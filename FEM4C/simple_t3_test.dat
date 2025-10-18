@@ -1,0 +1,13 @@
+# Simple T3 test for comparison
+T3 Simple Test
+3 1
+1  0.0   0.0
+2  1.0   0.0
+3  0.0   1.0
+1  1 2 3
+200000.0  0.3
+1  1  1  0  0.0  0.0  0.0
+2  0  1  0  0.0  0.0  0.0
+point loads
+3  1000.0  0.0  0.0
+end

@@ -1,0 +1,35 @@
+# FEM4C Test Data - T6 Beam Analysis
+# Simple supported beam with center load
+T6 Beam Analysis
+# nnode, nelem
+12 2
+# node coordinates
+1  0.0   0.0
+2  5.0   0.0
+3 10.0   0.0
+4  0.0   1.0
+5  5.0   1.0
+6 10.0   1.0
+7  2.5   0.0
+8  7.5   0.0
+9  2.5   1.0
+10 7.5   1.0
+11 0.0   0.5
+12 10.0  0.5
+# element connectivity
+1  1 2 4 7 9 11
+2  2 3 5 8 10 12
+# material properties (E, nu)
+200000.0  0.3
+# boundary conditions (node, ux_flag, uy_flag, uz_flag, ux_value, uy_value, uz_value)
+1  1  1  0  0.0  0.0  0.0
+4  1  1  0  0.0  0.0  0.0
+11 1  1  0  0.0  0.0  0.0
+3  0  1  0  0.0  0.0  0.0
+6  0  1  0  0.0  0.0  0.0
+12 0  1  0  0.0  0.0  0.0
+# point loads
+point loads
+2  0.0  -500.0  0.0
+5  0.0  -500.0  0.0
+end

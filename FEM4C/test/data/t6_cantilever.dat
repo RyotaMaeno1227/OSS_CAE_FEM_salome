@@ -1,0 +1,26 @@
+# FEM4C Test Data - T6 Cantilever Beam
+# Cantilever beam with tip load
+T6 Cantilever Beam Test
+# nnode, nelem
+6 1
+# node coordinates (L=4m, h=1m cantilever beam)
+1  0.0   0.0
+2  4.0   0.0
+3  4.0   1.0
+4  2.0   0.0
+5  4.0   0.5
+6  2.0   1.0
+# element connectivity
+1  1 2 3 4 5 6
+# material properties (E=200MPa, nu=0.3)
+200000.0  0.3
+# boundary conditions (node, ux_flag, uy_flag, uz_flag, ux_value, uy_value, uz_value)
+# Fixed support at left end (x=0)
+1  1  1  0  0.0  0.0  0.0
+6  1  1  0  0.0  0.0  0.0
+# point loads
+point loads
+# Tip load: 1000N downward at right end
+2  0.0  -1000.0  0.0
+3  0.0  -1000.0  0.0
+end

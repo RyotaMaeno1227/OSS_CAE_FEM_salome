@@ -1,0 +1,32 @@
+# Workspace-specific directories
+.claude/
+
+# Build artifacts
+*.o
+*.obj
+*.mod
+*.smod
+
+# Executables and libraries
+*.exe
+*.out
+*.a
+*.so
+*.dll
+*.dylib
+
+# Compiler and debugger dumps
+*.stackdump
+*.trace
+core
+
+# Editor and OS files
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Local build directories
+build/
+bin/
+tmp/

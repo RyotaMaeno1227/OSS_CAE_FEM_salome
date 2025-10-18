@@ -1,0 +1,24 @@
+# FEM4C Validation Test - Square plate under tension
+Square Plate Tension Test
+# nnode, nelem
+6 1
+# coordinates - unit square T6 element
+1   0.0   0.0
+2   1.0   0.0
+3   0.0   1.0
+4   0.5   0.0
+5   0.5   0.5
+6   0.0   0.5
+# element connectivity
+1   1  2  3  4  5  6
+# material properties (E=200GPa, nu=0.3)
+200000.0  0.3
+# boundary conditions (fix left edge)
+1  1  1  0  0.0  0.0  0.0
+6  0  1  0  0.0  0.0  0.0
+3  0  1  0  0.0  0.0  0.0
+# point loads (tension on right edge)
+point loads
+2   1000.0  0.0  0.0
+4   500.0   0.0  0.0
+end

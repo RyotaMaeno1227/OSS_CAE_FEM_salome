@@ -1,0 +1,23 @@
+# FEM4C Test Data - T6 Minimal Constraint Test
+# Minimal constraints to allow displacement
+T6 Minimal Test
+# nnode, nelem
+6 1
+# node coordinates
+1  0.0   0.0
+2  1.0   0.0
+3  0.0   1.0
+4  0.5   0.0
+5  0.5   0.5
+6  0.0   0.5
+# element connectivity
+1  1 2 3 4 5 6
+# material properties (E, nu)
+200000.0  0.3
+# boundary conditions - only constrain rigid body motion
+1  1  1  0  0.0  0.0  0.0
+2  0  1  0  0.0  0.0  0.0
+# point loads
+point loads
+3  1000.0  0.0  0.0
+end

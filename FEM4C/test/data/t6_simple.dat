@@ -1,0 +1,24 @@
+# FEM4C Test Data - Simple T6 Triangle Element
+# Single T6 element test case
+Simple T6 Element Test
+# nnode, nelem
+6 1
+# node coordinates
+1  0.0   0.0
+2  1.0   0.0
+3  0.0   1.0
+4  0.5   0.0
+5  0.5   0.5
+6  0.0   0.5
+# element connectivity
+1  1 2 3 4 5 6
+# material properties (E, nu)
+200000.0  0.3
+# boundary conditions (node, ux_flag, uy_flag, uz_flag, ux_value, uy_value, uz_value)
+1  1  1  0  0.0  0.0  0.0
+4  1  1  0  0.0  0.0  0.0
+6  1  1  0  0.0  0.0  0.0
+# point loads
+point loads
+2  1000.0  0.0  0.0
+end
