@@ -62,3 +62,36 @@ git push --force-with-lease origin main
   （現在の `.gitignore` は一般的な Fortran の成果物を除外する設定になっています）。
 - GitHub リポジトリの設定（デフォルトブランチ、ブランチ保護等）を確認・調整する。
 - `readme.txt` などのドキュメントにビルド手順や運用ルールを追記する。
+
+## 8. Chrono サブモジュールの管理
+
+このリポジトリでは `third_party/chrono` を Git サブモジュールとして管理しています。  
+Chrono 側のリポジトリ URL: `https://github.com/RyotaMaeno1227/OSS_CAE_MBD.git`
+
+### 初回クローン直後
+
+```bash
+git submodule update --init --recursive
+```
+
+### Chrono を最新版に更新したいとき
+
+```bash
+cd third_party/chrono
+git checkout main
+git pull origin main
+cd ../..
+git add third_party/chrono
+git commit -m "Update Chrono submodule"
+```
+
+### 既存コミットに合わせてサブモジュールを同期したいとき
+
+```bash
+git submodule update --init --recursive
+```
+
+### 注意事項
+
+- Chrono リポジトリ側では OpenCASCADE や Salome-Meca のアーカイブは含めません（必要に応じて各自取得）。
+- サブモジュールの変更を反映する際は、親リポジトリで `git add third_party/chrono` を忘れずに実行してください。
