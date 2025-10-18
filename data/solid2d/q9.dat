@@ -1,0 +1,26 @@
+title
+test data for q9
+nnode, nelem
+   9    1
+node,coordinate
+     1         0               0 
+     2         1               0
+     3         2               0
+     4         0               2 
+     5         1               2 
+     6         2               2 
+     7         0               4 
+     8         1               4
+     9         2               4 
+element
+     1     1 3 9 7 2 6 8 4 5
+material
+ 2000 0.3
+boundary
+       1 1 1  0.000000 0.000000 
+       4 1 0  0.000000 0.000000 
+       7 1 0  0.000000 0.000000 
+traction
+1
+   3 9 6 1.0 0.0
+end

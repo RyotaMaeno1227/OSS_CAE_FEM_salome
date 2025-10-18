@@ -1,0 +1,73 @@
+# This file is a component of the software based on the book
+# "High Performance Finite Element Method" written by
+# Takahiro Yamada.
+# Copyright (c) 2006 Takahiro Yamada, All Right Reserved.
+
+ELEM =	t4disp
+
+PROG =	$(ELEM).exe
+
+SRCS =	calstf.f90 elemod.f90 elform.f90 trv.f90
+
+OBJS =	assol.obj ufv.obj datmod.obj emat.obj \
+	essmod.obj etirw.obj hiperfem.obj matlib.obj rddat.obj \
+	calstf.obj elemod.obj elform.obj trv.obj
+
+LIBS =	
+
+COMSRC=	assol.f90 ufv.f90 datmod.f90 emat.f90 \
+	essmod.f90 etirw.f90 hiperfem.f90 matlib.f90 rddat.f90
+
+COMDIR= ..\..\COMMON\\
+
+F90 = ifort
+F90FLAGS = /O3 /Qipo
+LDFLAGS = /O3 /Qipo
+
+all: $(PROG)
+
+$(PROG): $(OBJS)
+	$(F90) $(LDFLAGS) /exe:$@ $(OBJS) $(LIBS)
+
+clean:
+	del $(PROG) $(OBJS) *.mod
+
+tar:
+	tar cvf $(ELEM).tar  $(SRCS) Makefile Makefile.win Makefile.unix
+
+.SUFFIXES: $(SUFFIXES) .f90 .obj
+
+.f90.obj:
+	$(F90) $(F90FLAGS) /c $<
+
+essmod.obj: $(COMDIR)essmod.f90
+	$(F90) $(F90FLAGS) /c $(COMDIR)essmod.f90
+
+datmod.obj: elemod.obj essmod.obj $(COMDIR)datmod.f90
+	$(F90) $(F90FLAGS) /c $(COMDIR)datmod.f90
+
+assol.obj: datmod.obj essmod.obj $(COMDIR)assol.f90
+	$(F90) $(F90FLAGS) /c $(COMDIR)assol.f90
+
+ufv.obj: datmod.obj essmod.obj trv.obj $(COMDIR)ufv.f90
+	$(F90) $(F90FLAGS) /c $(COMDIR)ufv.f90
+
+emat.obj: elemod.obj essmod.obj $(COMDIR)emat.f90
+	$(F90) $(F90FLAGS) /c $(COMDIR)emat.f90
+
+matlib.obj: $(COMDIR)matlib.f90
+	$(F90) $(F90FLAGS) /c $(COMDIR)matlib.f90
+
+etirw.obj: assol.obj datmod.obj elemod.obj elform.obj $(COMDIR)etirw.f90
+	$(F90) $(F90FLAGS) /c $(COMDIR)etirw.f90
+
+rddat.obj: assol.obj trv.obj datmod.obj emat.obj $(COMDIR)rddat.f90
+	$(F90) $(F90FLAGS) /c $(COMDIR)rddat.f90
+
+hiperfem.obj: assol.obj trv.obj datmod.obj elemod.obj emat.obj $(COMDIR)hiperfem.f90
+	$(F90) $(F90FLAGS) /c $(COMDIR)hiperfem.f90
+
+elemod.obj: essmod.obj
+elform.obj: datmod.obj elemod.obj emat.obj essmod.obj
+calstf.obj: datmod.obj elemod.obj elform.obj emat.obj essmod.obj
+trv.obj: assol.obj datmod.obj elemod.obj essmod.obj emat.obj

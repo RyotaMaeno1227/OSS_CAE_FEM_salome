@@ -1,0 +1,25 @@
+title
+test data for s8
+nnode, nelem
+   8    1
+node,coordinate
+     1         0               0 
+     2         1               0
+     3         2               0
+     4         0               2 
+     5         2               2 
+     6         0               4 
+     7         1               4
+     8         2               4 
+element
+     1     1 3 8 6 2 5 7 4
+material
+ 2000 0.3
+boundary
+       1 1 1  0.000000 0.000000 
+       4 1 0  0.000000 0.000000 
+       6 1 0  0.000000 0.000000 
+traction
+1
+   3 8 5 1.0 0.0
+end
