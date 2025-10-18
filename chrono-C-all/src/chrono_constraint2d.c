@@ -1,7 +1,12 @@
 #include "../include/chrono_constraint2d.h"
 
 #include <math.h>
+#include <stdlib.h>
 #include <string.h>
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 static double length(const double v[2]) {
     return sqrt(v[0] * v[0] + v[1] * v[1]);
@@ -30,6 +35,18 @@ static void sub(const double a[2], const double b[2], double out[2]) {
     out[1] = a[1] - b[1];
 }
 
+static void chrono_distance_constraint2d_prepare_impl(void *constraint_ptr, double dt);
+static void chrono_distance_constraint2d_apply_warm_start_impl(void *constraint_ptr);
+static void chrono_distance_constraint2d_solve_velocity_impl(void *constraint_ptr);
+static void chrono_distance_constraint2d_solve_position_impl(void *constraint_ptr);
+
+static const ChronoConstraint2DOps_C chrono_distance_constraint2d_ops = {
+    chrono_distance_constraint2d_prepare_impl,
+    chrono_distance_constraint2d_apply_warm_start_impl,
+    chrono_distance_constraint2d_solve_velocity_impl,
+    chrono_distance_constraint2d_solve_position_impl
+};
+
 static void apply_impulse(ChronoBody2D_C *body, const double impulse[2], const double r[2]) {
     if (!body || body->is_static) {
         return;
@@ -38,6 +55,149 @@ static void apply_impulse(ChronoBody2D_C *body, const double impulse[2], const d
     body->linear_velocity[1] += impulse[1] * body->inverse_mass;
     double angular_impulse = cross(r, impulse);
     body->angular_velocity += angular_impulse * body->inverse_inertia;
+}
+
+static int chrono_constraint2d_find_root(int *parent, int idx) {
+    while (parent[idx] != idx) {
+        parent[idx] = parent[parent[idx]];
+        idx = parent[idx];
+    }
+    return idx;
+}
+
+static void chrono_constraint2d_union(int *parent, int *rank, int a, int b) {
+    if (a < 0 || b < 0) {
+        return;
+    }
+    int root_a = chrono_constraint2d_find_root(parent, a);
+    int root_b = chrono_constraint2d_find_root(parent, b);
+    if (root_a == root_b) {
+        return;
+    }
+    if (rank[root_a] < rank[root_b]) {
+        parent[root_a] = root_b;
+    } else if (rank[root_a] > rank[root_b]) {
+        parent[root_b] = root_a;
+    } else {
+        parent[root_b] = root_a;
+        rank[root_a] += 1;
+    }
+}
+
+size_t chrono_constraint2d_build_islands(ChronoConstraint2DBase_C **constraints,
+                                         size_t count,
+                                         int *island_ids) {
+    if (!constraints || count == 0) {
+        return 0;
+    }
+
+    size_t max_bodies = count * 2;
+    ChronoBody2D_C **body_nodes = (ChronoBody2D_C **)malloc(max_bodies * sizeof(ChronoBody2D_C *));
+    int *parent = (int *)malloc(max_bodies * sizeof(int));
+    int *rank = (int *)calloc(max_bodies, sizeof(int));
+    int *constraint_body_indices = (int *)malloc(count * 2 * sizeof(int));
+
+    if (!body_nodes || !parent || !rank || !constraint_body_indices) {
+        free(body_nodes);
+        free(parent);
+        free(rank);
+        free(constraint_body_indices);
+        return 0;
+    }
+
+    size_t unique_bodies = 0;
+
+    for (size_t i = 0; i < count; ++i) {
+        ChronoConstraint2DBase_C *constraint = constraints[i];
+        ChronoBody2D_C *body_a = constraint ? constraint->body_a : NULL;
+        ChronoBody2D_C *body_b = constraint ? constraint->body_b : NULL;
+
+        int idx_a = -1;
+        int idx_b = -1;
+
+        if (body_a) {
+            int found = -1;
+            for (size_t j = 0; j < unique_bodies; ++j) {
+                if (body_nodes[j] == body_a) {
+                    found = (int)j;
+                    break;
+                }
+            }
+            if (found < 0) {
+                found = (int)unique_bodies;
+                body_nodes[unique_bodies] = body_a;
+                parent[unique_bodies] = (int)unique_bodies;
+                rank[unique_bodies] = 0;
+                unique_bodies++;
+            }
+            idx_a = found;
+        }
+
+        if (body_b) {
+            int found = -1;
+            for (size_t j = 0; j < unique_bodies; ++j) {
+                if (body_nodes[j] == body_b) {
+                    found = (int)j;
+                    break;
+                }
+            }
+            if (found < 0) {
+                found = (int)unique_bodies;
+                body_nodes[unique_bodies] = body_b;
+                parent[unique_bodies] = (int)unique_bodies;
+                rank[unique_bodies] = 0;
+                unique_bodies++;
+            }
+            idx_b = found;
+        }
+
+        constraint_body_indices[2 * i] = idx_a;
+        constraint_body_indices[2 * i + 1] = idx_b;
+
+        if (idx_a >= 0 && idx_b >= 0) {
+            chrono_constraint2d_union(parent, rank, idx_a, idx_b);
+        }
+    }
+
+    int *root_to_island = NULL;
+    if (unique_bodies > 0) {
+        root_to_island = (int *)malloc(unique_bodies * sizeof(int));
+        if (root_to_island) {
+            for (size_t i = 0; i < unique_bodies; ++i) {
+                root_to_island[i] = -1;
+            }
+        }
+    }
+
+    size_t island_count = 0;
+    for (size_t i = 0; i < count; ++i) {
+        int idx_a = constraint_body_indices[2 * i];
+        int idx_b = constraint_body_indices[2 * i + 1];
+        int first_idx = idx_a >= 0 ? idx_a : idx_b;
+        int island_id = -1;
+        if (first_idx >= 0 && root_to_island) {
+            int root = chrono_constraint2d_find_root(parent, first_idx);
+            if (root_to_island[root] < 0) {
+                root_to_island[root] = (int)island_count;
+                island_count++;
+            }
+            island_id = root_to_island[root];
+        } else {
+            island_id = (int)island_count;
+            island_count++;
+        }
+        if (island_ids) {
+            island_ids[i] = island_id;
+        }
+    }
+
+    free(root_to_island);
+    free(body_nodes);
+    free(parent);
+    free(rank);
+    free(constraint_body_indices);
+
+    return island_count;
 }
 
 void chrono_distance_constraint2d_init(ChronoDistanceConstraint2D_C *constraint,
@@ -50,8 +210,11 @@ void chrono_distance_constraint2d_init(ChronoDistanceConstraint2D_C *constraint,
         return;
     }
     memset(constraint, 0, sizeof(*constraint));
-    constraint->body_a = body_a;
-    constraint->body_b = body_b;
+    constraint->base.ops = &chrono_distance_constraint2d_ops;
+    constraint->base.body_a = body_a;
+    constraint->base.body_b = body_b;
+    constraint->base.accumulated_impulse = 0.0;
+    constraint->base.effective_mass = 0.0;
     if (local_anchor_a) {
         constraint->local_anchor_a[0] = local_anchor_a[0];
         constraint->local_anchor_a[1] = local_anchor_a[1];
@@ -65,8 +228,6 @@ void chrono_distance_constraint2d_init(ChronoDistanceConstraint2D_C *constraint,
     constraint->softness = 0.0;
     constraint->slop = 0.001;
     constraint->max_correction = 0.2;
-    constraint->accumulated_impulse = 0.0;
-    constraint->effective_mass = 0.0;
     constraint->bias = 0.0;
 }
 
@@ -113,13 +274,14 @@ void chrono_distance_constraint2d_set_max_correction(ChronoDistanceConstraint2D_
     constraint->max_correction = max_correction;
 }
 
-void chrono_distance_constraint2d_prepare(ChronoDistanceConstraint2D_C *constraint, double dt) {
+static void chrono_distance_constraint2d_prepare_impl(void *constraint_ptr, double dt) {
+    ChronoDistanceConstraint2D_C *constraint = (ChronoDistanceConstraint2D_C *)constraint_ptr;
     if (!constraint || dt <= 0.0) {
         return;
     }
 
-    ChronoBody2D_C *body_a = constraint->body_a;
-    ChronoBody2D_C *body_b = constraint->body_b;
+    ChronoBody2D_C *body_a = constraint->base.body_a;
+    ChronoBody2D_C *body_b = constraint->base.body_b;
 
     chrono_body2d_local_to_world(body_a, constraint->local_anchor_a, constraint->ra);
     sub(constraint->ra, body_a->position, constraint->ra);
@@ -155,9 +317,9 @@ void chrono_distance_constraint2d_prepare(ChronoDistanceConstraint2D_C *constrai
     }
 
     if (inv_mass > 0.0) {
-        constraint->effective_mass = 1.0 / inv_mass;
+        constraint->base.effective_mass = 1.0 / inv_mass;
     } else {
-        constraint->effective_mass = 0.0;
+        constraint->base.effective_mass = 0.0;
     }
 
     double C = dist - constraint->rest_length;
@@ -171,26 +333,28 @@ void chrono_distance_constraint2d_prepare(ChronoDistanceConstraint2D_C *constrai
     constraint->bias = bias;
 
     if (constraint->softness > 0.0) {
-        constraint->effective_mass = 1.0 / (inv_mass + constraint->softness);
+        constraint->base.effective_mass = 1.0 / (inv_mass + constraint->softness);
     }
 }
 
-void chrono_distance_constraint2d_apply_warm_start(ChronoDistanceConstraint2D_C *constraint) {
+static void chrono_distance_constraint2d_apply_warm_start_impl(void *constraint_ptr) {
+    ChronoDistanceConstraint2D_C *constraint = (ChronoDistanceConstraint2D_C *)constraint_ptr;
     if (!constraint) {
         return;
     }
     double impulse_vec[2];
-    scale(constraint->normal, constraint->accumulated_impulse, impulse_vec);
-    apply_impulse(constraint->body_a, (double[2]){-impulse_vec[0], -impulse_vec[1]}, constraint->ra);
-    apply_impulse(constraint->body_b, impulse_vec, constraint->rb);
+    scale(constraint->normal, constraint->base.accumulated_impulse, impulse_vec);
+    apply_impulse(constraint->base.body_a, (double[2]){-impulse_vec[0], -impulse_vec[1]}, constraint->ra);
+    apply_impulse(constraint->base.body_b, impulse_vec, constraint->rb);
 }
 
-void chrono_distance_constraint2d_solve_velocity(ChronoDistanceConstraint2D_C *constraint) {
+static void chrono_distance_constraint2d_solve_velocity_impl(void *constraint_ptr) {
+    ChronoDistanceConstraint2D_C *constraint = (ChronoDistanceConstraint2D_C *)constraint_ptr;
     if (!constraint) {
         return;
     }
-    ChronoBody2D_C *body_a = constraint->body_a;
-    ChronoBody2D_C *body_b = constraint->body_b;
+    ChronoBody2D_C *body_a = constraint->base.body_a;
+    ChronoBody2D_C *body_b = constraint->base.body_b;
 
     double va[2] = {0.0, 0.0};
     double vb[2] = {0.0, 0.0};
@@ -214,15 +378,15 @@ void chrono_distance_constraint2d_solve_velocity(ChronoDistanceConstraint2D_C *c
 
     double dv[2];
     sub(vb, va, dv);
-    double Cdot = dot(dv, constraint->normal);
+  	double Cdot = dot(dv, constraint->normal);
 
     double gamma = constraint->softness;
-    double denom = constraint->effective_mass;
+    double denom = constraint->base.effective_mass;
     if (denom == 0.0) {
         return;
     }
-    double lambda = -(Cdot + constraint->bias + gamma * constraint->accumulated_impulse) * denom;
-    constraint->accumulated_impulse += lambda;
+    double lambda = -(Cdot + constraint->bias + gamma * constraint->base.accumulated_impulse) * denom;
+    constraint->base.accumulated_impulse += lambda;
 
     double impulse_vec[2];
     scale(constraint->normal, lambda, impulse_vec);
@@ -230,12 +394,13 @@ void chrono_distance_constraint2d_solve_velocity(ChronoDistanceConstraint2D_C *c
     apply_impulse(body_b, impulse_vec, constraint->rb);
 }
 
-void chrono_distance_constraint2d_solve_position(ChronoDistanceConstraint2D_C *constraint) {
+static void chrono_distance_constraint2d_solve_position_impl(void *constraint_ptr) {
+    ChronoDistanceConstraint2D_C *constraint = (ChronoDistanceConstraint2D_C *)constraint_ptr;
     if (!constraint) {
         return;
     }
-    ChronoBody2D_C *body_a = constraint->body_a;
-    ChronoBody2D_C *body_b = constraint->body_b;
+    ChronoBody2D_C *body_a = constraint->base.body_a;
+    ChronoBody2D_C *body_b = constraint->base.body_b;
 
     double pa[2];
     add(body_a->position, constraint->ra, pa);
@@ -290,3 +455,229 @@ void chrono_distance_constraint2d_solve_position(ChronoDistanceConstraint2D_C *c
     }
 }
 
+void chrono_constraint2d_prepare(ChronoConstraint2DBase_C *constraint, double dt) {
+    if (!constraint || !constraint->ops || !constraint->ops->prepare) {
+        return;
+    }
+    constraint->ops->prepare((void *)constraint, dt);
+}
+
+void chrono_constraint2d_apply_warm_start(ChronoConstraint2DBase_C *constraint) {
+    if (!constraint || !constraint->ops || !constraint->ops->apply_warm_start) {
+        return;
+    }
+    constraint->ops->apply_warm_start((void *)constraint);
+}
+
+void chrono_constraint2d_solve_velocity(ChronoConstraint2DBase_C *constraint) {
+    if (!constraint || !constraint->ops || !constraint->ops->solve_velocity) {
+        return;
+    }
+    constraint->ops->solve_velocity((void *)constraint);
+}
+
+void chrono_constraint2d_solve_position(ChronoConstraint2DBase_C *constraint) {
+    if (!constraint || !constraint->ops || !constraint->ops->solve_position) {
+        return;
+    }
+    constraint->ops->solve_position((void *)constraint);
+}
+
+void chrono_constraint2d_batch_solve(ChronoConstraint2DBase_C **constraints,
+                                     size_t count,
+                                     double dt,
+                                     const ChronoConstraint2DBatchConfig_C *config) {
+    if (!constraints || count == 0) {
+        return;
+    }
+
+    ChronoConstraint2DBatchConfig_C cfg = {0};
+    if (config) {
+        cfg = *config;
+    }
+    if (cfg.velocity_iterations <= 0) {
+        cfg.velocity_iterations = 10;
+    }
+    if (cfg.position_iterations <= 0) {
+        cfg.position_iterations = 3;
+    }
+
+    int use_parallel =
+#ifdef _OPENMP
+        (cfg.enable_parallel && count > 1);
+#else
+        0;
+#endif
+
+    int *island_ids = NULL;
+    size_t *island_sizes = NULL;
+    size_t *island_offsets = NULL;
+    size_t *ordered_indices = NULL;
+    size_t island_count = 0;
+
+    if (use_parallel) {
+        island_ids = (int *)malloc(count * sizeof(int));
+        if (!island_ids) {
+            use_parallel = 0;
+        }
+    }
+
+    if (use_parallel) {
+        island_count = chrono_constraint2d_build_islands(constraints, count, island_ids);
+        if (island_count <= 1) {
+            use_parallel = 0;
+        }
+    }
+
+    if (use_parallel) {
+        island_sizes = (size_t *)calloc(island_count, sizeof(size_t));
+        island_offsets = (size_t *)malloc(island_count * sizeof(size_t));
+        ordered_indices = (size_t *)malloc(count * sizeof(size_t));
+        size_t *cursor = (size_t *)calloc(island_count, sizeof(size_t));
+        if (!island_sizes || !island_offsets || !ordered_indices || !cursor) {
+            free(island_sizes);
+            free(island_offsets);
+            free(ordered_indices);
+            free(cursor);
+            use_parallel = 0;
+        } else {
+            for (size_t i = 0; i < count; ++i) {
+                int island = island_ids[i];
+                if (island >= 0) {
+                    island_sizes[island]++;
+                }
+            }
+            size_t offset = 0;
+            for (size_t island = 0; island < island_count; ++island) {
+                island_offsets[island] = offset;
+                offset += island_sizes[island];
+            }
+            for (size_t i = 0; i < count; ++i) {
+                int island = island_ids[i];
+                if (island >= 0) {
+                    size_t pos = island_offsets[island] + cursor[island];
+                    ordered_indices[pos] = i;
+                    cursor[island] += 1;
+                }
+            }
+            free(cursor);
+        }
+    }
+
+    if (!use_parallel) {
+        free(island_ids);
+        free(island_sizes);
+        free(island_offsets);
+        free(ordered_indices);
+
+        if (dt > 0.0) {
+            for (size_t i = 0; i < count; ++i) {
+                chrono_constraint2d_prepare(constraints[i], dt);
+            }
+        }
+
+        for (size_t i = 0; i < count; ++i) {
+            chrono_constraint2d_apply_warm_start(constraints[i]);
+        }
+
+        for (int iter = 0; iter < cfg.velocity_iterations; ++iter) {
+            for (size_t i = 0; i < count; ++i) {
+                chrono_constraint2d_solve_velocity(constraints[i]);
+            }
+        }
+
+        for (int iter = 0; iter < cfg.position_iterations; ++iter) {
+            for (size_t i = 0; i < count; ++i) {
+                chrono_constraint2d_solve_position(constraints[i]);
+            }
+        }
+        return;
+    }
+
+    if (dt > 0.0) {
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static)
+#endif
+        for (size_t island = 0; island < island_count; ++island) {
+            size_t start = island_offsets[island];
+            size_t items = island_sizes[island];
+            for (size_t k = 0; k < items; ++k) {
+                size_t idx = ordered_indices[start + k];
+                chrono_constraint2d_prepare(constraints[idx], dt);
+            }
+        }
+    }
+
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static)
+#endif
+    for (size_t island = 0; island < island_count; ++island) {
+        size_t start = island_offsets[island];
+        size_t items = island_sizes[island];
+        for (size_t k = 0; k < items; ++k) {
+            size_t idx = ordered_indices[start + k];
+            chrono_constraint2d_apply_warm_start(constraints[idx]);
+        }
+    }
+
+    for (int iter = 0; iter < cfg.velocity_iterations; ++iter) {
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static)
+#endif
+        for (size_t island = 0; island < island_count; ++island) {
+            size_t start = island_offsets[island];
+            size_t items = island_sizes[island];
+            for (size_t k = 0; k < items; ++k) {
+                size_t idx = ordered_indices[start + k];
+                chrono_constraint2d_solve_velocity(constraints[idx]);
+            }
+        }
+    }
+
+    for (int iter = 0; iter < cfg.position_iterations; ++iter) {
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static)
+#endif
+        for (size_t island = 0; island < island_count; ++island) {
+            size_t start = island_offsets[island];
+            size_t items = island_sizes[island];
+            for (size_t k = 0; k < items; ++k) {
+                size_t idx = ordered_indices[start + k];
+                chrono_constraint2d_solve_position(constraints[idx]);
+            }
+        }
+    }
+
+    free(island_ids);
+    free(island_sizes);
+    free(island_offsets);
+    free(ordered_indices);
+}
+
+void chrono_distance_constraint2d_prepare(ChronoDistanceConstraint2D_C *constraint, double dt) {
+    if (!constraint) {
+        return;
+    }
+    chrono_constraint2d_prepare(&constraint->base, dt);
+}
+
+void chrono_distance_constraint2d_apply_warm_start(ChronoDistanceConstraint2D_C *constraint) {
+    if (!constraint) {
+        return;
+    }
+    chrono_constraint2d_apply_warm_start(&constraint->base);
+}
+
+void chrono_distance_constraint2d_solve_velocity(ChronoDistanceConstraint2D_C *constraint) {
+    if (!constraint) {
+        return;
+    }
+    chrono_constraint2d_solve_velocity(&constraint->base);
+}
+
+void chrono_distance_constraint2d_solve_position(ChronoDistanceConstraint2D_C *constraint) {
+    if (!constraint) {
+        return;
+    }
+    chrono_constraint2d_solve_position(&constraint->base);
+}

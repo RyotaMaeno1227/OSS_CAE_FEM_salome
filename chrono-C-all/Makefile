@@ -1,5 +1,5 @@
 CC := gcc
-CFLAGS := -std=c99 -Wall -Wextra -pedantic -Iinclude
+CFLAGS := -std=c99 -Wall -Wextra -pedantic -Iinclude -fopenmp
 LDFLAGS := -lm
 
 SRC_DIR := src
@@ -10,7 +10,8 @@ TEST_TARGETS := \
 		$(TEST_DIR)/test_distance_constraint_stabilization \
 		$(TEST_DIR)/test_circle_collision_regression \
 		$(TEST_DIR)/test_circle_collision_oblique \
-		$(TEST_DIR)/test_circle_collision_resting
+		$(TEST_DIR)/test_circle_collision_resting \
+		$(TEST_DIR)/test_constraint_batch_solve
 
 .PHONY: all clean test tests
 

@@ -5,11 +5,30 @@
 extern "C" {
 #endif
 
+#include <stddef.h>
+
 #include "chrono_body2d.h"
 
-typedef struct ChronoDistanceConstraint2D_C {
+typedef void (*ChronoConstraint2DPrepareFunc)(void *constraint, double dt);
+typedef void (*ChronoConstraint2DStepFunc)(void *constraint);
+
+typedef struct ChronoConstraint2DOps_C {
+    ChronoConstraint2DPrepareFunc prepare;
+    ChronoConstraint2DStepFunc apply_warm_start;
+    ChronoConstraint2DStepFunc solve_velocity;
+    ChronoConstraint2DStepFunc solve_position;
+} ChronoConstraint2DOps_C;
+
+typedef struct ChronoConstraint2DBase_C {
+    const ChronoConstraint2DOps_C *ops;
     ChronoBody2D_C *body_a;
     ChronoBody2D_C *body_b;
+    double accumulated_impulse;
+    double effective_mass;
+} ChronoConstraint2DBase_C;
+
+typedef struct ChronoDistanceConstraint2D_C {
+    ChronoConstraint2DBase_C base;
     double local_anchor_a[2];
     double local_anchor_b[2];
     double rest_length;
@@ -17,13 +36,30 @@ typedef struct ChronoDistanceConstraint2D_C {
     double softness;
     double slop;
     double max_correction;
-    double accumulated_impulse;
-    double effective_mass;
     double normal[2];
     double ra[2];
     double rb[2];
     double bias;
 } ChronoDistanceConstraint2D_C;
+
+typedef struct ChronoConstraint2DBatchConfig_C {
+    int velocity_iterations;
+    int position_iterations;
+    int enable_parallel;
+} ChronoConstraint2DBatchConfig_C;
+
+size_t chrono_constraint2d_build_islands(ChronoConstraint2DBase_C **constraints,
+                                         size_t count,
+                                         int *island_ids);
+
+void chrono_constraint2d_prepare(ChronoConstraint2DBase_C *constraint, double dt);
+void chrono_constraint2d_apply_warm_start(ChronoConstraint2DBase_C *constraint);
+void chrono_constraint2d_solve_velocity(ChronoConstraint2DBase_C *constraint);
+void chrono_constraint2d_solve_position(ChronoConstraint2DBase_C *constraint);
+void chrono_constraint2d_batch_solve(ChronoConstraint2DBase_C **constraints,
+                                     size_t count,
+                                     double dt,
+                                     const ChronoConstraint2DBatchConfig_C *config);
 
 void chrono_distance_constraint2d_init(ChronoDistanceConstraint2D_C *constraint,
                                        ChronoBody2D_C *body_a,
