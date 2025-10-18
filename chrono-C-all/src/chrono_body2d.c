@@ -10,16 +10,6 @@ static void rotate2d(double angle, const double v[2], double out[2]) {
     out[1] = s * v[0] + c * v[1];
 }
 
-static void cross_scalar_vector(double s, const double v[2], double out[2]) {
-    out[0] = -s * v[1];
-    out[1] = s * v[0];
-}
-
-static void cross_vector_scalar(const double v[2], double s, double out[2]) {
-    out[0] = s * v[1];
-    out[1] = -s * v[0];
-}
-
 void chrono_body2d_init(ChronoBody2D_C *body) {
     if (!body) {
         return;
@@ -28,6 +18,7 @@ void chrono_body2d_init(ChronoBody2D_C *body) {
     body->inverse_mass = 0.0;
     body->inverse_inertia = 0.0;
     body->is_static = 1;
+    body->circle_radius = 0.0;
 }
 
 void chrono_body2d_set_mass(ChronoBody2D_C *body, double mass, double inertia) {
@@ -123,3 +114,16 @@ void chrono_body2d_reset_forces(ChronoBody2D_C *body) {
     body->torque = 0.0;
 }
 
+void chrono_body2d_set_circle_shape(ChronoBody2D_C *body, double radius) {
+    if (!body) {
+        return;
+    }
+    body->circle_radius = (radius > 0.0) ? radius : 0.0;
+}
+
+double chrono_body2d_get_circle_radius(const ChronoBody2D_C *body) {
+    if (!body) {
+        return 0.0;
+    }
+    return body->circle_radius;
+}

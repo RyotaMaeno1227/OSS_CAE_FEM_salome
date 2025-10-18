@@ -17,6 +17,7 @@ typedef struct ChronoBody2D_C {
     double inverse_mass;
     double inverse_inertia;
     int is_static;
+    double circle_radius;
 } ChronoBody2D_C;
 
 void chrono_body2d_init(ChronoBody2D_C *body);
@@ -29,6 +30,8 @@ void chrono_body2d_integrate_explicit(ChronoBody2D_C *body, double dt);
 void chrono_body2d_local_to_world(const ChronoBody2D_C *body, const double local[2], double world[2]);
 void chrono_body2d_world_to_local(const ChronoBody2D_C *body, const double world[2], double local[2]);
 void chrono_body2d_reset_forces(ChronoBody2D_C *body);
+void chrono_body2d_set_circle_shape(ChronoBody2D_C *body, double radius);
+double chrono_body2d_get_circle_radius(const ChronoBody2D_C *body);
 
 #ifdef __cplusplus
 }
