@@ -19,6 +19,9 @@ void chrono_body2d_init(ChronoBody2D_C *body) {
     body->inverse_inertia = 0.0;
     body->is_static = 1;
     body->circle_radius = 0.0;
+    body->restitution = 0.0;
+    body->friction_static = 0.0;
+    body->friction_dynamic = 0.0;
 }
 
 void chrono_body2d_set_mass(ChronoBody2D_C *body, double mass, double inertia) {
@@ -126,4 +129,57 @@ double chrono_body2d_get_circle_radius(const ChronoBody2D_C *body) {
         return 0.0;
     }
     return body->circle_radius;
+}
+
+void chrono_body2d_set_restitution(ChronoBody2D_C *body, double restitution) {
+    if (!body) {
+        return;
+    }
+    if (restitution < 0.0) {
+        restitution = 0.0;
+    } else if (restitution > 1.0) {
+        restitution = 1.0;
+    }
+    body->restitution = restitution;
+}
+
+double chrono_body2d_get_restitution(const ChronoBody2D_C *body) {
+    if (!body) {
+        return 0.0;
+    }
+    return body->restitution;
+}
+
+void chrono_body2d_set_friction_static(ChronoBody2D_C *body, double mu_s) {
+    if (!body) {
+        return;
+    }
+    if (mu_s < 0.0) {
+        mu_s = 0.0;
+    }
+    body->friction_static = mu_s;
+}
+
+double chrono_body2d_get_friction_static(const ChronoBody2D_C *body) {
+    if (!body) {
+        return 0.0;
+    }
+    return body->friction_static;
+}
+
+void chrono_body2d_set_friction_dynamic(ChronoBody2D_C *body, double mu_d) {
+    if (!body) {
+        return;
+    }
+    if (mu_d < 0.0) {
+        mu_d = 0.0;
+    }
+    body->friction_dynamic = mu_d;
+}
+
+double chrono_body2d_get_friction_dynamic(const ChronoBody2D_C *body) {
+    if (!body) {
+        return 0.0;
+    }
+    return body->friction_dynamic;
 }

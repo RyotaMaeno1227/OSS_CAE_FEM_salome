@@ -18,6 +18,9 @@ typedef struct ChronoBody2D_C {
     double inverse_inertia;
     int is_static;
     double circle_radius;
+    double restitution;
+    double friction_static;
+    double friction_dynamic;
 } ChronoBody2D_C;
 
 void chrono_body2d_init(ChronoBody2D_C *body);
@@ -32,6 +35,12 @@ void chrono_body2d_world_to_local(const ChronoBody2D_C *body, const double world
 void chrono_body2d_reset_forces(ChronoBody2D_C *body);
 void chrono_body2d_set_circle_shape(ChronoBody2D_C *body, double radius);
 double chrono_body2d_get_circle_radius(const ChronoBody2D_C *body);
+void chrono_body2d_set_restitution(ChronoBody2D_C *body, double restitution);
+double chrono_body2d_get_restitution(const ChronoBody2D_C *body);
+void chrono_body2d_set_friction_static(ChronoBody2D_C *body, double mu_s);
+double chrono_body2d_get_friction_static(const ChronoBody2D_C *body);
+void chrono_body2d_set_friction_dynamic(ChronoBody2D_C *body, double mu_d);
+double chrono_body2d_get_friction_dynamic(const ChronoBody2D_C *body);
 
 #ifdef __cplusplus
 }
