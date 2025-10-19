@@ -16,13 +16,21 @@ TEST_TARGETS := \
 	$(TEST_DIR)/test_circle_collision_materials \
 	$(TEST_DIR)/test_circle_collision_continuous \
 	$(TEST_DIR)/test_island_contact_constraint \
+	$(TEST_DIR)/test_island_parallel_contacts \
+	$(TEST_DIR)/test_contact_manager_longrun \
 	$(TEST_DIR)/test_constraint_batch_solve
+
+BENCH_TARGETS := \
+	$(TEST_DIR)/bench_island_solver
 
 .PHONY: all clean test tests
 
 all: $(TEST_TARGETS)
 
 $(TEST_DIR)/test_%: $(TEST_DIR)/test_%.c $(CORE_SRCS)
+	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
+
+$(TEST_DIR)/bench_%: $(TEST_DIR)/bench_%.c $(CORE_SRCS)
 	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
 
 tests: $(TEST_TARGETS)
@@ -34,5 +42,12 @@ test: tests
 		"$$t"; \
 	done
 
+bench: $(BENCH_TARGETS)
+	@set -e; \
+	for b in $(BENCH_TARGETS); do \
+		echo "Running $$b"; \
+		"$$b"; \
+	done
+
 clean:
-	$(RM) $(TEST_TARGETS)
+	$(RM) $(TEST_TARGETS) $(BENCH_TARGETS)
