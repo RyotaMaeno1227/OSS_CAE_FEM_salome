@@ -46,7 +46,7 @@ int main(void) {
     double va_t_before = dot2(body_a.linear_velocity, tangent);
     double vb_t_before = dot2(body_b.linear_velocity, tangent);
 
-    if (chrono_collision2d_resolve_circle_circle(&body_a, &body_b, &contact, 0.8) != 0) {
+    if (chrono_collision2d_resolve_circle_circle(&body_a, &body_b, &contact, 0.8, 0.0, 0.0, NULL) != 0) {
         fprintf(stderr, "Failed to resolve oblique circle collision.\n");
         return 1;
     }

@@ -44,7 +44,7 @@ int main(void) {
         return 1;
     }
 
-    if (chrono_collision2d_resolve_circle_circle(&body_a, &body_b, &contact, 0.8) != 0) {
+    if (chrono_collision2d_resolve_circle_circle(&body_a, &body_b, &contact, 0.8, 0.0, 0.0, NULL) != 0) {
         fprintf(stderr, "Failed to resolve circle-circle collision.\n");
         return 1;
     }

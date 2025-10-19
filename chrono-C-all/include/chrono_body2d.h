@@ -23,6 +23,12 @@ typedef struct ChronoBody2D_C {
     double friction_dynamic;
 } ChronoBody2D_C;
 
+typedef struct ChronoMaterial2D_C {
+    double restitution;
+    double friction_static;
+    double friction_dynamic;
+} ChronoMaterial2D_C;
+
 void chrono_body2d_init(ChronoBody2D_C *body);
 void chrono_body2d_set_mass(ChronoBody2D_C *body, double mass, double inertia);
 void chrono_body2d_set_static(ChronoBody2D_C *body);
@@ -41,6 +47,8 @@ void chrono_body2d_set_friction_static(ChronoBody2D_C *body, double mu_s);
 double chrono_body2d_get_friction_static(const ChronoBody2D_C *body);
 void chrono_body2d_set_friction_dynamic(ChronoBody2D_C *body, double mu_d);
 double chrono_body2d_get_friction_dynamic(const ChronoBody2D_C *body);
+ChronoMaterial2D_C chrono_material2d_make(double restitution, double mu_s, double mu_d);
+void chrono_body2d_set_material(ChronoBody2D_C *body, const ChronoMaterial2D_C *material);
 
 #ifdef __cplusplus
 }

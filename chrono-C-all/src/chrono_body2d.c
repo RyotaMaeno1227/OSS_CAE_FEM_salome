@@ -183,3 +183,20 @@ double chrono_body2d_get_friction_dynamic(const ChronoBody2D_C *body) {
     }
     return body->friction_dynamic;
 }
+
+ChronoMaterial2D_C chrono_material2d_make(double restitution, double mu_s, double mu_d) {
+    ChronoMaterial2D_C material;
+    material.restitution = (restitution < 0.0) ? 0.0 : (restitution > 1.0 ? 1.0 : restitution);
+    material.friction_static = (mu_s < 0.0) ? 0.0 : mu_s;
+    material.friction_dynamic = (mu_d < 0.0) ? 0.0 : mu_d;
+    return material;
+}
+
+void chrono_body2d_set_material(ChronoBody2D_C *body, const ChronoMaterial2D_C *material) {
+    if (!body || !material) {
+        return;
+    }
+    chrono_body2d_set_restitution(body, material->restitution);
+    chrono_body2d_set_friction_static(body, material->friction_static);
+    chrono_body2d_set_friction_dynamic(body, material->friction_dynamic);
+}

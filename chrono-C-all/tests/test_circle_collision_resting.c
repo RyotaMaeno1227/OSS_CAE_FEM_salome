@@ -46,7 +46,7 @@ int main(void) {
         return 1;
     }
 
-    if (chrono_collision2d_resolve_circle_circle(&body_a, &body_b, &contact, 0.0) != 0) {
+    if (chrono_collision2d_resolve_circle_circle(&body_a, &body_b, &contact, 0.0, 0.0, 0.0, NULL) != 0) {
         fprintf(stderr, "Resolution failed for resting contact.\n");
         return 1;
     }

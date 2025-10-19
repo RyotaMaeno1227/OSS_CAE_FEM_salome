@@ -396,6 +396,55 @@ void chrono_contact_manager2d_free(ChronoContactManager2D_C *manager) {
     manager->capacity = 0;
 }
 
+void chrono_contact_manager2d_begin_step(ChronoContactManager2D_C *manager) {
+    if (!manager) {
+        return;
+    }
+    for (size_t i = 0; i < manager->count; ++i) {
+        ChronoContactManifold2D_C *manifold = &manager->pairs[i].manifold;
+        for (int j = 0; j < manifold->num_points; ++j) {
+            manifold->points[j].is_active = 0;
+        }
+    }
+}
+
+static void chrono_contact_manifold2d_finalize(ChronoContactManifold2D_C *manifold) {
+    if (!manifold) {
+        return;
+    }
+    int write_idx = 0;
+    for (int i = 0; i < manifold->num_points; ++i) {
+        if (manifold->points[i].is_active) {
+            if (write_idx != i) {
+                manifold->points[write_idx] = manifold->points[i];
+            }
+            ++write_idx;
+        }
+    }
+    for (int i = write_idx; i < manifold->num_points; ++i) {
+        memset(&manifold->points[i], 0, sizeof(manifold->points[i]));
+    }
+    manifold->num_points = write_idx;
+}
+
+void chrono_contact_manager2d_end_step(ChronoContactManager2D_C *manager) {
+    if (!manager) {
+        return;
+    }
+    size_t write_idx = 0;
+    for (size_t i = 0; i < manager->count; ++i) {
+        ChronoContactPair2D_C *pair = &manager->pairs[i];
+        chrono_contact_manifold2d_finalize(&pair->manifold);
+        if (pair->manifold.num_points > 0) {
+            if (write_idx != i) {
+                manager->pairs[write_idx] = *pair;
+            }
+            ++write_idx;
+        }
+    }
+    manager->count = write_idx;
+}
+
 static ChronoContactPair2D_C *chrono_contact_manager2d_find_pair(ChronoContactManager2D_C *manager,
                                                                  ChronoBody2D_C *body_a,
                                                                  ChronoBody2D_C *body_b) {

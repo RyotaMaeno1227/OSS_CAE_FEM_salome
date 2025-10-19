@@ -12,7 +12,10 @@ TEST_TARGETS := \
 	$(TEST_DIR)/test_circle_collision_oblique \
 	$(TEST_DIR)/test_circle_collision_resting \
 	$(TEST_DIR)/test_circle_collision_friction \
+	$(TEST_DIR)/test_circle_collision_continuous \
 	$(TEST_DIR)/test_circle_collision_materials \
+	$(TEST_DIR)/test_circle_collision_continuous \
+	$(TEST_DIR)/test_island_contact_constraint \
 	$(TEST_DIR)/test_constraint_batch_solve
 
 .PHONY: all clean test tests

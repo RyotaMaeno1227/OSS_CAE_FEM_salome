@@ -63,6 +63,8 @@ typedef struct ChronoContactManager2D_C {
 void chrono_contact_manager2d_init(ChronoContactManager2D_C *manager);
 void chrono_contact_manager2d_reset(ChronoContactManager2D_C *manager);
 void chrono_contact_manager2d_free(ChronoContactManager2D_C *manager);
+void chrono_contact_manager2d_begin_step(ChronoContactManager2D_C *manager);
+void chrono_contact_manager2d_end_step(ChronoContactManager2D_C *manager);
 ChronoContactManifold2D_C *chrono_contact_manager2d_get_manifold(ChronoContactManager2D_C *manager,
                                                                  ChronoBody2D_C *body_a,
                                                                  ChronoBody2D_C *body_b);

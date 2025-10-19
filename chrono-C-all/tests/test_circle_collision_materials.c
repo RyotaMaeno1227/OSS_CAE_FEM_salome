@@ -8,9 +8,6 @@ static void init_bodies(ChronoBody2D_C *body, double x_pos) {
     chrono_body2d_init(body);
     chrono_body2d_set_mass(body, 1.0, 0.5);
     chrono_body2d_set_circle_shape(body, 0.5);
-    chrono_body2d_set_restitution(body, 0.0);
-    chrono_body2d_set_friction_static(body, 0.0);
-    chrono_body2d_set_friction_dynamic(body, 0.0);
     body->position[0] = x_pos;
     body->position[1] = 0.0;
 }
@@ -99,81 +96,105 @@ static void compute_expected(const ChronoBody2D_C *body_a,
     out_vel_b[1] = vel_b_after[1] + tangent_vec[1] * inv_mass_b;
 }
 
+typedef struct MaterialCase2D {
+    ChronoMaterial2D_C material_a;
+    ChronoMaterial2D_C material_b;
+    double expected_restitution;
+    double expected_mu_s;
+    double expected_mu_d;
+} MaterialCase2D;
+
 int main(void) {
-    ChronoBody2D_C body_a;
-    ChronoBody2D_C body_b;
-    init_bodies(&body_a, -0.5);
-    init_bodies(&body_b, 0.48);
+    const MaterialCase2D cases[] = {
+        {chrono_material2d_make(0.1, 0.5, 0.3),
+         chrono_material2d_make(0.4, 0.2, 0.25),
+         0.4,
+         sqrt(0.5 * 0.2),
+         sqrt(0.3 * 0.25)},
+        {chrono_material2d_make(0.2, 0.7, 0.4),
+         chrono_material2d_make(0.2, 0.8, 0.6),
+         0.2,
+         sqrt(0.7 * 0.8),
+         sqrt(0.4 * 0.6)},
+        {chrono_material2d_make(0.0, 0.3, 0.1),
+         chrono_material2d_make(1.0, 0.6, 0.4),
+         1.0,
+         sqrt(0.3 * 0.6),
+         sqrt(0.1 * 0.4)},
+    };
 
-    body_a.linear_velocity[0] = 1.2;
-    body_a.linear_velocity[1] = 0.7;
-    body_b.linear_velocity[0] = -0.5;
-    body_b.linear_velocity[1] = -0.3;
+    for (size_t idx = 0; idx < sizeof(cases) / sizeof(cases[0]); ++idx) {
+        ChronoBody2D_C body_a;
+        ChronoBody2D_C body_b;
+        init_bodies(&body_a, -0.5);
+        init_bodies(&body_b, 0.48);
 
-    chrono_body2d_set_restitution(&body_a, 0.1);
-    chrono_body2d_set_restitution(&body_b, 0.4);
-    chrono_body2d_set_friction_static(&body_a, 0.5);
-    chrono_body2d_set_friction_dynamic(&body_a, 0.3);
-    chrono_body2d_set_friction_static(&body_b, 0.2);
-    chrono_body2d_set_friction_dynamic(&body_b, 0.25);
+        body_a.linear_velocity[0] = 1.2;
+        body_a.linear_velocity[1] = 0.7;
+        body_b.linear_velocity[0] = -0.5;
+        body_b.linear_velocity[1] = -0.3;
 
-    ChronoContactManager2D_C manager;
-    chrono_contact_manager2d_init(&manager);
+        chrono_body2d_set_material(&body_a, &cases[idx].material_a);
+        chrono_body2d_set_material(&body_b, &cases[idx].material_b);
 
-    ChronoContact2D_C contact;
-    if (chrono_collision2d_detect_circle_circle(&body_a, &body_b, &contact) != 0 || !contact.has_contact) {
-        fprintf(stderr, "Material test: contact detection failed\n");
+        ChronoContactManager2D_C manager;
+        chrono_contact_manager2d_init(&manager);
+
+        ChronoContact2D_C contact;
+        if (chrono_collision2d_detect_circle_circle(&body_a, &body_b, &contact) != 0 || !contact.has_contact) {
+            fprintf(stderr, "Material test %zu: contact detection failed\n", idx);
+            chrono_contact_manager2d_free(&manager);
+            return 1;
+        }
+
+        if (!chrono_contact_manager2d_update_circle_circle(&manager, &body_a, &body_b, &contact)) {
+            fprintf(stderr, "Material test %zu: manifold update failed\n", idx);
+            chrono_contact_manager2d_free(&manager);
+            return 1;
+        }
+
+        ChronoContactManifold2D_C *manifold = chrono_contact_manager2d_get_manifold(&manager, &body_a, &body_b);
+        if (!manifold) {
+            fprintf(stderr, "Material test %zu: manifold retrieval failed\n", idx);
+            chrono_contact_manager2d_free(&manager);
+            return 1;
+        }
+
+        double expected_a[2];
+        double expected_b[2];
+        compute_expected(&body_a, &body_b, &contact,
+                         cases[idx].expected_restitution,
+                         cases[idx].expected_mu_s,
+                         cases[idx].expected_mu_d,
+                         expected_a, expected_b);
+
+        double initial_speed_sum = fabs(body_a.linear_velocity[0]) + fabs(body_a.linear_velocity[1]) +
+                                   fabs(body_b.linear_velocity[0]) + fabs(body_b.linear_velocity[1]);
+
+        if (chrono_collision2d_resolve_circle_circle(&body_a, &body_b, &contact,
+                                                     0.0, 0.0, 0.0, manifold) != 0) {
+            fprintf(stderr, "Material test %zu: resolve failed\n", idx);
+            chrono_contact_manager2d_free(&manager);
+            return 1;
+        }
+
+        double tol = 1e-6 * (1.0 + initial_speed_sum);
+        if (fabs(body_a.linear_velocity[0] - expected_a[0]) > tol ||
+            fabs(body_a.linear_velocity[1] - expected_a[1]) > tol ||
+            fabs(body_b.linear_velocity[0] - expected_b[0]) > tol ||
+            fabs(body_b.linear_velocity[1] - expected_b[1]) > tol) {
+            fprintf(stderr, "Material test %zu failed:\n", idx);
+            fprintf(stderr, "  Body A expected (%.6f, %.6f) got (%.6f, %.6f)\n",
+                    expected_a[0], expected_a[1], body_a.linear_velocity[0], body_a.linear_velocity[1]);
+            fprintf(stderr, "  Body B expected (%.6f, %.6f) got (%.6f, %.6f)\n",
+                    expected_b[0], expected_b[1], body_b.linear_velocity[0], body_b.linear_velocity[1]);
+            chrono_contact_manager2d_free(&manager);
+            return 1;
+        }
+
         chrono_contact_manager2d_free(&manager);
-        return 1;
     }
 
-    ChronoContactPoint2D_C *point = chrono_contact_manager2d_update_circle_circle(&manager, &body_a, &body_b, &contact);
-    if (!point) {
-        fprintf(stderr, "Material test: manifold update failed\n");
-        chrono_contact_manager2d_free(&manager);
-        return 1;
-    }
-
-    ChronoContactManifold2D_C *manifold = chrono_contact_manager2d_get_manifold(&manager, &body_a, &body_b);
-    if (!manifold) {
-        fprintf(stderr, "Material test: manifold retrieval failed\n");
-        chrono_contact_manager2d_free(&manager);
-        return 1;
-    }
-
-    double expected_a[2];
-    double expected_b[2];
-    double restitution = fmax(chrono_body2d_get_restitution(&body_a), chrono_body2d_get_restitution(&body_b));
-    double mu_static = sqrt(chrono_body2d_get_friction_static(&body_a) * chrono_body2d_get_friction_static(&body_b));
-    double mu_dynamic = sqrt(chrono_body2d_get_friction_dynamic(&body_a) * chrono_body2d_get_friction_dynamic(&body_b));
-    compute_expected(&body_a, &body_b, &contact, restitution, mu_static, mu_dynamic, expected_a, expected_b);
-
-    double initial_speed_sum = fabs(body_a.linear_velocity[0]) + fabs(body_a.linear_velocity[1]) +
-                               fabs(body_b.linear_velocity[0]) + fabs(body_b.linear_velocity[1]);
-
-    if (chrono_collision2d_resolve_circle_circle(&body_a, &body_b, &contact,
-                                                 0.0, 0.0, 0.0, manifold) != 0) {
-        fprintf(stderr, "Material test: resolve failed\n");
-        chrono_contact_manager2d_free(&manager);
-        return 1;
-    }
-
-    double diff_a0 = fabs(body_a.linear_velocity[0] - expected_a[0]);
-    double diff_a1 = fabs(body_a.linear_velocity[1] - expected_a[1]);
-    double diff_b0 = fabs(body_b.linear_velocity[0] - expected_b[0]);
-    double diff_b1 = fabs(body_b.linear_velocity[1] - expected_b[1]);
-    double tol = 1e-6 * (1.0 + initial_speed_sum);
-
-    if (diff_a0 > tol || diff_a1 > tol || diff_b0 > tol || diff_b1 > tol) {
-        fprintf(stderr, "Material test failed: expected (%.6f, %.6f) vs actual (%.6f, %.6f) for body A;\n",
-                expected_a[0], expected_a[1], body_a.linear_velocity[0], body_a.linear_velocity[1]);
-        fprintf(stderr, "                           expected (%.6f, %.6f) vs actual (%.6f, %.6f) for body B\n",
-                expected_b[0], expected_b[1], body_b.linear_velocity[0], body_b.linear_velocity[1]);
-        chrono_contact_manager2d_free(&manager);
-        return 1;
-    }
-
-    chrono_contact_manager2d_free(&manager);
     printf("Circle collision material combination test passed.\n");
     return 0;
 }

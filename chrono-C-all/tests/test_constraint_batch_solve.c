@@ -10,7 +10,8 @@
 static size_t run_batch(int enable_parallel,
                         double distances_out[CONSTRAINT_COUNT],
                         int island_ids_out[CONSTRAINT_COUNT],
-                        double rest_lengths_out[CONSTRAINT_COUNT]) {
+                        double rest_lengths_out[CONSTRAINT_COUNT],
+                        ChronoConstraint2DBatchWorkspace_C *workspace) {
     ChronoBody2D_C anchor0;
     ChronoBody2D_C anchor2;
     ChronoBody2D_C body_shared;
@@ -90,7 +91,7 @@ static size_t run_batch(int enable_parallel,
     cfg.enable_parallel = enable_parallel;
 
     double dt = 0.016;
-    chrono_constraint2d_batch_solve(ptrs, CONSTRAINT_COUNT, dt, &cfg);
+    chrono_constraint2d_batch_solve(ptrs, CONSTRAINT_COUNT, dt, &cfg, workspace);
 
     for (int i = 0; i < CONSTRAINT_COUNT; ++i) {
         ChronoBody2D_C *body_a = ptrs[i]->body_a;
@@ -117,8 +118,13 @@ int main(void) {
     double parallel_rest_lengths[CONSTRAINT_COUNT];
     int island_ids[CONSTRAINT_COUNT];
 
-    size_t island_count = run_batch(0, sequential_distances, island_ids, sequential_rest_lengths);
-    run_batch(1, parallel_distances, NULL, parallel_rest_lengths);
+    ChronoConstraint2DBatchWorkspace_C workspace;
+    chrono_constraint2d_workspace_init(&workspace);
+
+    size_t island_count = run_batch(0, sequential_distances, island_ids, sequential_rest_lengths, &workspace);
+    chrono_constraint2d_workspace_reset(&workspace);
+    run_batch(1, parallel_distances, NULL, parallel_rest_lengths, &workspace);
+    chrono_constraint2d_workspace_free(&workspace);
 
     int success = 1;
     if (island_count != 2) {

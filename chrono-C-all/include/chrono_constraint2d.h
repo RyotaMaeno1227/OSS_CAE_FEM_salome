@@ -48,6 +48,34 @@ typedef struct ChronoConstraint2DBatchConfig_C {
     int enable_parallel;
 } ChronoConstraint2DBatchConfig_C;
 
+typedef struct ChronoConstraint2DBatchWorkspace_C {
+    int *island_ids;
+    size_t island_ids_capacity;
+    size_t *island_sizes;
+    size_t island_sizes_capacity;
+    size_t *island_offsets;
+    size_t island_offsets_capacity;
+    size_t *ordered_indices;
+    size_t ordered_indices_capacity;
+    ChronoConstraint2DBase_C **constraint_buffer;
+    size_t constraint_buffer_capacity;
+} ChronoConstraint2DBatchWorkspace_C;
+
+/*
+ * ワークスペースAPIの使い方:
+ *   ChronoConstraint2DBatchWorkspace_C workspace;
+ *   chrono_constraint2d_workspace_init(&workspace);
+ *   while (running) {
+ *       chrono_constraint2d_workspace_reset(&workspace);
+ *       chrono_constraint2d_batch_solve(..., &workspace);
+ *   }
+ *   chrono_constraint2d_workspace_free(&workspace);
+ */
+
+void chrono_constraint2d_workspace_init(ChronoConstraint2DBatchWorkspace_C *workspace);
+void chrono_constraint2d_workspace_reset(ChronoConstraint2DBatchWorkspace_C *workspace);
+void chrono_constraint2d_workspace_free(ChronoConstraint2DBatchWorkspace_C *workspace);
+
 size_t chrono_constraint2d_build_islands(ChronoConstraint2DBase_C **constraints,
                                          size_t count,
                                          int *island_ids);
@@ -59,7 +87,8 @@ void chrono_constraint2d_solve_position(ChronoConstraint2DBase_C *constraint);
 void chrono_constraint2d_batch_solve(ChronoConstraint2DBase_C **constraints,
                                      size_t count,
                                      double dt,
-                                     const ChronoConstraint2DBatchConfig_C *config);
+                                     const ChronoConstraint2DBatchConfig_C *config,
+                                     ChronoConstraint2DBatchWorkspace_C *workspace);
 
 void chrono_distance_constraint2d_init(ChronoDistanceConstraint2D_C *constraint,
                                        ChronoBody2D_C *body_a,

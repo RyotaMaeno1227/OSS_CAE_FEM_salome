@@ -1,6 +1,7 @@
 #include "../include/chrono_constraint2d.h"
 
 #include <math.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -57,6 +58,56 @@ static void apply_impulse(ChronoBody2D_C *body, const double impulse[2], const d
     body->angular_velocity += angular_impulse * body->inverse_inertia;
 }
 
+typedef struct ChronoConstraintBodyMapEntry {
+    ChronoBody2D_C *key;
+    int value;
+} ChronoConstraintBodyMapEntry;
+
+void chrono_constraint2d_workspace_init(ChronoConstraint2DBatchWorkspace_C *workspace) {
+    if (!workspace) {
+        return;
+    }
+    memset(workspace, 0, sizeof(*workspace));
+}
+
+void chrono_constraint2d_workspace_reset(ChronoConstraint2DBatchWorkspace_C *workspace) {
+    if (!workspace) {
+        return;
+    }
+    for (size_t i = 0; i < workspace->island_ids_capacity; ++i) {
+        workspace->island_ids[i] = 0;
+    }
+    for (size_t i = 0; i < workspace->island_sizes_capacity; ++i) {
+        workspace->island_sizes[i] = 0;
+    }
+    for (size_t i = 0; i < workspace->island_offsets_capacity; ++i) {
+        workspace->island_offsets[i] = 0;
+    }
+    for (size_t i = 0; i < workspace->ordered_indices_capacity; ++i) {
+        workspace->ordered_indices[i] = 0;
+    }
+    for (size_t i = 0; i < workspace->constraint_buffer_capacity; ++i) {
+        workspace->constraint_buffer[i] = NULL;
+    }
+}
+
+void chrono_constraint2d_workspace_free(ChronoConstraint2DBatchWorkspace_C *workspace) {
+    if (!workspace) {
+        return;
+    }
+    free(workspace->island_ids);
+    free(workspace->island_sizes);
+    free(workspace->island_offsets);
+    free(workspace->ordered_indices);
+    free(workspace->constraint_buffer);
+    chrono_constraint2d_workspace_init(workspace);
+}
+
+static size_t chrono_constraint2d_hash_body(const ChronoBody2D_C *body) {
+    uintptr_t ptr = (uintptr_t)body;
+    return (ptr >> 4) ^ (ptr >> 9);
+}
+
 static int chrono_constraint2d_find_root(int *parent, int idx) {
     while (parent[idx] != idx) {
         parent[idx] = parent[parent[idx]];
@@ -84,6 +135,37 @@ static void chrono_constraint2d_union(int *parent, int *rank, int a, int b) {
     }
 }
 
+static int chrono_constraint2d_body_lookup_or_add(ChronoConstraintBodyMapEntry *map,
+                                                  size_t capacity_mask,
+                                                  ChronoBody2D_C **body_nodes,
+                                                  int *parent,
+                                                  int *rank,
+                                                  size_t *unique_bodies,
+                                                  ChronoBody2D_C *body) {
+    if (!body) {
+        return -1;
+    }
+    size_t mask = capacity_mask;
+    size_t idx = chrono_constraint2d_hash_body(body) & mask;
+    while (1) {
+        ChronoConstraintBodyMapEntry *entry = &map[idx];
+        if (!entry->key) {
+            int new_index = (int)(*unique_bodies);
+            entry->key = body;
+            entry->value = new_index;
+            body_nodes[*unique_bodies] = body;
+            parent[*unique_bodies] = new_index;
+            rank[*unique_bodies] = 0;
+            (*unique_bodies)++;
+            return new_index;
+        }
+        if (entry->key == body) {
+            return entry->value;
+        }
+        idx = (idx + 1) & mask;
+    }
+}
+
 size_t chrono_constraint2d_build_islands(ChronoConstraint2DBase_C **constraints,
                                          size_t count,
                                          int *island_ids) {
@@ -92,12 +174,23 @@ size_t chrono_constraint2d_build_islands(ChronoConstraint2DBase_C **constraints,
     }
 
     size_t max_bodies = count * 2;
+    if (max_bodies == 0) {
+        return 0;
+    }
+
+    size_t map_capacity = 1;
+    while (map_capacity < max_bodies * 2) {
+        map_capacity <<= 1;
+    }
+
+    ChronoConstraintBodyMapEntry *map = (ChronoConstraintBodyMapEntry *)calloc(map_capacity, sizeof(ChronoConstraintBodyMapEntry));
     ChronoBody2D_C **body_nodes = (ChronoBody2D_C **)malloc(max_bodies * sizeof(ChronoBody2D_C *));
     int *parent = (int *)malloc(max_bodies * sizeof(int));
-    int *rank = (int *)calloc(max_bodies, sizeof(int));
+    int *rank = (int *)malloc(max_bodies * sizeof(int));
     int *constraint_body_indices = (int *)malloc(count * 2 * sizeof(int));
 
-    if (!body_nodes || !parent || !rank || !constraint_body_indices) {
+    if (!map || !body_nodes || !parent || !rank || !constraint_body_indices) {
+        free(map);
         free(body_nodes);
         free(parent);
         free(rank);
@@ -112,44 +205,20 @@ size_t chrono_constraint2d_build_islands(ChronoConstraint2DBase_C **constraints,
         ChronoBody2D_C *body_a = constraint ? constraint->body_a : NULL;
         ChronoBody2D_C *body_b = constraint ? constraint->body_b : NULL;
 
-        int idx_a = -1;
-        int idx_b = -1;
-
-        if (body_a) {
-            int found = -1;
-            for (size_t j = 0; j < unique_bodies; ++j) {
-                if (body_nodes[j] == body_a) {
-                    found = (int)j;
-                    break;
-                }
-            }
-            if (found < 0) {
-                found = (int)unique_bodies;
-                body_nodes[unique_bodies] = body_a;
-                parent[unique_bodies] = (int)unique_bodies;
-                rank[unique_bodies] = 0;
-                unique_bodies++;
-            }
-            idx_a = found;
-        }
-
-        if (body_b) {
-            int found = -1;
-            for (size_t j = 0; j < unique_bodies; ++j) {
-                if (body_nodes[j] == body_b) {
-                    found = (int)j;
-                    break;
-                }
-            }
-            if (found < 0) {
-                found = (int)unique_bodies;
-                body_nodes[unique_bodies] = body_b;
-                parent[unique_bodies] = (int)unique_bodies;
-                rank[unique_bodies] = 0;
-                unique_bodies++;
-            }
-            idx_b = found;
-        }
+        int idx_a = chrono_constraint2d_body_lookup_or_add(map,
+                                                           map_capacity - 1,
+                                                           body_nodes,
+                                                           parent,
+                                                           rank,
+                                                           &unique_bodies,
+                                                           body_a);
+        int idx_b = chrono_constraint2d_body_lookup_or_add(map,
+                                                           map_capacity - 1,
+                                                           body_nodes,
+                                                           parent,
+                                                           rank,
+                                                           &unique_bodies,
+                                                           body_b);
 
         constraint_body_indices[2 * i] = idx_a;
         constraint_body_indices[2 * i + 1] = idx_b;
@@ -192,6 +261,7 @@ size_t chrono_constraint2d_build_islands(ChronoConstraint2DBase_C **constraints,
     }
 
     free(root_to_island);
+    free(map);
     free(body_nodes);
     free(parent);
     free(rank);
@@ -486,7 +556,8 @@ void chrono_constraint2d_solve_position(ChronoConstraint2DBase_C *constraint) {
 void chrono_constraint2d_batch_solve(ChronoConstraint2DBase_C **constraints,
                                      size_t count,
                                      double dt,
-                                     const ChronoConstraint2DBatchConfig_C *config) {
+                                     const ChronoConstraint2DBatchConfig_C *config,
+                                     ChronoConstraint2DBatchWorkspace_C *workspace) {
     if (!constraints || count == 0) {
         return;
     }
@@ -513,12 +584,28 @@ void chrono_constraint2d_batch_solve(ChronoConstraint2DBase_C **constraints,
     size_t *island_sizes = NULL;
     size_t *island_offsets = NULL;
     size_t *ordered_indices = NULL;
+    int external_workspace = 0;
     size_t island_count = 0;
 
     if (use_parallel) {
-        island_ids = (int *)malloc(count * sizeof(int));
-        if (!island_ids) {
-            use_parallel = 0;
+        if (workspace && workspace->island_ids_capacity >= count) {
+            island_ids = workspace->island_ids;
+            external_workspace = 1;
+        } else if (workspace) {
+            int *new_ids = (int *)realloc(workspace->island_ids, count * sizeof(int));
+            if (!new_ids) {
+                use_parallel = 0;
+            } else {
+                workspace->island_ids = new_ids;
+                workspace->island_ids_capacity = count;
+                island_ids = workspace->island_ids;
+                external_workspace = 1;
+            }
+        } else {
+            island_ids = (int *)malloc(count * sizeof(int));
+            if (!island_ids) {
+                use_parallel = 0;
+            }
         }
     }
 
@@ -530,45 +617,117 @@ void chrono_constraint2d_batch_solve(ChronoConstraint2DBase_C **constraints,
     }
 
     if (use_parallel) {
-        island_sizes = (size_t *)calloc(island_count, sizeof(size_t));
-        island_offsets = (size_t *)malloc(island_count * sizeof(size_t));
-        ordered_indices = (size_t *)malloc(count * sizeof(size_t));
-        size_t *cursor = (size_t *)calloc(island_count, sizeof(size_t));
-        if (!island_sizes || !island_offsets || !ordered_indices || !cursor) {
-            free(island_sizes);
-            free(island_offsets);
-            free(ordered_indices);
-            free(cursor);
-            use_parallel = 0;
+        size_t need_island = island_count;
+        size_t need_constraints = count;
+
+        if (workspace) {
+            if (workspace->island_sizes_capacity < need_island) {
+                size_t *new_sizes = (size_t *)realloc(workspace->island_sizes, sizeof(size_t) * need_island);
+                if (!new_sizes) {
+                    use_parallel = 0;
+                } else {
+                    workspace->island_sizes = new_sizes;
+                    workspace->island_sizes_capacity = need_island;
+                }
+            }
+            if (workspace->island_offsets_capacity < need_island) {
+                size_t *new_offsets = (size_t *)realloc(workspace->island_offsets, sizeof(size_t) * need_island);
+                if (!new_offsets) {
+                    use_parallel = 0;
+                } else {
+                    workspace->island_offsets = new_offsets;
+                    workspace->island_offsets_capacity = need_island;
+                }
+            }
+            if (workspace->ordered_indices_capacity < need_constraints) {
+                size_t *new_ordered = (size_t *)realloc(workspace->ordered_indices, sizeof(size_t) * need_constraints);
+                if (!new_ordered) {
+                    use_parallel = 0;
+                } else {
+                    workspace->ordered_indices = new_ordered;
+                    workspace->ordered_indices_capacity = need_constraints;
+                }
+            }
         } else {
+            island_sizes = (size_t *)calloc(need_island, sizeof(size_t));
+            island_offsets = (size_t *)malloc(need_island * sizeof(size_t));
+            ordered_indices = (size_t *)malloc(need_constraints * sizeof(size_t));
+            size_t *cursor = (size_t *)calloc(need_island, sizeof(size_t));
+            if (!island_sizes || !island_offsets || !ordered_indices || !cursor) {
+                free(island_sizes);
+                free(island_offsets);
+                free(ordered_indices);
+                free(cursor);
+                use_parallel = 0;
+            } else {
+                for (size_t i = 0; i < count; ++i) {
+                    int island = island_ids[i];
+                    if (island >= 0) {
+                        island_sizes[island]++;
+                    }
+                }
+                size_t offset = 0;
+                for (size_t island = 0; island < island_count; ++island) {
+                    island_offsets[island] = offset;
+                    offset += island_sizes[island];
+                }
+                for (size_t i = 0; i < count; ++i) {
+                    int island = island_ids[i];
+                    if (island >= 0) {
+                        size_t pos = island_offsets[island] + cursor[island];
+                        ordered_indices[pos] = i;
+                        cursor[island] += 1;
+                    }
+                }
+                free(cursor);
+            }
+        }
+    }
+
+    if (use_parallel && workspace) {
+        if (!island_sizes) {
+            island_sizes = workspace->island_sizes;
+            memset(island_sizes, 0, sizeof(size_t) * workspace->island_sizes_capacity);
             for (size_t i = 0; i < count; ++i) {
                 int island = island_ids[i];
                 if (island >= 0) {
                     island_sizes[island]++;
                 }
             }
+        }
+        if (!island_offsets) {
+            island_offsets = workspace->island_offsets;
             size_t offset = 0;
             for (size_t island = 0; island < island_count; ++island) {
                 island_offsets[island] = offset;
                 offset += island_sizes[island];
             }
+        }
+        if (!ordered_indices) {
+            ordered_indices = workspace->ordered_indices;
+            memset(ordered_indices, 0, sizeof(size_t) * workspace->ordered_indices_capacity);
+            memset(workspace->island_sizes, 0, sizeof(size_t) * workspace->island_sizes_capacity);
             for (size_t i = 0; i < count; ++i) {
                 int island = island_ids[i];
                 if (island >= 0) {
-                    size_t pos = island_offsets[island] + cursor[island];
+                    size_t pos = island_offsets[island] + workspace->island_sizes[island];
                     ordered_indices[pos] = i;
-                    cursor[island] += 1;
+                    workspace->island_sizes[island]++;
                 }
             }
-            free(cursor);
+            memcpy(workspace->island_sizes, island_sizes, sizeof(size_t) * island_count);
         }
     }
 
     if (!use_parallel) {
-        free(island_ids);
-        free(island_sizes);
-        free(island_offsets);
-        free(ordered_indices);
+        if (!external_workspace) {
+            free(island_ids);
+        }
+        if (!workspace) {
+            free(island_sizes);
+            free(island_offsets);
+            free(ordered_indices);
+        }
 
         if (dt > 0.0) {
             for (size_t i = 0; i < count; ++i) {
@@ -648,10 +807,14 @@ void chrono_constraint2d_batch_solve(ChronoConstraint2DBase_C **constraints,
         }
     }
 
-    free(island_ids);
-    free(island_sizes);
-    free(island_offsets);
-    free(ordered_indices);
+    if (!external_workspace) {
+        free(island_ids);
+    }
+    if (!workspace) {
+        free(island_sizes);
+        free(island_offsets);
+        free(ordered_indices);
+    }
 }
 
 void chrono_distance_constraint2d_prepare(ChronoDistanceConstraint2D_C *constraint, double dt) {
