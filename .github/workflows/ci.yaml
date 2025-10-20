@@ -26,4 +26,10 @@ jobs:
       - name: Run island solver benchmark
         working-directory: chrono-C-all
         run: |
-          make bench
+          make bench | tee bench.log
+
+      - name: Upload bench log
+        uses: actions/upload-artifact@v4
+        with:
+          name: island-solver-bench
+          path: chrono-C-all/bench.log
