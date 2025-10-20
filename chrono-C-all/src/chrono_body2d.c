@@ -19,6 +19,8 @@ void chrono_body2d_init(ChronoBody2D_C *body) {
     body->inverse_inertia = 0.0;
     body->is_static = 1;
     body->circle_radius = 0.0;
+    body->shape_type = CHRONO_BODY2D_SHAPE_NONE;
+    body->polygon_vertex_count = 0;
     body->restitution = 0.0;
     body->friction_static = 0.0;
     body->friction_dynamic = 0.0;
@@ -122,6 +124,8 @@ void chrono_body2d_set_circle_shape(ChronoBody2D_C *body, double radius) {
         return;
     }
     body->circle_radius = (radius > 0.0) ? radius : 0.0;
+    body->shape_type = CHRONO_BODY2D_SHAPE_CIRCLE;
+    body->polygon_vertex_count = 0;
 }
 
 double chrono_body2d_get_circle_radius(const ChronoBody2D_C *body) {
@@ -129,6 +133,41 @@ double chrono_body2d_get_circle_radius(const ChronoBody2D_C *body) {
         return 0.0;
     }
     return body->circle_radius;
+}
+
+int chrono_body2d_set_polygon_shape(ChronoBody2D_C *body, const double *vertices, size_t vertex_count) {
+    if (!body || !vertices || vertex_count < 3 || vertex_count > CHRONO_BODY2D_MAX_POLYGON_VERTICES) {
+        return 0;
+    }
+    for (size_t i = 0; i < vertex_count; ++i) {
+        body->polygon_vertices[i][0] = vertices[2 * i];
+        body->polygon_vertices[i][1] = vertices[2 * i + 1];
+    }
+    body->polygon_vertex_count = vertex_count;
+    body->shape_type = CHRONO_BODY2D_SHAPE_POLYGON;
+    body->circle_radius = 0.0;
+    return 1;
+}
+
+size_t chrono_body2d_get_polygon_vertex_count(const ChronoBody2D_C *body) {
+    if (!body || body->shape_type != CHRONO_BODY2D_SHAPE_POLYGON) {
+        return 0;
+    }
+    return body->polygon_vertex_count;
+}
+
+const double *chrono_body2d_get_polygon_vertices(const ChronoBody2D_C *body) {
+    if (!body || body->shape_type != CHRONO_BODY2D_SHAPE_POLYGON || body->polygon_vertex_count == 0) {
+        return NULL;
+    }
+    return &body->polygon_vertices[0][0];
+}
+
+ChronoBody2DShapeType_C chrono_body2d_get_shape_type(const ChronoBody2D_C *body) {
+    if (!body) {
+        return CHRONO_BODY2D_SHAPE_NONE;
+    }
+    return (ChronoBody2DShapeType_C)body->shape_type;
 }
 
 void chrono_body2d_set_restitution(ChronoBody2D_C *body, double restitution) {

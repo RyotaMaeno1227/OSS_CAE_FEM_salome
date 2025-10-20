@@ -21,6 +21,9 @@ typedef struct ChronoBody2D_C {
     double restitution;
     double friction_static;
     double friction_dynamic;
+    int shape_type;
+    size_t polygon_vertex_count;
+    double polygon_vertices[16][2];
 } ChronoBody2D_C;
 
 typedef struct ChronoMaterial2D_C {
@@ -28,6 +31,14 @@ typedef struct ChronoMaterial2D_C {
     double friction_static;
     double friction_dynamic;
 } ChronoMaterial2D_C;
+
+#define CHRONO_BODY2D_MAX_POLYGON_VERTICES 16
+
+typedef enum ChronoBody2DShapeType_C {
+    CHRONO_BODY2D_SHAPE_NONE = 0,
+    CHRONO_BODY2D_SHAPE_CIRCLE = 1,
+    CHRONO_BODY2D_SHAPE_POLYGON = 2
+} ChronoBody2DShapeType_C;
 
 void chrono_body2d_init(ChronoBody2D_C *body);
 void chrono_body2d_set_mass(ChronoBody2D_C *body, double mass, double inertia);
@@ -41,6 +52,10 @@ void chrono_body2d_world_to_local(const ChronoBody2D_C *body, const double world
 void chrono_body2d_reset_forces(ChronoBody2D_C *body);
 void chrono_body2d_set_circle_shape(ChronoBody2D_C *body, double radius);
 double chrono_body2d_get_circle_radius(const ChronoBody2D_C *body);
+int chrono_body2d_set_polygon_shape(ChronoBody2D_C *body, const double *vertices, size_t vertex_count);
+size_t chrono_body2d_get_polygon_vertex_count(const ChronoBody2D_C *body);
+const double *chrono_body2d_get_polygon_vertices(const ChronoBody2D_C *body);
+ChronoBody2DShapeType_C chrono_body2d_get_shape_type(const ChronoBody2D_C *body);
 void chrono_body2d_set_restitution(ChronoBody2D_C *body, double restitution);
 double chrono_body2d_get_restitution(const ChronoBody2D_C *body);
 void chrono_body2d_set_friction_static(ChronoBody2D_C *body, double mu_s);

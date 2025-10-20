@@ -1,5 +1,6 @@
 #include "../include/chrono_collision2d.h"
 
+#include <float.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,6 +21,81 @@ static double clamp(double value, double min_val, double max_val) {
         return max_val;
     }
     return value;
+}
+
+static void normalize2(double v[2]) {
+    double len = sqrt(v[0] * v[0] + v[1] * v[1]);
+    if (len > 1e-12) {
+        v[0] /= len;
+        v[1] /= len;
+    }
+}
+
+static void perpendicular2(const double v[2], double out[2]) {
+    out[0] = v[1];
+    out[1] = -v[0];
+}
+
+static void polygon_to_world(const ChronoBody2D_C *body, double (*out_vertices)[2]) {
+    size_t count = chrono_body2d_get_polygon_vertex_count(body);
+    const double *local_vertices = chrono_body2d_get_polygon_vertices(body);
+    if (!local_vertices) {
+        return;
+    }
+    double c = cos(body->angle);
+    double s = sin(body->angle);
+    for (size_t i = 0; i < count; ++i) {
+        double lx = local_vertices[2 * i];
+        double ly = local_vertices[2 * i + 1];
+        double wx = c * lx - s * ly + body->position[0];
+        double wy = s * lx + c * ly + body->position[1];
+        out_vertices[i][0] = wx;
+        out_vertices[i][1] = wy;
+    }
+}
+
+static void polygon_face_normals(const double (*vertices)[2], size_t count, double (*normals)[2]) {
+    for (size_t i = 0; i < count; ++i) {
+        const double *a = vertices[i];
+        const double *b = vertices[(i + 1) % count];
+        double edge[2] = {b[0] - a[0], b[1] - a[1]};
+        double normal[2];
+        perpendicular2(edge, normal);
+        normalize2(normal);
+        normals[i][0] = normal[0];
+        normals[i][1] = normal[1];
+    }
+}
+
+static void project_polygon(const double (*vertices)[2], size_t count, const double axis[2], double *min, double *max) {
+    double projection = dot2(vertices[0], axis);
+    double min_val = projection;
+    double max_val = projection;
+    for (size_t i = 1; i < count; ++i) {
+        projection = dot2(vertices[i], axis);
+        if (projection < min_val) {
+            min_val = projection;
+        }
+        if (projection > max_val) {
+            max_val = projection;
+        }
+    }
+    *min = min_val;
+    *max = max_val;
+}
+
+static void support_polygon(const double (*vertices)[2], size_t count, const double axis[2], double out[2]) {
+    double best = dot2(vertices[0], axis);
+    out[0] = vertices[0][0];
+    out[1] = vertices[0][1];
+    for (size_t i = 1; i < count; ++i) {
+        double projection = dot2(vertices[i], axis);
+        if (projection > best) {
+            best = projection;
+            out[0] = vertices[i][0];
+            out[1] = vertices[i][1];
+        }
+    }
 }
 
 int chrono_collision2d_detect_circle_circle(const ChronoBody2D_C *body_a,
@@ -62,17 +138,218 @@ int chrono_collision2d_detect_circle_circle(const ChronoBody2D_C *body_a,
     return 0;
 }
 
+int chrono_collision2d_detect_circle_polygon(const ChronoBody2D_C *circle_body,
+                                             const ChronoBody2D_C *polygon_body,
+                                             ChronoContact2D_C *contact) {
+    if (!circle_body || !polygon_body || !contact) {
+        return -1;
+    }
+    if (chrono_body2d_get_shape_type(circle_body) != CHRONO_BODY2D_SHAPE_CIRCLE ||
+        chrono_body2d_get_shape_type(polygon_body) != CHRONO_BODY2D_SHAPE_POLYGON) {
+        return -1;
+    }
+    size_t vertex_count = chrono_body2d_get_polygon_vertex_count(polygon_body);
+    if (vertex_count < 3) {
+        return -1;
+    }
+    memset(contact, 0, sizeof(*contact));
+
+    double polygon_vertices[CHRONO_BODY2D_MAX_POLYGON_VERTICES][2];
+    double normals[CHRONO_BODY2D_MAX_POLYGON_VERTICES][2];
+    polygon_to_world(polygon_body, polygon_vertices);
+    const double (*poly_ptr)[2] = (const double (*)[2])polygon_vertices;
+    polygon_face_normals(poly_ptr, vertex_count, normals);
+
+    double best_axis[2] = {0.0, 0.0};
+    double best_overlap = DBL_MAX;
+    double circle_center[2] = {circle_body->position[0], circle_body->position[1]};
+    double circle_radius = chrono_body2d_get_circle_radius(circle_body);
+    if (circle_radius <= 0.0) {
+        return -1;
+    }
+
+    for (size_t i = 0; i < vertex_count; ++i) {
+        double axis[2] = {normals[i][0], normals[i][1]};
+        double min_poly, max_poly;
+        project_polygon(poly_ptr, vertex_count, axis, &min_poly, &max_poly);
+        double center_proj = dot2(circle_center, axis);
+        double min_circle = center_proj - circle_radius;
+        double max_circle = center_proj + circle_radius;
+        double overlap = fmin(max_poly, max_circle) - fmax(min_poly, min_circle);
+        if (overlap <= 0.0) {
+            contact->has_contact = 0;
+            return 0;
+        }
+        if (overlap < best_overlap) {
+            best_overlap = overlap;
+            best_axis[0] = axis[0];
+            best_axis[1] = axis[1];
+        }
+    }
+
+    size_t closest_index = 0;
+    double closest_dist2 = DBL_MAX;
+    for (size_t i = 0; i < vertex_count; ++i) {
+        double dx = circle_center[0] - polygon_vertices[i][0];
+        double dy = circle_center[1] - polygon_vertices[i][1];
+        double dist2 = dx * dx + dy * dy;
+        if (dist2 < closest_dist2) {
+            closest_dist2 = dist2;
+            closest_index = i;
+        }
+    }
+    if (closest_dist2 > 1e-12) {
+        double axis[2] = {circle_center[0] - polygon_vertices[closest_index][0],
+                          circle_center[1] - polygon_vertices[closest_index][1]};
+        normalize2(axis);
+        double min_poly, max_poly;
+        project_polygon(poly_ptr, vertex_count, axis, &min_poly, &max_poly);
+        double center_proj = dot2(circle_center, axis);
+        double min_circle = center_proj - circle_radius;
+        double max_circle = center_proj + circle_radius;
+        double overlap = fmin(max_poly, max_circle) - fmax(min_poly, min_circle);
+        if (overlap <= 0.0) {
+            contact->has_contact = 0;
+            return 0;
+        }
+        if (overlap < best_overlap) {
+            best_overlap = overlap;
+            best_axis[0] = axis[0];
+            best_axis[1] = axis[1];
+        }
+    }
+
+    if (best_overlap == DBL_MAX) {
+        contact->has_contact = 0;
+        return 0;
+    }
+
+    double to_polygon[2] = {polygon_body->position[0] - circle_body->position[0],
+                            polygon_body->position[1] - circle_body->position[1]};
+    if (dot2(to_polygon, best_axis) < 0.0) {
+        best_axis[0] = -best_axis[0];
+        best_axis[1] = -best_axis[1];
+    }
+
+    double circle_point[2] = {circle_center[0] + best_axis[0] * circle_radius,
+                              circle_center[1] + best_axis[1] * circle_radius};
+    double polygon_point[2];
+    double negative_axis[2] = {-best_axis[0], -best_axis[1]};
+    support_polygon(poly_ptr, vertex_count, negative_axis, polygon_point);
+
+    contact->normal[0] = best_axis[0];
+    contact->normal[1] = best_axis[1];
+    contact->contact_point[0] = 0.5 * (circle_point[0] + polygon_point[0]);
+    contact->contact_point[1] = 0.5 * (circle_point[1] + polygon_point[1]);
+    contact->penetration = best_overlap;
+    contact->has_contact = 1;
+    return 0;
+}
+
+int chrono_collision2d_detect_polygon_circle(const ChronoBody2D_C *polygon_body,
+                                             const ChronoBody2D_C *circle_body,
+                                             ChronoContact2D_C *contact) {
+    return chrono_collision2d_detect_circle_polygon(circle_body, polygon_body, contact);
+}
+
+int chrono_collision2d_detect_polygon_polygon(const ChronoBody2D_C *body_a,
+                                              const ChronoBody2D_C *body_b,
+                                              ChronoContact2D_C *contact) {
+    if (!body_a || !body_b || !contact) {
+        return -1;
+    }
+    if (chrono_body2d_get_shape_type(body_a) != CHRONO_BODY2D_SHAPE_POLYGON ||
+        chrono_body2d_get_shape_type(body_b) != CHRONO_BODY2D_SHAPE_POLYGON) {
+        return -1;
+    }
+    size_t count_a = chrono_body2d_get_polygon_vertex_count(body_a);
+    size_t count_b = chrono_body2d_get_polygon_vertex_count(body_b);
+    if (count_a < 3 || count_b < 3) {
+        return -1;
+    }
+    memset(contact, 0, sizeof(*contact));
+
+    double vertices_a[CHRONO_BODY2D_MAX_POLYGON_VERTICES][2];
+    double vertices_b[CHRONO_BODY2D_MAX_POLYGON_VERTICES][2];
+    double normals_a[CHRONO_BODY2D_MAX_POLYGON_VERTICES][2];
+    double normals_b[CHRONO_BODY2D_MAX_POLYGON_VERTICES][2];
+
+    polygon_to_world(body_a, vertices_a);
+    polygon_to_world(body_b, vertices_b);
+    const double (*verts_a_ptr)[2] = (const double (*)[2])vertices_a;
+    const double (*verts_b_ptr)[2] = (const double (*)[2])vertices_b;
+    polygon_face_normals(verts_a_ptr, count_a, normals_a);
+    polygon_face_normals(verts_b_ptr, count_b, normals_b);
+
+    double best_axis[2] = {0.0, 0.0};
+    double best_overlap = DBL_MAX;
+
+    for (size_t i = 0; i < count_a; ++i) {
+        double axis[2] = {normals_a[i][0], normals_a[i][1]};
+        double min_a, max_a, min_b, max_b;
+        project_polygon(verts_a_ptr, count_a, axis, &min_a, &max_a);
+        project_polygon(verts_b_ptr, count_b, axis, &min_b, &max_b);
+        double overlap = fmin(max_a, max_b) - fmax(min_a, min_b);
+        if (overlap <= 0.0) {
+            contact->has_contact = 0;
+            return 0;
+        }
+        if (overlap < best_overlap) {
+            best_overlap = overlap;
+            best_axis[0] = axis[0];
+            best_axis[1] = axis[1];
+        }
+    }
+
+    for (size_t i = 0; i < count_b; ++i) {
+        double axis[2] = {normals_b[i][0], normals_b[i][1]};
+        double min_a, max_a, min_b, max_b;
+        project_polygon(verts_a_ptr, count_a, axis, &min_a, &max_a);
+        project_polygon(verts_b_ptr, count_b, axis, &min_b, &max_b);
+        double overlap = fmin(max_a, max_b) - fmax(min_a, min_b);
+        if (overlap <= 0.0) {
+            contact->has_contact = 0;
+            return 0;
+        }
+        if (overlap < best_overlap) {
+            best_overlap = overlap;
+            best_axis[0] = axis[0];
+            best_axis[1] = axis[1];
+        }
+    }
+
+    double to_b[2] = {body_b->position[0] - body_a->position[0],
+                      body_b->position[1] - body_a->position[1]};
+    if (dot2(to_b, best_axis) < 0.0) {
+        best_axis[0] = -best_axis[0];
+        best_axis[1] = -best_axis[1];
+    }
+
+    double point_a[2];
+    double point_b[2];
+    support_polygon(verts_a_ptr, count_a, best_axis, point_a);
+    double negative_axis[2] = {-best_axis[0], -best_axis[1]};
+    support_polygon(verts_b_ptr, count_b, negative_axis, point_b);
+
+    contact->normal[0] = best_axis[0];
+    contact->normal[1] = best_axis[1];
+    contact->contact_point[0] = 0.5 * (point_a[0] + point_b[0]);
+    contact->contact_point[1] = 0.5 * (point_a[1] + point_b[1]);
+    contact->penetration = best_overlap;
+    contact->has_contact = 1;
+    return 0;
+}
 static double cross2(const double a[2], const double b[2]) {
     return a[0] * b[1] - a[1] * b[0];
 }
 
-int chrono_collision2d_resolve_circle_circle(ChronoBody2D_C *body_a,
-                                             ChronoBody2D_C *body_b,
-                                             const ChronoContact2D_C *contact,
-                                             double restitution,
-                                             double friction_static,
-                                             double friction_dynamic,
-                                             ChronoContactManifold2D_C *manifold) {
+int chrono_collision2d_resolve_contact(ChronoBody2D_C *body_a,
+                                       ChronoBody2D_C *body_b,
+                                       const ChronoContact2D_C *contact,
+                                       double restitution,
+                                       double friction_static,
+                                       double friction_dynamic,
+                                       ChronoContactManifold2D_C *manifold) {
     if (!body_a || !body_b || !contact || !contact->has_contact) {
         return -1;
     }
@@ -265,6 +542,55 @@ int chrono_collision2d_resolve_circle_circle(ChronoBody2D_C *body_a,
 
     return 0;
 }
+
+int chrono_collision2d_resolve_circle_circle(ChronoBody2D_C *body_a,
+                                             ChronoBody2D_C *body_b,
+                                             const ChronoContact2D_C *contact,
+                                             double restitution,
+                                             double friction_static,
+                                             double friction_dynamic,
+                                             ChronoContactManifold2D_C *manifold) {
+    return chrono_collision2d_resolve_contact(body_a,
+                                              body_b,
+                                              contact,
+                                              restitution,
+                                              friction_static,
+                                              friction_dynamic,
+                                              manifold);
+}
+
+int chrono_collision2d_resolve_polygon_polygon(ChronoBody2D_C *body_a,
+                                               ChronoBody2D_C *body_b,
+                                               const ChronoContact2D_C *contact,
+                                               double restitution,
+                                               double friction_static,
+                                               double friction_dynamic,
+                                               ChronoContactManifold2D_C *manifold) {
+    return chrono_collision2d_resolve_contact(body_a,
+                                              body_b,
+                                              contact,
+                                              restitution,
+                                              friction_static,
+                                              friction_dynamic,
+                                              manifold);
+}
+
+int chrono_collision2d_resolve_circle_polygon(ChronoBody2D_C *circle_body,
+                                              ChronoBody2D_C *polygon_body,
+                                              const ChronoContact2D_C *contact,
+                                              double restitution,
+                                              double friction_static,
+                                              double friction_dynamic,
+                                              ChronoContactManifold2D_C *manifold) {
+    return chrono_collision2d_resolve_contact(circle_body,
+                                              polygon_body,
+                                              contact,
+                                              restitution,
+                                              friction_static,
+                                              friction_dynamic,
+                                              manifold);
+}
+
 void chrono_contact_manifold2d_init(ChronoContactManifold2D_C *manifold) {
     if (!manifold) {
         return;
@@ -491,10 +817,10 @@ ChronoContactManifold2D_C *chrono_contact_manager2d_get_manifold(ChronoContactMa
     return &pair->manifold;
 }
 
-ChronoContactPoint2D_C *chrono_contact_manager2d_update_circle_circle(ChronoContactManager2D_C *manager,
-                                                                      ChronoBody2D_C *body_a,
-                                                                      ChronoBody2D_C *body_b,
-                                                                      const ChronoContact2D_C *contact) {
+static ChronoContactPoint2D_C *chrono_contact_manager2d_update_pair(ChronoContactManager2D_C *manager,
+                                                                    ChronoBody2D_C *body_a,
+                                                                    ChronoBody2D_C *body_b,
+                                                                    const ChronoContact2D_C *contact) {
     ChronoContactManifold2D_C *manifold = chrono_contact_manager2d_get_manifold(manager, body_a, body_b);
     if (!manifold) {
         return NULL;
@@ -508,4 +834,18 @@ ChronoContactPoint2D_C *chrono_contact_manager2d_update_circle_circle(ChronoCont
     manifold->combined_friction_static = mu_s;
     manifold->combined_friction_dynamic = mu_d;
     return chrono_contact_manifold2d_add_or_update(manifold, contact);
+}
+
+ChronoContactPoint2D_C *chrono_contact_manager2d_update_circle_circle(ChronoContactManager2D_C *manager,
+                                                                      ChronoBody2D_C *body_a,
+                                                                      ChronoBody2D_C *body_b,
+                                                                      const ChronoContact2D_C *contact) {
+    return chrono_contact_manager2d_update_pair(manager, body_a, body_b, contact);
+}
+
+ChronoContactPoint2D_C *chrono_contact_manager2d_update_contact(ChronoContactManager2D_C *manager,
+                                                                ChronoBody2D_C *body_a,
+                                                                ChronoBody2D_C *body_b,
+                                                                const ChronoContact2D_C *contact) {
+    return chrono_contact_manager2d_update_pair(manager, body_a, body_b, contact);
 }

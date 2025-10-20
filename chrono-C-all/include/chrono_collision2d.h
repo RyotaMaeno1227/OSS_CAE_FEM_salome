@@ -72,10 +72,23 @@ ChronoContactPoint2D_C *chrono_contact_manager2d_update_circle_circle(ChronoCont
                                                                       ChronoBody2D_C *body_a,
                                                                       ChronoBody2D_C *body_b,
                                                                       const ChronoContact2D_C *contact);
+ChronoContactPoint2D_C *chrono_contact_manager2d_update_contact(ChronoContactManager2D_C *manager,
+                                                                ChronoBody2D_C *body_a,
+                                                                ChronoBody2D_C *body_b,
+                                                                const ChronoContact2D_C *contact);
 
 int chrono_collision2d_detect_circle_circle(const ChronoBody2D_C *body_a,
                                             const ChronoBody2D_C *body_b,
                                             ChronoContact2D_C *contact);
+int chrono_collision2d_detect_circle_polygon(const ChronoBody2D_C *circle_body,
+                                             const ChronoBody2D_C *polygon_body,
+                                             ChronoContact2D_C *contact);
+int chrono_collision2d_detect_polygon_circle(const ChronoBody2D_C *polygon_body,
+                                             const ChronoBody2D_C *circle_body,
+                                             ChronoContact2D_C *contact);
+int chrono_collision2d_detect_polygon_polygon(const ChronoBody2D_C *body_a,
+                                              const ChronoBody2D_C *body_b,
+                                              ChronoContact2D_C *contact);
 
 int chrono_collision2d_resolve_circle_circle(ChronoBody2D_C *body_a,
                                              ChronoBody2D_C *body_b,
@@ -84,6 +97,27 @@ int chrono_collision2d_resolve_circle_circle(ChronoBody2D_C *body_a,
                                              double friction_static,
                                              double friction_dynamic,
                                              ChronoContactManifold2D_C *manifold);
+int chrono_collision2d_resolve_contact(ChronoBody2D_C *body_a,
+                                       ChronoBody2D_C *body_b,
+                                       const ChronoContact2D_C *contact,
+                                       double restitution,
+                                       double friction_static,
+                                       double friction_dynamic,
+                                       ChronoContactManifold2D_C *manifold);
+int chrono_collision2d_resolve_polygon_polygon(ChronoBody2D_C *body_a,
+                                               ChronoBody2D_C *body_b,
+                                               const ChronoContact2D_C *contact,
+                                               double restitution,
+                                               double friction_static,
+                                               double friction_dynamic,
+                                               ChronoContactManifold2D_C *manifold);
+int chrono_collision2d_resolve_circle_polygon(ChronoBody2D_C *circle_body,
+                                              ChronoBody2D_C *polygon_body,
+                                              const ChronoContact2D_C *contact,
+                                              double restitution,
+                                              double friction_static,
+                                              double friction_dynamic,
+                                              ChronoContactManifold2D_C *manifold);
 
 #ifdef __cplusplus
 }

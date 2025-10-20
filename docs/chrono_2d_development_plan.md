@@ -12,7 +12,7 @@
 |------|------------|------|
 | 剛体基盤 (`chrono_body2d`) | ✅ 初期機能あり | 明示的オイラー積分、ワールド/ローカル変換、円形形状、材料パラメータ（反発・摩擦）対応済み。スリープや多形状未対応。 |
 | 距離制約 (`chrono_constraint2d`) | ✅ 安定化 solver あり | Baumgarte + Softness + Warm-start。複数制約や角速度連成未実装。 |
-| 接触 (`chrono_collision2d`) | ✅ 円vs円（反発＋静/動摩擦＋2点マニフォールド） | ChronoContactManager2D による持続解決とマニフォールド再利用を実装。長時間安定性を `test_contact_manager_longrun` で検証。 |
+| 接触 (`chrono_collision2d`) | ✅ 円/凸ポリゴン対応（反発＋静/動摩擦＋2点マニフォールド） | ChronoContactManager2D による持続解決とマニフォールド再利用を実装。長時間安定性を `test_contact_manager_longrun`、ポリゴン回帰を `test_polygon_collision` で検証。 |
 | アイランド統合 (`chrono_island2d`) | ✅ 初期版 | 拘束・接触をまとめる `ChronoIsland2D_C` とワークスペース整備、OpenMP 対応ラッパソルバを実装。 |
 | テスト | ✅ 主要カバレッジ | 距離拘束・円衝突各種・連続接触に加え、アイランド並列テスト、マニフォールド長期回帰、島ビルダ単体テストを追加済み。 |
 | ドキュメント | ⚠️ 一部整備 | README に単体テストの手順あり。本ドキュメントに島ソルバ・ベンチ情報を追記。 |
@@ -50,8 +50,8 @@
 2. **継続接触管理**  
    - マンifold（複数接触点）の保持、ウォームスタート用蓄積インパルス管理。
 3. **形状拡張**  
-   - 凸ポリゴン対応：SAT or GJK/EPA の簡易実装。  
-   - 円 vs ポリゴン、ボックス vs ボックスなどをサポート。
+   - 凸ポリゴン対応：SAT ベースの検出・解決を追加済み（円 vs ポリゴン、ポリゴン vs ポリゴン）。  
+   - 今後は複数接触点抽出や GJK/EPA への拡張、複雑形状サポートを検討。
 4. **アイランドソルバーの導入**  
    - 拘束・接触をまとめたアイランド分割と並列実行への布石。  
    - `chrono_island2d_build`・`chrono_island2d_solve` を実装済み（OpenMP 対応）。今後は形状拡張／新拘束追加後の統合稼働を想定。
@@ -60,6 +60,7 @@
 1. **単体テスト整備**  
    - 各拘束・接触ケースの数値回帰テストを `tests/` 以下に追加。  
    - `test_island_parallel_contacts`・`test_island_builder` でアイランド分割の正当性と並列経路を検証。  
+   - `test_polygon_collision` で凸ポリゴン／円の接触検出と解決を回帰。
    - `test_contact_manager_longrun` でマニフォールドの再利用・ウォームスタート安定性を長時間回帰。  
    - `make test` で全テストが実行されるよう連携。
 2. **ベンチマーク/デモ**  
