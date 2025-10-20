@@ -10,6 +10,47 @@ static void rotate2d(double angle, const double v[2], double out[2]) {
     out[1] = s * v[0] + c * v[1];
 }
 
+static int polygon_mass_properties(const double *vertices,
+                                   size_t count,
+                                   double density,
+                                   double *out_mass,
+                                   double *out_inertia) {
+    if (!vertices || count < 3 || !out_mass || !out_inertia) {
+        return 0;
+    }
+    double area2 = 0.0;
+    double inertia_integral = 0.0;
+    for (size_t i = 0; i < count; ++i) {
+        size_t j = (i + 1) % count;
+        double x0 = vertices[2 * i];
+        double y0 = vertices[2 * i + 1];
+        double x1 = vertices[2 * j];
+        double y1 = vertices[2 * j + 1];
+        double cross = x0 * y1 - x1 * y0;
+        area2 += cross;
+        double f1 = x0 * x0 + x0 * x1 + x1 * x1;
+        double f2 = y0 * y0 + y0 * y1 + y1 * y1;
+        inertia_integral += cross * (f1 + f2);
+    }
+
+    double area = 0.5 * area2;
+    double density_abs = density >= 0.0 ? density : -density;
+    double mass = fabs(area) * density_abs;
+    if (mass <= 0.0) {
+        *out_mass = 0.0;
+        *out_inertia = 0.0;
+        return density > 0.0 ? 0 : 1;
+    }
+
+    double inertia = fabs(inertia_integral) * density_abs / 12.0;
+    if (inertia < 0.0) {
+        inertia = 0.0;
+    }
+    *out_mass = mass;
+    *out_inertia = inertia;
+    return 1;
+}
+
 void chrono_body2d_init(ChronoBody2D_C *body) {
     if (!body) {
         return;
@@ -168,6 +209,27 @@ ChronoBody2DShapeType_C chrono_body2d_get_shape_type(const ChronoBody2D_C *body)
         return CHRONO_BODY2D_SHAPE_NONE;
     }
     return (ChronoBody2DShapeType_C)body->shape_type;
+}
+
+int chrono_body2d_set_polygon_shape_with_density(ChronoBody2D_C *body,
+                                                 const double *vertices,
+                                                 size_t vertex_count,
+                                                 double density) {
+    if (!chrono_body2d_set_polygon_shape(body, vertices, vertex_count)) {
+        return 0;
+    }
+    if (density <= 0.0) {
+        chrono_body2d_set_static(body);
+        return 1;
+    }
+    double mass = 0.0;
+    double inertia = 0.0;
+    if (!polygon_mass_properties(vertices, vertex_count, density, &mass, &inertia) || mass <= 0.0) {
+        chrono_body2d_set_static(body);
+        return 0;
+    }
+    chrono_body2d_set_mass(body, mass, inertia);
+    return 1;
 }
 
 void chrono_body2d_set_restitution(ChronoBody2D_C *body, double restitution) {

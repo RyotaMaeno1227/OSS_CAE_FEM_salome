@@ -98,6 +98,49 @@ static void support_polygon(const double (*vertices)[2], size_t count, const dou
     }
 }
 
+static int clip_segment(const double (*input)[2],
+                        int count,
+                        const double normal[2],
+                        double offset,
+                        double (*output)[2]) {
+    if (count < 2) {
+        return 0;
+    }
+    double distances[2];
+    distances[0] = dot2(normal, input[0]) - offset;
+    distances[1] = dot2(normal, input[1]) - offset;
+
+    int out_count = 0;
+
+    if (distances[0] <= 0.0) {
+        output[out_count][0] = input[0][0];
+        output[out_count][1] = input[0][1];
+        ++out_count;
+    }
+
+    if ((distances[0] <= 0.0 && distances[1] > 0.0) ||
+        (distances[0] > 0.0 && distances[1] <= 0.0)) {
+        double t = distances[0] / (distances[0] - distances[1]);
+        double intersection[2] = {
+            input[0][0] + t * (input[1][0] - input[0][0]),
+            input[0][1] + t * (input[1][1] - input[0][1])
+        };
+        output[out_count][0] = intersection[0];
+        output[out_count][1] = intersection[1];
+        ++out_count;
+    }
+
+    if (distances[1] <= 0.0) {
+        if (out_count < 2) {
+            output[out_count][0] = input[1][0];
+            output[out_count][1] = input[1][1];
+            ++out_count;
+        }
+    }
+
+    return out_count;
+}
+
 int chrono_collision2d_detect_circle_circle(const ChronoBody2D_C *body_a,
                                             const ChronoBody2D_C *body_b,
                                             ChronoContact2D_C *contact) {
@@ -132,8 +175,12 @@ int chrono_collision2d_detect_circle_circle(const ChronoBody2D_C *body_a,
     }
 
     contact->penetration = radius_sum - distance;
+    contact->penetrations[0] = contact->penetration;
+    contact->point_count = 1;
     contact->contact_point[0] = body_a->position[0] + contact->normal[0] * (radius_a - 0.5 * contact->penetration);
     contact->contact_point[1] = body_a->position[1] + contact->normal[1] * (radius_a - 0.5 * contact->penetration);
+    contact->contact_points[0][0] = contact->contact_point[0];
+    contact->contact_points[0][1] = contact->contact_point[1];
     contact->has_contact = 1;
     return 0;
 }
@@ -242,6 +289,10 @@ int chrono_collision2d_detect_circle_polygon(const ChronoBody2D_C *circle_body,
     contact->contact_point[0] = 0.5 * (circle_point[0] + polygon_point[0]);
     contact->contact_point[1] = 0.5 * (circle_point[1] + polygon_point[1]);
     contact->penetration = best_overlap;
+    contact->penetrations[0] = contact->penetration;
+    contact->contact_points[0][0] = contact->contact_point[0];
+    contact->contact_points[0][1] = contact->contact_point[1];
+    contact->point_count = 1;
     contact->has_contact = 1;
     return 0;
 }
@@ -283,6 +334,8 @@ int chrono_collision2d_detect_polygon_polygon(const ChronoBody2D_C *body_a,
 
     double best_axis[2] = {0.0, 0.0};
     double best_overlap = DBL_MAX;
+    int reference_is_a = 1;
+    size_t reference_index = 0;
 
     for (size_t i = 0; i < count_a; ++i) {
         double axis[2] = {normals_a[i][0], normals_a[i][1]};
@@ -298,6 +351,8 @@ int chrono_collision2d_detect_polygon_polygon(const ChronoBody2D_C *body_a,
             best_overlap = overlap;
             best_axis[0] = axis[0];
             best_axis[1] = axis[1];
+            reference_is_a = 1;
+            reference_index = i;
         }
     }
 
@@ -315,6 +370,8 @@ int chrono_collision2d_detect_polygon_polygon(const ChronoBody2D_C *body_a,
             best_overlap = overlap;
             best_axis[0] = axis[0];
             best_axis[1] = axis[1];
+            reference_is_a = 0;
+            reference_index = i;
         }
     }
 
@@ -325,31 +382,113 @@ int chrono_collision2d_detect_polygon_polygon(const ChronoBody2D_C *body_a,
         best_axis[1] = -best_axis[1];
     }
 
-    double point_a[2];
-    double point_b[2];
-    support_polygon(verts_a_ptr, count_a, best_axis, point_a);
-    double negative_axis[2] = {-best_axis[0], -best_axis[1]};
-    support_polygon(verts_b_ptr, count_b, negative_axis, point_b);
+    const double (*ref_vertices)[2] = reference_is_a ? verts_a_ptr : verts_b_ptr;
+    const double (*inc_vertices)[2] = reference_is_a ? verts_b_ptr : verts_a_ptr;
+    const double (*inc_normals)[2] = reference_is_a ? (const double (*)[2])normals_b : (const double (*)[2])normals_a;
+    size_t ref_count = reference_is_a ? count_a : count_b;
+    size_t inc_count = reference_is_a ? count_b : count_a;
 
-    contact->normal[0] = best_axis[0];
-    contact->normal[1] = best_axis[1];
-    contact->contact_point[0] = 0.5 * (point_a[0] + point_b[0]);
-    contact->contact_point[1] = 0.5 * (point_a[1] + point_b[1]);
-    contact->penetration = best_overlap;
+    const double *ref_v1 = ref_vertices[reference_index];
+    const double *ref_v2 = ref_vertices[(reference_index + 1) % ref_count];
+
+    double ref_tangent[2] = {ref_v2[0] - ref_v1[0], ref_v2[1] - ref_v1[1]};
+    normalize2(ref_tangent);
+    double ref_normal[2] = {ref_tangent[1], -ref_tangent[0]};
+    if (dot2(ref_normal, best_axis) < 0.0) {
+        ref_tangent[0] = -ref_tangent[0];
+        ref_tangent[1] = -ref_tangent[1];
+        ref_normal[0] = -ref_normal[0];
+        ref_normal[1] = -ref_normal[1];
+    }
+
+    double ref_offset = dot2(ref_normal, ref_v1);
+
+    size_t incident_index = 0;
+    double min_dot = DBL_MAX;
+    for (size_t i = 0; i < inc_count; ++i) {
+        double dot = dot2(inc_normals[i], ref_normal);
+        if (dot < min_dot) {
+            min_dot = dot;
+            incident_index = i;
+        }
+    }
+
+    double incident_edge[2][2];
+    incident_edge[0][0] = inc_vertices[incident_index][0];
+    incident_edge[0][1] = inc_vertices[incident_index][1];
+    incident_edge[1][0] = inc_vertices[(incident_index + 1) % inc_count][0];
+    incident_edge[1][1] = inc_vertices[(incident_index + 1) % inc_count][1];
+
+    double clip_buffer1[2][2];
+    double clip_buffer2[2][2];
+
+    double neg_tangent[2] = {-ref_tangent[0], -ref_tangent[1]};
+    double neg_offset = dot2(neg_tangent, ref_v1);
+    int clip_count = clip_segment((const double (*)[2])incident_edge, 2, neg_tangent, neg_offset, clip_buffer1);
+    if (clip_count == 0) {
+        contact->has_contact = 0;
+        return 0;
+    }
+
+    double pos_offset = dot2(ref_tangent, ref_v2);
+    clip_count = clip_segment((const double (*)[2])clip_buffer1, clip_count, ref_tangent, pos_offset, clip_buffer2);
+    if (clip_count == 0) {
+        contact->has_contact = 0;
+        return 0;
+    }
+
+    contact->normal[0] = ref_normal[0];
+    contact->normal[1] = ref_normal[1];
     contact->has_contact = 1;
+    contact->point_count = 0;
+
+    const double penetration_safety = 1e-6;
+    for (int i = 0; i < clip_count && contact->point_count < CHRONO_CONTACT2D_MAX_POINTS; ++i) {
+        double separation = dot2(ref_normal, clip_buffer2[i]) - ref_offset;
+        double penetration = best_overlap - separation;
+        if (penetration >= -penetration_safety) {
+            int idx = contact->point_count;
+            contact->contact_points[idx][0] = clip_buffer2[i][0];
+            contact->contact_points[idx][1] = clip_buffer2[i][1];
+            contact->penetrations[idx] = penetration;
+            contact->point_count = idx + 1;
+        }
+    }
+
+    if (contact->point_count == 0) {
+        double point_a[2];
+        double point_b[2];
+        support_polygon(verts_a_ptr, count_a, best_axis, point_a);
+        double negative_axis[2] = {-best_axis[0], -best_axis[1]};
+        support_polygon(verts_b_ptr, count_b, negative_axis, point_b);
+        contact->normal[0] = best_axis[0];
+        contact->normal[1] = best_axis[1];
+        contact->contact_point[0] = 0.5 * (point_a[0] + point_b[0]);
+        contact->contact_point[1] = 0.5 * (point_a[1] + point_b[1]);
+        contact->penetration = best_overlap;
+        contact->contact_points[0][0] = contact->contact_point[0];
+        contact->contact_points[0][1] = contact->contact_point[1];
+        contact->penetrations[0] = contact->penetration;
+        contact->point_count = 1;
+        return 0;
+    }
+
+    contact->penetration = contact->penetrations[0];
+    contact->contact_point[0] = contact->contact_points[0][0];
+    contact->contact_point[1] = contact->contact_points[0][1];
     return 0;
 }
 static double cross2(const double a[2], const double b[2]) {
     return a[0] * b[1] - a[1] * b[0];
 }
 
-int chrono_collision2d_resolve_contact(ChronoBody2D_C *body_a,
-                                       ChronoBody2D_C *body_b,
-                                       const ChronoContact2D_C *contact,
-                                       double restitution,
-                                       double friction_static,
-                                       double friction_dynamic,
-                                       ChronoContactManifold2D_C *manifold) {
+static int chrono_collision2d_resolve_single(ChronoBody2D_C *body_a,
+                                             ChronoBody2D_C *body_b,
+                                             const ChronoContact2D_C *contact,
+                                             double restitution,
+                                             double friction_static,
+                                             double friction_dynamic,
+                                             ChronoContactManifold2D_C *manifold) {
     if (!body_a || !body_b || !contact || !contact->has_contact) {
         return -1;
     }
@@ -541,6 +680,55 @@ int chrono_collision2d_resolve_contact(ChronoBody2D_C *body_a,
     }
 
     return 0;
+}
+
+int chrono_collision2d_resolve_contact(ChronoBody2D_C *body_a,
+                                       ChronoBody2D_C *body_b,
+                                       const ChronoContact2D_C *contact,
+                                       double restitution,
+                                       double friction_static,
+                                       double friction_dynamic,
+                                       ChronoContactManifold2D_C *manifold) {
+    if (!contact || !contact->has_contact) {
+        return -1;
+    }
+    int count = contact->point_count;
+    if (count <= 0) {
+        count = 1;
+    }
+    int status = 0;
+    for (int i = 0; i < count; ++i) {
+        ChronoContact2D_C single;
+        memset(&single, 0, sizeof(single));
+        single.has_contact = 1;
+        single.point_count = 1;
+        single.normal[0] = contact->normal[0];
+        single.normal[1] = contact->normal[1];
+        double cp[2];
+        double pen = contact->penetration;
+        if (i < contact->point_count) {
+            cp[0] = contact->contact_points[i][0];
+            cp[1] = contact->contact_points[i][1];
+            pen = contact->penetrations[i];
+        } else {
+            cp[0] = contact->contact_point[0];
+            cp[1] = contact->contact_point[1];
+        }
+        single.contact_points[0][0] = cp[0];
+        single.contact_points[0][1] = cp[1];
+        single.penetrations[0] = pen;
+        single.contact_point[0] = cp[0];
+        single.contact_point[1] = cp[1];
+        single.penetration = pen;
+        status |= chrono_collision2d_resolve_single(body_a,
+                                                    body_b,
+                                                    &single,
+                                                    restitution,
+                                                    friction_static,
+                                                    friction_dynamic,
+                                                    manifold);
+    }
+    return status;
 }
 
 int chrono_collision2d_resolve_circle_circle(ChronoBody2D_C *body_a,
@@ -833,7 +1021,37 @@ static ChronoContactPoint2D_C *chrono_contact_manager2d_update_pair(ChronoContac
     manifold->combined_restitution = restitution;
     manifold->combined_friction_static = mu_s;
     manifold->combined_friction_dynamic = mu_d;
-    return chrono_contact_manifold2d_add_or_update(manifold, contact);
+    int count = contact->point_count;
+    if (count <= 0) {
+        count = contact->has_contact ? 1 : 0;
+    }
+    ChronoContactPoint2D_C *last_point = NULL;
+    for (int i = 0; i < count; ++i) {
+        ChronoContact2D_C single;
+        memset(&single, 0, sizeof(single));
+        single.has_contact = contact->has_contact;
+        single.point_count = 1;
+        single.normal[0] = contact->normal[0];
+        single.normal[1] = contact->normal[1];
+        double pen = contact->penetration;
+        double cp[2];
+        if (i < contact->point_count) {
+            pen = contact->penetrations[i];
+            cp[0] = contact->contact_points[i][0];
+            cp[1] = contact->contact_points[i][1];
+        } else {
+            cp[0] = contact->contact_point[0];
+            cp[1] = contact->contact_point[1];
+        }
+        single.penetration = pen;
+        single.contact_point[0] = cp[0];
+        single.contact_point[1] = cp[1];
+        single.contact_points[0][0] = cp[0];
+        single.contact_points[0][1] = cp[1];
+        single.penetrations[0] = pen;
+        last_point = chrono_contact_manifold2d_add_or_update(manifold, &single);
+    }
+    return last_point;
 }
 
 ChronoContactPoint2D_C *chrono_contact_manager2d_update_circle_circle(ChronoContactManager2D_C *manager,

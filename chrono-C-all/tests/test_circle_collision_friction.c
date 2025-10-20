@@ -272,6 +272,10 @@ static int test_manifold_multi_point(void) {
     contact2.contact_point[0] = body_a.position[0] + 0.48;
     contact2.contact_point[1] = body_a.position[1] + 0.20;
     contact2.penetration = 0.018;
+    contact2.point_count = 1;
+    contact2.contact_points[0][0] = contact2.contact_point[0];
+    contact2.contact_points[0][1] = contact2.contact_point[1];
+    contact2.penetrations[0] = contact2.penetration;
     ChronoContactPoint2D_C *p2 = chrono_contact_manifold2d_add_or_update(manifold, &contact2);
     if (!p2) {
         fprintf(stderr, "Multi-point test: failed to insert second point\n");

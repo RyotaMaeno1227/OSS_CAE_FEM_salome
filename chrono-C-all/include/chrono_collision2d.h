@@ -7,14 +7,17 @@ extern "C" {
 
 #include "chrono_body2d.h"
 
+#define CHRONO_CONTACT2D_MAX_POINTS 2
+
 typedef struct ChronoContact2D_C {
     double normal[2];
     double contact_point[2];
     double penetration;
+    double contact_points[CHRONO_CONTACT2D_MAX_POINTS][2];
+    double penetrations[CHRONO_CONTACT2D_MAX_POINTS];
+    int point_count;
     int has_contact;
 } ChronoContact2D_C;
-
-#define CHRONO_CONTACT2D_MAX_POINTS 2
 
 typedef struct ChronoContactPoint2D_C {
     ChronoContact2D_C contact;

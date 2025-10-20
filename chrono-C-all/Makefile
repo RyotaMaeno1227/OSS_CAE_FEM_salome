@@ -18,6 +18,9 @@ TEST_TARGETS := \
 	$(TEST_DIR)/test_island_contact_constraint \
 	$(TEST_DIR)/test_island_parallel_contacts \
 	$(TEST_DIR)/test_polygon_collision \
+	$(TEST_DIR)/test_polygon_slope_friction \
+	$(TEST_DIR)/test_polygon_spin_collision \
+	$(TEST_DIR)/test_polygon_mass_properties \
 	$(TEST_DIR)/test_island_builder \
 	$(TEST_DIR)/test_contact_manager_longrun \
 	$(TEST_DIR)/test_constraint_batch_solve

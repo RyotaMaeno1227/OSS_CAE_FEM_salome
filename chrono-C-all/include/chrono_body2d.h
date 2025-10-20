@@ -56,6 +56,10 @@ int chrono_body2d_set_polygon_shape(ChronoBody2D_C *body, const double *vertices
 size_t chrono_body2d_get_polygon_vertex_count(const ChronoBody2D_C *body);
 const double *chrono_body2d_get_polygon_vertices(const ChronoBody2D_C *body);
 ChronoBody2DShapeType_C chrono_body2d_get_shape_type(const ChronoBody2D_C *body);
+int chrono_body2d_set_polygon_shape_with_density(ChronoBody2D_C *body,
+                                                 const double *vertices,
+                                                 size_t vertex_count,
+                                                 double density);
 void chrono_body2d_set_restitution(ChronoBody2D_C *body, double restitution);
 double chrono_body2d_get_restitution(const ChronoBody2D_C *body);
 void chrono_body2d_set_friction_static(ChronoBody2D_C *body, double mu_s);

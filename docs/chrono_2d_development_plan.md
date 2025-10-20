@@ -10,7 +10,7 @@
 ## 2. 現状サマリ（2025-10-19 時点）
 | 領域 | ステータス | 備考 |
 |------|------------|------|
-| 剛体基盤 (`chrono_body2d`) | ✅ 初期機能あり | 明示的オイラー積分、ワールド/ローカル変換、円形形状、材料パラメータ（反発・摩擦）対応済み。スリープや多形状未対応。 |
+| 剛体基盤 (`chrono_body2d`) | ✅ 初期機能あり | 明示的オイラー積分、ワールド/ローカル変換、円形形状、材料パラメータ（反発・摩擦）に加え、凸ポリゴン形状＋質量特性自動計算 (`chrono_body2d_set_polygon_shape_with_density`) に対応。スリープや多形状未対応。 |
 | 距離制約 (`chrono_constraint2d`) | ✅ 安定化 solver あり | Baumgarte + Softness + Warm-start。複数制約や角速度連成未実装。 |
 | 接触 (`chrono_collision2d`) | ✅ 円/凸ポリゴン対応（反発＋静/動摩擦＋2点マニフォールド） | ChronoContactManager2D による持続解決とマニフォールド再利用を実装。長時間安定性を `test_contact_manager_longrun`、ポリゴン回帰を `test_polygon_collision` で検証。 |
 | アイランド統合 (`chrono_island2d`) | ✅ 初期版 | 拘束・接触をまとめる `ChronoIsland2D_C` とワークスペース整備、OpenMP 対応ラッパソルバを実装。 |
@@ -20,8 +20,8 @@
 ## 3. 機能拡張ロードマップ
 ### 3.1 剛体
 1. **質量特性拡張**  
-   - 慣性テンソル更新ロジック（2D 版）を追加し、任意形状に対応できるようにする。  
-   - `chrono_body2d_set_mass_properties` の実装とテスト。
+   - 慣性テンソル更新ロジック（2D 版）を追加し、任意形状に対応できるようにする。✅ `chrono_body2d_set_polygon_shape_with_density` で凸ポリゴンの質量・慣性を自動設定済み。  
+   - `chrono_body2d_set_mass_properties` の実装とテスト（任意分布の対応は今後の課題）。
 2. **積分器拡張**  
    - セミインプリシット・サブステップなどを導入。`chrono_body2d_integrate_semi_implicit` 等の API を検討。
 3. **スリープ/ウェイク管理**  
@@ -60,7 +60,8 @@
 1. **単体テスト整備**  
    - 各拘束・接触ケースの数値回帰テストを `tests/` 以下に追加。  
    - `test_island_parallel_contacts`・`test_island_builder` でアイランド分割の正当性と並列経路を検証。  
-   - `test_polygon_collision` で凸ポリゴン／円の接触検出と解決を回帰。
+   - `test_polygon_collision` で凸ポリゴン／円の接触検出と解決を回帰し、`test_polygon_mass_properties` で質量・慣性の数値精度を確認。  
+   - `test_polygon_slope_friction` と `test_polygon_spin_collision` で斜面摩擦・回転ポリゴン衝突シナリオを網羅。  
    - `test_contact_manager_longrun` でマニフォールドの再利用・ウォームスタート安定性を長時間回帰。  
    - `make test` で全テストが実行されるよう連携。
 2. **ベンチマーク/デモ**  
