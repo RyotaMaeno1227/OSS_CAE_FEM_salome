@@ -17,6 +17,7 @@ TEST_TARGETS := \
 	$(TEST_DIR)/test_circle_collision_continuous \
 	$(TEST_DIR)/test_island_contact_constraint \
 	$(TEST_DIR)/test_island_parallel_contacts \
+	$(TEST_DIR)/test_island_builder \
 	$(TEST_DIR)/test_contact_manager_longrun \
 	$(TEST_DIR)/test_constraint_batch_solve
 

@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential
+
+      - name: Run unit tests
+        working-directory: chrono-C-all
+        run: |
+          make clean
+          make test
+
+      - name: Run island solver benchmark
+        working-directory: chrono-C-all
+        run: |
+          make bench
