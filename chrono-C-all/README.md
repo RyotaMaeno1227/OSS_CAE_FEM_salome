@@ -47,3 +47,23 @@ Additional regression tests are available via `make test` (see the top-level `Ma
 - `tests/test_polygon_spin_collision.c`: counter-rotating convex polygons interacting through the manifold pipeline.
 - `tests/test_capsule_edge_collision.c`: capsule/capsule and edge/circle interactions via the GJK/EPA backend.
 - `tests/test_island_polygon_longrun.c`: combined constraint + polygon contact scenario executed through the island solver.
+- `tests/test_prismatic_constraint.c`: slider joint with stroke limits and motor drive (limit and motor regression).
+- `tests/test_spring_constraint.c`: damped spring between an anchor and dynamic body.
+- `tests/test_revolute_constraint.c`: pin joint maintaining a pivot under gravity.
+
+## Examples and Visualization
+
+Two self-contained demos can be built with `make examples`:
+
+- `examples/newton_cradle` – four-body Newton's cradle producing `data/newton_cradle.csv`.
+- `examples/prismatic_slider` – slider joint with enable/disable motor and limit transitions, writing `data/prismatic_slider.csv`.
+
+Run an example and point the MATLAB helpers in `docs/` at the generated CSV to obtain plots and GIF animations.  For instance:
+
+```matlab
+% From the repo root or docs/ directory:
+newton_cradle_visualization('../data/newton_cradle.csv', 'cradle_frames');
+prismatic_slider_visualization('../data/prismatic_slider.csv', 'prismatic_frames');
+```
+
+Both scripts emit trajectory/diagnostic plots and an animation built from PNG frames (stored under the output directory).
