@@ -37,7 +37,10 @@
      - 拘束配列を処理する `chrono_constraint2d_batch_solve(...)` を追加し、Sequential Impulse 風に反復できるよう設計。  
      - 将来的な並列化を見据え、バッチ構造には拘束グループ ID（アイランド）を保持できる拡張余地を残す。
 2. **新規拘束タイプ**  
-   - 回転ジョイント（ピン）、スライダ、スプリングダンパ等を段階的に追加。
+   - ✅ 回転ジョイント（ピン）: `ChronoRevoluteConstraint2D_C` を追加し、Sequential Impulse ベースのバッチソルバに統合。`tests/test_revolute_constraint` で回帰確認。  
+   - ✅ プリズマティック（スライダ）: `ChronoPrismaticConstraint2D_C` に法線拘束＋ウォームスタートを実装し、ストローク制限とモータ駆動（リミット＆モータ）を追加。`tests/test_prismatic_constraint` で軸外ドリフト／リミット／モータ速度を回帰確認。  
+   - ✅ スプリングダンパ: `ChronoSpringConstraint2D_C` を追加し、フック＋粘性力をインパルスとして適用。`tests/test_spring_constraint` で収束挙動を確認。  
+   - 今後: スライダのリミット／モータ、他拘束タイプ（スライダ2軸、ギア、距離減衰など）を段階的に追加。
 3. **ソルバー**  
    - Sequential Impulse / Gauss-Seidel による複合拘束解決。  
    - Baumgarte 以外の安定化手法（位置校正、XPBD 的アプローチ）の検討。

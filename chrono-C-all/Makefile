@@ -4,6 +4,7 @@ LDFLAGS := -lm
 
 SRC_DIR := src
 TEST_DIR := tests
+EXAMPLE_DIR := examples
 
 CORE_SRCS := $(wildcard $(SRC_DIR)/*.c)
 TEST_TARGETS := \
@@ -25,19 +26,29 @@ TEST_TARGETS := \
 	$(TEST_DIR)/test_island_polygon_longrun \
 	$(TEST_DIR)/test_island_builder \
 	$(TEST_DIR)/test_contact_manager_longrun \
+	$(TEST_DIR)/test_revolute_constraint \
+	$(TEST_DIR)/test_prismatic_constraint \
+	$(TEST_DIR)/test_spring_constraint \
 	$(TEST_DIR)/test_constraint_batch_solve
 
 BENCH_TARGETS := \
 	$(TEST_DIR)/bench_island_solver
 
-.PHONY: all clean test tests
+EXAMPLE_TARGETS := \
+	$(EXAMPLE_DIR)/newton_cradle \
+	$(EXAMPLE_DIR)/prismatic_slider
 
-all: $(TEST_TARGETS)
+.PHONY: all clean test tests examples
+
+all: $(TEST_TARGETS) $(EXAMPLE_TARGETS)
 
 $(TEST_DIR)/test_%: $(TEST_DIR)/test_%.c $(CORE_SRCS)
 	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
 
 $(TEST_DIR)/bench_%: $(TEST_DIR)/bench_%.c $(CORE_SRCS)
+	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
+
+$(EXAMPLE_DIR)/%: $(EXAMPLE_DIR)/%.c $(CORE_SRCS)
 	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
 
 tests: $(TEST_TARGETS)
@@ -56,5 +67,7 @@ bench: $(BENCH_TARGETS)
 		"$$b"; \
 	done
 
+examples: $(EXAMPLE_TARGETS)
+
 clean:
-	$(RM) $(TEST_TARGETS) $(BENCH_TARGETS)
+	$(RM) $(TEST_TARGETS) $(BENCH_TARGETS) $(EXAMPLE_TARGETS)

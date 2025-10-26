@@ -36,16 +36,80 @@ static void sub(const double a[2], const double b[2], double out[2]) {
     out[1] = a[1] - b[1];
 }
 
+static void normalize(double v[2]) {
+    double len = length(v);
+    if (len > 1e-12) {
+        v[0] /= len;
+        v[1] /= len;
+    }
+}
+
+static void rotate_angle(double angle, const double v[2], double out[2]) {
+    double c = cos(angle);
+    double s = sin(angle);
+    out[0] = c * v[0] - s * v[1];
+    out[1] = s * v[0] + c * v[1];
+}
+
+static int invert2x2(const double *m, double *out) {
+    double det = m[0] * m[3] - m[1] * m[2];
+    if (fabs(det) < 1e-12) {
+        return 0;
+    }
+    double inv_det = 1.0 / det;
+    out[0] = m[3] * inv_det;
+    out[1] = -m[1] * inv_det;
+    out[2] = -m[2] * inv_det;
+    out[3] = m[0] * inv_det;
+    return 1;
+}
+
 static void chrono_distance_constraint2d_prepare_impl(void *constraint_ptr, double dt);
 static void chrono_distance_constraint2d_apply_warm_start_impl(void *constraint_ptr);
 static void chrono_distance_constraint2d_solve_velocity_impl(void *constraint_ptr);
 static void chrono_distance_constraint2d_solve_position_impl(void *constraint_ptr);
+
+static void chrono_revolute_constraint2d_prepare_impl(void *constraint_ptr, double dt);
+static void chrono_revolute_constraint2d_apply_warm_start_impl(void *constraint_ptr);
+static void chrono_revolute_constraint2d_solve_velocity_impl(void *constraint_ptr);
+static void chrono_revolute_constraint2d_solve_position_impl(void *constraint_ptr);
+
+static void chrono_prismatic_constraint2d_prepare_impl(void *constraint_ptr, double dt);
+static void chrono_prismatic_constraint2d_apply_warm_start_impl(void *constraint_ptr);
+static void chrono_prismatic_constraint2d_solve_velocity_impl(void *constraint_ptr);
+static void chrono_prismatic_constraint2d_solve_position_impl(void *constraint_ptr);
+
+static void chrono_spring_constraint2d_prepare_impl(void *constraint_ptr, double dt);
+static void chrono_spring_constraint2d_apply_warm_start_impl(void *constraint_ptr);
+static void chrono_spring_constraint2d_solve_velocity_impl(void *constraint_ptr);
+static void chrono_spring_constraint2d_solve_position_impl(void *constraint_ptr);
 
 static const ChronoConstraint2DOps_C chrono_distance_constraint2d_ops = {
     chrono_distance_constraint2d_prepare_impl,
     chrono_distance_constraint2d_apply_warm_start_impl,
     chrono_distance_constraint2d_solve_velocity_impl,
     chrono_distance_constraint2d_solve_position_impl
+};
+
+static const ChronoConstraint2DOps_C chrono_revolute_constraint2d_ops = {
+    chrono_revolute_constraint2d_prepare_impl,
+    chrono_revolute_constraint2d_apply_warm_start_impl,
+    chrono_revolute_constraint2d_solve_velocity_impl,
+    chrono_revolute_constraint2d_solve_position_impl
+};
+
+static const ChronoConstraint2DOps_C chrono_prismatic_constraint2d_ops = {
+    chrono_prismatic_constraint2d_prepare_impl,
+    chrono_prismatic_constraint2d_apply_warm_start_impl,
+    chrono_prismatic_constraint2d_solve_velocity_impl,
+    chrono_prismatic_constraint2d_solve_position_impl
+};
+
+static const ChronoConstraint2DOps_C chrono_spring_constraint2d_ops = {
+    chrono_spring_constraint2d_prepare_impl,
+    chrono_spring_constraint2d_apply_warm_start_impl,
+    chrono_spring_constraint2d_solve_velocity_impl,
+    chrono_spring_constraint2d_solve_position_impl
 };
 
 static void apply_impulse(ChronoBody2D_C *body, const double impulse[2], const double r[2]) {
@@ -525,6 +589,811 @@ static void chrono_distance_constraint2d_solve_position_impl(void *constraint_pt
     }
 }
 
+void chrono_revolute_constraint2d_init(ChronoRevoluteConstraint2D_C *constraint,
+                                       ChronoBody2D_C *body_a,
+                                       ChronoBody2D_C *body_b,
+                                       const double local_anchor_a[2],
+                                       const double local_anchor_b[2]) {
+    if (!constraint) {
+        return;
+    }
+    memset(constraint, 0, sizeof(*constraint));
+    constraint->base.ops = &chrono_revolute_constraint2d_ops;
+    constraint->base.body_a = body_a;
+    constraint->base.body_b = body_b;
+    if (local_anchor_a) {
+        constraint->local_anchor_a[0] = local_anchor_a[0];
+        constraint->local_anchor_a[1] = local_anchor_a[1];
+    }
+    if (local_anchor_b) {
+        constraint->local_anchor_b[0] = local_anchor_b[0];
+        constraint->local_anchor_b[1] = local_anchor_b[1];
+    }
+    constraint->softness = 0.0;
+    constraint->baumgarte_beta = 0.2;
+    constraint->slop = 1e-3;
+    constraint->max_correction = 0.2;
+}
+
+void chrono_revolute_constraint2d_set_baumgarte(ChronoRevoluteConstraint2D_C *constraint, double beta) {
+    if (!constraint) {
+        return;
+    }
+    if (beta < 0.0) {
+        beta = 0.0;
+    }
+    if (beta > 1.0) {
+        beta = 1.0;
+    }
+    constraint->baumgarte_beta = beta;
+}
+
+void chrono_revolute_constraint2d_set_softness(ChronoRevoluteConstraint2D_C *constraint, double softness) {
+    if (!constraint) {
+        return;
+    }
+    if (softness < 0.0) {
+        softness = 0.0;
+    }
+    constraint->softness = softness;
+}
+
+void chrono_revolute_constraint2d_set_slop(ChronoRevoluteConstraint2D_C *constraint, double slop) {
+    if (!constraint) {
+        return;
+    }
+    if (slop < 0.0) {
+        slop = 0.0;
+    }
+    constraint->slop = slop;
+}
+
+void chrono_revolute_constraint2d_set_max_correction(ChronoRevoluteConstraint2D_C *constraint, double max_correction) {
+    if (!constraint) {
+        return;
+    }
+    if (max_correction < 0.0) {
+        max_correction = 0.0;
+    }
+    constraint->max_correction = max_correction;
+}
+
+static void chrono_revolute_constraint2d_prepare_impl(void *constraint_ptr, double dt) {
+    ChronoRevoluteConstraint2D_C *constraint = (ChronoRevoluteConstraint2D_C *)constraint_ptr;
+    if (!constraint || dt <= 0.0) {
+        return;
+    }
+
+    ChronoBody2D_C *body_a = constraint->base.body_a;
+    ChronoBody2D_C *body_b = constraint->base.body_b;
+
+    if (body_a) {
+        double world_a[2];
+        chrono_body2d_local_to_world(body_a, constraint->local_anchor_a, world_a);
+        sub(world_a, body_a->position, constraint->ra);
+    } else {
+        constraint->ra[0] = 0.0;
+        constraint->ra[1] = 0.0;
+    }
+    if (body_b) {
+        double world_b[2];
+        chrono_body2d_local_to_world(body_b, constraint->local_anchor_b, world_b);
+        sub(world_b, body_b->position, constraint->rb);
+    } else {
+        constraint->rb[0] = 0.0;
+        constraint->rb[1] = 0.0;
+    }
+
+    double pa[2] = {0.0, 0.0};
+    double pb[2] = {0.0, 0.0};
+    if (body_a) {
+        add(body_a->position, constraint->ra, pa);
+    }
+    if (body_b) {
+        add(body_b->position, constraint->rb, pb);
+    }
+
+    double C[2];
+    sub(pb, pa, C);
+
+    double inv_mass_a = (body_a && !body_a->is_static) ? body_a->inverse_mass : 0.0;
+    double inv_inertia_a = (body_a && !body_a->is_static) ? body_a->inverse_inertia : 0.0;
+    double inv_mass_b = (body_b && !body_b->is_static) ? body_b->inverse_mass : 0.0;
+    double inv_inertia_b = (body_b && !body_b->is_static) ? body_b->inverse_inertia : 0.0;
+
+    double k00 = inv_mass_a + inv_mass_b;
+    double k11 = inv_mass_a + inv_mass_b;
+    double k01 = 0.0;
+
+    if (inv_inertia_a > 0.0) {
+        k00 += inv_inertia_a * constraint->ra[1] * constraint->ra[1];
+        k01 -= inv_inertia_a * constraint->ra[0] * constraint->ra[1];
+        k11 += inv_inertia_a * constraint->ra[0] * constraint->ra[0];
+    }
+    if (inv_inertia_b > 0.0) {
+        k00 += inv_inertia_b * constraint->rb[1] * constraint->rb[1];
+        k01 -= inv_inertia_b * constraint->rb[0] * constraint->rb[1];
+        k11 += inv_inertia_b * constraint->rb[0] * constraint->rb[0];
+    }
+
+    double k[2][2] = {
+        {k00, k01},
+        {k01, k11}
+    };
+
+    if (!invert2x2(&k[0][0], &constraint->position_mass[0][0])) {
+        memset(constraint->position_mass, 0, sizeof(constraint->position_mass));
+    }
+
+    double vel_k[2][2] = {
+        {k00 + constraint->softness, k01},
+        {k01, k11 + constraint->softness}
+    };
+    if (!invert2x2(&vel_k[0][0], &constraint->effective_mass[0][0])) {
+        memset(constraint->effective_mass, 0, sizeof(constraint->effective_mass));
+    }
+
+    double error_len = length(C);
+    if (error_len > constraint->slop) {
+        double scale_factor = 1.0;
+        if (error_len > 0.0) {
+            scale_factor = (error_len - constraint->slop) / error_len;
+        }
+        constraint->bias[0] = -constraint->baumgarte_beta / dt * C[0] * scale_factor;
+        constraint->bias[1] = -constraint->baumgarte_beta / dt * C[1] * scale_factor;
+    } else {
+        constraint->bias[0] = 0.0;
+        constraint->bias[1] = 0.0;
+    }
+}
+
+static void chrono_revolute_constraint2d_apply_warm_start_impl(void *constraint_ptr) {
+    ChronoRevoluteConstraint2D_C *constraint = (ChronoRevoluteConstraint2D_C *)constraint_ptr;
+    if (!constraint) {
+        return;
+    }
+
+    ChronoBody2D_C *body_a = constraint->base.body_a;
+    ChronoBody2D_C *body_b = constraint->base.body_b;
+
+    double impulse[2] = {
+        constraint->accumulated_impulse[0],
+        constraint->accumulated_impulse[1]
+    };
+
+    if (body_a) {
+        double impulse_a[2] = {-impulse[0], -impulse[1]};
+        apply_impulse(body_a, impulse_a, constraint->ra);
+    }
+    if (body_b) {
+        apply_impulse(body_b, impulse, constraint->rb);
+    }
+}
+
+static void chrono_revolute_constraint2d_solve_velocity_impl(void *constraint_ptr) {
+    ChronoRevoluteConstraint2D_C *constraint = (ChronoRevoluteConstraint2D_C *)constraint_ptr;
+    if (!constraint) {
+        return;
+    }
+
+    ChronoBody2D_C *body_a = constraint->base.body_a;
+    ChronoBody2D_C *body_b = constraint->base.body_b;
+
+    double va[2] = {0.0, 0.0};
+    double vb[2] = {0.0, 0.0};
+
+    if (body_a && !body_a->is_static) {
+        va[0] = body_a->linear_velocity[0];
+        va[1] = body_a->linear_velocity[1];
+        double cross_ra_x = -body_a->angular_velocity * constraint->ra[1];
+        double cross_ra_y = body_a->angular_velocity * constraint->ra[0];
+        va[0] += cross_ra_x;
+        va[1] += cross_ra_y;
+    }
+    if (body_b && !body_b->is_static) {
+        vb[0] = body_b->linear_velocity[0];
+        vb[1] = body_b->linear_velocity[1];
+        double cross_rb_x = -body_b->angular_velocity * constraint->rb[1];
+        double cross_rb_y = body_b->angular_velocity * constraint->rb[0];
+        vb[0] += cross_rb_x;
+        vb[1] += cross_rb_y;
+    }
+
+    double dv[2];
+    sub(vb, va, dv);
+
+    double gamma = constraint->softness;
+    double c[2] = {
+        dv[0] + constraint->bias[0] + gamma * constraint->accumulated_impulse[0],
+        dv[1] + constraint->bias[1] + gamma * constraint->accumulated_impulse[1]
+    };
+
+    double lambda[2] = {0.0, 0.0};
+    lambda[0] = -(constraint->effective_mass[0][0] * c[0] + constraint->effective_mass[0][1] * c[1]);
+    lambda[1] = -(constraint->effective_mass[1][0] * c[0] + constraint->effective_mass[1][1] * c[1]);
+
+    constraint->accumulated_impulse[0] += lambda[0];
+    constraint->accumulated_impulse[1] += lambda[1];
+
+    if (body_a) {
+        double impulse_a[2] = {-lambda[0], -lambda[1]};
+        apply_impulse(body_a, impulse_a, constraint->ra);
+    }
+    if (body_b) {
+        apply_impulse(body_b, lambda, constraint->rb);
+    }
+}
+
+static void chrono_revolute_constraint2d_solve_position_impl(void *constraint_ptr) {
+    ChronoRevoluteConstraint2D_C *constraint = (ChronoRevoluteConstraint2D_C *)constraint_ptr;
+    if (!constraint) {
+        return;
+    }
+
+    ChronoBody2D_C *body_a = constraint->base.body_a;
+    ChronoBody2D_C *body_b = constraint->base.body_b;
+
+    double pa[2] = {0.0, 0.0};
+    double pb[2] = {0.0, 0.0};
+    if (body_a) {
+        add(body_a->position, constraint->ra, pa);
+    }
+    if (body_b) {
+        add(body_b->position, constraint->rb, pb);
+    }
+
+    double C[2];
+    sub(pb, pa, C);
+
+    double error_len = length(C);
+    double linear_error[2] = {0.0, 0.0};
+    if (error_len > constraint->slop) {
+        double scale_factor = 1.0;
+        if (error_len > 0.0) {
+            scale_factor = (error_len - constraint->slop) / error_len;
+        }
+        linear_error[0] = C[0] * scale_factor;
+        linear_error[1] = C[1] * scale_factor;
+    }
+
+    double correction[2] = {-linear_error[0], -linear_error[1]};
+    double correction_len = length(correction);
+    if (correction_len > constraint->max_correction && correction_len > 0.0) {
+        double scale = constraint->max_correction / correction_len;
+        correction[0] *= scale;
+        correction[1] *= scale;
+    }
+
+    double lambda[2] = {0.0, 0.0};
+    lambda[0] = constraint->position_mass[0][0] * correction[0] + constraint->position_mass[0][1] * correction[1];
+    lambda[1] = constraint->position_mass[1][0] * correction[0] + constraint->position_mass[1][1] * correction[1];
+
+    if (body_a && !body_a->is_static) {
+        body_a->position[0] += -lambda[0] * body_a->inverse_mass;
+        body_a->position[1] += -lambda[1] * body_a->inverse_mass;
+        double angular = cross(constraint->ra, (double[2]){lambda[0], lambda[1]});
+        body_a->angle -= angular * body_a->inverse_inertia;
+    }
+    if (body_b && !body_b->is_static) {
+        body_b->position[0] += lambda[0] * body_b->inverse_mass;
+        body_b->position[1] += lambda[1] * body_b->inverse_mass;
+        double angular = cross(constraint->rb, (double[2]){lambda[0], lambda[1]});
+        body_b->angle += angular * body_b->inverse_inertia;
+    }
+}
+
+static void chrono_prismatic_constraint2d_prepare_impl(void *constraint_ptr, double dt) {
+    ChronoPrismaticConstraint2D_C *constraint = (ChronoPrismaticConstraint2D_C *)constraint_ptr;
+    if (!constraint || dt <= 0.0) {
+        return;
+    }
+
+    constraint->cached_dt = dt;
+
+    ChronoBody2D_C *body_a = constraint->base.body_a;
+    ChronoBody2D_C *body_b = constraint->base.body_b;
+
+    if (body_a) {
+        double world_a[2];
+        chrono_body2d_local_to_world(body_a, constraint->local_anchor_a, world_a);
+        sub(world_a, body_a->position, constraint->ra);
+        rotate_angle(body_a->angle, constraint->local_axis_a, constraint->axis_world);
+    } else {
+        constraint->ra[0] = 0.0;
+        constraint->ra[1] = 0.0;
+        constraint->axis_world[0] = constraint->local_axis_a[0];
+        constraint->axis_world[1] = constraint->local_axis_a[1];
+    }
+
+    if (body_b) {
+        double world_b[2];
+        chrono_body2d_local_to_world(body_b, constraint->local_anchor_b, world_b);
+        sub(world_b, body_b->position, constraint->rb);
+    } else {
+        constraint->rb[0] = 0.0;
+        constraint->rb[1] = 0.0;
+    }
+
+    if (fabs(constraint->axis_world[0]) < 1e-9 && fabs(constraint->axis_world[1]) < 1e-9) {
+        constraint->axis_world[0] = 1.0;
+        constraint->axis_world[1] = 0.0;
+    }
+    normalize(constraint->axis_world);
+    constraint->normal_world[0] = -constraint->axis_world[1];
+    constraint->normal_world[1] = constraint->axis_world[0];
+    normalize(constraint->normal_world);
+
+    double pa[2] = {0.0, 0.0};
+    double pb[2] = {0.0, 0.0};
+    if (body_a) {
+        add(body_a->position, constraint->ra, pa);
+    }
+    if (body_b) {
+        add(body_b->position, constraint->rb, pb);
+    }
+
+    double delta[2];
+    sub(pb, pa, delta);
+    constraint->translation = dot(delta, constraint->axis_world);
+    double C = dot(delta, constraint->normal_world);
+    double error = fabs(C) > constraint->slop ? C - constraint->slop * (C > 0 ? 1.0 : -1.0) : 0.0;
+
+    double inv_mass = 0.0;
+    if (body_a && !body_a->is_static) {
+        double ra_cross_n = cross(constraint->ra, constraint->normal_world);
+        inv_mass += body_a->inverse_mass + ra_cross_n * ra_cross_n * body_a->inverse_inertia;
+    }
+    if (body_b && !body_b->is_static) {
+        double rb_cross_n = cross(constraint->rb, constraint->normal_world);
+        inv_mass += body_b->inverse_mass + rb_cross_n * rb_cross_n * body_b->inverse_inertia;
+    }
+
+    constraint->base.effective_mass = (inv_mass > 0.0) ? 1.0 / inv_mass : 0.0;
+    if (constraint->softness > 0.0) {
+        constraint->base.effective_mass = (inv_mass + constraint->softness) > 0.0
+            ? 1.0 / (inv_mass + constraint->softness)
+            : 0.0;
+    }
+
+    double beta = constraint->baumgarte_beta;
+    constraint->bias = (beta > 0.0) ? -beta / dt * error : 0.0;
+
+    double inv_mass_axis = 0.0;
+    if (body_a && !body_a->is_static) {
+        double ra_cross_axis = cross(constraint->ra, constraint->axis_world);
+        inv_mass_axis += body_a->inverse_mass + ra_cross_axis * ra_cross_axis * body_a->inverse_inertia;
+    }
+    if (body_b && !body_b->is_static) {
+        double rb_cross_axis = cross(constraint->rb, constraint->axis_world);
+        inv_mass_axis += body_b->inverse_mass + rb_cross_axis * rb_cross_axis * body_b->inverse_inertia;
+    }
+    constraint->motor_mass = (inv_mass_axis > 0.0) ? 1.0 / inv_mass_axis : 0.0;
+
+    constraint->limit_state = 0;
+    constraint->limit_bias = 0.0;
+    if (constraint->enable_limit) {
+        if (constraint->translation < constraint->limit_lower) {
+            constraint->limit_state = -1;
+        } else if (constraint->translation > constraint->limit_upper) {
+            constraint->limit_state = 1;
+        }
+        if (constraint->limit_state != 0) {
+            double limit_error = 0.0;
+            if (constraint->limit_state < 0) {
+                limit_error = constraint->translation - constraint->limit_lower;
+            } else {
+                limit_error = constraint->translation - constraint->limit_upper;
+            }
+            double beta_limit = constraint->baumgarte_beta;
+            if (beta_limit > 0.0) {
+                constraint->limit_bias = -beta_limit / dt * limit_error;
+            }
+        } else {
+            constraint->limit_accumulated_impulse = 0.0;
+        }
+    } else {
+        constraint->limit_accumulated_impulse = 0.0;
+    }
+
+    if (!constraint->enable_motor || constraint->motor_max_force <= 0.0) {
+        constraint->accumulated_motor_impulse = 0.0;
+    }
+}
+
+static void chrono_prismatic_constraint2d_apply_warm_start_impl(void *constraint_ptr) {
+    ChronoPrismaticConstraint2D_C *constraint = (ChronoPrismaticConstraint2D_C *)constraint_ptr;
+    if (!constraint) {
+        return;
+    }
+    double impulse_vec[2] = {
+        constraint->normal_world[0] * constraint->base.accumulated_impulse,
+        constraint->normal_world[1] * constraint->base.accumulated_impulse
+    };
+    ChronoBody2D_C *body_a = constraint->base.body_a;
+    ChronoBody2D_C *body_b = constraint->base.body_b;
+    if (body_a) {
+        apply_impulse(body_a, (double[2]){-impulse_vec[0], -impulse_vec[1]}, constraint->ra);
+    }
+    if (body_b) {
+        apply_impulse(body_b, impulse_vec, constraint->rb);
+    }
+
+    if (constraint->enable_motor && constraint->motor_max_force > 0.0 && constraint->motor_mass > 0.0) {
+        double motor_vec[2] = {
+            constraint->axis_world[0] * constraint->accumulated_motor_impulse,
+            constraint->axis_world[1] * constraint->accumulated_motor_impulse
+        };
+        if (body_a) {
+            apply_impulse(body_a, (double[2]){-motor_vec[0], -motor_vec[1]}, constraint->ra);
+        }
+        if (body_b) {
+            apply_impulse(body_b, motor_vec, constraint->rb);
+        }
+    }
+
+    if (constraint->enable_limit && constraint->limit_state != 0 && constraint->motor_mass > 0.0) {
+        double limit_vec[2] = {
+            constraint->axis_world[0] * constraint->limit_accumulated_impulse,
+            constraint->axis_world[1] * constraint->limit_accumulated_impulse
+        };
+        if (body_a) {
+            apply_impulse(body_a, (double[2]){-limit_vec[0], -limit_vec[1]}, constraint->ra);
+        }
+        if (body_b) {
+            apply_impulse(body_b, limit_vec, constraint->rb);
+        }
+    }
+}
+
+static void chrono_prismatic_constraint2d_solve_velocity_impl(void *constraint_ptr) {
+    ChronoPrismaticConstraint2D_C *constraint = (ChronoPrismaticConstraint2D_C *)constraint_ptr;
+    if (!constraint) {
+        return;
+    }
+    ChronoBody2D_C *body_a = constraint->base.body_a;
+    ChronoBody2D_C *body_b = constraint->base.body_b;
+
+    double va[2] = {0.0, 0.0};
+    double vb[2] = {0.0, 0.0};
+    if (body_a && !body_a->is_static) {
+        va[0] = body_a->linear_velocity[0];
+        va[1] = body_a->linear_velocity[1];
+        double cross_ra_x = -body_a->angular_velocity * constraint->ra[1];
+        double cross_ra_y = body_a->angular_velocity * constraint->ra[0];
+        va[0] += cross_ra_x;
+        va[1] += cross_ra_y;
+    }
+    if (body_b && !body_b->is_static) {
+        vb[0] = body_b->linear_velocity[0];
+        vb[1] = body_b->linear_velocity[1];
+        double cross_rb_x = -body_b->angular_velocity * constraint->rb[1];
+        double cross_rb_y = body_b->angular_velocity * constraint->rb[0];
+        vb[0] += cross_rb_x;
+        vb[1] += cross_rb_y;
+    }
+
+    double dv[2];
+    sub(vb, va, dv);
+    double Cdot = dot(dv, constraint->normal_world);
+    double gamma = constraint->softness;
+    double denom = constraint->base.effective_mass;
+    if (denom == 0.0) {
+        return;
+    }
+    double lambda = -(Cdot + constraint->bias + gamma * constraint->base.accumulated_impulse) * denom;
+    constraint->base.accumulated_impulse += lambda;
+
+    double impulse_vec[2] = {
+        constraint->normal_world[0] * lambda,
+        constraint->normal_world[1] * lambda
+    };
+
+    if (body_a) {
+        apply_impulse(body_a, (double[2]){-impulse_vec[0], -impulse_vec[1]}, constraint->ra);
+    }
+    if (body_b) {
+        apply_impulse(body_b, impulse_vec, constraint->rb);
+    }
+
+    if (constraint->enable_motor && constraint->motor_mass > 0.0 && constraint->motor_max_force > 0.0) {
+        double axis_vel = dot(dv, constraint->axis_world);
+        double Cmotor = axis_vel - constraint->motor_speed;
+        double lambda_motor = -Cmotor * constraint->motor_mass;
+        double max_impulse = constraint->motor_max_force * constraint->cached_dt;
+        double prev_impulse = constraint->accumulated_motor_impulse;
+        double new_impulse = prev_impulse + lambda_motor;
+        if (new_impulse > max_impulse) {
+            new_impulse = max_impulse;
+        } else if (new_impulse < -max_impulse) {
+            new_impulse = -max_impulse;
+        }
+        lambda_motor = new_impulse - prev_impulse;
+        constraint->accumulated_motor_impulse = new_impulse;
+        double motor_vec[2] = {
+            constraint->axis_world[0] * lambda_motor,
+            constraint->axis_world[1] * lambda_motor
+        };
+        if (body_a) {
+            apply_impulse(body_a, (double[2]){-motor_vec[0], -motor_vec[1]}, constraint->ra);
+        }
+        if (body_b) {
+            apply_impulse(body_b, motor_vec, constraint->rb);
+        }
+    }
+
+    if (constraint->enable_limit && constraint->limit_state != 0 && constraint->motor_mass > 0.0) {
+        double axis_vel = dot(dv, constraint->axis_world);
+        double gamma_limit = constraint->softness;
+        double denom_limit = constraint->motor_mass;
+        double lambda_limit = -(axis_vel + constraint->limit_bias + gamma_limit * constraint->limit_accumulated_impulse) * denom_limit;
+        double old_impulse = constraint->limit_accumulated_impulse;
+        double new_impulse = old_impulse + lambda_limit;
+        if (constraint->limit_state < 0) {
+            if (new_impulse < 0.0) {
+                new_impulse = 0.0;
+            }
+        } else {
+            if (new_impulse > 0.0) {
+                new_impulse = 0.0;
+            }
+        }
+        lambda_limit = new_impulse - old_impulse;
+        constraint->limit_accumulated_impulse = new_impulse;
+
+        double limit_vec[2] = {
+            constraint->axis_world[0] * lambda_limit,
+            constraint->axis_world[1] * lambda_limit
+        };
+        if (body_a) {
+            apply_impulse(body_a, (double[2]){-limit_vec[0], -limit_vec[1]}, constraint->ra);
+        }
+        if (body_b) {
+            apply_impulse(body_b, limit_vec, constraint->rb);
+        }
+    }
+}
+
+static void chrono_prismatic_constraint2d_solve_position_impl(void *constraint_ptr) {
+    ChronoPrismaticConstraint2D_C *constraint = (ChronoPrismaticConstraint2D_C *)constraint_ptr;
+    if (!constraint) {
+        return;
+    }
+    ChronoBody2D_C *body_a = constraint->base.body_a;
+    ChronoBody2D_C *body_b = constraint->base.body_b;
+
+    double axis_world[2] = {constraint->local_axis_a[0], constraint->local_axis_a[1]};
+    if (body_a) {
+        rotate_angle(body_a->angle, constraint->local_axis_a, axis_world);
+    }
+    normalize(axis_world);
+    double normal[2] = {-axis_world[1], axis_world[0]};
+    normalize(normal);
+
+    double ra_local[2] = {0.0, 0.0};
+    double rb_local[2] = {0.0, 0.0};
+    if (body_a) {
+        double world_a[2];
+        chrono_body2d_local_to_world(body_a, constraint->local_anchor_a, world_a);
+        sub(world_a, body_a->position, ra_local);
+    }
+    if (body_b) {
+        double world_b[2];
+        chrono_body2d_local_to_world(body_b, constraint->local_anchor_b, world_b);
+        sub(world_b, body_b->position, rb_local);
+    }
+
+    double pa[2] = {0.0, 0.0};
+    double pb[2] = {0.0, 0.0};
+    if (body_a) {
+        add(body_a->position, ra_local, pa);
+    }
+    if (body_b) {
+        add(body_b->position, rb_local, pb);
+    }
+
+    double delta[2];
+    sub(pb, pa, delta);
+    double C = dot(delta, normal);
+    double error = fabs(C) > constraint->slop ? C - constraint->slop * (C > 0 ? 1.0 : -1.0) : 0.0;
+
+    double correction = -error;
+    double max_corr = constraint->max_correction;
+    if (correction > max_corr) {
+        correction = max_corr;
+    } else if (correction < -max_corr) {
+        correction = -max_corr;
+    }
+
+    double inv_mass = 0.0;
+    if (body_a && !body_a->is_static) {
+        double ra_cross_n = cross(ra_local, normal);
+        inv_mass += body_a->inverse_mass + ra_cross_n * ra_cross_n * body_a->inverse_inertia;
+    }
+    if (body_b && !body_b->is_static) {
+        double rb_cross_n = cross(rb_local, normal);
+        inv_mass += body_b->inverse_mass + rb_cross_n * rb_cross_n * body_b->inverse_inertia;
+    }
+    if (inv_mass == 0.0) {
+        return;
+    }
+    double lambda = correction / inv_mass;
+    double impulse_vec[2] = {normal[0] * lambda, normal[1] * lambda};
+
+    if (body_a && !body_a->is_static) {
+        body_a->position[0] -= impulse_vec[0] * body_a->inverse_mass;
+        body_a->position[1] -= impulse_vec[1] * body_a->inverse_mass;
+        double angular = cross(ra_local, impulse_vec);
+        body_a->angle -= angular * body_a->inverse_inertia;
+    }
+    if (body_b && !body_b->is_static) {
+        body_b->position[0] += impulse_vec[0] * body_b->inverse_mass;
+        body_b->position[1] += impulse_vec[1] * body_b->inverse_mass;
+        double angular = cross(rb_local, impulse_vec);
+        body_b->angle += angular * body_b->inverse_inertia;
+    }
+
+    double translation = dot(delta, axis_world);
+    double limit_error = 0.0;
+    if (constraint->enable_limit) {
+        if (translation < constraint->limit_lower) {
+            limit_error = translation - constraint->limit_lower;
+        } else if (translation > constraint->limit_upper) {
+            limit_error = translation - constraint->limit_upper;
+        }
+    }
+
+    if (limit_error != 0.0) {
+        double direction = (limit_error < 0.0) ? 1.0 : -1.0;
+        double correction_mag = fmin(fabs(limit_error), constraint->max_correction);
+        double correction = correction_mag * direction;
+
+        double ra_cross_axis = cross(ra_local, axis_world);
+        double rb_cross_axis = cross(rb_local, axis_world);
+        double inv_mass_axis = 0.0;
+        if (body_a && !body_a->is_static) {
+            inv_mass_axis += body_a->inverse_mass + ra_cross_axis * ra_cross_axis * body_a->inverse_inertia;
+        }
+        if (body_b && !body_b->is_static) {
+            inv_mass_axis += body_b->inverse_mass + rb_cross_axis * rb_cross_axis * body_b->inverse_inertia;
+        }
+        if (inv_mass_axis > 0.0) {
+            double lambda_limit = correction / inv_mass_axis;
+            double limit_vec[2] = {axis_world[0] * lambda_limit, axis_world[1] * lambda_limit};
+
+            if (body_a && !body_a->is_static) {
+                body_a->position[0] -= limit_vec[0] * body_a->inverse_mass;
+                body_a->position[1] -= limit_vec[1] * body_a->inverse_mass;
+                double angular = cross(ra_local, limit_vec);
+                body_a->angle -= angular * body_a->inverse_inertia;
+            }
+            if (body_b && !body_b->is_static) {
+                body_b->position[0] += limit_vec[0] * body_b->inverse_mass;
+                body_b->position[1] += limit_vec[1] * body_b->inverse_mass;
+                double angular = cross(rb_local, limit_vec);
+                body_b->angle += angular * body_b->inverse_inertia;
+            }
+        }
+    }
+}
+
+static void chrono_spring_constraint2d_prepare_impl(void *constraint_ptr, double dt) {
+    ChronoSpringConstraint2D_C *constraint = (ChronoSpringConstraint2D_C *)constraint_ptr;
+    if (!constraint || dt <= 0.0) {
+        return;
+    }
+    constraint->cached_dt = dt;
+    constraint->velocity_applied = 0;
+
+    ChronoBody2D_C *body_a = constraint->base.body_a;
+    ChronoBody2D_C *body_b = constraint->base.body_b;
+
+    if (body_a) {
+        double world_a[2];
+        chrono_body2d_local_to_world(body_a, constraint->local_anchor_a, world_a);
+        sub(world_a, body_a->position, constraint->ra);
+    } else {
+        constraint->ra[0] = 0.0;
+        constraint->ra[1] = 0.0;
+    }
+    if (body_b) {
+        double world_b[2];
+        chrono_body2d_local_to_world(body_b, constraint->local_anchor_b, world_b);
+        sub(world_b, body_b->position, constraint->rb);
+    } else {
+        constraint->rb[0] = 0.0;
+        constraint->rb[1] = 0.0;
+    }
+
+    double pa[2] = {0.0, 0.0};
+    double pb[2] = {0.0, 0.0};
+    if (body_a) {
+        add(body_a->position, constraint->ra, pa);
+    }
+    if (body_b) {
+        add(body_b->position, constraint->rb, pb);
+    }
+    sub(pb, pa, constraint->direction);
+    constraint->current_length = length(constraint->direction);
+    if (constraint->current_length > 1e-12) {
+        constraint->direction[0] /= constraint->current_length;
+        constraint->direction[1] /= constraint->current_length;
+    } else {
+        constraint->direction[0] = 0.0;
+        constraint->direction[1] = 0.0;
+    }
+}
+
+static void chrono_spring_constraint2d_apply_warm_start_impl(void *constraint_ptr) {
+    (void)constraint_ptr;
+}
+
+static void chrono_spring_constraint2d_solve_velocity_impl(void *constraint_ptr) {
+    ChronoSpringConstraint2D_C *constraint = (ChronoSpringConstraint2D_C *)constraint_ptr;
+    if (!constraint || constraint->velocity_applied) {
+        return;
+    }
+    if (constraint->cached_dt <= 0.0) {
+        return;
+    }
+    if (constraint->current_length <= 1e-12) {
+        return;
+    }
+
+    ChronoBody2D_C *body_a = constraint->base.body_a;
+    ChronoBody2D_C *body_b = constraint->base.body_b;
+
+    double va[2] = {0.0, 0.0};
+    double vb[2] = {0.0, 0.0};
+    if (body_a && !body_a->is_static) {
+        va[0] = body_a->linear_velocity[0];
+        va[1] = body_a->linear_velocity[1];
+        double cross_ra_x = -body_a->angular_velocity * constraint->ra[1];
+        double cross_ra_y = body_a->angular_velocity * constraint->ra[0];
+        va[0] += cross_ra_x;
+        va[1] += cross_ra_y;
+    }
+    if (body_b && !body_b->is_static) {
+        vb[0] = body_b->linear_velocity[0];
+        vb[1] = body_b->linear_velocity[1];
+        double cross_rb_x = -body_b->angular_velocity * constraint->rb[1];
+        double cross_rb_y = body_b->angular_velocity * constraint->rb[0];
+        vb[0] += cross_rb_x;
+        vb[1] += cross_rb_y;
+    }
+
+    double dv[2];
+    sub(vb, va, dv);
+    double rel_vel = dot(dv, constraint->direction);
+    double deflection = constraint->current_length - constraint->rest_length;
+
+    double stiffness = constraint->stiffness;
+    double damping = constraint->damping;
+    if (stiffness == 0.0 && damping == 0.0) {
+        constraint->velocity_applied = 1;
+        return;
+    }
+
+    double force = -stiffness * deflection - damping * rel_vel;
+    double impulse = force * constraint->cached_dt;
+    double impulse_vec[2] = {
+        constraint->direction[0] * impulse,
+        constraint->direction[1] * impulse
+    };
+
+    if (body_a) {
+        apply_impulse(body_a, (double[2]){-impulse_vec[0], -impulse_vec[1]}, constraint->ra);
+    }
+    if (body_b) {
+        apply_impulse(body_b, impulse_vec, constraint->rb);
+    }
+
+    constraint->velocity_applied = 1;
+}
+
+static void chrono_spring_constraint2d_solve_position_impl(void *constraint_ptr) {
+    (void)constraint_ptr;
+}
+
 void chrono_constraint2d_prepare(ChronoConstraint2DBase_C *constraint, double dt) {
     if (!constraint || !constraint->ops || !constraint->ops->prepare) {
         return;
@@ -843,4 +1712,271 @@ void chrono_distance_constraint2d_solve_position(ChronoDistanceConstraint2D_C *c
         return;
     }
     chrono_constraint2d_solve_position(&constraint->base);
+}
+
+void chrono_revolute_constraint2d_prepare(ChronoRevoluteConstraint2D_C *constraint, double dt) {
+    if (!constraint) {
+        return;
+    }
+    chrono_constraint2d_prepare(&constraint->base, dt);
+}
+
+void chrono_revolute_constraint2d_apply_warm_start(ChronoRevoluteConstraint2D_C *constraint) {
+    if (!constraint) {
+        return;
+    }
+    chrono_constraint2d_apply_warm_start(&constraint->base);
+}
+
+void chrono_revolute_constraint2d_solve_velocity(ChronoRevoluteConstraint2D_C *constraint) {
+    if (!constraint) {
+        return;
+    }
+    chrono_constraint2d_solve_velocity(&constraint->base);
+}
+
+void chrono_revolute_constraint2d_solve_position(ChronoRevoluteConstraint2D_C *constraint) {
+    if (!constraint) {
+        return;
+    }
+    chrono_constraint2d_solve_position(&constraint->base);
+}
+
+void chrono_prismatic_constraint2d_prepare(ChronoPrismaticConstraint2D_C *constraint, double dt) {
+    if (!constraint) {
+        return;
+    }
+    chrono_constraint2d_prepare(&constraint->base, dt);
+}
+
+void chrono_prismatic_constraint2d_apply_warm_start(ChronoPrismaticConstraint2D_C *constraint) {
+    if (!constraint) {
+        return;
+    }
+    chrono_constraint2d_apply_warm_start(&constraint->base);
+}
+
+void chrono_prismatic_constraint2d_solve_velocity(ChronoPrismaticConstraint2D_C *constraint) {
+    if (!constraint) {
+        return;
+    }
+    chrono_constraint2d_solve_velocity(&constraint->base);
+}
+
+void chrono_prismatic_constraint2d_solve_position(ChronoPrismaticConstraint2D_C *constraint) {
+    if (!constraint) {
+        return;
+    }
+    chrono_constraint2d_solve_position(&constraint->base);
+}
+
+void chrono_spring_constraint2d_init(ChronoSpringConstraint2D_C *constraint,
+                                     ChronoBody2D_C *body_a,
+                                     ChronoBody2D_C *body_b,
+                                     const double local_anchor_a[2],
+                                     const double local_anchor_b[2],
+                                     double rest_length,
+                                     double stiffness,
+                                     double damping) {
+    if (!constraint) {
+        return;
+    }
+    memset(constraint, 0, sizeof(*constraint));
+    constraint->base.ops = &chrono_spring_constraint2d_ops;
+    constraint->base.body_a = body_a;
+    constraint->base.body_b = body_b;
+    if (local_anchor_a) {
+        constraint->local_anchor_a[0] = local_anchor_a[0];
+        constraint->local_anchor_a[1] = local_anchor_a[1];
+    }
+    if (local_anchor_b) {
+        constraint->local_anchor_b[0] = local_anchor_b[0];
+        constraint->local_anchor_b[1] = local_anchor_b[1];
+    }
+    constraint->rest_length = rest_length;
+    constraint->stiffness = stiffness;
+    constraint->damping = damping;
+    constraint->cached_dt = 0.0;
+    constraint->velocity_applied = 0;
+}
+
+void chrono_spring_constraint2d_set_rest_length(ChronoSpringConstraint2D_C *constraint, double rest_length) {
+    if (!constraint) {
+        return;
+    }
+    constraint->rest_length = rest_length;
+}
+
+void chrono_spring_constraint2d_set_stiffness(ChronoSpringConstraint2D_C *constraint, double stiffness) {
+    if (!constraint) {
+        return;
+    }
+    constraint->stiffness = stiffness;
+}
+
+void chrono_spring_constraint2d_set_damping(ChronoSpringConstraint2D_C *constraint, double damping) {
+    if (!constraint) {
+        return;
+    }
+    constraint->damping = damping;
+}
+
+void chrono_spring_constraint2d_prepare(ChronoSpringConstraint2D_C *constraint, double dt) {
+    if (!constraint) {
+        return;
+    }
+    chrono_constraint2d_prepare(&constraint->base, dt);
+}
+
+void chrono_spring_constraint2d_apply_warm_start(ChronoSpringConstraint2D_C *constraint) {
+    if (!constraint) {
+        return;
+    }
+    chrono_constraint2d_apply_warm_start(&constraint->base);
+}
+
+void chrono_spring_constraint2d_solve_velocity(ChronoSpringConstraint2D_C *constraint) {
+    if (!constraint) {
+        return;
+    }
+    chrono_constraint2d_solve_velocity(&constraint->base);
+}
+
+void chrono_spring_constraint2d_solve_position(ChronoSpringConstraint2D_C *constraint) {
+    if (!constraint) {
+        return;
+    }
+    chrono_constraint2d_solve_position(&constraint->base);
+}
+
+void chrono_prismatic_constraint2d_init(ChronoPrismaticConstraint2D_C *constraint,
+                                        ChronoBody2D_C *body_a,
+                                        ChronoBody2D_C *body_b,
+                                        const double local_anchor_a[2],
+                                        const double local_anchor_b[2],
+                                        const double local_axis_a[2]) {
+    if (!constraint) {
+        return;
+    }
+    memset(constraint, 0, sizeof(*constraint));
+    constraint->base.ops = &chrono_prismatic_constraint2d_ops;
+    constraint->base.body_a = body_a;
+    constraint->base.body_b = body_b;
+    if (local_anchor_a) {
+        constraint->local_anchor_a[0] = local_anchor_a[0];
+        constraint->local_anchor_a[1] = local_anchor_a[1];
+    }
+    if (local_anchor_b) {
+        constraint->local_anchor_b[0] = local_anchor_b[0];
+        constraint->local_anchor_b[1] = local_anchor_b[1];
+    }
+    if (local_axis_a) {
+        constraint->local_axis_a[0] = local_axis_a[0];
+        constraint->local_axis_a[1] = local_axis_a[1];
+    } else {
+        constraint->local_axis_a[0] = 1.0;
+        constraint->local_axis_a[1] = 0.0;
+    }
+    normalize(constraint->local_axis_a);
+    constraint->softness = 0.0;
+    constraint->baumgarte_beta = 0.2;
+    constraint->slop = 1e-3;
+    constraint->max_correction = 0.2;
+    constraint->limit_lower = -1.0;
+    constraint->limit_upper = 1.0;
+    constraint->enable_limit = 0;
+    constraint->motor_speed = 0.0;
+    constraint->motor_max_force = 0.0;
+    constraint->enable_motor = 0;
+    constraint->accumulated_motor_impulse = 0.0;
+}
+
+void chrono_prismatic_constraint2d_set_axis(ChronoPrismaticConstraint2D_C *constraint,
+                                            const double local_axis_a[2]) {
+    if (!constraint) {
+        return;
+    }
+    if (local_axis_a) {
+        constraint->local_axis_a[0] = local_axis_a[0];
+        constraint->local_axis_a[1] = local_axis_a[1];
+    } else {
+        constraint->local_axis_a[0] = 1.0;
+        constraint->local_axis_a[1] = 0.0;
+    }
+    normalize(constraint->local_axis_a);
+}
+
+void chrono_prismatic_constraint2d_set_baumgarte(ChronoPrismaticConstraint2D_C *constraint, double beta) {
+    if (!constraint) {
+        return;
+    }
+    if (beta < 0.0) {
+        beta = 0.0;
+    }
+    if (beta > 1.0) {
+        beta = 1.0;
+    }
+    constraint->baumgarte_beta = beta;
+}
+
+void chrono_prismatic_constraint2d_set_softness(ChronoPrismaticConstraint2D_C *constraint, double softness) {
+    if (!constraint) {
+        return;
+    }
+    if (softness < 0.0) {
+        softness = 0.0;
+    }
+    constraint->softness = softness;
+}
+
+void chrono_prismatic_constraint2d_set_slop(ChronoPrismaticConstraint2D_C *constraint, double slop) {
+    if (!constraint) {
+        return;
+    }
+    if (slop < 0.0) {
+        slop = 0.0;
+    }
+    constraint->slop = slop;
+}
+
+void chrono_prismatic_constraint2d_set_max_correction(ChronoPrismaticConstraint2D_C *constraint, double max_correction) {
+    if (!constraint) {
+        return;
+    }
+    if (max_correction < 0.0) {
+        max_correction = 0.0;
+    }
+    constraint->max_correction = max_correction;
+}
+
+void chrono_prismatic_constraint2d_enable_limit(ChronoPrismaticConstraint2D_C *constraint,
+                                               int enable,
+                                               double lower,
+                                               double upper) {
+    if (!constraint) {
+        return;
+    }
+    constraint->enable_limit = enable ? 1 : 0;
+    if (lower > upper) {
+        double tmp = lower;
+        lower = upper;
+        upper = tmp;
+    }
+    constraint->limit_lower = lower;
+    constraint->limit_upper = upper;
+}
+
+void chrono_prismatic_constraint2d_enable_motor(ChronoPrismaticConstraint2D_C *constraint,
+                                               int enable,
+                                               double speed,
+                                               double max_force) {
+    if (!constraint) {
+        return;
+    }
+    constraint->enable_motor = enable ? 1 : 0;
+    constraint->motor_speed = speed;
+    constraint->motor_max_force = (max_force >= 0.0) ? max_force : 0.0;
+    if (!constraint->enable_motor) {
+        constraint->accumulated_motor_impulse = 0.0;
+    }
 }
