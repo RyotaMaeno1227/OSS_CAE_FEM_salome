@@ -13,6 +13,382 @@ static double length2(const double v[2]) {
     return sqrt(dot2(v, v));
 }
 
+static void rotate_world(const ChronoBody2D_C *body, const double local[2], double out[2]) {
+    double c = cos(body->angle);
+    double s = sin(body->angle);
+    out[0] = c * local[0] - s * local[1];
+    out[1] = s * local[0] + c * local[1];
+}
+
+static void rotate_local(const ChronoBody2D_C *body, const double world[2], double out[2]) {
+    double c = cos(body->angle);
+    double s = sin(body->angle);
+    out[0] = c * world[0] + s * world[1];
+    out[1] = -s * world[0] + c * world[1];
+}
+
+static void normalize(double v[2]) {
+    double len = sqrt(v[0] * v[0] + v[1] * v[1]);
+    if (len > 1e-12) {
+        v[0] /= len;
+        v[1] /= len;
+    }
+}
+
+static void support_circle(const ChronoBody2D_C *body, const double dir[2], double out[2]) {
+    double direction[2] = {dir[0], dir[1]};
+    normalize(direction);
+    double scaled[2] = {direction[0] * body->circle_radius, direction[1] * body->circle_radius};
+    out[0] = body->position[0] + scaled[0];
+    out[1] = body->position[1] + scaled[1];
+}
+
+static void support_polygon_world(const ChronoBody2D_C *body, const double dir[2], double out[2]) {
+    size_t count = chrono_body2d_get_polygon_vertex_count(body);
+    const double *vertices = chrono_body2d_get_polygon_vertices(body);
+    double best = -DBL_MAX;
+    double best_vertex[2] = {0.0, 0.0};
+    for (size_t i = 0; i < count; ++i) {
+        double local[2] = {vertices[2 * i], vertices[2 * i + 1]};
+        double world_vertex[2];
+        rotate_world(body, local, world_vertex);
+        world_vertex[0] += body->position[0];
+        world_vertex[1] += body->position[1];
+        double d = dot2(world_vertex, dir);
+        if (d > best) {
+            best = d;
+            best_vertex[0] = world_vertex[0];
+            best_vertex[1] = world_vertex[1];
+        }
+    }
+    out[0] = best_vertex[0];
+    out[1] = best_vertex[1];
+}
+
+static void support_capsule(const ChronoBody2D_C *body, const double dir[2], double out[2]) {
+    double local_dir[2];
+    rotate_local(body, dir, local_dir);
+    double sign = (local_dir[0] >= 0.0) ? 1.0 : -1.0;
+    double local_point[2] = {sign * body->capsule_half_length, 0.0};
+    double world_point[2];
+    rotate_world(body, local_point, world_point);
+    world_point[0] += body->position[0];
+    world_point[1] += body->position[1];
+    double norm_dir[2] = {dir[0], dir[1]};
+    normalize(norm_dir);
+    world_point[0] += norm_dir[0] * body->capsule_radius;
+    world_point[1] += norm_dir[1] * body->capsule_radius;
+    out[0] = world_point[0];
+    out[1] = world_point[1];
+}
+
+static void support_edge(const ChronoBody2D_C *body, const double dir[2], double out[2]) {
+    double v0_local[2] = {body->edge_vertices[0][0], body->edge_vertices[0][1]};
+    double v1_local[2] = {body->edge_vertices[1][0], body->edge_vertices[1][1]};
+    double v0_world[2];
+    double v1_world[2];
+    rotate_world(body, v0_local, v0_world);
+    rotate_world(body, v1_local, v1_world);
+    v0_world[0] += body->position[0];
+    v0_world[1] += body->position[1];
+    v1_world[0] += body->position[0];
+    v1_world[1] += body->position[1];
+    double d0 = dot2(v0_world, dir);
+    double d1 = dot2(v1_world, dir);
+    if (d0 > d1) {
+        out[0] = v0_world[0];
+        out[1] = v0_world[1];
+    } else {
+        out[0] = v1_world[0];
+        out[1] = v1_world[1];
+    }
+}
+
+static void perp_left(const double v[2], double out[2]) {
+    out[0] = v[1];
+    out[1] = -v[0];
+}
+
+static void support_point_body(const ChronoBody2D_C *body, const double dir[2], double out[2]) {
+    if (!body) {
+        out[0] = 0.0;
+        out[1] = 0.0;
+        return;
+    }
+    switch (chrono_body2d_get_shape_type(body)) {
+        case CHRONO_BODY2D_SHAPE_CIRCLE:
+            support_circle(body, dir, out);
+            break;
+        case CHRONO_BODY2D_SHAPE_POLYGON:
+            support_polygon_world(body, dir, out);
+            break;
+        case CHRONO_BODY2D_SHAPE_CAPSULE:
+            support_capsule(body, dir, out);
+            break;
+        case CHRONO_BODY2D_SHAPE_EDGE:
+            support_edge(body, dir, out);
+            break;
+        default:
+            out[0] = body->position[0];
+            out[1] = body->position[1];
+            break;
+    }
+}
+
+typedef struct {
+    double point[2];
+    double support_a[2];
+    double support_b[2];
+} SupportPoint2D_C;
+
+typedef struct {
+    SupportPoint2D_C points[3];
+    int count;
+} Simplex2D_C;
+
+static SupportPoint2D_C minkowski_support(const ChronoBody2D_C *a,
+                                          const ChronoBody2D_C *b,
+                                          const double dir[2]) {
+    SupportPoint2D_C sp;
+    support_point_body(a, dir, sp.support_a);
+    double neg_dir[2] = {-dir[0], -dir[1]};
+    support_point_body(b, neg_dir, sp.support_b);
+    sp.point[0] = sp.support_a[0] - sp.support_b[0];
+    sp.point[1] = sp.support_a[1] - sp.support_b[1];
+    return sp;
+}
+
+static int simplex_handle_line(Simplex2D_C *simplex, double dir[2]) {
+    SupportPoint2D_C A = simplex->points[simplex->count - 1];
+    SupportPoint2D_C B = simplex->points[simplex->count - 2];
+    double AB[2] = {B.point[0] - A.point[0], B.point[1] - A.point[1]};
+    double AO[2] = {-A.point[0], -A.point[1]};
+    if (dot2(AB, AO) > 0.0) {
+        double perp[2];
+        perp_left(AB, perp);
+        if (dot2(perp, AO) < 0.0) {
+            perp[0] = -perp[0];
+            perp[1] = -perp[1];
+        }
+        dir[0] = perp[0];
+        dir[1] = perp[1];
+    } else {
+        simplex->count = 1;
+        simplex->points[0] = A;
+        dir[0] = AO[0];
+        dir[1] = AO[1];
+    }
+    return 0;
+}
+
+static int simplex_handle_triangle(Simplex2D_C *simplex, double dir[2]) {
+    SupportPoint2D_C A = simplex->points[2];
+    SupportPoint2D_C B = simplex->points[1];
+    SupportPoint2D_C C = simplex->points[0];
+    double AB[2] = {B.point[0] - A.point[0], B.point[1] - A.point[1]};
+    double AC[2] = {C.point[0] - A.point[0], C.point[1] - A.point[1]};
+    double AO[2] = {-A.point[0], -A.point[1]};
+
+    double ab_perp[2];
+    perp_left(AB, ab_perp);
+    if (dot2(ab_perp, AC) > 0.0) {
+        ab_perp[0] = -ab_perp[0];
+        ab_perp[1] = -ab_perp[1];
+    }
+    if (dot2(ab_perp, AO) > 0.0) {
+        simplex->count = 2;
+        simplex->points[0] = B;
+        simplex->points[1] = A;
+        dir[0] = ab_perp[0];
+        dir[1] = ab_perp[1];
+        return 0;
+    }
+
+    double ac_perp[2];
+    perp_left(AC, ac_perp);
+    if (dot2(ac_perp, AB) > 0.0) {
+        ac_perp[0] = -ac_perp[0];
+        ac_perp[1] = -ac_perp[1];
+    }
+    if (dot2(ac_perp, AO) > 0.0) {
+        simplex->count = 2;
+        simplex->points[0] = C;
+        simplex->points[1] = A;
+        dir[0] = ac_perp[0];
+        dir[1] = ac_perp[1];
+        return 0;
+    }
+    return 1;
+}
+
+static int simplex_contains_origin(Simplex2D_C *simplex, double dir[2]) {
+    if (simplex->count == 1) {
+        dir[0] = -simplex->points[0].point[0];
+        dir[1] = -simplex->points[0].point[1];
+        return 0;
+    }
+    if (simplex->count == 2) {
+        return simplex_handle_line(simplex, dir);
+    }
+    return simplex_handle_triangle(simplex, dir);
+}
+
+static int gjk_intersect(const ChronoBody2D_C *a,
+                         const ChronoBody2D_C *b,
+                         Simplex2D_C *simplex) {
+    double direction[2] = {b->position[0] - a->position[0], b->position[1] - a->position[1]};
+    if (fabs(direction[0]) < 1e-6 && fabs(direction[1]) < 1e-6) {
+        direction[0] = 1.0;
+        direction[1] = 0.0;
+    }
+    Simplex2D_C local_simplex = {0};
+    local_simplex.points[0] = minkowski_support(a, b, direction);
+    local_simplex.count = 1;
+    direction[0] = -local_simplex.points[0].point[0];
+    direction[1] = -local_simplex.points[0].point[1];
+
+    for (int iteration = 0; iteration < 30; ++iteration) {
+        SupportPoint2D_C new_point = minkowski_support(a, b, direction);
+        if (dot2(new_point.point, direction) <= 0.0) {
+            return 0;
+        }
+        local_simplex.points[local_simplex.count++] = new_point;
+        if (simplex_contains_origin(&local_simplex, direction)) {
+            *simplex = local_simplex;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+typedef struct {
+    double normal[2];
+    double penetration;
+    SupportPoint2D_C edge_v1;
+    SupportPoint2D_C edge_v2;
+} EPAResult2D_C;
+
+static int epa_penetration(const ChronoBody2D_C *a,
+                           const ChronoBody2D_C *b,
+                           Simplex2D_C *simplex,
+                           EPAResult2D_C *result) {
+    SupportPoint2D_C polytope[32];
+    int count = simplex->count;
+    if (count < 3) {
+        return 0;
+    }
+    for (int i = 0; i < count; ++i) {
+        polytope[i] = simplex->points[i];
+    }
+
+    for (int iteration = 0; iteration < 32; ++iteration) {
+        double min_distance = DBL_MAX;
+        int best_index = -1;
+        double best_normal[2] = {0.0, 0.0};
+
+        for (int i = 0; i < count; ++i) {
+            int j = (i + 1) % count;
+            double edge[2] = {polytope[j].point[0] - polytope[i].point[0],
+                              polytope[j].point[1] - polytope[i].point[1]};
+            double normal[2] = {edge[1], -edge[0]};
+            normalize(normal);
+            if (dot2(normal, polytope[i].point) > 0.0) {
+                normal[0] = -normal[0];
+                normal[1] = -normal[1];
+            }
+            double distance = fabs(dot2(normal, polytope[i].point));
+            if (distance < min_distance) {
+                min_distance = distance;
+                best_index = i;
+                best_normal[0] = normal[0];
+                best_normal[1] = normal[1];
+            }
+        }
+
+        if (best_index < 0) {
+            return 0;
+        }
+
+        SupportPoint2D_C support = minkowski_support(a, b, best_normal);
+        double support_dist = dot2(support.point, best_normal);
+        if (support_dist - min_distance < 1e-6) {
+            if (result) {
+                result->normal[0] = best_normal[0];
+                result->normal[1] = best_normal[1];
+                result->penetration = support_dist;
+                result->edge_v1 = polytope[best_index];
+                result->edge_v2 = polytope[(best_index + 1) % count];
+            }
+            return 1;
+        }
+
+        if (count + 1 >= 32) {
+            return 0;
+        }
+
+        int insert_index = best_index + 1;
+        for (int k = count; k > insert_index; --k) {
+            polytope[k] = polytope[k - 1];
+        }
+        polytope[insert_index] = support;
+        ++count;
+    }
+    return 0;
+}
+
+static void compute_contact_points(const EPAResult2D_C *epa,
+                                   double contact_a[2],
+                                   double contact_b[2]) {
+    double edge_vec[2] = {epa->edge_v2.point[0] - epa->edge_v1.point[0],
+                          epa->edge_v2.point[1] - epa->edge_v1.point[1]};
+    double edge_len_sq = dot2(edge_vec, edge_vec);
+    double t = 0.0;
+    if (edge_len_sq > 1e-12) {
+        double ao[2] = {-epa->edge_v1.point[0], -epa->edge_v1.point[1]};
+        t = dot2(edge_vec, ao) / edge_len_sq;
+        if (t < 0.0) t = 0.0;
+        if (t > 1.0) t = 1.0;
+    }
+    contact_a[0] = epa->edge_v1.support_a[0] + t * (epa->edge_v2.support_a[0] - epa->edge_v1.support_a[0]);
+    contact_a[1] = epa->edge_v1.support_a[1] + t * (epa->edge_v2.support_a[1] - epa->edge_v1.support_a[1]);
+    contact_b[0] = epa->edge_v1.support_b[0] + t * (epa->edge_v2.support_b[0] - epa->edge_v1.support_b[0]);
+    contact_b[1] = epa->edge_v1.support_b[1] + t * (epa->edge_v2.support_b[1] - epa->edge_v1.support_b[1]);
+}
+
+int chrono_collision2d_detect_convex_gjk(const ChronoBody2D_C *body_a,
+                                         const ChronoBody2D_C *body_b,
+                                         ChronoContact2D_C *contact) {
+    if (!contact) {
+        return -1;
+    }
+    memset(contact, 0, sizeof(*contact));
+    Simplex2D_C simplex = {0};
+    if (!gjk_intersect(body_a, body_b, &simplex)) {
+        contact->has_contact = 0;
+        return 0;
+    }
+    EPAResult2D_C epa;
+    if (!epa_penetration(body_a, body_b, &simplex, &epa)) {
+        contact->has_contact = 0;
+        return 0;
+    }
+    normalize(epa.normal);
+    contact->normal[0] = epa.normal[0];
+    contact->normal[1] = epa.normal[1];
+    contact->penetration = epa.penetration;
+    double point_a[2];
+    double point_b[2];
+    compute_contact_points(&epa, point_a, point_b);
+    contact->contact_point[0] = 0.5 * (point_a[0] + point_b[0]);
+    contact->contact_point[1] = 0.5 * (point_a[1] + point_b[1]);
+    contact->contact_points[0][0] = contact->contact_point[0];
+    contact->contact_points[0][1] = contact->contact_point[1];
+    contact->penetrations[0] = contact->penetration;
+    contact->point_count = 1;
+    contact->has_contact = 1;
+    return 0;
+}
+
 static double clamp(double value, double min_val, double max_val) {
     if (value < min_val) {
         return min_val;
@@ -477,6 +853,136 @@ int chrono_collision2d_detect_polygon_polygon(const ChronoBody2D_C *body_a,
     contact->contact_point[0] = contact->contact_points[0][0];
     contact->contact_point[1] = contact->contact_points[0][1];
     return 0;
+}
+
+int chrono_collision2d_detect_capsule_capsule(const ChronoBody2D_C *body_a,
+                                             const ChronoBody2D_C *body_b,
+                                             ChronoContact2D_C *contact) {
+    return chrono_collision2d_detect_convex_gjk(body_a, body_b, contact);
+}
+
+int chrono_collision2d_detect_capsule_circle(const ChronoBody2D_C *capsule_body,
+                                            const ChronoBody2D_C *circle_body,
+                                            ChronoContact2D_C *contact) {
+    return chrono_collision2d_detect_convex_gjk(capsule_body, circle_body, contact);
+}
+
+int chrono_collision2d_detect_circle_capsule(const ChronoBody2D_C *circle_body,
+                                             const ChronoBody2D_C *capsule_body,
+                                             ChronoContact2D_C *contact) {
+    return chrono_collision2d_detect_convex_gjk(circle_body, capsule_body, contact);
+}
+
+int chrono_collision2d_detect_capsule_polygon(const ChronoBody2D_C *capsule_body,
+                                             const ChronoBody2D_C *polygon_body,
+                                             ChronoContact2D_C *contact) {
+    return chrono_collision2d_detect_convex_gjk(capsule_body, polygon_body, contact);
+}
+
+int chrono_collision2d_detect_polygon_capsule(const ChronoBody2D_C *polygon_body,
+                                             const ChronoBody2D_C *capsule_body,
+                                             ChronoContact2D_C *contact) {
+    return chrono_collision2d_detect_convex_gjk(polygon_body, capsule_body, contact);
+}
+
+int chrono_collision2d_detect_edge_circle(const ChronoBody2D_C *edge_body,
+                                         const ChronoBody2D_C *circle_body,
+                                         ChronoContact2D_C *contact) {
+    return chrono_collision2d_detect_circle_edge(circle_body, edge_body, contact);
+}
+
+int chrono_collision2d_detect_circle_edge(const ChronoBody2D_C *circle_body,
+                                         const ChronoBody2D_C *edge_body,
+                                         ChronoContact2D_C *contact) {
+    if (!circle_body || !edge_body || !contact) {
+        return -1;
+    }
+    memset(contact, 0, sizeof(*contact));
+    if (chrono_body2d_get_shape_type(circle_body) != CHRONO_BODY2D_SHAPE_CIRCLE ||
+        chrono_body2d_get_shape_type(edge_body) != CHRONO_BODY2D_SHAPE_EDGE) {
+        return chrono_collision2d_detect_convex_gjk(circle_body, edge_body, contact);
+    }
+    double radius = chrono_body2d_get_circle_radius(circle_body);
+    if (radius <= 0.0) {
+        contact->has_contact = 0;
+        return 0;
+    }
+    double center[2] = {circle_body->position[0], circle_body->position[1]};
+    double start_local[2] = {edge_body->edge_vertices[0][0], edge_body->edge_vertices[0][1]};
+    double end_local[2] = {edge_body->edge_vertices[1][0], edge_body->edge_vertices[1][1]};
+    double start_world[2];
+    double end_world[2];
+    rotate_world(edge_body, start_local, start_world);
+    rotate_world(edge_body, end_local, end_world);
+    start_world[0] += edge_body->position[0];
+    start_world[1] += edge_body->position[1];
+    end_world[0] += edge_body->position[0];
+    end_world[1] += edge_body->position[1];
+
+    double edge_vec[2] = {end_world[0] - start_world[0], end_world[1] - start_world[1]};
+    double edge_len_sq = dot2(edge_vec, edge_vec);
+    double t = 0.0;
+    if (edge_len_sq > 1e-12) {
+        double to_center[2] = {center[0] - start_world[0], center[1] - start_world[1]};
+        t = dot2(to_center, edge_vec) / edge_len_sq;
+        if (t < 0.0) t = 0.0;
+        if (t > 1.0) t = 1.0;
+    }
+    double closest[2] = {start_world[0] + t * edge_vec[0],
+                         start_world[1] + t * edge_vec[1]};
+    double diff[2] = {center[0] - closest[0], center[1] - closest[1]};
+    double dist_sq = dot2(diff, diff);
+    if (dist_sq >= radius * radius) {
+        contact->has_contact = 0;
+        return 0;
+    }
+    double distance = sqrt(dist_sq);
+    double normal[2];
+    if (distance > 1e-9) {
+        normal[0] = diff[0] / distance;
+        normal[1] = diff[1] / distance;
+    } else {
+        double tangent[2] = {edge_vec[1], -edge_vec[0]};
+        normalize(tangent);
+        normal[0] = -tangent[1];
+        normal[1] = tangent[0];
+    }
+    double penetration = radius - distance;
+    contact->normal[0] = normal[0];
+    contact->normal[1] = normal[1];
+    contact->penetration = penetration;
+    contact->contact_point[0] = center[0] - normal[0] * (radius - 0.5 * penetration);
+    contact->contact_point[1] = center[1] - normal[1] * (radius - 0.5 * penetration);
+    contact->contact_points[0][0] = contact->contact_point[0];
+    contact->contact_points[0][1] = contact->contact_point[1];
+    contact->penetrations[0] = penetration;
+    contact->point_count = 1;
+    contact->has_contact = 1;
+    return 0;
+}
+
+int chrono_collision2d_detect_edge_capsule(const ChronoBody2D_C *edge_body,
+                                          const ChronoBody2D_C *capsule_body,
+                                          ChronoContact2D_C *contact) {
+    return chrono_collision2d_detect_convex_gjk(edge_body, capsule_body, contact);
+}
+
+int chrono_collision2d_detect_capsule_edge(const ChronoBody2D_C *capsule_body,
+                                          const ChronoBody2D_C *edge_body,
+                                          ChronoContact2D_C *contact) {
+    return chrono_collision2d_detect_convex_gjk(capsule_body, edge_body, contact);
+}
+
+int chrono_collision2d_detect_edge_polygon(const ChronoBody2D_C *edge_body,
+                                          const ChronoBody2D_C *polygon_body,
+                                          ChronoContact2D_C *contact) {
+    return chrono_collision2d_detect_convex_gjk(edge_body, polygon_body, contact);
+}
+
+int chrono_collision2d_detect_polygon_edge(const ChronoBody2D_C *polygon_body,
+                                          const ChronoBody2D_C *edge_body,
+                                          ChronoContact2D_C *contact) {
+    return chrono_collision2d_detect_convex_gjk(polygon_body, edge_body, contact);
 }
 static double cross2(const double a[2], const double b[2]) {
     return a[0] * b[1] - a[1] * b[0];

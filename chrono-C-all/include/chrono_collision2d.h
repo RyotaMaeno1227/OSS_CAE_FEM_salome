@@ -92,6 +92,42 @@ int chrono_collision2d_detect_polygon_circle(const ChronoBody2D_C *polygon_body,
 int chrono_collision2d_detect_polygon_polygon(const ChronoBody2D_C *body_a,
                                               const ChronoBody2D_C *body_b,
                                               ChronoContact2D_C *contact);
+int chrono_collision2d_detect_convex_gjk(const ChronoBody2D_C *body_a,
+                                         const ChronoBody2D_C *body_b,
+                                         ChronoContact2D_C *contact);
+int chrono_collision2d_detect_capsule_capsule(const ChronoBody2D_C *body_a,
+                                             const ChronoBody2D_C *body_b,
+                                             ChronoContact2D_C *contact);
+int chrono_collision2d_detect_capsule_circle(const ChronoBody2D_C *capsule_body,
+                                            const ChronoBody2D_C *circle_body,
+                                            ChronoContact2D_C *contact);
+int chrono_collision2d_detect_circle_capsule(const ChronoBody2D_C *circle_body,
+                                            const ChronoBody2D_C *capsule_body,
+                                            ChronoContact2D_C *contact);
+int chrono_collision2d_detect_capsule_polygon(const ChronoBody2D_C *capsule_body,
+                                             const ChronoBody2D_C *polygon_body,
+                                             ChronoContact2D_C *contact);
+int chrono_collision2d_detect_polygon_capsule(const ChronoBody2D_C *polygon_body,
+                                             const ChronoBody2D_C *capsule_body,
+                                             ChronoContact2D_C *contact);
+int chrono_collision2d_detect_edge_circle(const ChronoBody2D_C *edge_body,
+                                         const ChronoBody2D_C *circle_body,
+                                         ChronoContact2D_C *contact);
+int chrono_collision2d_detect_circle_edge(const ChronoBody2D_C *circle_body,
+                                         const ChronoBody2D_C *edge_body,
+                                         ChronoContact2D_C *contact);
+int chrono_collision2d_detect_edge_capsule(const ChronoBody2D_C *edge_body,
+                                          const ChronoBody2D_C *capsule_body,
+                                          ChronoContact2D_C *contact);
+int chrono_collision2d_detect_capsule_edge(const ChronoBody2D_C *capsule_body,
+                                          const ChronoBody2D_C *edge_body,
+                                          ChronoContact2D_C *contact);
+int chrono_collision2d_detect_edge_polygon(const ChronoBody2D_C *edge_body,
+                                          const ChronoBody2D_C *polygon_body,
+                                          ChronoContact2D_C *contact);
+int chrono_collision2d_detect_polygon_edge(const ChronoBody2D_C *polygon_body,
+                                          const ChronoBody2D_C *edge_body,
+                                          ChronoContact2D_C *contact);
 
 int chrono_collision2d_resolve_circle_circle(ChronoBody2D_C *body_a,
                                              ChronoBody2D_C *body_b,

@@ -62,6 +62,12 @@ void chrono_body2d_init(ChronoBody2D_C *body) {
     body->circle_radius = 0.0;
     body->shape_type = CHRONO_BODY2D_SHAPE_NONE;
     body->polygon_vertex_count = 0;
+    body->capsule_half_length = 0.0;
+    body->capsule_radius = 0.0;
+    body->edge_vertices[0][0] = 0.0;
+    body->edge_vertices[0][1] = 0.0;
+    body->edge_vertices[1][0] = 0.0;
+    body->edge_vertices[1][1] = 0.0;
     body->restitution = 0.0;
     body->friction_static = 0.0;
     body->friction_dynamic = 0.0;
@@ -167,6 +173,12 @@ void chrono_body2d_set_circle_shape(ChronoBody2D_C *body, double radius) {
     body->circle_radius = (radius > 0.0) ? radius : 0.0;
     body->shape_type = CHRONO_BODY2D_SHAPE_CIRCLE;
     body->polygon_vertex_count = 0;
+    body->capsule_half_length = 0.0;
+    body->capsule_radius = 0.0;
+    body->edge_vertices[0][0] = 0.0;
+    body->edge_vertices[0][1] = 0.0;
+    body->edge_vertices[1][0] = 0.0;
+    body->edge_vertices[1][1] = 0.0;
 }
 
 double chrono_body2d_get_circle_radius(const ChronoBody2D_C *body) {
@@ -187,6 +199,12 @@ int chrono_body2d_set_polygon_shape(ChronoBody2D_C *body, const double *vertices
     body->polygon_vertex_count = vertex_count;
     body->shape_type = CHRONO_BODY2D_SHAPE_POLYGON;
     body->circle_radius = 0.0;
+    body->capsule_half_length = 0.0;
+    body->capsule_radius = 0.0;
+    body->edge_vertices[0][0] = 0.0;
+    body->edge_vertices[0][1] = 0.0;
+    body->edge_vertices[1][0] = 0.0;
+    body->edge_vertices[1][1] = 0.0;
     return 1;
 }
 
@@ -229,6 +247,38 @@ int chrono_body2d_set_polygon_shape_with_density(ChronoBody2D_C *body,
         return 0;
     }
     chrono_body2d_set_mass(body, mass, inertia);
+    return 1;
+}
+
+int chrono_body2d_set_capsule_shape(ChronoBody2D_C *body, double half_length, double radius) {
+    if (!body || half_length < 0.0 || radius <= 0.0) {
+        return 0;
+    }
+    body->capsule_half_length = half_length;
+    body->capsule_radius = radius;
+    body->shape_type = CHRONO_BODY2D_SHAPE_CAPSULE;
+    body->polygon_vertex_count = 0;
+    body->circle_radius = 0.0;
+    body->edge_vertices[0][0] = 0.0;
+    body->edge_vertices[0][1] = 0.0;
+    body->edge_vertices[1][0] = 0.0;
+    body->edge_vertices[1][1] = 0.0;
+    return 1;
+}
+
+int chrono_body2d_set_edge_shape(ChronoBody2D_C *body, const double start[2], const double end[2]) {
+    if (!body || !start || !end) {
+        return 0;
+    }
+    body->edge_vertices[0][0] = start[0];
+    body->edge_vertices[0][1] = start[1];
+    body->edge_vertices[1][0] = end[0];
+    body->edge_vertices[1][1] = end[1];
+    body->shape_type = CHRONO_BODY2D_SHAPE_EDGE;
+    body->polygon_vertex_count = 0;
+    body->circle_radius = 0.0;
+    body->capsule_half_length = 0.0;
+    body->capsule_radius = 0.0;
     return 1;
 }
 

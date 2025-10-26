@@ -21,6 +21,7 @@ TEST_TARGETS := \
 	$(TEST_DIR)/test_polygon_slope_friction \
 	$(TEST_DIR)/test_polygon_spin_collision \
 	$(TEST_DIR)/test_polygon_mass_properties \
+	$(TEST_DIR)/test_capsule_edge_collision \
 	$(TEST_DIR)/test_island_builder \
 	$(TEST_DIR)/test_contact_manager_longrun \
 	$(TEST_DIR)/test_constraint_batch_solve

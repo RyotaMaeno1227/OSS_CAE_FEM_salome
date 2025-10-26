@@ -24,6 +24,9 @@ typedef struct ChronoBody2D_C {
     int shape_type;
     size_t polygon_vertex_count;
     double polygon_vertices[16][2];
+    double capsule_half_length;
+    double capsule_radius;
+    double edge_vertices[2][2];
 } ChronoBody2D_C;
 
 typedef struct ChronoMaterial2D_C {
@@ -37,7 +40,9 @@ typedef struct ChronoMaterial2D_C {
 typedef enum ChronoBody2DShapeType_C {
     CHRONO_BODY2D_SHAPE_NONE = 0,
     CHRONO_BODY2D_SHAPE_CIRCLE = 1,
-    CHRONO_BODY2D_SHAPE_POLYGON = 2
+    CHRONO_BODY2D_SHAPE_POLYGON = 2,
+    CHRONO_BODY2D_SHAPE_CAPSULE = 3,
+    CHRONO_BODY2D_SHAPE_EDGE = 4
 } ChronoBody2DShapeType_C;
 
 void chrono_body2d_init(ChronoBody2D_C *body);
@@ -60,6 +65,8 @@ int chrono_body2d_set_polygon_shape_with_density(ChronoBody2D_C *body,
                                                  const double *vertices,
                                                  size_t vertex_count,
                                                  double density);
+int chrono_body2d_set_capsule_shape(ChronoBody2D_C *body, double half_length, double radius);
+int chrono_body2d_set_edge_shape(ChronoBody2D_C *body, const double start[2], const double end[2]);
 void chrono_body2d_set_restitution(ChronoBody2D_C *body, double restitution);
 double chrono_body2d_get_restitution(const ChronoBody2D_C *body);
 void chrono_body2d_set_friction_static(ChronoBody2D_C *body, double mu_s);
