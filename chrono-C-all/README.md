@@ -46,3 +46,4 @@ Additional regression tests are available via `make test` (see the top-level `Ma
 - `tests/test_polygon_slope_friction.c`: block sliding on an inclined plane with friction.
 - `tests/test_polygon_spin_collision.c`: counter-rotating convex polygons interacting through the manifold pipeline.
 - `tests/test_capsule_edge_collision.c`: capsule/capsule and edge/circle interactions via the GJK/EPA backend.
+- `tests/test_island_polygon_longrun.c`: combined constraint + polygon contact scenario executed through the island solver.

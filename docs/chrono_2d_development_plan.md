@@ -62,6 +62,7 @@
    - `test_island_parallel_contacts`・`test_island_builder` でアイランド分割の正当性と並列経路を検証。  
    - `test_polygon_collision` で凸ポリゴン／円の接触検出と解決を回帰し、`test_polygon_mass_properties` で質量・慣性の数値精度を確認。  
    - `test_polygon_slope_friction`・`test_polygon_spin_collision` で斜面摩擦・回転ポリゴン衝突シナリオを網羅、`test_capsule_edge_collision` でカプセル・エッジの組合せを検証。  
+   - `test_island_polygon_longrun` でポリゴン同士の接触と距離拘束を同一アイランド内で長時間駆動し、ウォームスタート統合を回帰。  
    - `test_contact_manager_longrun` でマニフォールドの再利用・ウォームスタート安定性を長時間回帰。  
    - `make test` で全テストが実行されるよう連携。
 2. **ベンチマーク/デモ**  

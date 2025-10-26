@@ -608,13 +608,13 @@ void chrono_island2d_solve(const ChronoIsland2DWorkspace_C *workspace,
                     if (!point->is_active || !point->contact.has_contact) {
                         continue;
                     }
-                    chrono_collision2d_resolve_circle_circle(body_a,
-                                                             body_b,
-                                                             &point->contact,
-                                                             manifold->combined_restitution,
-                                                             manifold->combined_friction_static,
-                                                             manifold->combined_friction_dynamic,
-                                                             manifold);
+                    chrono_collision2d_resolve_contact(body_a,
+                                                       body_b,
+                                                       &point->contact,
+                                                       manifold->combined_restitution,
+                                                       manifold->combined_friction_static,
+                                                       manifold->combined_friction_dynamic,
+                                                       manifold);
                 }
             }
         }
