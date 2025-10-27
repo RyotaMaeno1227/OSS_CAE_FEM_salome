@@ -22,6 +22,27 @@ static void init_slider_body(ChronoBody2D_C *body, double x, double y, double vx
     body->linear_velocity[1] = vy;
 }
 
+static double compute_translation(const ChronoBody2D_C *anchor,
+                                  const ChronoBody2D_C *slider,
+                                  const ChronoPrismaticConstraint2D_C *joint) {
+    double axis_world[2] = {joint->local_axis_a[0], joint->local_axis_a[1]};
+    if (anchor) {
+        double c = cos(anchor->angle);
+        double s = sin(anchor->angle);
+        axis_world[0] = c * joint->local_axis_a[0] - s * joint->local_axis_a[1];
+        axis_world[1] = s * joint->local_axis_a[0] + c * joint->local_axis_a[1];
+    }
+    double anchor_world[2];
+    double slider_world[2];
+    chrono_body2d_local_to_world(anchor, joint->local_anchor_a, anchor_world);
+    chrono_body2d_local_to_world(slider, joint->local_anchor_b, slider_world);
+    double delta[2] = {
+        slider_world[0] - anchor_world[0],
+        slider_world[1] - anchor_world[1]
+    };
+    return delta[0] * axis_world[0] + delta[1] * axis_world[1];
+}
+
 int main(void) {
     ChronoBody2D_C anchor;
     ChronoBody2D_C slider;
@@ -43,6 +64,7 @@ int main(void) {
     chrono_prismatic_constraint2d_set_slop(&joint, 1e-4);
     chrono_prismatic_constraint2d_set_max_correction(&joint, 0.05);
     chrono_prismatic_constraint2d_enable_limit(&joint, 1, -0.3, 0.4);
+    chrono_prismatic_constraint2d_set_limit_spring(&joint, 55.0, 7.5);
 
     ChronoConstraint2DBase_C *constraints[1] = {&joint.base};
     ChronoConstraint2DBatchConfig_C config;
@@ -86,6 +108,14 @@ int main(void) {
         return 1;
     }
 
+    double translation_final = compute_translation(&anchor, &slider, &joint);
+    if (translation_final > 0.4 + 5e-3 || translation_final < -0.3 - 5e-3) {
+        fprintf(stderr,
+                "Prismatic constraint test failed: translation outside limit (%.6f)\n",
+                translation_final);
+        return 1;
+    }
+
     ChronoBody2D_C motor_slider;
     init_slider_body(&motor_slider, 0.0, 0.0, 0.0, 0.0);
 
@@ -100,6 +130,8 @@ int main(void) {
     chrono_prismatic_constraint2d_set_slop(&joint_motor, 1e-4);
     chrono_prismatic_constraint2d_set_max_correction(&joint_motor, 0.05);
     chrono_prismatic_constraint2d_enable_motor(&joint_motor, 1, 0.8, 12.0);
+    chrono_prismatic_constraint2d_set_limit_spring(&joint_motor, 45.0, 6.0);
+    chrono_prismatic_constraint2d_set_motor_position_target(&joint_motor, 0.26, 5.5, 1.0);
 
     ChronoConstraint2DBase_C *motor_constraints[1] = {&joint_motor.base};
     for (int step = 0; step < total_steps; ++step) {
@@ -108,11 +140,11 @@ int main(void) {
         chrono_body2d_reset_forces(&motor_slider);
     }
 
-    double axis_vel = motor_slider.linear_velocity[0];
-    if (fabs(axis_vel - 0.8) > 0.12) {
+    translation_final = compute_translation(&anchor, &motor_slider, &joint_motor);
+    if (fabs(translation_final - 0.26) > 0.03) {
         fprintf(stderr,
-                "Prismatic constraint test failed: motor speed mismatch (%.6f)\n",
-                axis_vel);
+                "Prismatic constraint test failed: position control drifted (%.6f)\n",
+                translation_final);
         return 1;
     }
 

@@ -27,6 +27,9 @@ typedef struct ChronoConstraint2DBase_C {
     double effective_mass;
 } ChronoConstraint2DBase_C;
 
+#define CHRONO_PRISMATIC_MOTOR_VELOCITY 0
+#define CHRONO_PRISMATIC_MOTOR_POSITION 1
+
 typedef struct ChronoDistanceConstraint2D_C {
     ChronoConstraint2DBase_C base;
     double local_anchor_a[2];
@@ -75,9 +78,15 @@ typedef struct ChronoPrismaticConstraint2D_C {
     double limit_lower;
     double limit_upper;
     int enable_limit;
+    double limit_spring_stiffness;
+    double limit_spring_damping;
     double motor_speed;
     double motor_max_force;
     int enable_motor;
+    int motor_mode;
+    double motor_position_target;
+    double motor_position_gain;
+    double motor_position_damping;
     double accumulated_motor_impulse;
     double limit_bias;
     double limit_accumulated_impulse;
@@ -85,6 +94,9 @@ typedef struct ChronoPrismaticConstraint2D_C {
     double motor_mass;
     double translation;
     double cached_dt;
+    double last_motor_force;
+    double last_limit_force;
+    double last_limit_spring_force;
 } ChronoPrismaticConstraint2D_C;
 
 typedef struct ChronoSpringConstraint2D_C {
@@ -194,13 +206,20 @@ void chrono_prismatic_constraint2d_set_softness(ChronoPrismaticConstraint2D_C *c
 void chrono_prismatic_constraint2d_set_slop(ChronoPrismaticConstraint2D_C *constraint, double slop);
 void chrono_prismatic_constraint2d_set_max_correction(ChronoPrismaticConstraint2D_C *constraint, double max_correction);
 void chrono_prismatic_constraint2d_enable_limit(ChronoPrismaticConstraint2D_C *constraint,
-                                               int enable,
-                                               double lower,
-                                               double upper);
+                                                int enable,
+                                                double lower,
+                                                double upper);
 void chrono_prismatic_constraint2d_enable_motor(ChronoPrismaticConstraint2D_C *constraint,
-                                               int enable,
-                                               double speed,
-                                               double max_force);
+                                                int enable,
+                                                double speed,
+                                                double max_force);
+void chrono_prismatic_constraint2d_set_limit_spring(ChronoPrismaticConstraint2D_C *constraint,
+                                                    double stiffness,
+                                                    double damping);
+void chrono_prismatic_constraint2d_set_motor_position_target(ChronoPrismaticConstraint2D_C *constraint,
+                                                             double target_position,
+                                                             double proportional_gain,
+                                                             double damping_gain);
 void chrono_prismatic_constraint2d_prepare(ChronoPrismaticConstraint2D_C *constraint, double dt);
 void chrono_prismatic_constraint2d_apply_warm_start(ChronoPrismaticConstraint2D_C *constraint);
 void chrono_prismatic_constraint2d_solve_velocity(ChronoPrismaticConstraint2D_C *constraint);

@@ -28,10 +28,14 @@ function prismatic_slider_visualization(csv_path, output_dir)
     x = data.x;
     vx = data.vx;
     translation = data.translation;
-    motor_impulse = data.motor_impulse;
-    limit_impulse = data.limit_impulse;
+    motor_force = data.motor_force;
+    limit_force = data.limit_force;
+    limit_spring_force = data.limit_spring_force;
     motor_speed = data.motor_speed;
     limit_state = data.limit_state;
+    motor_mode = data.motor_mode;
+    position_target = data.position_target;
+    position_gain = data.position_gain(1);
     limit_lower = data.limit_lower;
     limit_upper = data.limit_upper;
 
@@ -46,9 +50,11 @@ function prismatic_slider_visualization(csv_path, output_dir)
     plot(time, translation, 'LineWidth', 1.4);
     yline(upper_val, 'Color', [0.8 0.2 0.2], 'LineStyle', '--');
     yline(lower_val, 'Color', [0.8 0.2 0.2], 'LineStyle', '--');
+    plot(time, position_target, 'k--', 'LineWidth', 1.0);
     title('Slider Translation Over Time');
     xlabel('Time (s)');
     ylabel('Translation along axis (m)');
+    legend({'Limit band', 'Translation', 'Upper limit', 'Lower limit', 'Position target'}, 'Location', 'best');
     grid on;
     translation_path = fullfile(output_dir, 'translation_plot.png');
     exportgraphics(fig_translation, translation_path, 'Resolution', 200);
@@ -57,14 +63,16 @@ function prismatic_slider_visualization(csv_path, output_dir)
     %% Motor & limit impulses plot
     fig_impulse = figure('Name', 'Motor/Limit Response', 'Visible', 'off');
     yyaxis left;
-    plot(time, motor_impulse, 'LineWidth', 1.3);
+    plot(time, motor_force, 'LineWidth', 1.3);
     ylabel('Motor impulse (N)');
     yyaxis right;
-    plot(time, limit_impulse, 'LineWidth', 1.1);
-    ylabel('Limit impulse (N)');
+    plot(time, limit_force, 'LineWidth', 1.1);
+    hold on;
+    plot(time, limit_spring_force, 'LineWidth', 1.1, 'LineStyle', '--');
+    ylabel('Limit forces (N)');
     xlabel('Time (s)');
     title('Motor & Limit Impulse History');
-    legend({'Motor', 'Limit'}, 'Location', 'best');
+    legend({'Motor', 'Hard limit', 'Soft spring'}, 'Location', 'best');
     grid on;
     impulse_path = fullfile(output_dir, 'impulse_plot.png');
     exportgraphics(fig_impulse, impulse_path, 'Resolution', 200);
@@ -77,7 +85,7 @@ function prismatic_slider_visualization(csv_path, output_dir)
     plot(time, vx, 'LineWidth', 1.1);
     xlabel('Time (s)');
     ylabel('Speed (m/s)');
-    legend({'Commanded', 'Approx. actual'}, 'Location', 'best');
+    legend({'Commanded', 'Actual vx'}, 'Location', 'best');
     title('Motor Speed vs Slider Velocity');
     grid on;
     speed_path = fullfile(output_dir, 'motor_speed_plot.png');
@@ -119,7 +127,7 @@ function prismatic_slider_visualization(csv_path, output_dir)
                  'HorizontalAlignment', 'center', 'Color', [0.8 0.2 0.2]);
         end
 
-        title(sprintf('t = %.2f s', time(idx)));
+        title(sprintf('t = %.2f s  |  mode=%d  |  kp=%.2f', time(idx), motor_mode(idx), position_gain));
         xlabel('Axis (m)');
         ylabel('Offset (m)');
 

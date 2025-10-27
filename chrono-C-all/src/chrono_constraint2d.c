@@ -889,6 +889,9 @@ static void chrono_prismatic_constraint2d_prepare_impl(void *constraint_ptr, dou
     }
 
     constraint->cached_dt = dt;
+    constraint->last_motor_force = 0.0;
+    constraint->last_limit_force = 0.0;
+    constraint->last_limit_spring_force = 0.0;
 
     ChronoBody2D_C *body_a = constraint->base.body_a;
     ChronoBody2D_C *body_b = constraint->base.body_b;
@@ -1043,6 +1046,9 @@ static void chrono_prismatic_constraint2d_apply_warm_start_impl(void *constraint
             apply_impulse(body_b, limit_vec, constraint->rb);
         }
     }
+    constraint->last_motor_force = 0.0;
+    constraint->last_limit_force = 0.0;
+    constraint->last_limit_spring_force = 0.0;
 }
 
 static void chrono_prismatic_constraint2d_solve_velocity_impl(void *constraint_ptr) {
@@ -1075,6 +1081,7 @@ static void chrono_prismatic_constraint2d_solve_velocity_impl(void *constraint_p
     double dv[2];
     sub(vb, va, dv);
     double Cdot = dot(dv, constraint->normal_world);
+    double axis_vel = dot(dv, constraint->axis_world);
     double gamma = constraint->softness;
     double denom = constraint->base.effective_mass;
     if (denom == 0.0) {
@@ -1095,9 +1102,16 @@ static void chrono_prismatic_constraint2d_solve_velocity_impl(void *constraint_p
         apply_impulse(body_b, impulse_vec, constraint->rb);
     }
 
+    double motor_target_speed = constraint->motor_speed;
+    if (constraint->enable_motor && constraint->motor_mode == CHRONO_PRISMATIC_MOTOR_POSITION) {
+        double position_error = constraint->motor_position_target - constraint->translation;
+        motor_target_speed = constraint->motor_position_gain * position_error - constraint->motor_position_damping * axis_vel;
+    }
+
+    constraint->motor_speed = motor_target_speed;
+
     if (constraint->enable_motor && constraint->motor_mass > 0.0 && constraint->motor_max_force > 0.0) {
-        double axis_vel = dot(dv, constraint->axis_world);
-        double Cmotor = axis_vel - constraint->motor_speed;
+        double Cmotor = axis_vel - motor_target_speed;
         double lambda_motor = -Cmotor * constraint->motor_mass;
         double max_impulse = constraint->motor_max_force * constraint->cached_dt;
         double prev_impulse = constraint->accumulated_motor_impulse;
@@ -1119,10 +1133,14 @@ static void chrono_prismatic_constraint2d_solve_velocity_impl(void *constraint_p
         if (body_b) {
             apply_impulse(body_b, motor_vec, constraint->rb);
         }
+        if (constraint->cached_dt > 0.0) {
+            constraint->last_motor_force = lambda_motor / constraint->cached_dt;
+        }
+    } else {
+        constraint->last_motor_force = 0.0;
     }
 
     if (constraint->enable_limit && constraint->limit_state != 0 && constraint->motor_mass > 0.0) {
-        double axis_vel = dot(dv, constraint->axis_world);
         double gamma_limit = constraint->softness;
         double denom_limit = constraint->motor_mass;
         double lambda_limit = -(axis_vel + constraint->limit_bias + gamma_limit * constraint->limit_accumulated_impulse) * denom_limit;
@@ -1150,6 +1168,43 @@ static void chrono_prismatic_constraint2d_solve_velocity_impl(void *constraint_p
         if (body_b) {
             apply_impulse(body_b, limit_vec, constraint->rb);
         }
+        if (constraint->cached_dt > 0.0) {
+            constraint->last_limit_force = lambda_limit / constraint->cached_dt;
+        }
+    }
+    else {
+        constraint->last_limit_force = 0.0;
+    }
+
+    if (constraint->enable_limit && constraint->limit_spring_stiffness > 0.0 && constraint->motor_mass > 0.0) {
+        double deflection = 0.0;
+        if (constraint->translation < constraint->limit_lower) {
+            deflection = constraint->translation - constraint->limit_lower;
+        } else if (constraint->translation > constraint->limit_upper) {
+            deflection = constraint->translation - constraint->limit_upper;
+        }
+        if (deflection != 0.0) {
+            double force = -constraint->limit_spring_stiffness * deflection - constraint->limit_spring_damping * axis_vel;
+            double lambda_spring = force * constraint->cached_dt;
+            double spring_vec[2] = {
+                constraint->axis_world[0] * lambda_spring,
+                constraint->axis_world[1] * lambda_spring
+            };
+            if (body_a) {
+                apply_impulse(body_a, (double[2]){-spring_vec[0], -spring_vec[1]}, constraint->ra);
+            }
+            if (body_b) {
+                apply_impulse(body_b, spring_vec, constraint->rb);
+            }
+            if (constraint->cached_dt > 0.0) {
+                constraint->last_limit_spring_force = lambda_spring / constraint->cached_dt;
+            }
+        }
+        else {
+            constraint->last_limit_spring_force = 0.0;
+        }
+    } else {
+        constraint->last_limit_spring_force = 0.0;
     }
 }
 
@@ -1885,10 +1940,20 @@ void chrono_prismatic_constraint2d_init(ChronoPrismaticConstraint2D_C *constrain
     constraint->limit_lower = -1.0;
     constraint->limit_upper = 1.0;
     constraint->enable_limit = 0;
+    constraint->limit_spring_stiffness = 0.0;
+    constraint->limit_spring_damping = 0.0;
     constraint->motor_speed = 0.0;
     constraint->motor_max_force = 0.0;
     constraint->enable_motor = 0;
+    constraint->motor_mode = CHRONO_PRISMATIC_MOTOR_VELOCITY;
+    constraint->motor_position_target = 0.0;
+    constraint->motor_position_gain = 0.0;
+    constraint->motor_position_damping = 0.0;
     constraint->accumulated_motor_impulse = 0.0;
+    constraint->limit_accumulated_impulse = 0.0;
+    constraint->last_motor_force = 0.0;
+    constraint->last_limit_force = 0.0;
+    constraint->last_limit_spring_force = 0.0;
 }
 
 void chrono_prismatic_constraint2d_set_axis(ChronoPrismaticConstraint2D_C *constraint,
@@ -1974,9 +2039,34 @@ void chrono_prismatic_constraint2d_enable_motor(ChronoPrismaticConstraint2D_C *c
         return;
     }
     constraint->enable_motor = enable ? 1 : 0;
+    constraint->motor_mode = CHRONO_PRISMATIC_MOTOR_VELOCITY;
     constraint->motor_speed = speed;
     constraint->motor_max_force = (max_force >= 0.0) ? max_force : 0.0;
     if (!constraint->enable_motor) {
         constraint->accumulated_motor_impulse = 0.0;
     }
+}
+
+void chrono_prismatic_constraint2d_set_limit_spring(ChronoPrismaticConstraint2D_C *constraint,
+                                                    double stiffness,
+                                                    double damping) {
+    if (!constraint) {
+        return;
+    }
+    constraint->limit_spring_stiffness = (stiffness > 0.0) ? stiffness : 0.0;
+    constraint->limit_spring_damping = (damping > 0.0) ? damping : 0.0;
+}
+
+void chrono_prismatic_constraint2d_set_motor_position_target(ChronoPrismaticConstraint2D_C *constraint,
+                                                             double target_position,
+                                                             double proportional_gain,
+                                                             double damping_gain) {
+    if (!constraint) {
+        return;
+    }
+    constraint->enable_motor = 1;
+    constraint->motor_mode = CHRONO_PRISMATIC_MOTOR_POSITION;
+    constraint->motor_position_target = target_position;
+    constraint->motor_position_gain = (proportional_gain > 0.0) ? proportional_gain : 0.0;
+    constraint->motor_position_damping = (damping_gain > 0.0) ? damping_gain : 0.0;
 }

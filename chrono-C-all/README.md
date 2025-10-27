@@ -23,6 +23,8 @@ control compliance.
 - `chrono_collision2d_detect_* / resolve_*`: collision routines covering circle–circle, circle–polygon, and
   polygon–polygon (convex) pairs.  Each detection function fills a `ChronoContact2D_C` struct that can store up
   to two contact points for use with `chrono_collision2d_resolve_contact` and the contact manager.
+- `chrono_prismatic_constraint2d_*`: slider joint API。`chrono_prismatic_constraint2d_set_limit_spring` でソフトリミット、
+  `chrono_prismatic_constraint2d_set_motor_position_target` で位置制御モードに切替えられます。
 
 ## Building the tests
 
@@ -56,7 +58,7 @@ Additional regression tests are available via `make test` (see the top-level `Ma
 Two self-contained demos can be built with `make examples`:
 
 - `examples/newton_cradle` – four-body Newton's cradle producing `data/newton_cradle.csv`.
-- `examples/prismatic_slider` – slider joint with enable/disable motor and limit transitions, writing `data/prismatic_slider.csv`.
+- `examples/prismatic_slider` – slider joint with soft limits, velocity/位置モータ切り替えを含むデモ。`data/prismatic_slider.csv` に軸位置・リミット／モータ反力が記録されます。
 
 Run an example and point the MATLAB helpers in `docs/` at the generated CSV to obtain plots and GIF animations.  For instance:
 

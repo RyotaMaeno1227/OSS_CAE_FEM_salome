@@ -11,8 +11,13 @@ typedef struct PrismaticDemoConfig {
     double total_time;
     double limit_lower;
     double limit_upper;
+    double limit_spring_stiffness;
+    double limit_spring_damping;
     double motor_speed_forward;
     double motor_speed_reverse;
+    double position_target;
+    double position_gain;
+    double position_damping;
     double motor_max_force;
     double damping;
     int switch_step;
@@ -60,8 +65,9 @@ static double compute_translation(const ChronoBody2D_C *anchor,
 
 static void write_header(FILE *fp) {
     fprintf(fp,
-            "time,x,y,vx,vy,translation,motor_impulse,limit_impulse,"
-            "motor_speed,limit_state,limit_lower,limit_upper\n");
+            "time,x,y,vx,vy,translation,motor_force,limit_force,"
+            "limit_spring_force,motor_mode,motor_speed,limit_state,limit_lower,limit_upper,"
+            "position_target,position_gain\n");
 }
 
 int main(int argc, char **argv) {
@@ -80,8 +86,13 @@ int main(int argc, char **argv) {
     config.total_time = 6.0;
     config.limit_lower = -0.4;
     config.limit_upper = 0.45;
+    config.limit_spring_stiffness = 60.0;
+    config.limit_spring_damping = 8.0;
     config.motor_speed_forward = 0.8;
     config.motor_speed_reverse = -0.5;
+    config.position_target = 0.25;
+    config.position_gain = 6.0;
+    config.position_damping = 1.2;
     config.motor_max_force = 18.0;
     config.damping = 0.999;
     config.sample_stride = 5;
@@ -108,6 +119,9 @@ int main(int argc, char **argv) {
                                                1,
                                                config.limit_lower,
                                                config.limit_upper);
+    chrono_prismatic_constraint2d_set_limit_spring(&joint,
+                                                  config.limit_spring_stiffness,
+                                                  config.limit_spring_damping);
     chrono_prismatic_constraint2d_enable_motor(&joint,
                                                1,
                                                config.motor_speed_forward,
@@ -127,19 +141,14 @@ int main(int argc, char **argv) {
 
     for (int step = 0; step < total_steps; ++step) {
         if (step == config.switch_step) {
-            chrono_prismatic_constraint2d_enable_motor(&joint,
-                                                       1,
-                                                       config.motor_speed_reverse,
-                                                       config.motor_max_force);
+            chrono_prismatic_constraint2d_set_motor_position_target(&joint,
+                                                                     config.position_target,
+                                                                     config.position_gain,
+                                                                     config.position_damping);
+            joint.motor_max_force = config.motor_max_force;
         }
 
-        double prev_motor_impulse = joint.accumulated_motor_impulse;
-        double prev_limit_impulse = joint.limit_accumulated_impulse;
-
         chrono_constraint2d_batch_solve(constraints, 1, config.dt, &solver_cfg, NULL);
-
-        double motor_impulse = (joint.accumulated_motor_impulse - prev_motor_impulse) / config.dt;
-        double limit_impulse = (joint.limit_accumulated_impulse - prev_limit_impulse) / config.dt;
 
         slider.linear_velocity[0] *= config.damping;
         slider.linear_velocity[1] *= config.damping;
@@ -151,19 +160,23 @@ int main(int argc, char **argv) {
         if (step % config.sample_stride == 0) {
             double translation = compute_translation(&anchor, &slider, &joint);
             fprintf(fp,
-                    "%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%d,%.6f,%.6f\n",
+                    "%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%d,%.6f,%d,%.6f,%.6f,%.6f,%.6f\n",
                     time,
                     slider.position[0],
                     slider.position[1],
                     slider.linear_velocity[0],
                     slider.linear_velocity[1],
                     translation,
-                    motor_impulse,
-                    limit_impulse,
+                    joint.last_motor_force,
+                    joint.last_limit_force,
+                    joint.last_limit_spring_force,
+                    joint.motor_mode,
                     joint.motor_speed,
                     joint.limit_state,
                     config.limit_lower,
-                    config.limit_upper);
+                    config.limit_upper,
+                    config.position_target,
+                    config.position_gain);
         }
     }
 
