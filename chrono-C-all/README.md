@@ -77,3 +77,10 @@ prismatic_slider_visualization('../data/prismatic_slider.csv', 'prismatic_frames
 ```
 
 Both scripts emit trajectory/diagnostic plots and an animation built from PNG frames (stored under the output directory).
+
+## Planar ジョイントの推奨パラメータと安定性チェック
+
+- 位置モータを駆動する際は、先に `chrono_planar_constraint2d_enable_motor(axis, 1, 0.0, max_force)` で最大駆動力（推奨 15–18 N）を登録し、その後 `chrono_planar_constraint2d_set_motor_position_target(axis, target, 3.5, 1.2)` を呼び出すと PID 位置制御モードに切り替わります（周波数 = 3.5 Hz、減衰率 = 1.2）。
+- Baumgarte 係数は `chrono_planar_constraint2d_set_baumgarte(constraint, 0.15)` を目安にすると、位置誤差収束と数値安定性のバランスが取りやすくなります。必要に応じて `set_slop(1e-4)`、`set_max_correction(0.08)` を併用してください。
+- Y 軸リミットをソフトに拘束する場合は `chrono_planar_constraint2d_enable_limit(axis, 1, lower, upper)` に続けて `chrono_planar_constraint2d_set_limit_spring(axis, 55.0, 8.0)` を設定すると、急峻な衝突でもエネルギー発散を抑制できます。
+- `tests/test_planar_constraint_longrun` は 6000 ステップ（dt = 0.01）を通してモータ目標の切り替え・姿勢フィード・リミット衝突を検証し、位置誤差（≦ 0.018 m）と運動エネルギー（≦ 6.9 J）が許容範囲に収まっていることを確認します。長時間安定性を調整したい場合はこの回帰テストをベースラインとして活用してください。

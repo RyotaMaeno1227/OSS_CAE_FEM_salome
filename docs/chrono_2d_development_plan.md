@@ -40,7 +40,7 @@
    - ✅ 回転ジョイント（ピン）: `ChronoRevoluteConstraint2D_C` を追加し、Sequential Impulse ベースのバッチソルバに統合。`tests/test_revolute_constraint` で回帰確認。  
    - ✅ プリズマティック（スライダ）: `ChronoPrismaticConstraint2D_C` に法線拘束＋ウォームスタートを実装し、ストローク制限とモータ駆動（リミット＆モータ）を追加。位置制御モード（PID ベース）とソフトリミット（ばね＋ダンパ）を導入し、`tests/test_prismatic_constraint` でリミット／モータ動作と位置収束を確認。  
    - ✅ リボルート＋ギア: `ChronoRevoluteConstraint2D_C` に速度／位置モータを追加し、`ChronoGearConstraint2D_C` でギア比拘束を実装。`tests/test_revolute_constraint` と `tests/test_gear_constraint` を追加。  
-   - ✅ プラナー（2軸スライダ）: `ChronoPlanarConstraint2D_C` を追加し、軸毎のモータ／ソフトリミット／位置制御をサポート。`tests/test_planar_constraint` で回帰確認。  
+   - ✅ プラナー（2軸スライダ）: `ChronoPlanarConstraint2D_C` を追加し、軸毎のモータ／ソフトリミット／位置制御をサポート。Baumgarte 0.15／PID 周波数 3.5 Hz・減衰 1.2／ソフトリミットばね 55 N/m・ダンパ 8 N·s/m を推奨初期値とし、`tests/test_planar_constraint_longrun`（6000 ステップ）でモータ目標切替え・リミット衝突の安定性を回帰確認。`tests/test_planar_constraint` で基本挙動をチェックできる。  
    - ✅ スプリングダンパ: `ChronoSpringConstraint2D_C` を追加し、フック＋粘性力をインパルスとして適用。`tests/test_spring_constraint` で収束挙動を確認。  
    - 今後: スライダのリミット／モータ、他拘束タイプ（スライダ2軸、ギア、距離減衰など）を段階的に追加。
 3. **ソルバー**  

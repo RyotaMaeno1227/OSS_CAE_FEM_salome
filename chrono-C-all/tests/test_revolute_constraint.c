@@ -116,8 +116,18 @@ int main(void) {
     }
 
     const double target_angle = 0.5 * 3.141592653589793;
-    chrono_revolute_constraint2d_set_motor_position_target(&motor_joint, target_angle, 8.0, 1.4);
-    chrono_revolute_constraint2d_enable_motor(&motor_joint, 1, motor_joint.motor_speed, 6.0);
+    init_bob(&motor_body, 0.0, -0.6);
+    chrono_revolute_constraint2d_init(&motor_joint,
+                                      &anchor,
+                                      &motor_body,
+                                      local_anchor_anchor,
+                                      local_anchor_bob);
+    chrono_revolute_constraint2d_set_baumgarte(&motor_joint, 0.3);
+    chrono_revolute_constraint2d_set_slop(&motor_joint, 1e-4);
+    chrono_revolute_constraint2d_set_max_correction(&motor_joint, 0.05);
+    chrono_revolute_constraint2d_enable_motor(&motor_joint, 1, 0.0, 10.0);
+    chrono_revolute_constraint2d_set_motor_position_target(&motor_joint, target_angle, 10.0, 1.6);
+    motor_constraints[0] = &motor_joint.base;
     motor_body.angular_velocity = 0.0;
 
     for (int step = 0; step < total_steps; ++step) {

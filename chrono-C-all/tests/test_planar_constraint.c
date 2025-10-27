@@ -53,27 +53,27 @@ int main(void) {
     chrono_planar_constraint2d_set_slop(&planar, 1e-4);
     chrono_planar_constraint2d_set_max_correction(&planar, 0.05);
 
-    chrono_planar_constraint2d_set_motor_position_target(&planar,
-                                                          CHRONO_PLANAR_AXIS_X,
-                                                          0.3,
-                                                          6.0,
-                                                          1.0);
     chrono_planar_constraint2d_enable_motor(&planar,
                                             CHRONO_PLANAR_AXIS_X,
                                             1,
                                             0.0,
                                             15.0);
-
     chrono_planar_constraint2d_set_motor_position_target(&planar,
-                                                          CHRONO_PLANAR_AXIS_Y,
-                                                          -0.2,
+                                                          CHRONO_PLANAR_AXIS_X,
+                                                          0.3,
                                                           6.0,
-                                                          1.2);
+                                                          1.0);
+
     chrono_planar_constraint2d_enable_motor(&planar,
                                             CHRONO_PLANAR_AXIS_Y,
                                             1,
                                             0.0,
                                             15.0);
+    chrono_planar_constraint2d_set_motor_position_target(&planar,
+                                                          CHRONO_PLANAR_AXIS_Y,
+                                                          -0.2,
+                                                          6.0,
+                                                          1.2);
 
     ChronoConstraint2DBase_C *constraints[1] = {&planar.base};
     ChronoConstraint2DBatchConfig_C cfg;
