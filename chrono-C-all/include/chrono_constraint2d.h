@@ -29,6 +29,8 @@ typedef struct ChronoConstraint2DBase_C {
 
 #define CHRONO_PRISMATIC_MOTOR_VELOCITY 0
 #define CHRONO_PRISMATIC_MOTOR_POSITION 1
+#define CHRONO_REVOLUTE_MOTOR_VELOCITY 0
+#define CHRONO_REVOLUTE_MOTOR_POSITION 1
 
 typedef struct ChronoDistanceConstraint2D_C {
     ChronoConstraint2DBase_C base;
@@ -59,7 +61,29 @@ typedef struct ChronoRevoluteConstraint2D_C {
     double baumgarte_beta;
     double slop;
     double max_correction;
+    int motor_enable;
+    int motor_mode;
+    double motor_speed;
+    double motor_max_torque;
+    double motor_position_target;
+    double motor_position_gain;
+    double motor_position_damping;
+    double motor_mass;
+    double motor_accumulated_impulse;
+    double last_motor_torque;
+    double cached_dt;
 } ChronoRevoluteConstraint2D_C;
+
+typedef struct ChronoGearConstraint2D_C {
+    ChronoConstraint2DBase_C base;
+    double ratio;
+    double phase;
+    double softness;
+    double baumgarte_beta;
+    double bias;
+    double motor_mass;
+    double accumulated_impulse;
+} ChronoGearConstraint2D_C;
 
 typedef struct ChronoPrismaticConstraint2D_C {
     ChronoConstraint2DBase_C base;
@@ -188,6 +212,14 @@ void chrono_revolute_constraint2d_set_baumgarte(ChronoRevoluteConstraint2D_C *co
 void chrono_revolute_constraint2d_set_softness(ChronoRevoluteConstraint2D_C *constraint, double softness);
 void chrono_revolute_constraint2d_set_slop(ChronoRevoluteConstraint2D_C *constraint, double slop);
 void chrono_revolute_constraint2d_set_max_correction(ChronoRevoluteConstraint2D_C *constraint, double max_correction);
+void chrono_revolute_constraint2d_enable_motor(ChronoRevoluteConstraint2D_C *constraint,
+                                              int enable,
+                                              double speed,
+                                              double max_torque);
+void chrono_revolute_constraint2d_set_motor_position_target(ChronoRevoluteConstraint2D_C *constraint,
+                                                            double target_angle,
+                                                            double proportional_gain,
+                                                            double damping_gain);
 void chrono_revolute_constraint2d_prepare(ChronoRevoluteConstraint2D_C *constraint, double dt);
 void chrono_revolute_constraint2d_apply_warm_start(ChronoRevoluteConstraint2D_C *constraint);
 void chrono_revolute_constraint2d_solve_velocity(ChronoRevoluteConstraint2D_C *constraint);
@@ -224,6 +256,20 @@ void chrono_prismatic_constraint2d_prepare(ChronoPrismaticConstraint2D_C *constr
 void chrono_prismatic_constraint2d_apply_warm_start(ChronoPrismaticConstraint2D_C *constraint);
 void chrono_prismatic_constraint2d_solve_velocity(ChronoPrismaticConstraint2D_C *constraint);
 void chrono_prismatic_constraint2d_solve_position(ChronoPrismaticConstraint2D_C *constraint);
+
+void chrono_gear_constraint2d_init(ChronoGearConstraint2D_C *constraint,
+                                   ChronoBody2D_C *body_a,
+                                   ChronoBody2D_C *body_b,
+                                   double ratio,
+                                   double phase);
+void chrono_gear_constraint2d_set_ratio(ChronoGearConstraint2D_C *constraint, double ratio);
+void chrono_gear_constraint2d_set_phase(ChronoGearConstraint2D_C *constraint, double phase);
+void chrono_gear_constraint2d_set_baumgarte(ChronoGearConstraint2D_C *constraint, double beta);
+void chrono_gear_constraint2d_set_softness(ChronoGearConstraint2D_C *constraint, double softness);
+void chrono_gear_constraint2d_prepare(ChronoGearConstraint2D_C *constraint, double dt);
+void chrono_gear_constraint2d_apply_warm_start(ChronoGearConstraint2D_C *constraint);
+void chrono_gear_constraint2d_solve_velocity(ChronoGearConstraint2D_C *constraint);
+void chrono_gear_constraint2d_solve_position(ChronoGearConstraint2D_C *constraint);
 
 void chrono_spring_constraint2d_init(ChronoSpringConstraint2D_C *constraint,
                                      ChronoBody2D_C *body_a,

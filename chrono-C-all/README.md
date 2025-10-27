@@ -25,6 +25,10 @@ control compliance.
   to two contact points for use with `chrono_collision2d_resolve_contact` and the contact manager.
 - `chrono_prismatic_constraint2d_*`: slider joint API。`chrono_prismatic_constraint2d_set_limit_spring` でソフトリミット、
   `chrono_prismatic_constraint2d_set_motor_position_target` で位置制御モードに切替えられます。
+- `chrono_revolute_constraint2d_enable_motor` / `chrono_revolute_constraint2d_set_motor_position_target`: ピンジョイントに
+  速度・位置モータを追加し、`last_motor_torque` で直近の駆動トルクを取得可能です。
+- `chrono_gear_constraint2d_*`: 2 つのボディの角速度を比率付きで拘束するギア拘束。`ratio` と `phase` を設定して
+  角度・角速度の線形関係を維持します。
 
 ## Building the tests
 
@@ -59,6 +63,7 @@ Two self-contained demos can be built with `make examples`:
 
 - `examples/newton_cradle` – four-body Newton's cradle producing `data/newton_cradle.csv`.
 - `examples/prismatic_slider` – slider joint with soft limits, velocity/位置モータ切り替えを含むデモ。`data/prismatic_slider.csv` に軸位置・リミット／モータ反力が記録されます。
+- ギア／リボルートのモータ挙動は `tests/test_gear_constraint.c` や `tests/test_revolute_constraint.c` のシナリオを参考にしてください。
 
 Run an example and point the MATLAB helpers in `docs/` at the generated CSV to obtain plots and GIF animations.  For instance:
 

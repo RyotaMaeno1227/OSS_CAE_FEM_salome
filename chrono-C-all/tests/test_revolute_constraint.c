@@ -85,6 +85,55 @@ int main(void) {
         return 1;
     }
 
+    ChronoBody2D_C motor_body;
+    init_bob(&motor_body, 0.0, -0.6);
+    motor_body.angular_velocity = 0.0;
+
+    ChronoRevoluteConstraint2D_C motor_joint;
+    chrono_revolute_constraint2d_init(&motor_joint,
+                                      &anchor,
+                                      &motor_body,
+                                      local_anchor_anchor,
+                                      local_anchor_bob);
+    chrono_revolute_constraint2d_set_baumgarte(&motor_joint, 0.2);
+    chrono_revolute_constraint2d_set_slop(&motor_joint, 1e-4);
+    chrono_revolute_constraint2d_set_max_correction(&motor_joint, 0.05);
+    chrono_revolute_constraint2d_enable_motor(&motor_joint, 1, 4.0, 6.0);
+
+    ChronoConstraint2DBase_C *motor_constraints[1] = {&motor_joint.base};
+
+    for (int step = 0; step < total_steps; ++step) {
+        chrono_constraint2d_batch_solve(motor_constraints, 1, dt, &solve_config, NULL);
+        chrono_body2d_integrate_explicit(&motor_body, dt);
+        chrono_body2d_reset_forces(&motor_body);
+    }
+
+    if (fabs(motor_body.angular_velocity - 4.0) > 0.4) {
+        fprintf(stderr,
+                "Revolute constraint test failed: velocity motor drifted (w=%.6f)\n",
+                motor_body.angular_velocity);
+        return 1;
+    }
+
+    const double target_angle = 0.5 * 3.141592653589793;
+    chrono_revolute_constraint2d_set_motor_position_target(&motor_joint, target_angle, 8.0, 1.4);
+    chrono_revolute_constraint2d_enable_motor(&motor_joint, 1, motor_joint.motor_speed, 6.0);
+    motor_body.angular_velocity = 0.0;
+
+    for (int step = 0; step < total_steps; ++step) {
+        chrono_constraint2d_batch_solve(motor_constraints, 1, dt, &solve_config, NULL);
+        chrono_body2d_integrate_explicit(&motor_body, dt);
+        chrono_body2d_reset_forces(&motor_body);
+    }
+
+    double angle_error = fabs((motor_body.angle - anchor.angle) - target_angle);
+    if (angle_error > 0.1) {
+        fprintf(stderr,
+                "Revolute constraint test failed: position motor drifted (error=%.6f)\n",
+                angle_error);
+        return 1;
+    }
+
     printf("Revolute constraint test passed.\n");
     return 0;
 }
