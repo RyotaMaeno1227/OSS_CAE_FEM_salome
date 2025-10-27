@@ -29,6 +29,8 @@ control compliance.
   速度・位置モータを追加し、`last_motor_torque` で直近の駆動トルクを取得可能です。
 - `chrono_gear_constraint2d_*`: 2 つのボディの角速度を比率付きで拘束するギア拘束。`ratio` と `phase` を設定して
   角度・角速度の線形関係を維持します。
+- `chrono_planar_constraint2d_*`: 平面ジョイント（2軸スライダ）。`enable_limit` / `set_limit_spring` で各軸のソフトリミット、
+  `set_motor_position_target` で X/Y 軸それぞれの位置モータ制御が可能です。
 
 ## Building the tests
 
@@ -63,6 +65,7 @@ Two self-contained demos can be built with `make examples`:
 
 - `examples/newton_cradle` – four-body Newton's cradle producing `data/newton_cradle.csv`.
 - `examples/prismatic_slider` – slider joint with soft limits, velocity/位置モータ切り替えを含むデモ。`data/prismatic_slider.csv` に軸位置・リミット／モータ反力が記録されます。
+- `tests/test_planar_constraint.c` では 2 軸スライダの位置モータとリミット挙動を確認できます。
 - ギア／リボルートのモータ挙動は `tests/test_gear_constraint.c` や `tests/test_revolute_constraint.c` のシナリオを参考にしてください。
 
 Run an example and point the MATLAB helpers in `docs/` at the generated CSV to obtain plots and GIF animations.  For instance:

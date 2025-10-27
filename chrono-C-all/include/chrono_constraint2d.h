@@ -31,6 +31,11 @@ typedef struct ChronoConstraint2DBase_C {
 #define CHRONO_PRISMATIC_MOTOR_POSITION 1
 #define CHRONO_REVOLUTE_MOTOR_VELOCITY 0
 #define CHRONO_REVOLUTE_MOTOR_POSITION 1
+#define CHRONO_PLANAR_AXIS_X 0
+#define CHRONO_PLANAR_AXIS_Y 1
+#define CHRONO_PLANAR_AXIS_COUNT 2
+#define CHRONO_PLANAR_MOTOR_VELOCITY 0
+#define CHRONO_PLANAR_MOTOR_POSITION 1
 
 typedef struct ChronoDistanceConstraint2D_C {
     ChronoConstraint2DBase_C base;
@@ -137,6 +142,48 @@ typedef struct ChronoSpringConstraint2D_C {
     double cached_dt;
     int velocity_applied;
 } ChronoSpringConstraint2D_C;
+
+typedef struct ChronoPlanarConstraint2D_C {
+    ChronoConstraint2DBase_C base;
+    double local_anchor_a[2];
+    double local_anchor_b[2];
+    double local_axis_a[2];
+    double axis_world[CHRONO_PLANAR_AXIS_COUNT][2];
+    double ra[2];
+    double rb[2];
+    double translation[CHRONO_PLANAR_AXIS_COUNT];
+    double mass[CHRONO_PLANAR_AXIS_COUNT];
+    double bias[CHRONO_PLANAR_AXIS_COUNT];
+    double softness;
+    double baumgarte_beta;
+    double slop;
+    double max_correction;
+    double limit_lower[CHRONO_PLANAR_AXIS_COUNT];
+    double limit_upper[CHRONO_PLANAR_AXIS_COUNT];
+    int enable_limit[CHRONO_PLANAR_AXIS_COUNT];
+    double limit_spring_stiffness[CHRONO_PLANAR_AXIS_COUNT];
+    double limit_spring_damping[CHRONO_PLANAR_AXIS_COUNT];
+    double limit_bias[CHRONO_PLANAR_AXIS_COUNT];
+    double limit_accumulated_impulse[CHRONO_PLANAR_AXIS_COUNT];
+    int limit_state[CHRONO_PLANAR_AXIS_COUNT];
+    double limit_deflection[CHRONO_PLANAR_AXIS_COUNT];
+    double motor_speed[CHRONO_PLANAR_AXIS_COUNT];
+    double motor_max_force[CHRONO_PLANAR_AXIS_COUNT];
+    int enable_motor[CHRONO_PLANAR_AXIS_COUNT];
+    int motor_mode[CHRONO_PLANAR_AXIS_COUNT];
+    double motor_position_target[CHRONO_PLANAR_AXIS_COUNT];
+    double motor_position_gain[CHRONO_PLANAR_AXIS_COUNT];
+    double motor_position_damping[CHRONO_PLANAR_AXIS_COUNT];
+    double motor_accumulated_impulse[CHRONO_PLANAR_AXIS_COUNT];
+    double last_motor_force[CHRONO_PLANAR_AXIS_COUNT];
+    double last_limit_force[CHRONO_PLANAR_AXIS_COUNT];
+    double last_limit_spring_force[CHRONO_PLANAR_AXIS_COUNT];
+    double cached_dt;
+    double orientation_target;
+    double orientation_mass;
+    double orientation_bias;
+    double orientation_accumulated_impulse;
+} ChronoPlanarConstraint2D_C;
 
 typedef struct ChronoConstraint2DBatchConfig_C {
     int velocity_iterations;
@@ -256,6 +303,43 @@ void chrono_prismatic_constraint2d_prepare(ChronoPrismaticConstraint2D_C *constr
 void chrono_prismatic_constraint2d_apply_warm_start(ChronoPrismaticConstraint2D_C *constraint);
 void chrono_prismatic_constraint2d_solve_velocity(ChronoPrismaticConstraint2D_C *constraint);
 void chrono_prismatic_constraint2d_solve_position(ChronoPrismaticConstraint2D_C *constraint);
+
+void chrono_planar_constraint2d_init(ChronoPlanarConstraint2D_C *constraint,
+                                     ChronoBody2D_C *body_a,
+                                     ChronoBody2D_C *body_b,
+                                     const double local_anchor_a[2],
+                                     const double local_anchor_b[2],
+                                     const double local_axis_a[2]);
+void chrono_planar_constraint2d_set_axes(ChronoPlanarConstraint2D_C *constraint,
+                                         const double local_axis_a[2]);
+void chrono_planar_constraint2d_set_baumgarte(ChronoPlanarConstraint2D_C *constraint, double beta);
+void chrono_planar_constraint2d_set_softness(ChronoPlanarConstraint2D_C *constraint, double softness);
+void chrono_planar_constraint2d_set_slop(ChronoPlanarConstraint2D_C *constraint, double slop);
+void chrono_planar_constraint2d_set_max_correction(ChronoPlanarConstraint2D_C *constraint, double max_correction);
+void chrono_planar_constraint2d_enable_limit(ChronoPlanarConstraint2D_C *constraint,
+                                             int axis,
+                                             int enable,
+                                             double lower,
+                                             double upper);
+void chrono_planar_constraint2d_set_limit_spring(ChronoPlanarConstraint2D_C *constraint,
+                                                 int axis,
+                                                 double stiffness,
+                                                 double damping);
+void chrono_planar_constraint2d_enable_motor(ChronoPlanarConstraint2D_C *constraint,
+                                             int axis,
+                                             int enable,
+                                             double speed,
+                                             double max_force);
+void chrono_planar_constraint2d_set_motor_position_target(ChronoPlanarConstraint2D_C *constraint,
+                                                          int axis,
+                                                          double target,
+                                                          double proportional_gain,
+                                                          double damping_gain);
+void chrono_planar_constraint2d_set_orientation_target(ChronoPlanarConstraint2D_C *constraint, double target_angle);
+void chrono_planar_constraint2d_prepare(ChronoPlanarConstraint2D_C *constraint, double dt);
+void chrono_planar_constraint2d_apply_warm_start(ChronoPlanarConstraint2D_C *constraint);
+void chrono_planar_constraint2d_solve_velocity(ChronoPlanarConstraint2D_C *constraint);
+void chrono_planar_constraint2d_solve_position(ChronoPlanarConstraint2D_C *constraint);
 
 void chrono_gear_constraint2d_init(ChronoGearConstraint2D_C *constraint,
                                    ChronoBody2D_C *body_a,

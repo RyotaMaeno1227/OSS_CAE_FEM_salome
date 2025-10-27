@@ -27,6 +27,7 @@ TEST_TARGETS := \
 	$(TEST_DIR)/test_island_builder \
 	$(TEST_DIR)/test_contact_manager_longrun \
 	$(TEST_DIR)/test_revolute_constraint \
+	$(TEST_DIR)/test_planar_constraint \
 	$(TEST_DIR)/test_gear_constraint \
 	$(TEST_DIR)/test_prismatic_constraint \
 	$(TEST_DIR)/test_spring_constraint \
