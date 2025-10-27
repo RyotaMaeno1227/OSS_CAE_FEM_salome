@@ -95,3 +95,48 @@ git submodule update --init --recursive
 
 - Chrono リポジトリ側では OpenCASCADE や Salome-Meca のアーカイブは含めません（必要に応じて各自取得）。
 - サブモジュールの変更を反映する際は、親リポジトリで `git add third_party/chrono` を忘れずに実行してください。
+
+## 9. Codex の承認ダイアログを無効化したいとき
+
+常に承認なしで作業を進めたい場合は、ホームディレクトリにある Codex 設定ファイル `~/.codex/config.toml` を編集します。
+
+```bash
+nano ~/.codex/config.toml
+```
+
+以下を追加・変更すると、workspace 内の操作はすべて自動で承認されます（外部ファイルやネットワークはブロックされます）。
+
+```toml
+approval_policy = "never"
+sandbox_mode    = "workspace-write"
+
+[sandbox_workspace_write]
+network_access = true   # ネットを無効化したい場合は false
+```
+
+作業モードを切り替えられるようにしたい場合は、プロファイルを定義しておくと便利です。
+
+```toml
+[profiles.auto]
+approval_policy = "on-request"
+sandbox_mode    = "workspace-write"
+
+[profiles.handsfree]
+approval_policy = "never"
+sandbox_mode    = "workspace-write"
+
+[sandbox_workspace_write]
+network_access = false
+```
+
+使用例:
+
+```bash
+# 従来どおり承認ありで動かす
+codex --profile auto
+
+# 手放しモードで起動
+codex --profile handsfree
+```
+
+※設定キー名や値は OpenAI Codex の公式ドキュメントに準拠しています。
