@@ -58,6 +58,7 @@ Additional regression tests are available via `make test` (see the top-level `Ma
 - `tests/test_island_polygon_longrun.c`: combined constraint + polygon contact scenario executed through the island solver.
 - `tests/test_prismatic_constraint.c`: slider joint with stroke limits and motor drive (limit and motor regression).
 - `tests/test_prismatic_constraint_endurance.c`: 長時間のモータ切替えとリミット衝突を通じて PID チューニングとソフトリミットの安定性を検証します。
+- `tests/test_distance_angle_constraint.c`: 距離と角度を同時に拘束する複合ジョイントの回帰テスト。
 - `tests/test_distance_constraint_multi.c`: 距離拘束を複数本同時に解くケースで角速度連成とソフトネス設定が安定するか検証します。
 - `tests/test_spring_constraint.c`: damped spring between an anchor and dynamic body.
 - `tests/test_revolute_constraint.c`: pin joint maintaining a pivot under gravity.
@@ -90,3 +91,26 @@ Both scripts emit trajectory/diagnostic plots and an animation built from PNG fr
 - Baumgarte 係数は `chrono_planar_constraint2d_set_baumgarte(constraint, 0.15)` を目安にすると、位置誤差収束と数値安定性のバランスが取りやすくなります。必要に応じて `set_slop(1e-4)`、`set_max_correction(0.08)` を併用してください。
 - Y 軸リミットをソフトに拘束する場合は `chrono_planar_constraint2d_enable_limit(axis, 1, lower, upper)` に続けて `chrono_planar_constraint2d_set_limit_spring(axis, 55.0, 8.0)` を設定すると、急峻な衝突でもエネルギー発散を抑制できます。
 - `tests/test_planar_constraint_longrun` は 6000 ステップ（dt = 0.01）を通してモータ目標の切り替え・姿勢フィード・リミット衝突を検証し、位置誤差（≦ 0.018 m）と運動エネルギー（≦ 6.9 J）が許容範囲に収まっていることを確認します。長時間安定性を調整したい場合はこの回帰テストをベースラインとして活用してください。
+### Distance constraint tuning example
+
+```c
+ChronoDistanceConstraint2D_C distance;
+chrono_distance_constraint2d_init(&distance, anchor, body, local_a, local_b, rest);
+// Baumgarte bias handles positional drift; slop avoids jitter around rest length
+chrono_distance_constraint2d_set_baumgarte(&distance, 0.35);
+chrono_distance_constraint2d_set_slop(&distance, 5e-4);
+chrono_distance_constraint2d_set_max_correction(&distance, 0.07);
+
+// Linear softness adds a small compliance along the constraint axis (meters/Newton)
+// Angular softness damps relative rotation effects (radians/Newton-meter)
+chrono_distance_constraint2d_set_softness_linear(&distance, 0.01);
+chrono_distance_constraint2d_set_softness_angular(&distance, 0.25);
+
+// Optional spring/damper term pulls the bodies back toward rest_length
+chrono_distance_constraint2d_set_spring(&distance, 30.0, 4.0);
+
+// Record impulses for debugging/logging
+double last_force = distance.last_spring_force;
+```
+
+`tests/test_distance_constraint_soft` と `tests/test_distance_constraint_multi` を使うと、線形／角度ソフトネスやスプリング係数のチューニング結果を素早く確認できます。

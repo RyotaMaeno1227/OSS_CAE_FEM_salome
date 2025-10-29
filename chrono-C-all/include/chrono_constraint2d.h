@@ -193,6 +193,42 @@ typedef struct ChronoPlanarConstraint2D_C {
     double orientation_accumulated_impulse;
 } ChronoPlanarConstraint2D_C;
 
+typedef struct ChronoDistanceAngleConstraint2D_C {
+    ChronoConstraint2DBase_C base;
+    double local_anchor_a[2];
+    double local_anchor_b[2];
+    double rest_distance;
+    double rest_angle;
+    double axis_local[2];
+    double normal[2];
+    double ra[2];
+    double rb[2];
+    double bias_distance;
+    double bias_angle;
+    double baumgarte_distance;
+    double baumgarte_angle;
+    double softness_linear;
+    double softness_angle;
+    double slop;
+    double max_correction_distance;
+    double max_correction_angle;
+    double mass_distance;
+    double mass_angle;
+    double spring_distance_stiffness;
+    double spring_distance_damping;
+    double spring_angle_stiffness;
+    double spring_angle_damping;
+    double spring_distance_deflection;
+    double spring_angle_deflection;
+    double cached_dt;
+    double last_distance_impulse;
+    double last_angle_impulse;
+    double last_distance_force;
+    double last_angle_force;
+    double accumulated_distance_impulse;
+    double accumulated_angle_impulse;
+} ChronoDistanceAngleConstraint2D_C;
+
 typedef struct ChronoConstraint2DBatchConfig_C {
     int velocity_iterations;
     int position_iterations;
@@ -353,6 +389,40 @@ void chrono_planar_constraint2d_prepare(ChronoPlanarConstraint2D_C *constraint, 
 void chrono_planar_constraint2d_apply_warm_start(ChronoPlanarConstraint2D_C *constraint);
 void chrono_planar_constraint2d_solve_velocity(ChronoPlanarConstraint2D_C *constraint);
 void chrono_planar_constraint2d_solve_position(ChronoPlanarConstraint2D_C *constraint);
+
+void chrono_distance_angle_constraint2d_init(ChronoDistanceAngleConstraint2D_C *constraint,
+                                            ChronoBody2D_C *body_a,
+                                            ChronoBody2D_C *body_b,
+                                            const double local_anchor_a[2],
+                                            const double local_anchor_b[2],
+                                            double rest_distance,
+                                            double rest_angle,
+                                            const double axis_local[2]);
+void chrono_distance_angle_constraint2d_set_rest_distance(ChronoDistanceAngleConstraint2D_C *constraint,
+                                                          double rest_distance);
+void chrono_distance_angle_constraint2d_set_rest_angle(ChronoDistanceAngleConstraint2D_C *constraint,
+                                                       double rest_angle);
+void chrono_distance_angle_constraint2d_set_baumgarte(ChronoDistanceAngleConstraint2D_C *constraint,
+                                                      double beta_distance,
+                                                      double beta_angle);
+void chrono_distance_angle_constraint2d_set_slop(ChronoDistanceAngleConstraint2D_C *constraint, double slop);
+void chrono_distance_angle_constraint2d_set_max_correction(ChronoDistanceAngleConstraint2D_C *constraint,
+                                                           double max_distance,
+                                                           double max_angle);
+void chrono_distance_angle_constraint2d_set_softness_linear(ChronoDistanceAngleConstraint2D_C *constraint,
+                                                            double softness);
+void chrono_distance_angle_constraint2d_set_softness_angle(ChronoDistanceAngleConstraint2D_C *constraint,
+                                                           double softness);
+void chrono_distance_angle_constraint2d_set_distance_spring(ChronoDistanceAngleConstraint2D_C *constraint,
+                                                            double stiffness,
+                                                            double damping);
+void chrono_distance_angle_constraint2d_set_angle_spring(ChronoDistanceAngleConstraint2D_C *constraint,
+                                                         double stiffness,
+                                                         double damping);
+void chrono_distance_angle_constraint2d_prepare(ChronoDistanceAngleConstraint2D_C *constraint, double dt);
+void chrono_distance_angle_constraint2d_apply_warm_start(ChronoDistanceAngleConstraint2D_C *constraint);
+void chrono_distance_angle_constraint2d_solve_velocity(ChronoDistanceAngleConstraint2D_C *constraint);
+void chrono_distance_angle_constraint2d_solve_position(ChronoDistanceAngleConstraint2D_C *constraint);
 
 void chrono_gear_constraint2d_init(ChronoGearConstraint2D_C *constraint,
                                    ChronoBody2D_C *body_a,
