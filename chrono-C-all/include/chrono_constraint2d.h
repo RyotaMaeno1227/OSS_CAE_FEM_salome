@@ -43,7 +43,8 @@ typedef struct ChronoDistanceConstraint2D_C {
     double local_anchor_b[2];
     double rest_length;
     double baumgarte_beta;
-    double softness;
+    double softness_linear;
+    double softness_angular;
     double slop;
     double max_correction;
     double normal[2];
@@ -55,6 +56,8 @@ typedef struct ChronoDistanceConstraint2D_C {
     double spring_deflection;
     double cached_dt;
     double last_spring_force;
+    double last_impulse;
+    double accumulated_penetration;
 } ChronoDistanceConstraint2D_C;
 
 typedef struct ChronoRevoluteConstraint2D_C {
@@ -247,6 +250,8 @@ void chrono_distance_constraint2d_init(ChronoDistanceConstraint2D_C *constraint,
 
 void chrono_distance_constraint2d_set_baumgarte(ChronoDistanceConstraint2D_C *constraint, double beta);
 void chrono_distance_constraint2d_set_softness(ChronoDistanceConstraint2D_C *constraint, double softness);
+void chrono_distance_constraint2d_set_softness_linear(ChronoDistanceConstraint2D_C *constraint, double softness);
+void chrono_distance_constraint2d_set_softness_angular(ChronoDistanceConstraint2D_C *constraint, double softness);
 void chrono_distance_constraint2d_set_slop(ChronoDistanceConstraint2D_C *constraint, double slop);
 void chrono_distance_constraint2d_set_max_correction(ChronoDistanceConstraint2D_C *constraint, double max_correction);
 void chrono_distance_constraint2d_set_spring(ChronoDistanceConstraint2D_C *constraint,

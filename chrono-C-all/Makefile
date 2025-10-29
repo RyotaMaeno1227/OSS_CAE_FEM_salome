@@ -15,7 +15,7 @@ TEST_TARGETS := \
 	$(TEST_DIR)/test_circle_collision_resting \
 	$(TEST_DIR)/test_circle_collision_friction \
 	$(TEST_DIR)/test_circle_collision_continuous \
-	$(TEST_DIR)/test_circle_collision_materials \
+		$(TEST_DIR)/test_circle_collision_materials \
 	$(TEST_DIR)/test_circle_collision_continuous \
 	$(TEST_DIR)/test_island_contact_constraint \
 	$(TEST_DIR)/test_island_parallel_contacts \
@@ -34,6 +34,7 @@ TEST_TARGETS := \
 	$(TEST_DIR)/test_gear_constraint \
 	$(TEST_DIR)/test_prismatic_constraint \
 	$(TEST_DIR)/test_prismatic_constraint_endurance \
+	$(TEST_DIR)/test_distance_constraint_multi \
 	$(TEST_DIR)/test_spring_constraint \
 	$(TEST_DIR)/test_constraint_batch_solve
 

@@ -383,7 +383,8 @@ void chrono_distance_constraint2d_init(ChronoDistanceConstraint2D_C *constraint,
     }
     constraint->rest_length = rest_length;
     constraint->baumgarte_beta = 0.2;
-    constraint->softness = 0.0;
+    constraint->softness_linear = 0.0;
+    constraint->softness_angular = 0.0;
     constraint->slop = 0.001;
     constraint->max_correction = 0.2;
     constraint->bias = 0.0;
@@ -392,6 +393,8 @@ void chrono_distance_constraint2d_init(ChronoDistanceConstraint2D_C *constraint,
     constraint->spring_deflection = 0.0;
     constraint->cached_dt = 0.0;
     constraint->last_spring_force = 0.0;
+    constraint->last_impulse = 0.0;
+    constraint->accumulated_penetration = 0.0;
 }
 
 void chrono_distance_constraint2d_set_baumgarte(ChronoDistanceConstraint2D_C *constraint, double beta) {
@@ -414,7 +417,28 @@ void chrono_distance_constraint2d_set_softness(ChronoDistanceConstraint2D_C *con
     if (softness < 0.0) {
         softness = 0.0;
     }
-    constraint->softness = softness;
+    constraint->softness_linear = softness;
+    constraint->softness_angular = softness;
+}
+
+void chrono_distance_constraint2d_set_softness_linear(ChronoDistanceConstraint2D_C *constraint, double softness) {
+    if (!constraint) {
+        return;
+    }
+    if (softness < 0.0) {
+        softness = 0.0;
+    }
+    constraint->softness_linear = softness;
+}
+
+void chrono_distance_constraint2d_set_softness_angular(ChronoDistanceConstraint2D_C *constraint, double softness) {
+    if (!constraint) {
+        return;
+    }
+    if (softness < 0.0) {
+        softness = 0.0;
+    }
+    constraint->softness_angular = softness;
 }
 
 void chrono_distance_constraint2d_set_slop(ChronoDistanceConstraint2D_C *constraint, double slop) {
@@ -483,14 +507,18 @@ static void chrono_distance_constraint2d_prepare_impl(void *constraint_ptr, doub
     double ra_cross_n = cross(constraint->ra, constraint->normal);
     double rb_cross_n = cross(constraint->rb, constraint->normal);
 
-    double inv_mass = 0.0;
+    double inv_mass_linear = 0.0;
+    double inv_mass_angular = 0.0;
     if (body_a && !body_a->is_static) {
-        inv_mass += body_a->inverse_mass + ra_cross_n * ra_cross_n * body_a->inverse_inertia;
+        inv_mass_linear += body_a->inverse_mass;
+        inv_mass_angular += ra_cross_n * ra_cross_n * body_a->inverse_inertia;
     }
     if (body_b && !body_b->is_static) {
-        inv_mass += body_b->inverse_mass + rb_cross_n * rb_cross_n * body_b->inverse_inertia;
+        inv_mass_linear += body_b->inverse_mass;
+        inv_mass_angular += rb_cross_n * rb_cross_n * body_b->inverse_inertia;
     }
 
+    double inv_mass = inv_mass_linear + inv_mass_angular;
     if (inv_mass > 0.0) {
         constraint->base.effective_mass = 1.0 / inv_mass;
     } else {
@@ -508,11 +536,16 @@ static void chrono_distance_constraint2d_prepare_impl(void *constraint_ptr, doub
     }
     constraint->bias = bias;
 
-    if (constraint->softness > 0.0) {
-        constraint->base.effective_mass = 1.0 / (inv_mass + constraint->softness);
+    double compliance_linear = constraint->softness_linear;
+    double compliance_angular = constraint->softness_angular * (ra_cross_n * ra_cross_n + rb_cross_n * rb_cross_n);
+    double denom = inv_mass + compliance_linear + compliance_angular;
+    if (denom > 0.0) {
+        constraint->base.effective_mass = 1.0 / denom;
     }
 
+    constraint->accumulated_penetration = error;
     constraint->last_spring_force = 0.0;
+    constraint->last_impulse = 0.0;
 }
 
 static void chrono_distance_constraint2d_apply_warm_start_impl(void *constraint_ptr) {
@@ -558,7 +591,14 @@ static void chrono_distance_constraint2d_solve_velocity_impl(void *constraint_pt
     sub(vb, va, dv);
   	double Cdot = dot(dv, constraint->normal);
 
-    double gamma = constraint->softness;
+    double gamma = constraint->softness_linear;
+    double gamma_ang = constraint->softness_angular;
+    double compli = gamma + gamma_ang;
+    if (gamma <= 0.0 && gamma_ang > 0.0) {
+        gamma = gamma_ang;
+    } else if (gamma > 0.0 && gamma_ang > 0.0) {
+        gamma = compli;
+    }
     double denom = constraint->base.effective_mass;
     if (denom == 0.0) {
         return;
@@ -570,6 +610,7 @@ static void chrono_distance_constraint2d_solve_velocity_impl(void *constraint_pt
     scale(constraint->normal, lambda, impulse_vec);
     apply_impulse(body_a, (double[2]){-impulse_vec[0], -impulse_vec[1]}, constraint->ra);
     apply_impulse(body_b, impulse_vec, constraint->rb);
+    constraint->last_impulse = lambda;
 
     double stiffness = constraint->spring_stiffness;
     double damping = constraint->spring_damping;
