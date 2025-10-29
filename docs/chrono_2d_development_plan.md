@@ -72,7 +72,8 @@
    - `make test` で全テストが実行されるよう連携。
 2. **ベンチマーク/デモ**  
    - パフォーマンス検証用のベンチスイートを整備し、改善効果を把握。  
-   - `tests/bench_island_solver` を追加（呼び出し例: `make bench` または `./tests/bench_island_solver 128 400 8`）。スレッド数スイープ結果をログに出力。
+   - `tests/bench_island_solver` を追加（呼び出し例: `make bench` または `./tests/bench_island_solver 128 400 8`）。スレッド数スイープ結果をログに出力。  
+   - `examples/planar_constraint_demo` を追加し、`docs/planar_constraint_visualization.m` でモータ／リミット挙動を教材用に可視化できるようにした。
 3. **CI 連携**  
    - GitHub Actions 等でテスト自動実行（ローカルでの再現性重視、後日CI環境を検討）。
 

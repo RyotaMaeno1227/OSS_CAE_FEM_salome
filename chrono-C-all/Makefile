@@ -30,8 +30,10 @@ TEST_TARGETS := \
 	$(TEST_DIR)/test_revolute_constraint \
 	$(TEST_DIR)/test_planar_constraint \
 	$(TEST_DIR)/test_planar_constraint_longrun \
+	$(TEST_DIR)/test_planar_constraint_endurance \
 	$(TEST_DIR)/test_gear_constraint \
 	$(TEST_DIR)/test_prismatic_constraint \
+	$(TEST_DIR)/test_prismatic_constraint_endurance \
 	$(TEST_DIR)/test_spring_constraint \
 	$(TEST_DIR)/test_constraint_batch_solve
 
@@ -40,7 +42,8 @@ BENCH_TARGETS := \
 
 EXAMPLE_TARGETS := \
 	$(EXAMPLE_DIR)/newton_cradle \
-	$(EXAMPLE_DIR)/prismatic_slider
+	$(EXAMPLE_DIR)/prismatic_slider \
+	$(EXAMPLE_DIR)/planar_constraint_demo
 
 .PHONY: all clean test tests examples
 

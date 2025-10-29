@@ -57,8 +57,10 @@ Additional regression tests are available via `make test` (see the top-level `Ma
 - `tests/test_capsule_edge_collision.c`: capsule/capsule and edge/circle interactions via the GJK/EPA backend.
 - `tests/test_island_polygon_longrun.c`: combined constraint + polygon contact scenario executed through the island solver.
 - `tests/test_prismatic_constraint.c`: slider joint with stroke limits and motor drive (limit and motor regression).
+- `tests/test_prismatic_constraint_endurance.c`: 長時間のモータ切替えとリミット衝突を通じて PID チューニングとソフトリミットの安定性を検証します。
 - `tests/test_spring_constraint.c`: damped spring between an anchor and dynamic body.
 - `tests/test_revolute_constraint.c`: pin joint maintaining a pivot under gravity.
+- `tests/test_planar_constraint_longrun.c` / `tests/test_planar_constraint_endurance.c`: 2 軸スライダのモータ／リミット挙動を長時間シナリオで回帰し、位置・角度・エネルギーの安定性を確認します。
 
 ## Examples and Visualization
 
@@ -66,6 +68,7 @@ Two self-contained demos can be built with `make examples`:
 
 - `examples/newton_cradle` – four-body Newton's cradle producing `data/newton_cradle.csv`.
 - `examples/prismatic_slider` – slider joint with soft limits, velocity/位置モータ切り替えを含むデモ。`data/prismatic_slider.csv` に軸位置・リミット／モータ反力が記録されます。
+- `examples/planar_constraint_demo` – 2 軸プラナー拘束のデモ。モータ目標の切替えとリミット衝突を CSV (`data/planar_constraint.csv`) へ記録し、`docs/planar_constraint_visualization.m` で可視化できます。
 - `tests/test_planar_constraint.c` では 2 軸スライダの位置モータとリミット挙動を確認できます。
 - ギア／リボルートのモータ挙動は `tests/test_gear_constraint.c` や `tests/test_revolute_constraint.c` のシナリオを参考にしてください。
 
@@ -75,6 +78,7 @@ Run an example and point the MATLAB helpers in `docs/` at the generated CSV to o
 % From the repo root or docs/ directory:
 newton_cradle_visualization('../data/newton_cradle.csv', 'cradle_frames');
 prismatic_slider_visualization('../data/prismatic_slider.csv', 'prismatic_frames');
+planar_constraint_visualization('../data/planar_constraint.csv', 'planar_frames');
 ```
 
 Both scripts emit trajectory/diagnostic plots and an animation built from PNG frames (stored under the output directory).
