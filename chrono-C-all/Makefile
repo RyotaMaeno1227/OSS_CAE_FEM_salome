@@ -9,6 +9,7 @@ EXAMPLE_DIR := examples
 CORE_SRCS := $(wildcard $(SRC_DIR)/*.c)
 TEST_TARGETS := \
 		$(TEST_DIR)/test_distance_constraint_stabilization \
+	$(TEST_DIR)/test_distance_constraint_soft \
 	$(TEST_DIR)/test_circle_collision_regression \
 	$(TEST_DIR)/test_circle_collision_oblique \
 	$(TEST_DIR)/test_circle_collision_resting \

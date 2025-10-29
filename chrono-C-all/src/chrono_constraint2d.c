@@ -387,6 +387,11 @@ void chrono_distance_constraint2d_init(ChronoDistanceConstraint2D_C *constraint,
     constraint->slop = 0.001;
     constraint->max_correction = 0.2;
     constraint->bias = 0.0;
+    constraint->spring_stiffness = 0.0;
+    constraint->spring_damping = 0.0;
+    constraint->spring_deflection = 0.0;
+    constraint->cached_dt = 0.0;
+    constraint->last_spring_force = 0.0;
 }
 
 void chrono_distance_constraint2d_set_baumgarte(ChronoDistanceConstraint2D_C *constraint, double beta) {
@@ -432,6 +437,16 @@ void chrono_distance_constraint2d_set_max_correction(ChronoDistanceConstraint2D_
     constraint->max_correction = max_correction;
 }
 
+void chrono_distance_constraint2d_set_spring(ChronoDistanceConstraint2D_C *constraint,
+                                             double stiffness,
+                                             double damping) {
+    if (!constraint) {
+        return;
+    }
+    constraint->spring_stiffness = (stiffness > 0.0) ? stiffness : 0.0;
+    constraint->spring_damping = (damping > 0.0) ? damping : 0.0;
+}
+
 static void chrono_distance_constraint2d_prepare_impl(void *constraint_ptr, double dt) {
     ChronoDistanceConstraint2D_C *constraint = (ChronoDistanceConstraint2D_C *)constraint_ptr;
     if (!constraint || dt <= 0.0) {
@@ -440,6 +455,8 @@ static void chrono_distance_constraint2d_prepare_impl(void *constraint_ptr, doub
 
     ChronoBody2D_C *body_a = constraint->base.body_a;
     ChronoBody2D_C *body_b = constraint->base.body_b;
+
+    constraint->cached_dt = dt;
 
     chrono_body2d_local_to_world(body_a, constraint->local_anchor_a, constraint->ra);
     sub(constraint->ra, body_a->position, constraint->ra);
@@ -481,6 +498,7 @@ static void chrono_distance_constraint2d_prepare_impl(void *constraint_ptr, doub
     }
 
     double C = dist - constraint->rest_length;
+    constraint->spring_deflection = C;
     double error = fabs(C) > constraint->slop ? C - constraint->slop * (C > 0 ? 1 : -1) : 0.0;
 
     double beta = constraint->baumgarte_beta;
@@ -493,6 +511,8 @@ static void chrono_distance_constraint2d_prepare_impl(void *constraint_ptr, doub
     if (constraint->softness > 0.0) {
         constraint->base.effective_mass = 1.0 / (inv_mass + constraint->softness);
     }
+
+    constraint->last_spring_force = 0.0;
 }
 
 static void chrono_distance_constraint2d_apply_warm_start_impl(void *constraint_ptr) {
@@ -550,6 +570,47 @@ static void chrono_distance_constraint2d_solve_velocity_impl(void *constraint_pt
     scale(constraint->normal, lambda, impulse_vec);
     apply_impulse(body_a, (double[2]){-impulse_vec[0], -impulse_vec[1]}, constraint->ra);
     apply_impulse(body_b, impulse_vec, constraint->rb);
+
+    double stiffness = constraint->spring_stiffness;
+    double damping = constraint->spring_damping;
+    if ((stiffness > 0.0 || damping > 0.0) && constraint->cached_dt > 0.0) {
+        double va_post[2] = {0.0, 0.0};
+        double vb_post[2] = {0.0, 0.0};
+
+        if (body_a && !body_a->is_static) {
+            va_post[0] = body_a->linear_velocity[0];
+            va_post[1] = body_a->linear_velocity[1];
+            double cross_ra_x = -body_a->angular_velocity * constraint->ra[1];
+            double cross_ra_y = body_a->angular_velocity * constraint->ra[0];
+            va_post[0] += cross_ra_x;
+            va_post[1] += cross_ra_y;
+        }
+        if (body_b && !body_b->is_static) {
+            vb_post[0] = body_b->linear_velocity[0];
+            vb_post[1] = body_b->linear_velocity[1];
+            double cross_rb_x = -body_b->angular_velocity * constraint->rb[1];
+            double cross_rb_y = body_b->angular_velocity * constraint->rb[0];
+            vb_post[0] += cross_rb_x;
+            vb_post[1] += cross_rb_y;
+        }
+
+        double dv_post[2];
+        sub(vb_post, va_post, dv_post);
+        double rel_vel = dot(dv_post, constraint->normal);
+        double force = -stiffness * constraint->spring_deflection - damping * rel_vel;
+        double lambda_spring = force * constraint->cached_dt;
+        if (lambda_spring != 0.0) {
+            double impulse_spring[2] = {
+                constraint->normal[0] * lambda_spring,
+                constraint->normal[1] * lambda_spring
+            };
+            apply_impulse(body_a, (double[2]){-impulse_spring[0], -impulse_spring[1]}, constraint->ra);
+            apply_impulse(body_b, impulse_spring, constraint->rb);
+        }
+        constraint->last_spring_force = force;
+    } else {
+        constraint->last_spring_force = 0.0;
+    }
 }
 
 static void chrono_distance_constraint2d_solve_position_impl(void *constraint_ptr) {

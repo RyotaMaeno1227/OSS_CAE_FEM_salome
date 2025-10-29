@@ -11,7 +11,7 @@
 | 領域 | ステータス | 備考 |
 |------|------------|------|
 | 剛体基盤 (`chrono_body2d`) | ✅ 初期機能あり | 明示的オイラー積分、ワールド/ローカル変換、円形形状、材料パラメータ（反発・摩擦）に加え、凸ポリゴン形状＋質量特性自動計算 (`chrono_body2d_set_polygon_shape_with_density`) に対応。スリープや多形状未対応。 |
-| 距離制約 (`chrono_constraint2d`) | ✅ 安定化 solver あり | Baumgarte + Softness + Warm-start。複数制約や角速度連成未実装。 |
+| 距離制約 (`chrono_constraint2d`) | ✅ 安定化 solver あり | Baumgarte + Softness + Warm-start に加えて、`chrono_distance_constraint2d_set_spring` でバネ・ダンパを設定可能（`last_spring_force` でログ化）。複数制約や角速度連成は未実装。 |
 | 接触 (`chrono_collision2d`) | ✅ 円/凸ポリゴン/カプセル/エッジ対応（反発＋静/動摩擦＋2点マニフォールド） | GJK(EPA) ベースの汎用検出ルートを追加し、新プリミティブ（カプセル・エッジ）にも対応。`test_contact_manager_longrun`、`test_polygon_collision` 等で回帰。 |
 | アイランド統合 (`chrono_island2d`) | ✅ 初期版 | 拘束・接触をまとめる `ChronoIsland2D_C` とワークスペース整備、OpenMP 対応ラッパソルバを実装。 |
 | テスト | ✅ 主要カバレッジ | 距離拘束・円衝突各種・連続接触に加え、アイランド並列テスト、マニフォールド長期回帰、島ビルダ単体テストを追加済み。 |
@@ -89,6 +89,7 @@
 - **最新更新日**: 2025-10-19
 - **完了済みハイライト**
 - 明示的距離拘束テスト (`test_distance_constraint_stabilization`) 自動化。
+- 距離拘束のソフト化 (`chrono_distance_constraint2d_set_spring`) を追加し、`test_distance_constraint_soft` でばね・ダンパ挙動を回帰できるようにした。
 - 円衝突回帰テスト (`test_circle_collision_regression`) 追加。
 - 円衝突斜め回帰テスト (`test_circle_collision_oblique`) 追加し、摩擦ゼロ時の接線速度保存を検証。
 - 円衝突静止回帰テスト (`test_circle_collision_resting`) 追加し、ゼロ相対速度での安定性を確認。

@@ -23,6 +23,7 @@ control compliance.
 - `chrono_collision2d_detect_* / resolve_*`: collision routines covering circle–circle, circle–polygon, and
   polygon–polygon (convex) pairs.  Each detection function fills a `ChronoContact2D_C` struct that can store up
   to two contact points for use with `chrono_collision2d_resolve_contact` and the contact manager.
+- `chrono_distance_constraint2d_set_spring(constraint, stiffness, damping)`: 距離拘束をソフト化するフック。バネ定数・減衰を設定すると `last_spring_force` に最新の引張力を出力し、`tests/test_distance_constraint_soft` で動的な収束挙動を回帰できます。
 - `chrono_prismatic_constraint2d_*`: slider joint API。`chrono_prismatic_constraint2d_set_limit_spring` でソフトリミット、
   `chrono_prismatic_constraint2d_set_motor_position_target` で位置制御モードに切替えられます。
 - `chrono_revolute_constraint2d_enable_motor` / `chrono_revolute_constraint2d_set_motor_position_target`: ピンジョイントに
