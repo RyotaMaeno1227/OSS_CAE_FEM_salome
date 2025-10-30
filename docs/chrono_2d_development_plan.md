@@ -42,7 +42,8 @@
    - ✅ リボルート＋ギア: `ChronoRevoluteConstraint2D_C` に速度／位置モータを追加し、`ChronoGearConstraint2D_C` でギア比拘束を実装。`tests/test_revolute_constraint` と `tests/test_gear_constraint` を追加。  
    - ✅ プラナー（2軸スライダ）: `ChronoPlanarConstraint2D_C` を追加し、軸毎のモータ／ソフトリミット／位置制御をサポート。Baumgarte 0.15／PID 周波数 3.5 Hz・減衰 1.2／ソフトリミットばね 55 N/m・ダンパ 8 N·s/m を推奨初期値とし、`tests/test_planar_constraint_longrun`（6000 ステップ）でモータ目標切替え・リミット衝突の安定性を回帰確認。`tests/test_planar_constraint` で基本挙動をチェックできる。  
    - ✅ スプリングダンパ: `ChronoSpringConstraint2D_C` を追加し、フック＋粘性力をインパルスとして適用。`tests/test_spring_constraint` で収束挙動を確認。  
-   - ⏳ 複合拘束の検討: 距離＋角度を同時に拘束する「ユニバーサル」系、距離比を保持するカップリング、回転と直動を連成する差動／キャムフォロワ等をリストアップし、`ChronoConstraint2DOps_C` を用いた派生構造体として実装予定。仕様草案では (1) ボディペア＋局所アンカー＋回転軸を持つ `ChronoDistanceAngleConstraint2D_C`、(2) 線形結合係数を持つ `ChronoCoupledConstraint2D_C` を追加し、テストとして円周カップリングとスライダークランクを回帰する計画。  
+   - ✅ 距離＋角度複合拘束: `ChronoDistanceAngleConstraint2D_C` を実装し、`test_distance_angle_constraint` / `test_distance_angle_endurance` で収束と耐久性を回帰。  
+   - ⏳ 線形結合拘束: 距離比や角度比を保持する `ChronoCoupledConstraint2D_C` を設計中。仕様草案では一体型の線形結合拘束として追加し、スライダークランクや差動をカバーする計画。  
    - 今後: スライダのリミット／モータ、他拘束タイプ（スライダ2軸、ギア、距離減衰など）を段階的に追加。
 3. **ソルバー**  
    - Sequential Impulse / Gauss-Seidel による複合拘束解決。  

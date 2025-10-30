@@ -24,6 +24,8 @@ control compliance.
   polygon–polygon (convex) pairs.  Each detection function fills a `ChronoContact2D_C` struct that can store up
   to two contact points for use with `chrono_collision2d_resolve_contact` and the contact manager.
 - `chrono_distance_constraint2d_set_spring(constraint, stiffness, damping)`: 距離拘束をソフト化するフック。バネ定数・減衰を設定すると `last_spring_force` に最新の引張力を出力し、`tests/test_distance_constraint_soft` で動的な収束挙動を回帰できます。`chrono_distance_constraint2d_set_softness_linear` / `_angular` で平行移動と回転のコンプライアンスを個別に調整できます。
+- `chrono_distance_angle_constraint2d_*`: 距離と相対角を同時に拘束する複合ジョイント。線形／角度ソフトネスやスプリングの設定、`last_distance_force` / `last_angle_force` でログ出力が可能です。
+- `chrono_coupled_constraint2d_*`: 距離と角度の線形結合 `a * (d - d0) + b * (θ - θ0) = c` を維持する拘束。比率・オフセットを切り替えて連成機構をモデル化できます。
 - `chrono_prismatic_constraint2d_*`: slider joint API。`chrono_prismatic_constraint2d_set_limit_spring` でソフトリミット、
   `chrono_prismatic_constraint2d_set_motor_position_target` で位置制御モードに切替えられます。
 - `chrono_revolute_constraint2d_enable_motor` / `chrono_revolute_constraint2d_set_motor_position_target`: ピンジョイントに
@@ -59,7 +61,9 @@ Additional regression tests are available via `make test` (see the top-level `Ma
 - `tests/test_prismatic_constraint.c`: slider joint with stroke limits and motor drive (limit and motor regression).
 - `tests/test_prismatic_constraint_endurance.c`: 長時間のモータ切替えとリミット衝突を通じて PID チューニングとソフトリミットの安定性を検証します。
 - `tests/test_distance_angle_constraint.c`: 距離と角度を同時に拘束する複合ジョイントの回帰テスト。
+- `tests/test_distance_angle_endurance.c`: 距離＋角度拘束の耐久シナリオでパラメータ推奨値を確認し、最新のログ出力を検証します。
 - `tests/test_distance_constraint_multi.c`: 距離拘束を複数本同時に解くケースで角速度連成とソフトネス設定が安定するか検証します。
+- `tests/test_coupled_constraint.c`: 距離・角度比を持つカップリング拘束が期待どおり収束するか検証します。
 - `tests/test_spring_constraint.c`: damped spring between an anchor and dynamic body.
 - `tests/test_revolute_constraint.c`: pin joint maintaining a pivot under gravity.
 - `tests/test_planar_constraint_longrun.c` / `tests/test_planar_constraint_endurance.c`: 2 軸スライダのモータ／リミット挙動を長時間シナリオで回帰し、位置・角度・エネルギーの安定性を確認します。

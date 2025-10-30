@@ -11,6 +11,8 @@ TEST_TARGETS := \
 	$(TEST_DIR)/test_distance_constraint_stabilization \
 	$(TEST_DIR)/test_distance_constraint_soft \
 	$(TEST_DIR)/test_distance_angle_constraint \
+	$(TEST_DIR)/test_distance_angle_endurance \
+	$(TEST_DIR)/test_coupled_constraint \
 	$(TEST_DIR)/test_circle_collision_regression \
 	$(TEST_DIR)/test_circle_collision_oblique \
 	$(TEST_DIR)/test_circle_collision_resting \

@@ -1,6 +1,6 @@
 # chrono-C 2D 複合拘束仕様草案
 
-この文書は、`chrono-C-all` に距離＋角度複合拘束や線形結合（カップリング）拘束を導入するための設計案と API 草案をまとめたものです。既存の `ChronoConstraint2DOps_C` / `ChronoConstraint2DBase_C` フレームワークを前提とし、最小限の互換性を保ちながら機能拡張を行います。
+この文書は、`chrono-C-all` に距離＋角度複合拘束や線形結合（カップリング）拘束を導入するための設計案と API 草案をまとめたものです。距離＋角度拘束（`ChronoDistanceAngleConstraint2D_C`）は既に初期実装済みで、ここでは後続の線形結合拘束 `ChronoCoupledConstraint2D_C` に焦点を当てます。既存の `ChronoConstraint2DOps_C` / `ChronoConstraint2DBase_C` フレームワークを前提とし、最小限の互換性を保ちながら機能拡張を行います。
 
 ## 1. 目標と適用範囲
 
@@ -10,7 +10,9 @@
 
 ## 2. 新構造体の概要
 
-### 2.1 `ChronoDistanceAngleConstraint2D_C`
+既に実装された `ChronoDistanceAngleConstraint2D_C` では距離・角度の独立ソフトネス、バネ／ダンパ、最新インパルスのログが利用できます。本節では未実装の `ChronoCoupledConstraint2D_C` に焦点を当てます。
+
+### 2.1 `ChronoDistanceAngleConstraint2D_C`（実装済み）
 
 | フィールド | 説明 |
 |------------|------|
@@ -41,7 +43,7 @@ void chrono_distance_angle_constraint2d_set_angle_spring(...);
 - `tests/test_distance_angle_constraint.c` を追加し、距離＋角度拘束が単独および複数混在で安定するか検証。
 - 角度のみを変化させたケース（距離固定）と距離のみ変化させたケースを用意。
 
-### 2.2 `ChronoCoupledConstraint2D_C`
+### 2.2 `ChronoCoupledConstraint2D_C`（計画中）
 
 複数の既存拘束（距離、角度、スライダ等）の線形結合を維持する汎用拘束。初期フェーズでは下記の簡易版を想定。
 
