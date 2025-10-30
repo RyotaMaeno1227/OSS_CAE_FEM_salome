@@ -27,6 +27,10 @@ typedef struct ChronoConstraint2DBase_C {
     double effective_mass;
 } ChronoConstraint2DBase_C;
 
+#define CHRONO_COUPLED_MAX_EQ 4
+#define CHRONO_COUPLED_DIAG_RANK_DEFICIENT 0x1u
+#define CHRONO_COUPLED_DIAG_CONDITION_WARNING 0x2u
+
 #define CHRONO_PRISMATIC_MOTOR_VELOCITY 0
 #define CHRONO_PRISMATIC_MOTOR_POSITION 1
 #define CHRONO_REVOLUTE_MOTOR_VELOCITY 0
@@ -229,6 +233,33 @@ typedef struct ChronoDistanceAngleConstraint2D_C {
     double accumulated_angle_impulse;
 } ChronoDistanceAngleConstraint2D_C;
 
+typedef struct ChronoCoupledConstraint2DDiagnostics_C {
+    unsigned int flags;
+    int rank;
+    double condition_number;
+    double min_pivot;
+    double max_pivot;
+} ChronoCoupledConstraint2DDiagnostics_C;
+
+typedef struct ChronoCoupledConditionWarningPolicy_C {
+    int enable_logging;
+    double log_cooldown;
+    int enable_auto_recover;
+    int max_drop;
+} ChronoCoupledConditionWarningPolicy_C;
+
+typedef struct ChronoCoupledConstraint2DEquationDesc_C {
+    double ratio_distance;
+    double ratio_angle;
+    double target_offset;
+    double softness_distance;
+    double softness_angle;
+    double spring_distance_stiffness;
+    double spring_distance_damping;
+    double spring_angle_stiffness;
+    double spring_angle_damping;
+} ChronoCoupledConstraint2DEquationDesc_C;
+
 typedef struct ChronoCoupledConstraint2D_C {
     ChronoConstraint2DBase_C base;
     double local_anchor_a[2];
@@ -242,15 +273,51 @@ typedef struct ChronoCoupledConstraint2D_C {
     double ratio_distance;
     double ratio_angle;
     double target_offset;
-    double softness;
+    double softness_distance;
+    double softness_angle;
     double baumgarte;
     double slop;
     double max_correction;
     double cached_dt;
     double effective_mass;
+    double gamma;
     double bias;
     double accumulated_impulse;
     double last_impulse;
+    double last_distance_impulse;
+    double last_angle_impulse;
+    double last_distance_force;
+    double last_angle_force;
+    double spring_distance_stiffness;
+    double spring_distance_damping;
+    double spring_angle_stiffness;
+    double spring_angle_damping;
+    double spring_distance_deflection;
+    double spring_angle_deflection;
+    int equation_count;
+    int equation_active[CHRONO_COUPLED_MAX_EQ];
+    double ratio_distance_eq[CHRONO_COUPLED_MAX_EQ];
+    double ratio_angle_eq[CHRONO_COUPLED_MAX_EQ];
+    double target_offset_eq[CHRONO_COUPLED_MAX_EQ];
+    double softness_distance_eq[CHRONO_COUPLED_MAX_EQ];
+    double softness_angle_eq[CHRONO_COUPLED_MAX_EQ];
+    double spring_distance_stiffness_eq[CHRONO_COUPLED_MAX_EQ];
+    double spring_distance_damping_eq[CHRONO_COUPLED_MAX_EQ];
+    double spring_angle_stiffness_eq[CHRONO_COUPLED_MAX_EQ];
+    double spring_angle_damping_eq[CHRONO_COUPLED_MAX_EQ];
+    double gamma_eq[CHRONO_COUPLED_MAX_EQ];
+    double bias_eq[CHRONO_COUPLED_MAX_EQ];
+    double last_impulse_eq[CHRONO_COUPLED_MAX_EQ];
+    double last_distance_impulse_eq[CHRONO_COUPLED_MAX_EQ];
+    double last_angle_impulse_eq[CHRONO_COUPLED_MAX_EQ];
+    double last_distance_force_eq[CHRONO_COUPLED_MAX_EQ];
+    double last_angle_force_eq[CHRONO_COUPLED_MAX_EQ];
+    double accumulated_impulse_eq[CHRONO_COUPLED_MAX_EQ];
+    double inv_mass_matrix[CHRONO_COUPLED_MAX_EQ][CHRONO_COUPLED_MAX_EQ];
+    double system_matrix[CHRONO_COUPLED_MAX_EQ][CHRONO_COUPLED_MAX_EQ];
+    ChronoCoupledConstraint2DDiagnostics_C diagnostics;
+    ChronoCoupledConditionWarningPolicy_C condition_policy;
+    double condition_warning_log_timer;
 } ChronoCoupledConstraint2D_C;
 
 typedef struct ChronoConstraint2DBatchConfig_C {
@@ -467,8 +534,31 @@ void chrono_coupled_constraint2d_set_ratios(ChronoCoupledConstraint2D_C *constra
 void chrono_coupled_constraint2d_set_target_offset(ChronoCoupledConstraint2D_C *constraint, double offset);
 void chrono_coupled_constraint2d_set_baumgarte(ChronoCoupledConstraint2D_C *constraint, double beta);
 void chrono_coupled_constraint2d_set_softness(ChronoCoupledConstraint2D_C *constraint, double softness);
+void chrono_coupled_constraint2d_set_softness_distance(ChronoCoupledConstraint2D_C *constraint, double softness);
+void chrono_coupled_constraint2d_set_softness_angle(ChronoCoupledConstraint2D_C *constraint, double softness);
 void chrono_coupled_constraint2d_set_slop(ChronoCoupledConstraint2D_C *constraint, double slop);
 void chrono_coupled_constraint2d_set_max_correction(ChronoCoupledConstraint2D_C *constraint, double max_correction);
+void chrono_coupled_constraint2d_set_distance_spring(ChronoCoupledConstraint2D_C *constraint,
+                                                     double stiffness,
+                                                     double damping);
+void chrono_coupled_constraint2d_set_angle_spring(ChronoCoupledConstraint2D_C *constraint,
+                                                  double stiffness,
+                                                  double damping);
+void chrono_coupled_constraint2d_clear_equations(ChronoCoupledConstraint2D_C *constraint);
+int chrono_coupled_constraint2d_add_equation(ChronoCoupledConstraint2D_C *constraint,
+                                             const ChronoCoupledConstraint2DEquationDesc_C *desc);
+int chrono_coupled_constraint2d_set_equation(ChronoCoupledConstraint2D_C *constraint,
+                                             int index,
+                                             const ChronoCoupledConstraint2DEquationDesc_C *desc);
+int chrono_coupled_constraint2d_get_equation_count(const ChronoCoupledConstraint2D_C *constraint);
+const ChronoCoupledConstraint2DDiagnostics_C *
+chrono_coupled_constraint2d_get_diagnostics(const ChronoCoupledConstraint2D_C *constraint);
+void chrono_coupled_constraint2d_get_condition_warning_policy(
+    const ChronoCoupledConstraint2D_C *constraint,
+    ChronoCoupledConditionWarningPolicy_C *out_policy);
+void chrono_coupled_constraint2d_set_condition_warning_policy(
+    ChronoCoupledConstraint2D_C *constraint,
+    const ChronoCoupledConditionWarningPolicy_C *policy);
 void chrono_coupled_constraint2d_prepare(ChronoCoupledConstraint2D_C *constraint, double dt);
 void chrono_coupled_constraint2d_apply_warm_start(ChronoCoupledConstraint2D_C *constraint);
 void chrono_coupled_constraint2d_solve_velocity(ChronoCoupledConstraint2D_C *constraint);

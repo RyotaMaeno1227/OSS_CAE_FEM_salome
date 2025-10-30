@@ -43,7 +43,7 @@
    - ✅ プラナー（2軸スライダ）: `ChronoPlanarConstraint2D_C` を追加し、軸毎のモータ／ソフトリミット／位置制御をサポート。Baumgarte 0.15／PID 周波数 3.5 Hz・減衰 1.2／ソフトリミットばね 55 N/m・ダンパ 8 N·s/m を推奨初期値とし、`tests/test_planar_constraint_longrun`（6000 ステップ）でモータ目標切替え・リミット衝突の安定性を回帰確認。`tests/test_planar_constraint` で基本挙動をチェックできる。  
    - ✅ スプリングダンパ: `ChronoSpringConstraint2D_C` を追加し、フック＋粘性力をインパルスとして適用。`tests/test_spring_constraint` で収束挙動を確認。  
    - ✅ 距離＋角度複合拘束: `ChronoDistanceAngleConstraint2D_C` を実装し、`test_distance_angle_constraint` / `test_distance_angle_endurance` で収束と耐久性を回帰。  
-   - ⏳ 線形結合拘束: 距離比や角度比を保持する `ChronoCoupledConstraint2D_C` を設計中。仕様草案では一体型の線形結合拘束として追加し、スライダークランクや差動をカバーする計画。  
+   - ✅ 線形結合拘束: 距離+角度の一次結合を扱う `ChronoCoupledConstraint2D_C` を実装し、距離/角度ソフトネスの個別設定、バネ/ダンパ、`last_distance_force` / `last_angle_force` ログを追加。複数式（最大 4 本）の同時拘束に対応し、式別ログと `chrono_coupled_constraint2d_get_diagnostics` によるランク欠損・条件数の検出を実装。条件数が `CHRONO_COUPLED_DIAG_CONDITION_WARNING` 閾値を超えた場合に標準エラーへ警告を出しつつ、オプトイン設定で最小対角の式を自動ドロップできるよう `chrono_coupled_constraint2d_set_condition_warning_policy` を追加。`tests/test_coupled_constraint` / `tests/test_coupled_constraint_endurance` でパラメータ切替と長時間挙動を回帰。  
    - 今後: スライダのリミット／モータ、他拘束タイプ（スライダ2軸、ギア、距離減衰など）を段階的に追加。
 3. **ソルバー**  
    - Sequential Impulse / Gauss-Seidel による複合拘束解決。  
@@ -75,9 +75,11 @@
 2. **ベンチマーク/デモ**  
    - パフォーマンス検証用のベンチスイートを整備し、改善効果を把握。  
    - `tests/bench_island_solver` を追加（呼び出し例: `make bench` または `./tests/bench_island_solver 128 400 8`）。スレッド数スイープ結果をログに出力。  
-   - `examples/planar_constraint_demo` を追加し、`docs/planar_constraint_visualization.m` でモータ／リミット挙動を教材用に可視化できるようにした。
-3. **CI 連携**  
-   - GitHub Actions 等でテスト自動実行（ローカルでの再現性重視、後日CI環境を検討）。
+   - `examples/planar_constraint_demo` を追加し、`docs/planar_constraint_visualization.m` でモータ／リミット挙動を教材用に可視化できるようにした。  
+   - Coupled 拘束用のマイクロベンチ（多数の式を抱える拘束をアイランド内に並べ、条件数／反復回数／解法時間を計測）を次スプリントで追加。結果を CSV 化し、CI の nightly ベンチに組み込む計画。
+3. **CI / 可視化連携**  
+   - GitHub Actions 等でテスト自動実行（ローカルでの再現性重視、後日CI環境を検討）。  
+   - Coupled 耐久テストは所要時間と生成 CSV が大きいため、CI では週次/nightly ジョブで実行し、`tools/plot_coupled_constraint_endurance.py` でグラフをレンダリングしてアーティファクト化する運用を想定。ログの最大条件数・診断フラグ数を自動閾値チェックに追加予定。
 
 ## 4. マイルストンとタスク一覧
 | フェーズ | 想定期間 | 主タスク | 成果物 | 進捗 |
@@ -101,6 +103,7 @@
 - 円衝突摩擦回帰テスト (`test_circle_collision_friction`) を追加し、静摩擦保持と動摩擦減速、マネージャ経由でのマニフォールドウォームスタートを確認。
 - マテリアル組み合わせテスト (`test_circle_collision_materials`) を追加し、ボディごとの係数設定が期待どおり合成されることを解析解と比較して確認。
 - 連続接触シミュレーションテスト (`test_circle_collision_continuous`) を追加し、接触マネージャを用いた複数フレームの滑り/反発処理を確認。
+- Coupled 拘束の長時間挙動を確認する `test_coupled_constraint_endurance` を追加し、比率切替・ターゲット更新時のログを `data/coupled_constraint_endurance.csv` に書き出して診断フラグと条件数を回帰。
 - 拘束フレームワークに `ChronoConstraint2DOps_C`/`ChronoConstraint2DBase_C` を導入し、距離拘束を新インターフェースへ移行。
 - 距離拘束バッチソルバ (`chrono_constraint2d_batch_solve`) と OpenMP ベースの SMP 対応を実装し、`test_constraint_batch_solve` で並列／直列の一致を検証。
   - アイランド分割を Union-Find＋ハッシュマップベースに刷新し、大規模拘束でも高速にグルーピング可能にした。

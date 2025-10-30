@@ -25,7 +25,7 @@ control compliance.
   to two contact points for use with `chrono_collision2d_resolve_contact` and the contact manager.
 - `chrono_distance_constraint2d_set_spring(constraint, stiffness, damping)`: 距離拘束をソフト化するフック。バネ定数・減衰を設定すると `last_spring_force` に最新の引張力を出力し、`tests/test_distance_constraint_soft` で動的な収束挙動を回帰できます。`chrono_distance_constraint2d_set_softness_linear` / `_angular` で平行移動と回転のコンプライアンスを個別に調整できます。
 - `chrono_distance_angle_constraint2d_*`: 距離と相対角を同時に拘束する複合ジョイント。線形／角度ソフトネスやスプリングの設定、`last_distance_force` / `last_angle_force` でログ出力が可能です。
-- `chrono_coupled_constraint2d_*`: 距離と角度の線形結合 `a * (d - d0) + b * (θ - θ0) = c` を維持する拘束。比率・オフセットを切り替えて連成機構をモデル化できます。
+- `chrono_coupled_constraint2d_*`: 距離と角度の線形結合 `a * (d - d0) + b * (θ - θ0) = c` を維持する拘束。最大 4 本の線形式を同時に保持でき、式ごとにソフトネス・バネ/ダンパを個別設定可能です。`chrono_coupled_constraint2d_add_equation` / `set_equation` で係数やターゲットを追加し、`chrono_coupled_constraint2d_get_diagnostics` で条件数やランク欠損を取得できます。`chrono_coupled_constraint2d_set_condition_warning_policy` により、条件数閾値超過時のログ出力クールダウンや自動方程式無効化（最小対角の式をドロップ）を有効化できます。`last_distance_force_eq[]` / `last_angle_force_eq[]` には式別の最新反力を記録します。
 - `chrono_prismatic_constraint2d_*`: slider joint API。`chrono_prismatic_constraint2d_set_limit_spring` でソフトリミット、
   `chrono_prismatic_constraint2d_set_motor_position_target` で位置制御モードに切替えられます。
 - `chrono_revolute_constraint2d_enable_motor` / `chrono_revolute_constraint2d_set_motor_position_target`: ピンジョイントに
@@ -63,7 +63,8 @@ Additional regression tests are available via `make test` (see the top-level `Ma
 - `tests/test_distance_angle_constraint.c`: 距離と角度を同時に拘束する複合ジョイントの回帰テスト。
 - `tests/test_distance_angle_endurance.c`: 距離＋角度拘束の耐久シナリオでパラメータ推奨値を確認し、最新のログ出力を検証します。
 - `tests/test_distance_constraint_multi.c`: 距離拘束を複数本同時に解くケースで角速度連成とソフトネス設定が安定するか検証します。
-- `tests/test_coupled_constraint.c`: 距離・角度比を持つカップリング拘束が期待どおり収束するか検証します。
+- `tests/test_coupled_constraint.c`: 距離・角度比を持つカップリング拘束が期待どおり収束するか検証します。複数式の追加、ダイアグノスティクス、およびログ出力が想定どおり動作するか確認します。
+- `tests/test_coupled_constraint_endurance.c`: 複合拘束の耐久・ステージ切替シナリオを長時間実行し、CSV (`data/coupled_constraint_endurance.csv`) に出力した力・トルク推移と診断フラグをチェックします。
 - `tests/test_spring_constraint.c`: damped spring between an anchor and dynamic body.
 - `tests/test_revolute_constraint.c`: pin joint maintaining a pivot under gravity.
 - `tests/test_planar_constraint_longrun.c` / `tests/test_planar_constraint_endurance.c`: 2 軸スライダのモータ／リミット挙動を長時間シナリオで回帰し、位置・角度・エネルギーの安定性を確認します。
@@ -77,6 +78,7 @@ Two self-contained demos can be built with `make examples`:
 - `examples/planar_constraint_demo` – 2 軸プラナー拘束のデモ。モータ目標の切替えとリミット衝突を CSV (`data/planar_constraint.csv`) へ記録し、`docs/planar_constraint_visualization.m` で可視化できます。
 - `tests/test_planar_constraint.c` では 2 軸スライダの位置モータとリミット挙動を確認できます。
 - ギア／リボルートのモータ挙動は `tests/test_gear_constraint.c` や `tests/test_revolute_constraint.c` のシナリオを参考にしてください。
+- `tools/plot_coupled_constraint_endurance.py` – Python (matplotlib) ベースの可視化スクリプト。`data/coupled_constraint_endurance.csv` を読み込み、距離・角度・式別反力・条件数・診断フラグを 3 枚のグラフにまとめます。`python tools/plot_coupled_constraint_endurance.py --show` や `--output coupled.png` で利用できます。
 
 Run an example and point the MATLAB helpers in `docs/` at the generated CSV to obtain plots and GIF animations.  For instance:
 
@@ -118,3 +120,39 @@ double last_force = distance.last_spring_force;
 ```
 
 `tests/test_distance_constraint_soft` と `tests/test_distance_constraint_multi` を使うと、線形／角度ソフトネスやスプリング係数のチューニング結果を素早く確認できます。
+
+### Coupled constraint tuning example
+
+```c
+ChronoCoupledConstraint2D_C coupled;
+chrono_coupled_constraint2d_init(&coupled,
+                                 anchor,
+                                 body,
+                                 local_anchor,
+                                 local_anchor,
+                                 (double[2]){1.0, 0.0},
+                                 rest_distance,
+                                 rest_angle,
+                                 1.0,
+                                 0.5,
+                                 0.0);
+
+// Bias term for position correction and tolerance window to avoid chattering
+chrono_coupled_constraint2d_set_baumgarte(&coupled, 0.35);
+chrono_coupled_constraint2d_set_slop(&coupled, 5e-4);
+chrono_coupled_constraint2d_set_max_correction(&coupled, 0.08);
+
+// Treat distance and angle compliance independently
+chrono_coupled_constraint2d_set_softness_distance(&coupled, 0.015);
+chrono_coupled_constraint2d_set_softness_angle(&coupled, 0.03);
+
+// Optional springs help track rapidly changing targets; damping in radians/s / N*m/s
+chrono_coupled_constraint2d_set_distance_spring(&coupled, 40.0, 3.5);
+chrono_coupled_constraint2d_set_angle_spring(&coupled, 18.0, 0.8);
+
+// Inspect solver impulses/forces after chrono_constraint2d_batch_solve(...)
+double distance_force = coupled.last_distance_force;  // Newton
+double angle_torque = coupled.last_angle_force;       // N*m
+```
+
+距離リード側をやや硬く（ソフトネスは 0.01-0.02）、角度リード側は角速度揺らぎを抑えるため 0.02-0.04 を目安にすると安定しやすくなります。ターゲットをステージごとに切り替える場合は、距離スプリングの剛性を 30-45 N/m、角度側を 15-25 N*m/rad 程度に設定し、`tests/test_coupled_constraint` を回帰ベースラインとして Slop / Baumgarte / damping を調整してください。最新の `last_distance_force` / `last_angle_force` ログを CSV 化すると、`docs/planar_constraint_visualization.m` と同様のプロットに組み込めます。

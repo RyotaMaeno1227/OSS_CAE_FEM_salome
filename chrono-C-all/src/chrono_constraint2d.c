@@ -1,7 +1,9 @@
 #include "../include/chrono_constraint2d.h"
 
 #include <math.h>
+#include <float.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -62,6 +64,298 @@ static int invert2x2(const double *m, double *out) {
     out[2] = -m[2] * inv_det;
     out[3] = m[0] * inv_det;
     return 1;
+}
+
+#define CHRONO_COUPLED_PIVOT_EPSILON 1e-8
+#define CHRONO_COUPLED_CONDITION_THRESHOLD 1e8
+#define CHRONO_COUPLED_CONDITION_LOG_COOLDOWN_DEFAULT 0.25
+#define CHRONO_COUPLED_CONDITION_MAX_DROP_DEFAULT 1
+
+static void coupled_constraint_condition_policy_set_default(ChronoCoupledConditionWarningPolicy_C *policy) {
+    if (!policy) {
+        return;
+    }
+    policy->enable_logging = 1;
+    policy->log_cooldown = CHRONO_COUPLED_CONDITION_LOG_COOLDOWN_DEFAULT;
+    policy->enable_auto_recover = 0;
+    policy->max_drop = CHRONO_COUPLED_CONDITION_MAX_DROP_DEFAULT;
+}
+
+static int coupled_constraint_drop_weak_equation(ChronoCoupledConstraint2D_C *constraint,
+                                                 double system_matrix[CHRONO_COUPLED_MAX_EQ][CHRONO_COUPLED_MAX_EQ],
+                                                 int *active_indices,
+                                                 int *active_count) {
+    if (!constraint || !system_matrix || !active_indices || !active_count) {
+        return 0;
+    }
+    if (*active_count <= 1) {
+        return 0;
+    }
+    int remove_pos = 0;
+    double smallest = fabs(system_matrix[active_indices[0]][active_indices[0]]);
+    for (int k = 1; k < *active_count; ++k) {
+        int idx = active_indices[k];
+        double diag_val = fabs(system_matrix[idx][idx]);
+        if (diag_val < smallest) {
+            smallest = diag_val;
+            remove_pos = k;
+        }
+    }
+    int remove_index = active_indices[remove_pos];
+    constraint->equation_active[remove_index] = 0;
+    constraint->accumulated_impulse_eq[remove_index] = 0.0;
+    constraint->last_impulse_eq[remove_index] = 0.0;
+    constraint->last_distance_impulse_eq[remove_index] = 0.0;
+    constraint->last_angle_impulse_eq[remove_index] = 0.0;
+    constraint->last_distance_force_eq[remove_index] = 0.0;
+    constraint->last_angle_force_eq[remove_index] = 0.0;
+    for (int i = 0; i < CHRONO_COUPLED_MAX_EQ; ++i) {
+        constraint->inv_mass_matrix[remove_index][i] = 0.0;
+        constraint->inv_mass_matrix[i][remove_index] = 0.0;
+        constraint->system_matrix[remove_index][i] = 0.0;
+        constraint->system_matrix[i][remove_index] = 0.0;
+    }
+    int new_count = 0;
+    for (int i = 0; i < CHRONO_COUPLED_MAX_EQ; ++i) {
+        if (constraint->equation_active[i]) {
+            active_indices[new_count++] = i;
+        }
+    }
+    *active_count = new_count;
+    return 1;
+}
+
+static int coupled_constraint_try_log_condition_warning(ChronoCoupledConstraint2D_C *constraint,
+                                                        double condition,
+                                                        int active_count,
+                                                        int recovery_applied) {
+    if (!constraint) {
+        return 0;
+    }
+    ChronoCoupledConditionWarningPolicy_C *policy = &constraint->condition_policy;
+    if (!policy->enable_logging) {
+        return 0;
+    }
+    if (policy->log_cooldown > 0.0 && constraint->condition_warning_log_timer < policy->log_cooldown) {
+        return 0;
+    }
+    fprintf(stderr,
+            "[ChronoCoupledConstraint2D] condition warning: cond=%.3e threshold=%.3e active_eq=%d auto_recover=%s\n",
+            condition,
+            (double)CHRONO_COUPLED_CONDITION_THRESHOLD,
+            active_count,
+            policy->enable_auto_recover ? (recovery_applied ? "applied" : "enabled") : "disabled");
+    constraint->condition_warning_log_timer = 0.0;
+    return 1;
+}
+static void coupled_constraint_sync_primary_fields(ChronoCoupledConstraint2D_C *constraint) {
+    if (!constraint) {
+        return;
+    }
+    if (constraint->equation_count <= 0) {
+        constraint->ratio_distance = 0.0;
+        constraint->ratio_angle = 0.0;
+        constraint->target_offset = 0.0;
+        constraint->softness_distance = 0.0;
+        constraint->softness_angle = 0.0;
+        constraint->spring_distance_stiffness = 0.0;
+        constraint->spring_distance_damping = 0.0;
+        constraint->spring_angle_stiffness = 0.0;
+        constraint->spring_angle_damping = 0.0;
+        constraint->gamma = 0.0;
+        constraint->bias = 0.0;
+        constraint->last_impulse = 0.0;
+        constraint->last_distance_impulse = 0.0;
+        constraint->last_angle_impulse = 0.0;
+        constraint->last_distance_force = 0.0;
+        constraint->last_angle_force = 0.0;
+        constraint->accumulated_impulse = 0.0;
+        constraint->spring_distance_deflection = 0.0;
+        constraint->spring_angle_deflection = 0.0;
+        constraint->base.accumulated_impulse = 0.0;
+        constraint->base.effective_mass = 0.0;
+        constraint->effective_mass = 0.0;
+        return;
+    }
+    int idx = 0;
+    constraint->ratio_distance = constraint->ratio_distance_eq[idx];
+    constraint->ratio_angle = constraint->ratio_angle_eq[idx];
+    constraint->target_offset = constraint->target_offset_eq[idx];
+    constraint->softness_distance = constraint->softness_distance_eq[idx];
+    constraint->softness_angle = constraint->softness_angle_eq[idx];
+    constraint->spring_distance_stiffness = constraint->spring_distance_stiffness_eq[idx];
+    constraint->spring_distance_damping = constraint->spring_distance_damping_eq[idx];
+    constraint->spring_angle_stiffness = constraint->spring_angle_stiffness_eq[idx];
+    constraint->spring_angle_damping = constraint->spring_angle_damping_eq[idx];
+    constraint->gamma = constraint->gamma_eq[idx];
+    constraint->bias = constraint->bias_eq[idx];
+    constraint->last_impulse = constraint->last_impulse_eq[idx];
+    constraint->last_distance_impulse = constraint->last_distance_impulse_eq[idx];
+    constraint->last_angle_impulse = constraint->last_angle_impulse_eq[idx];
+    constraint->last_distance_force = constraint->last_distance_force_eq[idx];
+    constraint->last_angle_force = constraint->last_angle_force_eq[idx];
+    constraint->accumulated_impulse = constraint->accumulated_impulse_eq[idx];
+    constraint->base.accumulated_impulse = constraint->accumulated_impulse_eq[idx];
+    constraint->effective_mass = constraint->inv_mass_matrix[idx][idx];
+    constraint->base.effective_mass = constraint->effective_mass;
+}
+
+static void coupled_constraint_clear_equation_buffers(ChronoCoupledConstraint2D_C *constraint) {
+    if (!constraint) {
+        return;
+    }
+    for (int i = 0; i < CHRONO_COUPLED_MAX_EQ; ++i) {
+        constraint->equation_active[i] = 0;
+        constraint->ratio_distance_eq[i] = 0.0;
+        constraint->ratio_angle_eq[i] = 0.0;
+        constraint->target_offset_eq[i] = 0.0;
+        constraint->softness_distance_eq[i] = 0.0;
+        constraint->softness_angle_eq[i] = 0.0;
+        constraint->spring_distance_stiffness_eq[i] = 0.0;
+        constraint->spring_distance_damping_eq[i] = 0.0;
+        constraint->spring_angle_stiffness_eq[i] = 0.0;
+        constraint->spring_angle_damping_eq[i] = 0.0;
+        constraint->gamma_eq[i] = 0.0;
+        constraint->bias_eq[i] = 0.0;
+        constraint->last_impulse_eq[i] = 0.0;
+        constraint->last_distance_impulse_eq[i] = 0.0;
+        constraint->last_angle_impulse_eq[i] = 0.0;
+        constraint->last_distance_force_eq[i] = 0.0;
+        constraint->last_angle_force_eq[i] = 0.0;
+        constraint->accumulated_impulse_eq[i] = 0.0;
+        for (int j = 0; j < CHRONO_COUPLED_MAX_EQ; ++j) {
+            constraint->inv_mass_matrix[i][j] = 0.0;
+            constraint->system_matrix[i][j] = 0.0;
+        }
+    }
+    constraint->diagnostics.flags = 0;
+    constraint->diagnostics.rank = 0;
+    constraint->diagnostics.condition_number = 0.0;
+    constraint->diagnostics.min_pivot = 0.0;
+    constraint->diagnostics.max_pivot = 0.0;
+}
+
+static int coupled_constraint_invert_matrix(const double *src,
+                                            double *dst,
+                                            int n,
+                                            double pivot_epsilon,
+                                            double *min_pivot,
+                                            double *max_pivot,
+                                            int *rank) {
+    double a[CHRONO_COUPLED_MAX_EQ][CHRONO_COUPLED_MAX_EQ];
+    double inv[CHRONO_COUPLED_MAX_EQ][CHRONO_COUPLED_MAX_EQ];
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            a[i][j] = src[i * CHRONO_COUPLED_MAX_EQ + j];
+            inv[i][j] = (i == j) ? 1.0 : 0.0;
+        }
+    }
+    double local_min = 0.0;
+    double local_max = 0.0;
+    int local_rank = 0;
+    for (int col = 0; col < n; ++col) {
+        int pivot_row = col;
+        double pivot_val = fabs(a[pivot_row][col]);
+        for (int row = col + 1; row < n; ++row) {
+            double val = fabs(a[row][col]);
+            if (val > pivot_val) {
+                pivot_val = val;
+                pivot_row = row;
+            }
+        }
+        if (pivot_val < pivot_epsilon) {
+            continue;
+        }
+        if (pivot_row != col) {
+            for (int k = 0; k < n; ++k) {
+                double tmp = a[col][k];
+                a[col][k] = a[pivot_row][k];
+                a[pivot_row][k] = tmp;
+                tmp = inv[col][k];
+                inv[col][k] = inv[pivot_row][k];
+                inv[pivot_row][k] = tmp;
+            }
+        }
+        double pivot = a[col][col];
+        if (local_rank == 0) {
+            local_min = fabs(pivot);
+            local_max = fabs(pivot);
+        } else {
+            if (fabs(pivot) < local_min) {
+                local_min = fabs(pivot);
+            }
+            if (fabs(pivot) > local_max) {
+                local_max = fabs(pivot);
+            }
+        }
+        local_rank += 1;
+        double inv_pivot = 1.0 / pivot;
+        for (int k = 0; k < n; ++k) {
+            a[col][k] *= inv_pivot;
+            inv[col][k] *= inv_pivot;
+        }
+        for (int row = 0; row < n; ++row) {
+            if (row == col) {
+                continue;
+            }
+            double factor = a[row][col];
+            if (factor == 0.0) {
+                continue;
+            }
+            for (int k = 0; k < n; ++k) {
+                a[row][k] -= factor * a[col][k];
+                inv[row][k] -= factor * inv[col][k];
+            }
+        }
+    }
+    if (rank) {
+        *rank = local_rank;
+    }
+    if (min_pivot) {
+        *min_pivot = local_rank > 0 ? local_min : 0.0;
+    }
+    if (max_pivot) {
+        *max_pivot = local_rank > 0 ? local_max : 0.0;
+    }
+    if (local_rank < n) {
+        return 0;
+    }
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            dst[i * CHRONO_COUPLED_MAX_EQ + j] = inv[i][j];
+        }
+    }
+    return 1;
+}
+
+static double coupled_constraint_condition_bound(const double *matrix, int n) {
+    double upper = 0.0;
+    double lower = DBL_MAX;
+    for (int i = 0; i < n; ++i) {
+        double diag = matrix[i * CHRONO_COUPLED_MAX_EQ + i];
+        double row_sum = 0.0;
+        for (int j = 0; j < n; ++j) {
+            if (i == j) {
+                continue;
+            }
+            row_sum += fabs(matrix[i * CHRONO_COUPLED_MAX_EQ + j]);
+        }
+        double upper_candidate = fabs(diag) + row_sum;
+        if (upper_candidate > upper) {
+            upper = upper_candidate;
+        }
+        double lower_candidate = fabs(diag) - row_sum;
+        if (lower_candidate < lower) {
+            lower = lower_candidate;
+        }
+    }
+    if (lower <= CHRONO_COUPLED_PIVOT_EPSILON) {
+        lower = CHRONO_COUPLED_PIVOT_EPSILON;
+    }
+    if (upper < CHRONO_COUPLED_PIVOT_EPSILON) {
+        upper = CHRONO_COUPLED_PIVOT_EPSILON;
+    }
+    return upper / lower;
 }
 
 static void chrono_distance_constraint2d_prepare_impl(void *constraint_ptr, double dt);
@@ -686,20 +980,23 @@ void chrono_coupled_constraint2d_init(ChronoCoupledConstraint2D_C *constraint,
     }
     constraint->rest_distance = rest_distance;
     constraint->rest_angle = rest_angle;
-    constraint->ratio_distance = ratio_distance;
-    constraint->ratio_angle = ratio_angle;
-    constraint->target_offset = target_offset;
-    constraint->softness = 0.0;
     constraint->baumgarte = 0.35;
     constraint->slop = 5e-4;
     constraint->max_correction = 0.1;
     constraint->cached_dt = 0.0;
-    constraint->effective_mass = 0.0;
-    constraint->bias = 0.0;
-    constraint->accumulated_impulse = 0.0;
-    constraint->last_impulse = 0.0;
-    constraint->base.accumulated_impulse = 0.0;
-    constraint->base.effective_mass = 0.0;
+    constraint->spring_distance_deflection = 0.0;
+    constraint->spring_angle_deflection = 0.0;
+    coupled_constraint_condition_policy_set_default(&constraint->condition_policy);
+    constraint->condition_warning_log_timer = constraint->condition_policy.log_cooldown;
+    coupled_constraint_clear_equation_buffers(constraint);
+    constraint->equation_count = 0;
+    ChronoCoupledConstraint2DEquationDesc_C desc;
+    memset(&desc, 0, sizeof(desc));
+    desc.ratio_distance = ratio_distance;
+    desc.ratio_angle = ratio_angle;
+    desc.target_offset = target_offset;
+    chrono_coupled_constraint2d_add_equation(constraint, &desc);
+    coupled_constraint_sync_primary_fields(constraint);
 }
 
 void chrono_coupled_constraint2d_set_rest_distance(ChronoCoupledConstraint2D_C *constraint, double rest_distance) {
@@ -716,21 +1013,40 @@ void chrono_coupled_constraint2d_set_rest_angle(ChronoCoupledConstraint2D_C *con
     constraint->rest_angle = rest_angle;
 }
 
+static void coupled_constraint_ensure_equation(ChronoCoupledConstraint2D_C *constraint) {
+    if (!constraint) {
+        return;
+    }
+    if (constraint->equation_count > 0) {
+        return;
+    }
+    ChronoCoupledConstraint2DEquationDesc_C desc;
+    memset(&desc, 0, sizeof(desc));
+    chrono_coupled_constraint2d_add_equation(constraint, &desc);
+}
+
 void chrono_coupled_constraint2d_set_ratios(ChronoCoupledConstraint2D_C *constraint,
                                             double ratio_distance,
                                             double ratio_angle) {
     if (!constraint) {
         return;
     }
-    constraint->ratio_distance = ratio_distance;
-    constraint->ratio_angle = ratio_angle;
+    coupled_constraint_ensure_equation(constraint);
+    constraint->ratio_distance_eq[0] = ratio_distance;
+    constraint->ratio_angle_eq[0] = ratio_angle;
+    if (constraint->equation_active[0] == 0) {
+        constraint->equation_active[0] = 1;
+    }
+    coupled_constraint_sync_primary_fields(constraint);
 }
 
 void chrono_coupled_constraint2d_set_target_offset(ChronoCoupledConstraint2D_C *constraint, double offset) {
     if (!constraint) {
         return;
     }
-    constraint->target_offset = offset;
+    coupled_constraint_ensure_equation(constraint);
+    constraint->target_offset_eq[0] = offset;
+    coupled_constraint_sync_primary_fields(constraint);
 }
 
 void chrono_coupled_constraint2d_set_baumgarte(ChronoCoupledConstraint2D_C *constraint, double beta) {
@@ -750,10 +1066,34 @@ void chrono_coupled_constraint2d_set_softness(ChronoCoupledConstraint2D_C *const
     if (!constraint) {
         return;
     }
+    chrono_coupled_constraint2d_set_softness_distance(constraint, softness);
+    chrono_coupled_constraint2d_set_softness_angle(constraint, softness);
+}
+
+void chrono_coupled_constraint2d_set_softness_distance(ChronoCoupledConstraint2D_C *constraint, double softness) {
+    if (!constraint) {
+        return;
+    }
     if (softness < 0.0) {
         softness = 0.0;
     }
-    constraint->softness = softness;
+    constraint->softness_distance = softness;
+    coupled_constraint_ensure_equation(constraint);
+    constraint->softness_distance_eq[0] = softness;
+    coupled_constraint_sync_primary_fields(constraint);
+}
+
+void chrono_coupled_constraint2d_set_softness_angle(ChronoCoupledConstraint2D_C *constraint, double softness) {
+    if (!constraint) {
+        return;
+    }
+    if (softness < 0.0) {
+        softness = 0.0;
+    }
+    constraint->softness_angle = softness;
+    coupled_constraint_ensure_equation(constraint);
+    constraint->softness_angle_eq[0] = softness;
+    coupled_constraint_sync_primary_fields(constraint);
 }
 
 void chrono_coupled_constraint2d_set_slop(ChronoCoupledConstraint2D_C *constraint, double slop) {
@@ -774,6 +1114,748 @@ void chrono_coupled_constraint2d_set_max_correction(ChronoCoupledConstraint2D_C 
         max_correction = 0.0;
     }
     constraint->max_correction = max_correction;
+}
+
+void chrono_coupled_constraint2d_set_distance_spring(ChronoCoupledConstraint2D_C *constraint,
+                                                     double stiffness,
+                                                     double damping) {
+    if (!constraint) {
+        return;
+    }
+    constraint->spring_distance_stiffness = (stiffness > 0.0) ? stiffness : 0.0;
+    constraint->spring_distance_damping = (damping > 0.0) ? damping : 0.0;
+    coupled_constraint_ensure_equation(constraint);
+    constraint->spring_distance_stiffness_eq[0] = constraint->spring_distance_stiffness;
+    constraint->spring_distance_damping_eq[0] = constraint->spring_distance_damping;
+    coupled_constraint_sync_primary_fields(constraint);
+}
+
+void chrono_coupled_constraint2d_set_angle_spring(ChronoCoupledConstraint2D_C *constraint,
+                                                  double stiffness,
+                                                  double damping) {
+    if (!constraint) {
+        return;
+    }
+    constraint->spring_angle_stiffness = (stiffness > 0.0) ? stiffness : 0.0;
+    constraint->spring_angle_damping = (damping > 0.0) ? damping : 0.0;
+    coupled_constraint_ensure_equation(constraint);
+    constraint->spring_angle_stiffness_eq[0] = constraint->spring_angle_stiffness;
+    constraint->spring_angle_damping_eq[0] = constraint->spring_angle_damping;
+    coupled_constraint_sync_primary_fields(constraint);
+}
+
+void chrono_coupled_constraint2d_clear_equations(ChronoCoupledConstraint2D_C *constraint) {
+    if (!constraint) {
+        return;
+    }
+    constraint->equation_count = 0;
+    coupled_constraint_clear_equation_buffers(constraint);
+    coupled_constraint_sync_primary_fields(constraint);
+}
+
+int chrono_coupled_constraint2d_add_equation(ChronoCoupledConstraint2D_C *constraint,
+                                             const ChronoCoupledConstraint2DEquationDesc_C *desc) {
+    if (!constraint) {
+        return -1;
+    }
+    if (constraint->equation_count >= CHRONO_COUPLED_MAX_EQ) {
+        return -1;
+    }
+    int index = constraint->equation_count;
+    constraint->equation_count += 1;
+    chrono_coupled_constraint2d_set_equation(constraint, index, desc);
+    return index;
+}
+
+int chrono_coupled_constraint2d_set_equation(ChronoCoupledConstraint2D_C *constraint,
+                                             int index,
+                                             const ChronoCoupledConstraint2DEquationDesc_C *desc) {
+    if (!constraint || index < 0 || index >= CHRONO_COUPLED_MAX_EQ) {
+        return -1;
+    }
+    if (index >= constraint->equation_count) {
+        constraint->equation_count = index + 1;
+    }
+    constraint->equation_active[index] = 1;
+    double ratio_distance = 0.0;
+    double ratio_angle = 0.0;
+    double target_offset = 0.0;
+    double softness_distance = 0.0;
+    double softness_angle = 0.0;
+    double spring_distance_stiffness = 0.0;
+    double spring_distance_damping = 0.0;
+    double spring_angle_stiffness = 0.0;
+    double spring_angle_damping = 0.0;
+    if (desc) {
+        ratio_distance = desc->ratio_distance;
+        ratio_angle = desc->ratio_angle;
+        target_offset = desc->target_offset;
+        softness_distance = desc->softness_distance;
+        softness_angle = desc->softness_angle;
+        spring_distance_stiffness = desc->spring_distance_stiffness;
+        spring_distance_damping = desc->spring_distance_damping;
+        spring_angle_stiffness = desc->spring_angle_stiffness;
+        spring_angle_damping = desc->spring_angle_damping;
+    }
+    constraint->ratio_distance_eq[index] = ratio_distance;
+    constraint->ratio_angle_eq[index] = ratio_angle;
+    constraint->target_offset_eq[index] = target_offset;
+    constraint->softness_distance_eq[index] = (softness_distance > 0.0) ? softness_distance : 0.0;
+    constraint->softness_angle_eq[index] = (softness_angle > 0.0) ? softness_angle : 0.0;
+    constraint->spring_distance_stiffness_eq[index] = (spring_distance_stiffness > 0.0) ? spring_distance_stiffness : 0.0;
+    constraint->spring_distance_damping_eq[index] = (spring_distance_damping > 0.0) ? spring_distance_damping : 0.0;
+    constraint->spring_angle_stiffness_eq[index] = (spring_angle_stiffness > 0.0) ? spring_angle_stiffness : 0.0;
+    constraint->spring_angle_damping_eq[index] = (spring_angle_damping > 0.0) ? spring_angle_damping : 0.0;
+    constraint->gamma_eq[index] = 0.0;
+    constraint->bias_eq[index] = 0.0;
+    constraint->last_impulse_eq[index] = 0.0;
+    constraint->last_distance_impulse_eq[index] = 0.0;
+    constraint->last_angle_impulse_eq[index] = 0.0;
+    constraint->last_distance_force_eq[index] = 0.0;
+    constraint->last_angle_force_eq[index] = 0.0;
+    constraint->accumulated_impulse_eq[index] = 0.0;
+    coupled_constraint_sync_primary_fields(constraint);
+    return index;
+}
+
+int chrono_coupled_constraint2d_get_equation_count(const ChronoCoupledConstraint2D_C *constraint) {
+    if (!constraint) {
+        return 0;
+    }
+    return constraint->equation_count;
+}
+
+const ChronoCoupledConstraint2DDiagnostics_C *
+chrono_coupled_constraint2d_get_diagnostics(const ChronoCoupledConstraint2D_C *constraint) {
+    if (!constraint) {
+        return NULL;
+    }
+    return &constraint->diagnostics;
+}
+
+void chrono_coupled_constraint2d_get_condition_warning_policy(
+    const ChronoCoupledConstraint2D_C *constraint,
+    ChronoCoupledConditionWarningPolicy_C *out_policy) {
+    if (!constraint || !out_policy) {
+        return;
+    }
+    *out_policy = constraint->condition_policy;
+}
+
+void chrono_coupled_constraint2d_set_condition_warning_policy(
+    ChronoCoupledConstraint2D_C *constraint,
+    const ChronoCoupledConditionWarningPolicy_C *policy) {
+    if (!constraint) {
+        return;
+    }
+    if (!policy) {
+        coupled_constraint_condition_policy_set_default(&constraint->condition_policy);
+    } else {
+        constraint->condition_policy.enable_logging = policy->enable_logging ? 1 : 0;
+        constraint->condition_policy.log_cooldown =
+            (policy->log_cooldown >= 0.0) ? policy->log_cooldown : CHRONO_COUPLED_CONDITION_LOG_COOLDOWN_DEFAULT;
+        constraint->condition_policy.enable_auto_recover = policy->enable_auto_recover ? 1 : 0;
+        if (policy->max_drop > 0) {
+            constraint->condition_policy.max_drop = policy->max_drop;
+        } else {
+            constraint->condition_policy.max_drop = CHRONO_COUPLED_CONDITION_MAX_DROP_DEFAULT;
+        }
+    }
+    if (constraint->condition_policy.log_cooldown <= 0.0) {
+        constraint->condition_warning_log_timer = 0.0;
+    } else if (constraint->condition_warning_log_timer > constraint->condition_policy.log_cooldown) {
+        constraint->condition_warning_log_timer = constraint->condition_policy.log_cooldown;
+    }
+}
+
+static void chrono_coupled_constraint2d_prepare_impl(void *constraint_ptr, double dt) {
+    ChronoCoupledConstraint2D_C *constraint = (ChronoCoupledConstraint2D_C *)constraint_ptr;
+    if (!constraint || dt <= 0.0) {
+        return;
+    }
+
+    ChronoBody2D_C *body_a = constraint->base.body_a;
+   ChronoBody2D_C *body_b = constraint->base.body_b;
+
+    constraint->cached_dt = dt;
+    if (constraint->condition_policy.log_cooldown > 0.0) {
+        constraint->condition_warning_log_timer += dt;
+        if (constraint->condition_warning_log_timer > constraint->condition_policy.log_cooldown) {
+            constraint->condition_warning_log_timer = constraint->condition_policy.log_cooldown;
+        }
+    } else {
+        constraint->condition_warning_log_timer = 0.0;
+    }
+
+    double axis_local[2] = {constraint->axis_local[0], constraint->axis_local[1]};
+    if (body_a) {
+        rotate_angle(body_a->angle, axis_local, constraint->normal);
+    } else {
+        constraint->normal[0] = axis_local[0];
+        constraint->normal[1] = axis_local[1];
+    }
+    normalize(constraint->normal);
+
+    double world_a[2];
+    double world_b[2];
+
+    if (body_a) {
+        chrono_body2d_local_to_world(body_a, constraint->local_anchor_a, world_a);
+        constraint->ra[0] = world_a[0] - body_a->position[0];
+        constraint->ra[1] = world_a[1] - body_a->position[1];
+    } else {
+        world_a[0] = constraint->local_anchor_a[0];
+        world_a[1] = constraint->local_anchor_a[1];
+        constraint->ra[0] = 0.0;
+        constraint->ra[1] = 0.0;
+    }
+
+    if (body_b) {
+        chrono_body2d_local_to_world(body_b, constraint->local_anchor_b, world_b);
+        constraint->rb[0] = world_b[0] - body_b->position[0];
+        constraint->rb[1] = world_b[1] - body_b->position[1];
+    } else {
+        world_b[0] = constraint->local_anchor_b[0];
+        world_b[1] = constraint->local_anchor_b[1];
+        constraint->rb[0] = 0.0;
+        constraint->rb[1] = 0.0;
+    }
+
+    double pa[2];
+    double pb[2];
+    if (body_a) {
+        add(body_a->position, constraint->ra, pa);
+    } else {
+        pa[0] = world_a[0];
+        pa[1] = world_a[1];
+    }
+    if (body_b) {
+        add(body_b->position, constraint->rb, pb);
+    } else {
+        pb[0] = world_b[0];
+        pb[1] = world_b[1];
+    }
+
+    double delta[2];
+    sub(pb, pa, delta);
+    double dist = length(delta);
+    if (dist > 1e-9) {
+        constraint->normal[0] = delta[0] / dist;
+        constraint->normal[1] = delta[1] / dist;
+    }
+
+    double ra_cross_n = cross(constraint->ra, constraint->normal);
+    double rb_cross_n = cross(constraint->rb, constraint->normal);
+
+    double inv_mass_linear = 0.0;
+    double inv_mass_angular = 0.0;
+    if (body_a && !body_a->is_static) {
+        inv_mass_linear += body_a->inverse_mass;
+        inv_mass_angular += ra_cross_n * ra_cross_n * body_a->inverse_inertia;
+    }
+    if (body_b && !body_b->is_static) {
+        inv_mass_linear += body_b->inverse_mass;
+        inv_mass_angular += rb_cross_n * rb_cross_n * body_b->inverse_inertia;
+    }
+    double inv_mass_distance = inv_mass_linear + inv_mass_angular;
+
+    double inv_mass_angle = 0.0;
+    if (body_a && !body_a->is_static) {
+        inv_mass_angle += body_a->inverse_inertia;
+    }
+    if (body_b && !body_b->is_static) {
+        inv_mass_angle += body_b->inverse_inertia;
+    }
+
+    double angle_a = body_a ? body_a->angle : 0.0;
+    double angle_b = body_b ? body_b->angle : 0.0;
+
+    double C_distance = dist - constraint->rest_distance;
+    double C_angle = (angle_b - angle_a) - constraint->rest_angle;
+    constraint->spring_distance_deflection = C_distance;
+    constraint->spring_angle_deflection = C_angle;
+
+    coupled_constraint_ensure_equation(constraint);
+
+    constraint->diagnostics.flags = 0;
+    constraint->diagnostics.rank = 0;
+    constraint->diagnostics.condition_number = 0.0;
+    constraint->diagnostics.min_pivot = 0.0;
+    constraint->diagnostics.max_pivot = 0.0;
+
+    for (int i = 0; i < CHRONO_COUPLED_MAX_EQ; ++i) {
+        constraint->gamma_eq[i] = 0.0;
+        constraint->bias_eq[i] = 0.0;
+        constraint->last_impulse_eq[i] = 0.0;
+        constraint->last_distance_impulse_eq[i] = 0.0;
+        constraint->last_angle_impulse_eq[i] = 0.0;
+        constraint->last_distance_force_eq[i] = 0.0;
+        constraint->last_angle_force_eq[i] = 0.0;
+        for (int j = 0; j < CHRONO_COUPLED_MAX_EQ; ++j) {
+            constraint->inv_mass_matrix[i][j] = 0.0;
+            constraint->system_matrix[i][j] = 0.0;
+        }
+    }
+
+    int total_eq = constraint->equation_count;
+    if (total_eq <= 0) {
+        total_eq = 1;
+    }
+    if (total_eq > CHRONO_COUPLED_MAX_EQ) {
+        total_eq = CHRONO_COUPLED_MAX_EQ;
+    }
+
+    double base_matrix_full[CHRONO_COUPLED_MAX_EQ][CHRONO_COUPLED_MAX_EQ] = {{0.0}};
+    double system_matrix_full[CHRONO_COUPLED_MAX_EQ][CHRONO_COUPLED_MAX_EQ] = {{0.0}};
+
+    for (int i = 0; i < total_eq; ++i) {
+        if (i >= constraint->equation_count) {
+            constraint->equation_active[i] = 0;
+            continue;
+        }
+        double ratio_distance = constraint->ratio_distance_eq[i];
+        double ratio_angle = constraint->ratio_angle_eq[i];
+        constraint->equation_active[i] = 1;
+        constraint->gamma_eq[i] = ratio_distance * ratio_distance * constraint->softness_distance_eq[i] +
+                                  ratio_angle * ratio_angle * constraint->softness_angle_eq[i];
+        double eq_error = ratio_distance * C_distance +
+                          ratio_angle * C_angle -
+                          constraint->target_offset_eq[i];
+        double abs_error = fabs(eq_error);
+        if (abs_error > constraint->slop) {
+            eq_error -= constraint->slop * ((eq_error > 0.0) ? 1.0 : -1.0);
+        } else {
+            eq_error = 0.0;
+        }
+        if (constraint->baumgarte > 0.0) {
+            constraint->bias_eq[i] = -constraint->baumgarte / dt * eq_error;
+        } else {
+            constraint->bias_eq[i] = 0.0;
+        }
+    }
+
+    for (int i = 0; i < total_eq; ++i) {
+        double ratio_distance_i = constraint->ratio_distance_eq[i];
+        double ratio_angle_i = constraint->ratio_angle_eq[i];
+        for (int j = 0; j < total_eq; ++j) {
+            double ratio_distance_j = constraint->ratio_distance_eq[j];
+            double ratio_angle_j = constraint->ratio_angle_eq[j];
+            double value = ratio_distance_i * ratio_distance_j * inv_mass_distance +
+                           ratio_angle_i * ratio_angle_j * inv_mass_angle;
+            base_matrix_full[i][j] = value;
+            system_matrix_full[i][j] = value;
+        }
+        system_matrix_full[i][i] += constraint->gamma_eq[i];
+    }
+
+    int active_indices[CHRONO_COUPLED_MAX_EQ];
+    int active_count = 0;
+    for (int i = 0; i < total_eq; ++i) {
+        if (constraint->equation_active[i]) {
+            active_indices[active_count++] = i;
+        }
+    }
+    if (active_count == 0) {
+        active_indices[active_count++] = 0;
+        constraint->equation_active[0] = 1;
+    }
+
+    double min_pivot = 0.0;
+    double max_pivot = 0.0;
+    int rank = 0;
+    double condition = 0.0;
+    int success = 0;
+    int condition_recovery_applied = 0;
+    int drops_applied = 0;
+
+    while (active_count > 0) {
+        double sys_local[CHRONO_COUPLED_MAX_EQ * CHRONO_COUPLED_MAX_EQ] = {0.0};
+        double inv_local[CHRONO_COUPLED_MAX_EQ * CHRONO_COUPLED_MAX_EQ] = {0.0};
+        double base_local[CHRONO_COUPLED_MAX_EQ * CHRONO_COUPLED_MAX_EQ] = {0.0};
+        for (int row = 0; row < active_count; ++row) {
+            int idx_row = active_indices[row];
+            for (int col = 0; col < active_count; ++col) {
+                int idx_col = active_indices[col];
+                sys_local[row * CHRONO_COUPLED_MAX_EQ + col] = system_matrix_full[idx_row][idx_col];
+                base_local[row * CHRONO_COUPLED_MAX_EQ + col] = base_matrix_full[idx_row][idx_col];
+            }
+        }
+        if (coupled_constraint_invert_matrix(sys_local,
+                                             inv_local,
+                                             active_count,
+                                             CHRONO_COUPLED_PIVOT_EPSILON,
+                                             &min_pivot,
+                                             &max_pivot,
+                                             &rank)) {
+            condition = coupled_constraint_condition_bound(base_local, active_count);
+            if (condition > CHRONO_COUPLED_CONDITION_THRESHOLD) {
+                constraint->diagnostics.flags |= CHRONO_COUPLED_DIAG_CONDITION_WARNING;
+                int can_drop = 0;
+                int previous_active = active_count;
+                if (constraint->condition_policy.enable_auto_recover &&
+                    drops_applied < constraint->condition_policy.max_drop) {
+                    can_drop = coupled_constraint_drop_weak_equation(constraint,
+                                                                     system_matrix_full,
+                                                                     active_indices,
+                                                                     &active_count);
+                }
+                if (can_drop) {
+                    drops_applied += 1;
+                    condition_recovery_applied = 1;
+                    coupled_constraint_try_log_condition_warning(constraint,
+                                                                 condition,
+                                                                 previous_active,
+                                                                 1);
+                    continue;
+                }
+                coupled_constraint_try_log_condition_warning(constraint,
+                                                             condition,
+                                                             active_count,
+                                                             condition_recovery_applied);
+            }
+            success = 1;
+            for (int i = 0; i < total_eq; ++i) {
+                constraint->equation_active[i] = 0;
+                for (int j = 0; j < total_eq; ++j) {
+                    constraint->inv_mass_matrix[i][j] = 0.0;
+                    constraint->system_matrix[i][j] = 0.0;
+                }
+            }
+            for (int row = 0; row < active_count; ++row) {
+                int idx_row = active_indices[row];
+                constraint->equation_active[idx_row] = 1;
+                for (int col = 0; col < active_count; ++col) {
+                    int idx_col = active_indices[col];
+                    constraint->inv_mass_matrix[idx_row][idx_col] =
+                        inv_local[row * CHRONO_COUPLED_MAX_EQ + col];
+                    constraint->system_matrix[idx_row][idx_col] =
+                        sys_local[row * CHRONO_COUPLED_MAX_EQ + col];
+                }
+            }
+            break;
+        }
+
+        constraint->diagnostics.flags |= CHRONO_COUPLED_DIAG_RANK_DEFICIENT;
+
+        if (!coupled_constraint_drop_weak_equation(constraint,
+                                                   system_matrix_full,
+                                                   active_indices,
+                                                   &active_count)) {
+            if (active_count == 1) {
+                int idx = active_indices[0];
+                constraint->equation_active[idx] = 0;
+                constraint->accumulated_impulse_eq[idx] = 0.0;
+            }
+            break;
+        }
+    }
+
+    if (!success) {
+        for (int i = 0; i < total_eq; ++i) {
+            constraint->equation_active[i] = 0;
+            constraint->accumulated_impulse_eq[i] = 0.0;
+        }
+        constraint->diagnostics.rank = 0;
+        constraint->diagnostics.min_pivot = 0.0;
+        constraint->diagnostics.max_pivot = 0.0;
+        constraint->diagnostics.condition_number = 0.0;
+    } else {
+        constraint->diagnostics.rank = rank;
+        constraint->diagnostics.min_pivot = min_pivot;
+        constraint->diagnostics.max_pivot = max_pivot;
+        constraint->diagnostics.condition_number = condition;
+        if (condition > CHRONO_COUPLED_CONDITION_THRESHOLD) {
+            constraint->diagnostics.flags |= CHRONO_COUPLED_DIAG_CONDITION_WARNING;
+        }
+    }
+
+    coupled_constraint_sync_primary_fields(constraint);
+}
+
+static void chrono_coupled_constraint2d_apply_warm_start_impl(void *constraint_ptr) {
+    ChronoCoupledConstraint2D_C *constraint = (ChronoCoupledConstraint2D_C *)constraint_ptr;
+    if (!constraint) {
+        return;
+    }
+
+    ChronoBody2D_C *body_a = constraint->base.body_a;
+    ChronoBody2D_C *body_b = constraint->base.body_b;
+
+    double total_linear_scalar = 0.0;
+    double total_torque = 0.0;
+
+    for (int i = 0; i < constraint->equation_count; ++i) {
+        if (!constraint->equation_active[i]) {
+            constraint->accumulated_impulse_eq[i] = 0.0;
+            continue;
+        }
+        double lambda = constraint->accumulated_impulse_eq[i];
+        total_linear_scalar += constraint->ratio_distance_eq[i] * lambda;
+        total_torque += constraint->ratio_angle_eq[i] * lambda;
+    }
+
+    double impulse_vec[2] = {
+        constraint->normal[0] * total_linear_scalar,
+        constraint->normal[1] * total_linear_scalar
+    };
+
+    apply_impulse(body_a, (double[2]){-impulse_vec[0], -impulse_vec[1]}, constraint->ra);
+    apply_impulse(body_b, impulse_vec, constraint->rb);
+
+    if (body_a && !body_a->is_static) {
+        body_a->angular_velocity -= total_torque * body_a->inverse_inertia;
+    }
+    if (body_b && !body_b->is_static) {
+        body_b->angular_velocity += total_torque * body_b->inverse_inertia;
+    }
+
+    coupled_constraint_sync_primary_fields(constraint);
+}
+
+static void chrono_coupled_constraint2d_solve_velocity_impl(void *constraint_ptr) {
+    ChronoCoupledConstraint2D_C *constraint = (ChronoCoupledConstraint2D_C *)constraint_ptr;
+    if (!constraint) {
+        return;
+    }
+
+    ChronoBody2D_C *body_a = constraint->base.body_a;
+    ChronoBody2D_C *body_b = constraint->base.body_b;
+
+    double va[2] = {0.0, 0.0};
+    double vb[2] = {0.0, 0.0};
+
+    if (body_a && !body_a->is_static) {
+        va[0] = body_a->linear_velocity[0];
+        va[1] = body_a->linear_velocity[1];
+        double cross_ra_x = -body_a->angular_velocity * constraint->ra[1];
+        double cross_ra_y = body_a->angular_velocity * constraint->ra[0];
+        va[0] += cross_ra_x;
+        va[1] += cross_ra_y;
+    }
+    if (body_b && !body_b->is_static) {
+        vb[0] = body_b->linear_velocity[0];
+        vb[1] = body_b->linear_velocity[1];
+        double cross_rb_x = -body_b->angular_velocity * constraint->rb[1];
+        double cross_rb_y = body_b->angular_velocity * constraint->rb[0];
+        vb[0] += cross_rb_x;
+        vb[1] += cross_rb_y;
+    }
+
+    double dv[2];
+    sub(vb, va, dv);
+    double Cdot_distance = dot(dv, constraint->normal);
+    double omega_a = (body_a && !body_a->is_static) ? body_a->angular_velocity : 0.0;
+    double omega_b = (body_b && !body_b->is_static) ? body_b->angular_velocity : 0.0;
+    double Cdot_angle = omega_b - omega_a;
+
+    double rhs[CHRONO_COUPLED_MAX_EQ] = {0.0};
+    double lambda[CHRONO_COUPLED_MAX_EQ] = {0.0};
+
+    for (int i = 0; i < constraint->equation_count; ++i) {
+        if (!constraint->equation_active[i]) {
+            constraint->last_impulse_eq[i] = 0.0;
+            constraint->last_distance_force_eq[i] = 0.0;
+            constraint->last_angle_force_eq[i] = 0.0;
+            continue;
+        }
+        double Cdot = constraint->ratio_distance_eq[i] * Cdot_distance +
+                      constraint->ratio_angle_eq[i] * Cdot_angle;
+        rhs[i] = -(Cdot + constraint->bias_eq[i] + constraint->gamma_eq[i] * constraint->accumulated_impulse_eq[i]);
+    }
+
+    for (int i = 0; i < constraint->equation_count; ++i) {
+        if (!constraint->equation_active[i]) {
+            continue;
+        }
+        double sum = 0.0;
+        for (int j = 0; j < constraint->equation_count; ++j) {
+            if (!constraint->equation_active[j]) {
+                continue;
+            }
+            sum += constraint->inv_mass_matrix[i][j] * rhs[j];
+        }
+        lambda[i] = sum;
+    }
+
+    double total_linear_scalar = 0.0;
+    double total_torque = 0.0;
+
+    for (int i = 0; i < constraint->equation_count; ++i) {
+        if (!constraint->equation_active[i]) {
+            continue;
+        }
+        constraint->accumulated_impulse_eq[i] += lambda[i];
+        double linear_impulse = constraint->ratio_distance_eq[i] * lambda[i];
+        double torque_impulse = constraint->ratio_angle_eq[i] * lambda[i];
+        total_linear_scalar += linear_impulse;
+        total_torque += torque_impulse;
+        constraint->last_impulse_eq[i] = lambda[i];
+        constraint->last_distance_impulse_eq[i] = linear_impulse;
+        constraint->last_angle_impulse_eq[i] = torque_impulse;
+        if (constraint->cached_dt > 0.0) {
+            constraint->last_distance_force_eq[i] = linear_impulse / constraint->cached_dt;
+            constraint->last_angle_force_eq[i] = torque_impulse / constraint->cached_dt;
+        } else {
+            constraint->last_distance_force_eq[i] = 0.0;
+            constraint->last_angle_force_eq[i] = 0.0;
+        }
+    }
+
+    if (constraint->cached_dt > 0.0) {
+        for (int i = 0; i < constraint->equation_count; ++i) {
+            if (!constraint->equation_active[i]) {
+                continue;
+            }
+            if (constraint->spring_distance_stiffness_eq[i] > 0.0) {
+                double force = -constraint->spring_distance_stiffness_eq[i] * constraint->spring_distance_deflection -
+                               constraint->spring_distance_damping_eq[i] * Cdot_distance;
+                double lambda_spring = force * constraint->cached_dt;
+                total_linear_scalar += constraint->ratio_distance_eq[i] * lambda_spring;
+                constraint->last_distance_force_eq[i] += force;
+            }
+            if (constraint->spring_angle_stiffness_eq[i] > 0.0) {
+                double torque = -constraint->spring_angle_stiffness_eq[i] * constraint->spring_angle_deflection -
+                                constraint->spring_angle_damping_eq[i] * Cdot_angle;
+                double lambda_spring = torque * constraint->cached_dt;
+                total_torque += constraint->ratio_angle_eq[i] * lambda_spring;
+                constraint->last_angle_force_eq[i] += torque;
+            }
+        }
+    }
+
+    double impulse_vec[2] = {
+        constraint->normal[0] * total_linear_scalar,
+        constraint->normal[1] * total_linear_scalar
+    };
+
+    apply_impulse(body_a, (double[2]){-impulse_vec[0], -impulse_vec[1]}, constraint->ra);
+    apply_impulse(body_b, impulse_vec, constraint->rb);
+
+    if (body_a && !body_a->is_static) {
+        body_a->angular_velocity -= total_torque * body_a->inverse_inertia;
+    }
+    if (body_b && !body_b->is_static) {
+        body_b->angular_velocity += total_torque * body_b->inverse_inertia;
+    }
+
+    coupled_constraint_sync_primary_fields(constraint);
+}
+
+static void chrono_coupled_constraint2d_solve_position_impl(void *constraint_ptr) {
+    ChronoCoupledConstraint2D_C *constraint = (ChronoCoupledConstraint2D_C *)constraint_ptr;
+    if (!constraint) {
+        return;
+    }
+
+    ChronoBody2D_C *body_a = constraint->base.body_a;
+    ChronoBody2D_C *body_b = constraint->base.body_b;
+
+    double pa[2];
+    double pb[2];
+    if (body_a) {
+        add(body_a->position, constraint->ra, pa);
+    } else {
+        pa[0] = constraint->local_anchor_a[0];
+        pa[1] = constraint->local_anchor_a[1];
+    }
+    if (body_b) {
+        add(body_b->position, constraint->rb, pb);
+    } else {
+        pb[0] = constraint->local_anchor_b[0];
+        pb[1] = constraint->local_anchor_b[1];
+    }
+
+    double delta[2];
+    sub(pb, pa, delta);
+    double dist = length(delta);
+    double normal[2];
+    if (dist > 1e-9) {
+        normal[0] = delta[0] / dist;
+        normal[1] = delta[1] / dist;
+        constraint->normal[0] = normal[0];
+        constraint->normal[1] = normal[1];
+    } else {
+        normal[0] = constraint->normal[0];
+        normal[1] = constraint->normal[1];
+    }
+
+    double angle_a = body_a ? body_a->angle : 0.0;
+    double angle_b = body_b ? body_b->angle : 0.0;
+
+    double C_distance = dist - constraint->rest_distance;
+    double C_angle = (angle_b - angle_a) - constraint->rest_angle;
+    constraint->spring_distance_deflection = C_distance;
+    constraint->spring_angle_deflection = C_angle;
+
+    double correction_vec[CHRONO_COUPLED_MAX_EQ] = {0.0};
+    for (int i = 0; i < constraint->equation_count; ++i) {
+        if (!constraint->equation_active[i]) {
+            continue;
+        }
+        double eq_error = constraint->ratio_distance_eq[i] * C_distance +
+                          constraint->ratio_angle_eq[i] * C_angle -
+                          constraint->target_offset_eq[i];
+        double abs_error = fabs(eq_error);
+        if (abs_error > constraint->slop) {
+            eq_error -= constraint->slop * ((eq_error > 0.0) ? 1.0 : -1.0);
+        } else {
+            eq_error = 0.0;
+        }
+        double correction = -constraint->baumgarte * eq_error;
+        if (correction > constraint->max_correction) {
+            correction = constraint->max_correction;
+        } else if (correction < -constraint->max_correction) {
+            correction = -constraint->max_correction;
+        }
+        correction_vec[i] = correction;
+    }
+
+    double lambda[CHRONO_COUPLED_MAX_EQ] = {0.0};
+    for (int i = 0; i < constraint->equation_count; ++i) {
+        if (!constraint->equation_active[i]) {
+            continue;
+        }
+        double sum = 0.0;
+        for (int j = 0; j < constraint->equation_count; ++j) {
+            if (!constraint->equation_active[j]) {
+                continue;
+            }
+            sum += constraint->inv_mass_matrix[i][j] * correction_vec[j];
+        }
+        lambda[i] = sum;
+    }
+
+    double total_linear_scalar = 0.0;
+    double total_torque = 0.0;
+    for (int i = 0; i < constraint->equation_count; ++i) {
+        if (!constraint->equation_active[i]) {
+            continue;
+        }
+        total_linear_scalar += constraint->ratio_distance_eq[i] * lambda[i];
+        total_torque += constraint->ratio_angle_eq[i] * lambda[i];
+    }
+
+    double impulse_vec[2] = {normal[0] * total_linear_scalar, normal[1] * total_linear_scalar};
+    apply_impulse(body_a, (double[2]){-impulse_vec[0], -impulse_vec[1]}, constraint->ra);
+    apply_impulse(body_b, impulse_vec, constraint->rb);
+
+    double ra_cross_n = cross(constraint->ra, normal);
+    double rb_cross_n = cross(constraint->rb, normal);
+
+    if (body_a && !body_a->is_static) {
+        body_a->position[0] -= impulse_vec[0] * body_a->inverse_mass;
+        body_a->position[1] -= impulse_vec[1] * body_a->inverse_mass;
+        body_a->angle -= ra_cross_n * total_linear_scalar * body_a->inverse_inertia;
+        body_a->angle -= total_torque * body_a->inverse_inertia;
+    }
+    if (body_b && !body_b->is_static) {
+        body_b->position[0] += impulse_vec[0] * body_b->inverse_mass;
+        body_b->position[1] += impulse_vec[1] * body_b->inverse_mass;
+        body_b->angle += rb_cross_n * total_linear_scalar * body_b->inverse_inertia;
+        body_b->angle += total_torque * body_b->inverse_inertia;
+    }
+
+    coupled_constraint_sync_primary_fields(constraint);
 }
 
 static void chrono_distance_angle_constraint2d_prepare_impl(void *constraint_ptr, double dt) {
@@ -1121,322 +2203,6 @@ static void chrono_distance_angle_constraint2d_solve_position_impl(void *constra
         if (body_b && !body_b->is_static) {
             body_b->angle += lambda_angle * body_b->inverse_inertia;
         }
-    }
-}
-
-static void chrono_coupled_constraint2d_prepare_impl(void *constraint_ptr, double dt) {
-    ChronoCoupledConstraint2D_C *constraint = (ChronoCoupledConstraint2D_C *)constraint_ptr;
-    if (!constraint || dt <= 0.0) {
-        return;
-    }
-
-    ChronoBody2D_C *body_a = constraint->base.body_a;
-    ChronoBody2D_C *body_b = constraint->base.body_b;
-
-    constraint->cached_dt = dt;
-
-    double axis_local[2] = {constraint->axis_local[0], constraint->axis_local[1]};
-    if (body_a) {
-        rotate_angle(body_a->angle, axis_local, constraint->normal);
-    } else {
-        constraint->normal[0] = axis_local[0];
-        constraint->normal[1] = axis_local[1];
-    }
-    normalize(constraint->normal);
-
-    double world_a[2];
-    double world_b[2];
-
-    if (body_a) {
-        chrono_body2d_local_to_world(body_a, constraint->local_anchor_a, world_a);
-        constraint->ra[0] = world_a[0] - body_a->position[0];
-        constraint->ra[1] = world_a[1] - body_a->position[1];
-    } else {
-        world_a[0] = constraint->local_anchor_a[0];
-        world_a[1] = constraint->local_anchor_a[1];
-        constraint->ra[0] = 0.0;
-        constraint->ra[1] = 0.0;
-    }
-
-    if (body_b) {
-        chrono_body2d_local_to_world(body_b, constraint->local_anchor_b, world_b);
-        constraint->rb[0] = world_b[0] - body_b->position[0];
-        constraint->rb[1] = world_b[1] - body_b->position[1];
-    } else {
-        world_b[0] = constraint->local_anchor_b[0];
-        world_b[1] = constraint->local_anchor_b[1];
-        constraint->rb[0] = 0.0;
-        constraint->rb[1] = 0.0;
-    }
-
-    double pa[2];
-    double pb[2];
-    if (body_a) {
-        add(body_a->position, constraint->ra, pa);
-    } else {
-        pa[0] = world_a[0];
-        pa[1] = world_a[1];
-    }
-    if (body_b) {
-        add(body_b->position, constraint->rb, pb);
-    } else {
-        pb[0] = world_b[0];
-        pb[1] = world_b[1];
-    }
-
-    double delta[2];
-    sub(pb, pa, delta);
-    double dist = length(delta);
-    if (dist > 1e-9) {
-        constraint->normal[0] = delta[0] / dist;
-        constraint->normal[1] = delta[1] / dist;
-    }
-
-    double ra_cross_n = cross(constraint->ra, constraint->normal);
-    double rb_cross_n = cross(constraint->rb, constraint->normal);
-
-    double inv_mass_linear = 0.0;
-    double inv_mass_angular = 0.0;
-    if (body_a && !body_a->is_static) {
-        inv_mass_linear += body_a->inverse_mass;
-        inv_mass_angular += ra_cross_n * ra_cross_n * body_a->inverse_inertia;
-    }
-    if (body_b && !body_b->is_static) {
-        inv_mass_linear += body_b->inverse_mass;
-        inv_mass_angular += rb_cross_n * rb_cross_n * body_b->inverse_inertia;
-    }
-
-    double inv_mass_distance = inv_mass_linear + inv_mass_angular;
-
-    double inv_mass_angle = 0.0;
-    if (body_a && !body_a->is_static) {
-        inv_mass_angle += body_a->inverse_inertia;
-    }
-    if (body_b && !body_b->is_static) {
-        inv_mass_angle += body_b->inverse_inertia;
-    }
-
-    double k = constraint->ratio_distance * constraint->ratio_distance * inv_mass_distance +
-               constraint->ratio_angle * constraint->ratio_angle * inv_mass_angle;
-    double denom = k + constraint->softness;
-    constraint->effective_mass = (denom > 0.0) ? 1.0 / denom : 0.0;
-
-    double angle_a = body_a ? body_a->angle : 0.0;
-    double angle_b = body_b ? body_b->angle : 0.0;
-
-    double C_distance = dist - constraint->rest_distance;
-    double C_angle = (angle_b - angle_a) - constraint->rest_angle;
-    double C = constraint->ratio_distance * C_distance +
-               constraint->ratio_angle * C_angle -
-               constraint->target_offset;
-    double error = fabs(C) > constraint->slop ? C - constraint->slop * (C > 0 ? 1 : -1) : 0.0;
-    if (constraint->baumgarte > 0.0) {
-        constraint->bias = -constraint->baumgarte / dt * error;
-    } else {
-        constraint->bias = 0.0;
-    }
-    constraint->last_impulse = 0.0;
-    constraint->base.effective_mass = constraint->effective_mass;
-    constraint->base.accumulated_impulse = constraint->accumulated_impulse;
-}
-
-static void chrono_coupled_constraint2d_apply_warm_start_impl(void *constraint_ptr) {
-    ChronoCoupledConstraint2D_C *constraint = (ChronoCoupledConstraint2D_C *)constraint_ptr;
-    if (!constraint) {
-        return;
-    }
-
-    ChronoBody2D_C *body_a = constraint->base.body_a;
-    ChronoBody2D_C *body_b = constraint->base.body_b;
-
-    double lambda = constraint->accumulated_impulse;
-    double linear_impulse = constraint->ratio_distance * lambda;
-    double torque_impulse = constraint->ratio_angle * lambda;
-
-    double impulse_vec[2] = {
-        constraint->normal[0] * linear_impulse,
-        constraint->normal[1] * linear_impulse
-    };
-    apply_impulse(body_a, (double[2]){-impulse_vec[0], -impulse_vec[1]}, constraint->ra);
-    apply_impulse(body_b, impulse_vec, constraint->rb);
-
-    if (body_a && !body_a->is_static) {
-        body_a->angular_velocity -= torque_impulse * body_a->inverse_inertia;
-    }
-    if (body_b && !body_b->is_static) {
-        body_b->angular_velocity += torque_impulse * body_b->inverse_inertia;
-    }
-    constraint->base.accumulated_impulse = constraint->accumulated_impulse;
-}
-
-static void chrono_coupled_constraint2d_solve_velocity_impl(void *constraint_ptr) {
-    ChronoCoupledConstraint2D_C *constraint = (ChronoCoupledConstraint2D_C *)constraint_ptr;
-    if (!constraint) {
-        return;
-    }
-
-    ChronoBody2D_C *body_a = constraint->base.body_a;
-    ChronoBody2D_C *body_b = constraint->base.body_b;
-
-    double va[2] = {0.0, 0.0};
-    double vb[2] = {0.0, 0.0};
-
-    if (body_a && !body_a->is_static) {
-        va[0] = body_a->linear_velocity[0];
-        va[1] = body_a->linear_velocity[1];
-        double cross_ra_x = -body_a->angular_velocity * constraint->ra[1];
-        double cross_ra_y = body_a->angular_velocity * constraint->ra[0];
-        va[0] += cross_ra_x;
-        va[1] += cross_ra_y;
-    }
-    if (body_b && !body_b->is_static) {
-        vb[0] = body_b->linear_velocity[0];
-        vb[1] = body_b->linear_velocity[1];
-        double cross_rb_x = -body_b->angular_velocity * constraint->rb[1];
-        double cross_rb_y = body_b->angular_velocity * constraint->rb[0];
-        vb[0] += cross_rb_x;
-        vb[1] += cross_rb_y;
-    }
-
-    double dv[2];
-    sub(vb, va, dv);
-    double Cdot_distance = dot(dv, constraint->normal);
-    double omega_a = (body_a && !body_a->is_static) ? body_a->angular_velocity : 0.0;
-    double omega_b = (body_b && !body_b->is_static) ? body_b->angular_velocity : 0.0;
-    double Cdot_angle = omega_b - omega_a;
-
-    double Cdot = constraint->ratio_distance * Cdot_distance +
-                  constraint->ratio_angle * Cdot_angle;
-
-    if (constraint->effective_mass == 0.0) {
-        return;
-    }
-
-    double lambda = -(Cdot + constraint->bias + constraint->softness * constraint->accumulated_impulse) * constraint->effective_mass;
-    constraint->accumulated_impulse += lambda;
-    constraint->last_impulse = lambda;
-    constraint->base.accumulated_impulse = constraint->accumulated_impulse;
-
-    double linear_impulse = constraint->ratio_distance * lambda;
-    double torque_impulse = constraint->ratio_angle * lambda;
-
-    double impulse_vec[2] = {
-        constraint->normal[0] * linear_impulse,
-        constraint->normal[1] * linear_impulse
-    };
-    apply_impulse(body_a, (double[2]){-impulse_vec[0], -impulse_vec[1]}, constraint->ra);
-    apply_impulse(body_b, impulse_vec, constraint->rb);
-
-    if (body_a && !body_a->is_static) {
-        body_a->angular_velocity -= torque_impulse * body_a->inverse_inertia;
-    }
-    if (body_b && !body_b->is_static) {
-        body_b->angular_velocity += torque_impulse * body_b->inverse_inertia;
-    }
-}
-
-static void chrono_coupled_constraint2d_solve_position_impl(void *constraint_ptr) {
-    ChronoCoupledConstraint2D_C *constraint = (ChronoCoupledConstraint2D_C *)constraint_ptr;
-    if (!constraint) {
-        return;
-    }
-
-    ChronoBody2D_C *body_a = constraint->base.body_a;
-    ChronoBody2D_C *body_b = constraint->base.body_b;
-
-    double pa[2];
-    double pb[2];
-    if (body_a) {
-        add(body_a->position, constraint->ra, pa);
-    } else {
-        pa[0] = constraint->local_anchor_a[0];
-        pa[1] = constraint->local_anchor_a[1];
-    }
-    if (body_b) {
-        add(body_b->position, constraint->rb, pb);
-    } else {
-        pb[0] = constraint->local_anchor_b[0];
-        pb[1] = constraint->local_anchor_b[1];
-    }
-
-    double delta[2];
-    sub(pb, pa, delta);
-    double dist = length(delta);
-    double normal[2];
-    if (dist > 1e-9) {
-        normal[0] = delta[0] / dist;
-        normal[1] = delta[1] / dist;
-    } else {
-        normal[0] = constraint->normal[0];
-        normal[1] = constraint->normal[1];
-    }
-
-    double angle_a = body_a ? body_a->angle : 0.0;
-    double angle_b = body_b ? body_b->angle : 0.0;
-
-    double C_distance = dist - constraint->rest_distance;
-    double C_angle = (angle_b - angle_a) - constraint->rest_angle;
-    double C = constraint->ratio_distance * C_distance +
-               constraint->ratio_angle * C_angle -
-               constraint->target_offset;
-
-    double error = fabs(C) > constraint->slop ? C - constraint->slop * (C > 0 ? 1 : -1) : 0.0;
-    double correction = -constraint->baumgarte * error;
-    if (correction > constraint->max_correction) {
-        correction = constraint->max_correction;
-    } else if (correction < -constraint->max_correction) {
-        correction = -constraint->max_correction;
-    }
-
-    double ra_cross_n = cross(constraint->ra, normal);
-    double rb_cross_n = cross(constraint->rb, normal);
-
-    double inv_mass_linear = 0.0;
-    double inv_mass_angular = 0.0;
-    if (body_a && !body_a->is_static) {
-        inv_mass_linear += body_a->inverse_mass;
-        inv_mass_angular += ra_cross_n * ra_cross_n * body_a->inverse_inertia;
-    }
-    if (body_b && !body_b->is_static) {
-        inv_mass_linear += body_b->inverse_mass;
-        inv_mass_angular += rb_cross_n * rb_cross_n * body_b->inverse_inertia;
-    }
-    double inv_mass_distance = inv_mass_linear + inv_mass_angular;
-
-    double inv_mass_angle = 0.0;
-    if (body_a && !body_a->is_static) {
-        inv_mass_angle += body_a->inverse_inertia;
-    }
-    if (body_b && !body_b->is_static) {
-        inv_mass_angle += body_b->inverse_inertia;
-    }
-
-    double denom = constraint->ratio_distance * constraint->ratio_distance * inv_mass_distance +
-                   constraint->ratio_angle * constraint->ratio_angle * inv_mass_angle;
-
-    if (denom == 0.0) {
-        return;
-    }
-
-    double lambda = correction / denom;
-    double linear_impulse = constraint->ratio_distance * lambda;
-    double torque_impulse = constraint->ratio_angle * lambda;
-
-    double impulse_vec[2] = {normal[0] * linear_impulse, normal[1] * linear_impulse};
-    apply_impulse(body_a, (double[2]){-impulse_vec[0], -impulse_vec[1]}, constraint->ra);
-    apply_impulse(body_b, impulse_vec, constraint->rb);
-
-    if (body_a && !body_a->is_static) {
-        body_a->position[0] -= impulse_vec[0] * body_a->inverse_mass;
-        body_a->position[1] -= impulse_vec[1] * body_a->inverse_mass;
-        body_a->angle -= ra_cross_n * linear_impulse * body_a->inverse_inertia;
-        body_a->angle -= torque_impulse * body_a->inverse_inertia;
-    }
-    if (body_b && !body_b->is_static) {
-        body_b->position[0] += impulse_vec[0] * body_b->inverse_mass;
-        body_b->position[1] += impulse_vec[1] * body_b->inverse_mass;
-        body_b->angle += rb_cross_n * linear_impulse * body_b->inverse_inertia;
-        body_b->angle += torque_impulse * body_b->inverse_inertia;
     }
 }
 
