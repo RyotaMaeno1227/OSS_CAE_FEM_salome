@@ -30,6 +30,14 @@ class Thresholds:
 
 
 @dataclass
+class FailThresholds:
+    solve_time_us: float | None = None
+    max_condition: float | None = None
+    max_pending_steps: int | None = None
+    unrecovered_drops: int | None = None
+
+
+@dataclass
 class BenchRow:
     eq_count: int
     epsilon: float
@@ -89,7 +97,7 @@ def emit_warning(message: str) -> None:
 
 def evaluate_thresholds(rows: Iterable[BenchRow], thresholds: Thresholds) -> bool:
     """
-    Returns True when all rows satisfy thresholds, False otherwise (warnings emitted).
+    Emits GitHub-style warnings when thresholds are exceeded.
     """
     ok = True
 
@@ -128,6 +136,33 @@ def evaluate_thresholds(rows: Iterable[BenchRow], thresholds: Thresholds) -> boo
                 )
 
     return ok
+
+
+def collect_failures(rows: Iterable[BenchRow], thresholds: FailThresholds) -> List[str]:
+    failures: List[str] = []
+    for row in rows:
+        descriptor = f"eq={row.eq_count} eps={row.epsilon:.1e}"
+        if thresholds.solve_time_us is not None and row.avg_solve_time_us > thresholds.solve_time_us:
+            failures.append(
+                f"[CoupledBench] {descriptor} average solve time "
+                f"{row.avg_solve_time_us:.2f}us exceeds hard limit {thresholds.solve_time_us:.2f}us"
+            )
+        if thresholds.max_condition is not None and row.max_condition > thresholds.max_condition:
+            failures.append(
+                f"[CoupledBench] {descriptor} max condition "
+                f"{row.max_condition:.2e} exceeds hard limit {thresholds.max_condition:.2e}"
+            )
+        if thresholds.max_pending_steps is not None and row.max_pending_steps > thresholds.max_pending_steps:
+            failures.append(
+                f"[CoupledBench] {descriptor} pending drop duration "
+                f"{row.max_pending_steps} exceeds hard limit {thresholds.max_pending_steps}"
+            )
+        if thresholds.unrecovered_drops is not None and row.unrecovered_drops > thresholds.unrecovered_drops:
+            failures.append(
+                f"[CoupledBench] {descriptor} unrecovered drops "
+                f"{row.unrecovered_drops} exceeds hard limit {thresholds.unrecovered_drops}"
+            )
+    return failures
 
 
 def summarize(rows: Iterable[BenchRow]) -> str:
@@ -186,6 +221,26 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         default=Thresholds.max_pending_steps,
         help="Warning threshold for pending drop steps duration.",
     )
+    parser.add_argument(
+        "--fail-on-solve-time-us",
+        type=float,
+        help="Fail when the average solve time (microseconds) exceeds the given limit.",
+    )
+    parser.add_argument(
+        "--fail-on-max-condition",
+        type=float,
+        help="Fail when the maximum condition number exceeds the given limit.",
+    )
+    parser.add_argument(
+        "--fail-on-max-pending-steps",
+        type=int,
+        help="Fail when unresolved drop duration exceeds the given step count.",
+    )
+    parser.add_argument(
+        "--fail-on-unrecovered",
+        type=int,
+        help="Fail when unrecovered drop count exceeds the given limit.",
+    )
     return parser.parse_args(argv)
 
 
@@ -206,6 +261,19 @@ def main(argv: List[str]) -> int:
         emit_warning("[CoupledBench] CSV is empty - benchmark likely failed to emit results")
         return 1
 
+    if args.fail_on_max_pending_steps is not None and args.fail_on_max_pending_steps < 0:
+        print("Error: --fail-on-max-pending-steps must be non-negative.", file=sys.stderr)
+        return 2
+    if args.fail_on_unrecovered is not None and args.fail_on_unrecovered < 0:
+        print("Error: --fail-on-unrecovered must be non-negative.", file=sys.stderr)
+        return 2
+    if args.fail_on_solve_time_us is not None and args.fail_on_solve_time_us <= 0:
+        print("Error: --fail-on-solve-time-us must be positive.", file=sys.stderr)
+        return 2
+    if args.fail_on_max_condition is not None and args.fail_on_max_condition <= 0:
+        print("Error: --fail-on-max-condition must be positive.", file=sys.stderr)
+        return 2
+
     thresholds = Thresholds(
         max_solve_time_us=args.max_solve_time_us,
         max_condition=args.max_condition,
@@ -216,7 +284,20 @@ def main(argv: List[str]) -> int:
     print(summarize(rows))
 
     ok = evaluate_thresholds(rows, thresholds)
-    return 0 if ok else 0  # emit warnings without failing the job
+
+    fail_thresholds = FailThresholds(
+        solve_time_us=args.fail_on_solve_time_us,
+        max_condition=args.fail_on_max_condition,
+        max_pending_steps=args.fail_on_max_pending_steps,
+        unrecovered_drops=args.fail_on_unrecovered,
+    )
+    failures = collect_failures(rows, fail_thresholds)
+    if failures:
+        for message in failures:
+            print(message, file=sys.stderr)
+        return 3
+
+    return 0
 
 
 if __name__ == "__main__":

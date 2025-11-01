@@ -10,7 +10,7 @@ import hashlib
 import json
 import sys
 import shutil
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -76,6 +76,16 @@ def parse_args() -> argparse.Namespace:
         type=int,
         help="Keep only the most recent N entries (after deduplication).",
     )
+    parser.add_argument(
+        "--max-age-days",
+        type=int,
+        help="Remove archived entries older than the specified number of days.",
+    )
+    parser.add_argument(
+        "--max-file-size-mb",
+        type=float,
+        help="Fail if an input CSV exceeds the given size (in MiB).",
+    )
     return parser.parse_args()
 
 
@@ -115,6 +125,12 @@ def current_timestamp() -> Tuple[str, str]:
     return iso, tag
 
 
+def parse_timestamp(value: str) -> datetime:
+    if value.endswith("Z"):
+        value = value[:-1] + "+00:00"
+    return datetime.fromisoformat(value)
+
+
 def ensure_list(value: Optional[List[str]]) -> List[str]:
     return value or [str(default_csv_path())]
 
@@ -130,6 +146,7 @@ def archive_single_run(
     label: Optional[str],
     generate_summary: bool,
     dry_run: bool,
+    max_file_size_bytes: Optional[int],
 ) -> Optional[Dict[str, object]]:
     entries: List[Dict[str, object]] = manifest["entries"]  # type: ignore[assignment]
     existing = next((entry for entry in entries if entry.get("hash_sha256") == file_hash), None)
@@ -138,6 +155,14 @@ def archive_single_run(
             f"Skipping archive for {csv_path} (duplicate of {existing.get('archive_path')})."
         )
         return None
+
+    if max_file_size_bytes is not None:
+        file_size = csv_path.stat().st_size
+        if file_size > max_file_size_bytes:
+            raise RuntimeError(
+                f"Input CSV {csv_path} is {file_size / (1024 * 1024):.2f} MiB, which exceeds the limit "
+                f"of {max_file_size_bytes / (1024 * 1024):.2f} MiB."
+            )
 
     archive_dir.mkdir(parents=True, exist_ok=True)
     filename = f"{csv_path.stem}_{timestamp_tag}_{file_hash[:8]}.csv"
@@ -303,6 +328,52 @@ def enforce_max_entries(
     return len(trimmed)
 
 
+def enforce_max_age(
+    manifest: Dict[str, object],
+    archive_dir: Path,
+    max_age_days: int,
+    dry_run: bool,
+) -> int:
+    if max_age_days <= 0:
+        raise ValueError("--max-age-days must be positive.")
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=max_age_days)
+    entries: List[Dict[str, object]] = manifest["entries"]  # type: ignore[assignment]
+    removed = 0
+    kept: List[Dict[str, object]] = []
+
+    for entry in entries:
+        timestamp_str = entry.get("timestamp")
+        if not timestamp_str:
+            kept.append(entry)
+            continue
+        try:
+            entry_time = parse_timestamp(timestamp_str)
+        except ValueError:
+            # Preserve unparsable entries but surface warning.
+            print(f"Warning: could not parse timestamp '{timestamp_str}', keeping entry.", file=sys.stderr)
+            kept.append(entry)
+            continue
+
+        if entry_time < cutoff:
+            removed += 1
+            archive_name = entry.get("archive_path")
+            if archive_name:
+                _delete_archive_artifacts(archive_dir, archive_name, dry_run)
+        else:
+            kept.append(entry)
+
+    if not dry_run:
+        manifest["entries"] = sorted(kept, key=lambda item: item["timestamp"])  # type: ignore[index]
+
+    if removed:
+        print(f"Pruned {removed} archive entr{'y' if removed == 1 else 'ies'} older than {max_age_days} days.")
+    else:
+        print(f"No archive entries older than {max_age_days} days.")
+
+    return removed
+
+
 def main() -> int:
     args = parse_args()
     archive_dir = Path(args.archive_dir).expanduser()
@@ -317,6 +388,20 @@ def main() -> int:
     except RuntimeError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
+
+    if args.max_entries is not None and args.max_entries <= 0:
+        print("Error: --max-entries must be positive.", file=sys.stderr)
+        return 2
+    if args.max_age_days is not None and args.max_age_days <= 0:
+        print("Error: --max-age-days must be positive.", file=sys.stderr)
+        return 2
+    if args.max_file_size_mb is not None and args.max_file_size_mb <= 0:
+        print("Error: --max-file-size-mb must be positive.", file=sys.stderr)
+        return 2
+
+    max_file_size_bytes = (
+        int(args.max_file_size_mb * 1024 * 1024) if args.max_file_size_mb is not None else None
+    )
 
     inputs = [Path(item).expanduser() for item in ensure_list(args.inputs)]
 
@@ -336,18 +421,23 @@ def main() -> int:
         file_hash = compute_sha256(csv_path)
         timestamp_iso, timestamp_tag = current_timestamp()
 
-        archive_single_run(
-            csv_path=csv_path,
-            archive_dir=archive_dir,
-            manifest=manifest,
-            summary=summary,
-            file_hash=file_hash,
-            timestamp_iso=timestamp_iso,
-            timestamp_tag=timestamp_tag,
-            label=args.label,
-            generate_summary=not args.no_summary,
-            dry_run=args.dry_run,
-        )
+        try:
+            archive_single_run(
+                csv_path=csv_path,
+                archive_dir=archive_dir,
+                manifest=manifest,
+                summary=summary,
+                file_hash=file_hash,
+                timestamp_iso=timestamp_iso,
+                timestamp_tag=timestamp_tag,
+                label=args.label,
+                generate_summary=not args.no_summary,
+                dry_run=args.dry_run,
+                max_file_size_bytes=max_file_size_bytes,
+            )
+        except RuntimeError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 3
 
         refresh_latest_outputs(
             csv_path=csv_path,
@@ -373,6 +463,18 @@ def main() -> int:
                 manifest=manifest,
                 archive_dir=archive_dir,
                 max_entries=args.max_entries,
+                dry_run=args.dry_run,
+            )
+        except ValueError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 2
+
+    if args.max_age_days is not None:
+        try:
+            enforce_max_age(
+                manifest=manifest,
+                archive_dir=archive_dir,
+                max_age_days=args.max_age_days,
                 dry_run=args.dry_run,
             )
         except ValueError as exc:

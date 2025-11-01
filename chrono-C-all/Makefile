@@ -13,6 +13,7 @@ TEST_TARGETS := \
 	$(TEST_DIR)/test_distance_angle_constraint \
 	$(TEST_DIR)/test_distance_angle_endurance \
 	$(TEST_DIR)/test_coupled_constraint \
+	$(TEST_DIR)/test_coupled_logging_integration \
 	$(TEST_DIR)/test_coupled_constraint_endurance \
 	$(TEST_DIR)/test_circle_collision_regression \
 	$(TEST_DIR)/test_circle_collision_oblique \
@@ -49,7 +50,8 @@ BENCH_TARGETS := \
 EXAMPLE_TARGETS := \
 	$(EXAMPLE_DIR)/newton_cradle \
 	$(EXAMPLE_DIR)/prismatic_slider \
-	$(EXAMPLE_DIR)/planar_constraint_demo
+	$(EXAMPLE_DIR)/planar_constraint_demo \
+	$(EXAMPLE_DIR)/logging_integration_demo
 
 .PHONY: all clean test tests examples
 

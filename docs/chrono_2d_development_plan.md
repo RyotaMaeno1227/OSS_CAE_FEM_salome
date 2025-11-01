@@ -80,8 +80,8 @@
 3. **CI / 可視化連携**  
    - GitHub Actions 等でテスト自動実行（ローカルでの再現性重視、後日CI環境を検討）。  
    - `tools/plot_coupled_constraint_endurance.py` に Markdown/HTML/JSON サマリ出力と `--skip-plot`/しきい値判定オプションを追加し、ヘッドレス CI から `--no-show` と組み合わせてレポート生成および自動ゲートが可能。  
-   - `tools/archive_coupled_constraint_endurance.py` で耐久 CSV を SHA-256 ハッシュで重複判定しつつ `data/endurance_archive/` に時刻付きで保存、`latest.*`（CSV/Markdown/HTML/JSON）と manifest を更新、`--prune-duplicates` と `--max-entries` で履歴を整理できるようにした。  
-   - 週次（月曜 03:15 UTC）ワークフロー `.github/workflows/coupled_endurance.yml` を追加し、アーカイブ＋可視化＋アーティファクト化＋重複整理まで自動実行（`coupled_endurance-${{github.run_id}}` として `latest.csv/.summary.*` と manifest を収集）。
+   - `tools/archive_coupled_constraint_endurance.py` で耐久 CSV を SHA-256 ハッシュで重複判定しつつ `data/endurance_archive/` に時刻付きで保存、`latest.*`（CSV/Markdown/HTML/JSON）と manifest を更新、`--prune-duplicates`/`--max-entries`/`--max-age-days`/`--max-file-size-mb` で履歴や容量を整理できるようにした。  
+   - 週次（月曜 03:15 UTC）ワークフロー `.github/workflows/coupled_endurance.yml` を追加し、アーカイブ＋可視化＋アーティファクト化＋重複整理まで自動実行（`coupled_endurance-${{github.run_id}}` として `latest.csv/.summary.*` と manifest を収集）。必要に応じて `ARCHIVE_MAX_ENTRIES`/`ARCHIVE_MAX_AGE_DAYS`/`ARCHIVE_MAX_FILE_SIZE_MB` 環境変数で閾値を上書き可能。CI 失敗時の調査手順は `docs/coupled_endurance_ci_troubleshooting.md` を参照。
 
 ## 4. マイルストンとタスク一覧
 | フェーズ | 想定期間 | 主タスク | 成果物 | 進捗 |

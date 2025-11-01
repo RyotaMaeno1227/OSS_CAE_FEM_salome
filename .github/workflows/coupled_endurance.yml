@@ -8,6 +8,10 @@ on:
 jobs:
   archive-and-summarize:
     runs-on: ubuntu-latest
+    env:
+      ARCHIVE_MAX_ENTRIES: 26
+      ARCHIVE_MAX_AGE_DAYS: 90
+      ARCHIVE_MAX_FILE_SIZE_MB: 25
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -24,12 +28,22 @@ jobs:
 
       - name: Archive endurance CSV logs
         run: |
+          EXTRA_ARGS=""
+          if [ -n "${ARCHIVE_MAX_ENTRIES:-}" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS --max-entries ${ARCHIVE_MAX_ENTRIES}"
+          fi
+          if [ -n "${ARCHIVE_MAX_AGE_DAYS:-}" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS --max-age-days ${ARCHIVE_MAX_AGE_DAYS}"
+          fi
+          if [ -n "${ARCHIVE_MAX_FILE_SIZE_MB:-}" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS --max-file-size-mb ${ARCHIVE_MAX_FILE_SIZE_MB}"
+          fi
           python tools/archive_coupled_constraint_endurance.py \
             --archive-dir data/endurance_archive \
             --manifest data/endurance_archive/manifest.json \
             --label "${{ github.workflow }}:${{ github.run_id }}" \
             --prune-duplicates \
-            --max-entries 26
+            $EXTRA_ARGS
 
       - name: Generate endurance summaries
         run: |
@@ -40,7 +54,10 @@ jobs:
             --no-show \
             --summary-md data/endurance_archive/latest.summary.md \
             --summary-html data/endurance_archive/latest.summary.html \
-            --summary-json data/endurance_archive/latest.summary.json
+            --summary-json data/endurance_archive/latest.summary.json \
+            --fail-on-max-condition 5.0e8 \
+            --fail-on-warning-ratio-below 0.95 \
+            --fail-on-rank-ratio 0.05
 
       - name: Upload endurance artifacts
         uses: actions/upload-artifact@v4

@@ -18,6 +18,9 @@ from coupled_constraint_endurance_analysis import (
 )
 
 
+_Number = (int, float)
+
+
 def _import_pyplot():
     try:
         import matplotlib.pyplot as plt  # type: ignore
@@ -88,12 +91,75 @@ def parse_args() -> argparse.Namespace:
         help="Exit with code 4 if warning ratio exceeds this threshold (0.0 - 1.0).",
     )
     parser.add_argument(
+        "--fail-on-warning-ratio-below",
+        type=float,
+        help="Exit with code 6 if warning ratio falls below this threshold (0.0 - 1.0).",
+    )
+    parser.add_argument(
         "--fail-on-rank-ratio",
         type=float,
         help="Exit with code 5 if rank-deficient ratio exceeds this threshold (0.0 - 1.0).",
     )
+    parser.add_argument(
+        "--fail-on-rank-ratio-below",
+        type=float,
+        help="Exit with code 7 if rank-deficient ratio falls below this threshold (0.0 - 1.0).",
+    )
     return parser.parse_args()
 
+
+def _validate_summary_schema(payload: dict) -> None:
+    """Perform a lightweight schema validation for JSON output."""
+    required_numeric_fields = {
+        "samples",
+        "time_start",
+        "time_end",
+        "duration",
+        "max_condition",
+        "mean_condition",
+        "median_condition",
+        "warn_frames",
+        "warn_ratio",
+        "rank_frames",
+        "rank_ratio",
+        "max_distance_abs",
+        "max_angle_abs",
+    }
+    required_dict_fields = {
+        "eq_force_distance_max",
+        "eq_force_angle_max",
+        "eq_impulse_max",
+    }
+
+    missing = [key for key in (*required_numeric_fields, *required_dict_fields, "eq_ids") if key not in payload]
+    if missing:
+        raise ValueError(f"Summary payload missing fields: {', '.join(sorted(missing))}")
+
+    for key in required_numeric_fields:
+        value = payload[key]
+        if not isinstance(value, _Number):
+            raise ValueError(f"Field '{key}' must be numeric, got {type(value).__name__}")
+        if key in {"samples", "warn_frames", "rank_frames"} and not isinstance(value, int):
+            raise ValueError(f"Field '{key}' must be an integer, got {type(value).__name__}")
+
+    if not isinstance(payload["eq_ids"], list):
+        raise ValueError("Field 'eq_ids' must be a list.")
+
+    for eq_label in payload["eq_ids"]:
+        if not isinstance(eq_label, str) or not eq_label.startswith("eq"):
+            raise ValueError(f"eq_ids entry '{eq_label}' must be a string starting with 'eq'.")
+
+    for dict_key in required_dict_fields:
+        mapping = payload[dict_key]
+        if not isinstance(mapping, dict):
+            raise ValueError(f"Field '{dict_key}' must be an object.")
+        for eq_label, value in mapping.items():
+            if not isinstance(eq_label, str) or not eq_label.startswith("eq"):
+                raise ValueError(f"Key '{eq_label}' in '{dict_key}' must start with 'eq'.")
+            if not isinstance(value, _Number):
+                raise ValueError(
+                    f"Value for '{eq_label}' in '{dict_key}' must be numeric, got {type(value).__name__}"
+                )
 
 def plot(data: dict):
     plt = _import_pyplot()
@@ -175,8 +241,14 @@ def main() -> int:
     if args.fail_on_warning_ratio is not None and not 0.0 <= args.fail_on_warning_ratio <= 1.0:
         print("Error: --fail-on-warning-ratio expects a value between 0.0 and 1.0.", file=sys.stderr)
         return 2
+    if args.fail_on_warning_ratio_below is not None and not 0.0 <= args.fail_on_warning_ratio_below <= 1.0:
+        print("Error: --fail-on-warning-ratio-below expects a value between 0.0 and 1.0.", file=sys.stderr)
+        return 2
     if args.fail_on_rank_ratio is not None and not 0.0 <= args.fail_on_rank_ratio <= 1.0:
         print("Error: --fail-on-rank-ratio expects a value between 0.0 and 1.0.", file=sys.stderr)
+        return 2
+    if args.fail_on_rank_ratio_below is not None and not 0.0 <= args.fail_on_rank_ratio_below <= 1.0:
+        print("Error: --fail-on-rank-ratio-below expects a value between 0.0 and 1.0.", file=sys.stderr)
         return 2
 
     summary = compute_summary(data)
@@ -194,11 +266,20 @@ def main() -> int:
         summary_html_path.write_text(summary_as_html(summary), encoding="utf-8")
         print(f"Wrote HTML summary to {summary_html_path}")
 
+    summary_payload = None
+
     if args.summary_json:
         summary_json_path = Path(args.summary_json).expanduser()
         summary_json_path.parent.mkdir(parents=True, exist_ok=True)
+        if summary_payload is None:
+            summary_payload = summary.to_dict()
+        try:
+            _validate_summary_schema(summary_payload)
+        except ValueError as exc:
+            print(f"Invalid summary schema: {exc}", file=sys.stderr)
+            return 2
         summary_json_path.write_text(
-            json.dumps(summary.to_dict(), indent=2) + "\n",
+            json.dumps(summary_payload, indent=2) + "\n",
             encoding="utf-8",
         )
         print(f"Wrote JSON summary to {summary_json_path}")
@@ -224,6 +305,20 @@ def main() -> int:
             file=sys.stderr,
         )
         violation_exit_code = max(violation_exit_code, 5)
+
+    if args.fail_on_warning_ratio_below is not None and summary.warn_ratio < args.fail_on_warning_ratio_below:
+        print(
+            f"Warning ratio {summary.warn_ratio:.3f} is below lower bound {args.fail_on_warning_ratio_below:.3f}",
+            file=sys.stderr,
+        )
+        violation_exit_code = max(violation_exit_code, 6)
+
+    if args.fail_on_rank_ratio_below is not None and summary.rank_ratio < args.fail_on_rank_ratio_below:
+        print(
+            f"Rank-deficient ratio {summary.rank_ratio:.3f} is below lower bound {args.fail_on_rank_ratio_below:.3f}",
+            file=sys.stderr,
+        )
+        violation_exit_code = max(violation_exit_code, 7)
 
     if args.skip_plot:
         if args.output:

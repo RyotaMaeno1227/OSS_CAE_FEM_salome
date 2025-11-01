@@ -36,6 +36,7 @@ chrono-C-all/examples/newton_cradle
 chrono-C-all/examples/prismatic_slider
 chrono-C-all/tests/test_*
 chrono-C-all/tests/bench_*
+chrono-C-all/examples/logging_integration_demo
 
 # Benchmark outputs
 data/coupled_benchmark_metrics.csv
