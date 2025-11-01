@@ -1,0 +1,54 @@
+name: Coupled Endurance Maintenance
+
+on:
+  schedule:
+    - cron: '15 3 * * 1'
+  workflow_dispatch:
+
+jobs:
+  archive-and-summarize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install tooling dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install matplotlib
+
+      - name: Archive endurance CSV logs
+        run: |
+          python tools/archive_coupled_constraint_endurance.py \
+            --archive-dir data/endurance_archive \
+            --manifest data/endurance_archive/manifest.json \
+            --label "${{ github.workflow }}:${{ github.run_id }}"
+
+      - name: Generate endurance summaries
+        run: |
+          python tools/plot_coupled_constraint_endurance.py \
+            data/endurance_archive/latest.csv \
+            --output data/endurance_archive/latest.png \
+            --dpi 160 \
+            --no-show \
+            --summary-md data/endurance_archive/latest.summary.md \
+            --summary-html data/endurance_archive/latest.summary.html
+
+      - name: Upload endurance artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: coupled-endurance-${{ github.run_id }}
+          path: |
+            data/endurance_archive/latest.csv
+            data/endurance_archive/latest.png
+            data/endurance_archive/latest.summary.md
+            data/endurance_archive/latest.summary.html
+            data/endurance_archive/manifest.json
+            data/endurance_archive/*.csv
+            data/endurance_archive/*.csv.summary.md
+            data/endurance_archive/*.csv.summary.html

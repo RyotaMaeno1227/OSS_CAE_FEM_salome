@@ -79,7 +79,9 @@
    - Coupled 拘束用のマイクロベンチ（多数の式を抱える拘束をアイランド内に並べ、条件数／反復回数／解法時間を計測）を次スプリントで追加。結果を CSV 化し、CI の nightly ベンチに組み込む計画。
 3. **CI / 可視化連携**  
    - GitHub Actions 等でテスト自動実行（ローカルでの再現性重視、後日CI環境を検討）。  
-   - Coupled 耐久テストは所要時間と生成 CSV が大きいため、CI では週次/nightly ジョブで実行し、`tools/plot_coupled_constraint_endurance.py` でグラフをレンダリングしてアーティファクト化する運用を想定。ログの最大条件数・診断フラグ数を自動閾値チェックに追加予定。
+   - `tools/plot_coupled_constraint_endurance.py` に Markdown/HTML サマリ出力と `--skip-plot` オプションを追加し、ヘッドレス CI から `--no-show` と組み合わせてレポート生成できるようにした。  
+   - `tools/archive_coupled_constraint_endurance.py` で耐久 CSV を SHA-256 ハッシュで重複判定しつつ `data/endurance_archive/` に時刻付きで保存、`latest.*`（CSV/Markdown/HTML）と manifest を更新する運用を整備。  
+   - 週次（月曜 03:15 UTC）ワークフロー `.github/workflows/coupled_endurance.yml` を追加し、アーカイブ＋可視化＋アーティファクト化まで自動実行（`coupled_endurance-${{github.run_id}}` として `latest.csv/.summary.*` と manifest を収集）。
 
 ## 4. マイルストンとタスク一覧
 | フェーズ | 想定期間 | 主タスク | 成果物 | 進捗 |
@@ -213,6 +215,7 @@
 
 - 対象: 距離＋角度を線形結合し、複数式（`CHRONO_COUPLED_MAX_EQ`=4）を同時に解く `ChronoCoupledConstraint2D_C`
 - 目的: 既存 2D シーンのパターン把握と、テスト／ロギング／チューニング時の指針を確立する
+- 主要プリセットは `data/coupled_constraint_presets.yaml` に記録し、スクリプトや CI で共有できるようにしている。
 
 ### 13.1 代表ユースケース
 - **テレスコピック＋ヨー制御**: ブーム先端の距離制御と旋回角を組み合わせ、`ratio_distance=1.0` × `ratio_angle=0.4` で目標姿勢を連動。距離ソフトネス 0.012-0.018、角度ソフトネス 0.025-0.04 が安定域。
@@ -225,18 +228,18 @@
 - **ソフトネス**: グローバル値（`chrono_coupled_constraint2d_set_softness_*`）は 0.015 前後を基準に、式ごとの上書きで急峻な制御点を局所調整する。角度側は距離側の 1.5-2 倍が目安。
 - **スプリング／ダンパ**: 距離 30-45 N/m、角度 15-25 N·m/rad が標準。急峻な比率変更を扱う場合は式別に 20 N/m / 10 N·m/rad を追加し、`tests/test_coupled_constraint_endurance` と同条件でドリフトを確認。
 - **追加式の管理**: `chrono_coupled_constraint2d_add_equation` で 2 本目以降を登録したら、切り替え時に `chrono_coupled_constraint2d_set_equation` を介し差分更新しないとウォームスタート値が途切れる。大きな比率変更前に `target_offset` をゼロへ戻すと過渡振動が抑えられる。
-- **ログ観測**: `constraint.last_distance_force_eq[i]` / `last_angle_force_eq[i]` を CSV へ落とし込み、`tools/plot_coupled_constraint_endurance.py` でピーク検査や条件数の推移を確認。CI 用のサマリ抽出スクリプト（最大値・警告回数の統計化）は別途追加予定。警告を INFO へダウングレードする場合でも、距離誤差や `diagnostics.condition_number` との相関を可視化しておく。
+- **ログ観測**: `constraint.last_distance_force_eq[i]` / `last_angle_force_eq[i]` を CSV へ落とし込み、`tools/plot_coupled_constraint_endurance.py` でピーク検査や条件数の推移を確認。`tests/test_coupled_constraint_endurance` の CSV にはドロップ数・対象式 index・再解ステップ数を追記済み。週次ジョブでは `tools/run_coupled_benchmark.py` を用いて `data/coupled_benchmark_metrics.csv` と GitHub Actions Warning を自動収集する。
 
 ### 13.3 診断・警告運用
 - **診断フィールド**: `ChronoCoupledConstraint2DDiagnostics_C` は `flags`（`CHRONO_COUPLED_DIAG_*`）、`rank`、`condition_number`、pivot 最小/最大を提供。閾値超過時に `CHRONO_COUPLED_DIAG_CONDITION_WARNING` が立つため、CI ではこのビットの回数を集計する。
 - **ポリシー設定**: `ChronoCoupledConditionWarningPolicy_C` で `enable_logging`（デフォルト WARN 出力）、`log_cooldown`（秒換算タイマー）、`enable_auto_recover`（最小対角式のドロップ）、`max_drop` を制御。ドロップが発生した場合は `diagnostics.rank` が能動式数と一致することを確認する。
-- **標準ログ基盤との統合**: `chrono_log_warn` をデフォルトハンドラとしてバインドし、ポリシー側に `ChronoLogLevel` 相当の切り替えフラグを追加する予定。CI や長時間テストでは WARN→INFO へダウングレードし、stderr 汚染を抑えつつ `diagnostics.condition_number` の閾値監視は継続する。
+- **標準ログ基盤との統合**: `chrono_log` のハンドラ差し替え手順は `docs/chrono_logging_integration.md` に集約済み。CI や長時間テストでは WARN→INFO へダウングレードし、stderr 汚染を抑えつつ `diagnostics.condition_number` の閾値監視を継続する。
 
 ### 13.4 テスト＆検証フロー
 - **単体テスト**: `tests/test_coupled_constraint` で式追加・条件数警告・自動式ドロップを網羅。新しい比率やソフトネスを導入する場合はここへケース追加。
 - **耐久テスト**: `tests/test_coupled_constraint_endurance` は 7200 ステップで複数段階のターゲット切り替えを実施。CSV を `tools/plot_coupled_constraint_endurance.py` でプロットし、最大誤差・最大力・条件数をサマリへ抽出。
 - **ベンチ指標**: マイクロベンチ（近日実装）では「式数」「diagnostics.condition_number」「Gauss-Jordan の反復/ドロップ回数」「solve 時間(ns)」を計測する。目安は条件数 1e6 以内でドロップ 0、1e10 クラスで 1-2 式ドロップ、1 ステップ 200 µs 未満（デスクトップ CPU）。
-- **ログレビュー**: 耐久テスト中の WARN は仕様。CI へ取り込む際はポリシーで WARN→INFO へ切り替えつつ、`accumulated_flags` を閾値評価するスクリプトを追加する。
+- **ログレビュー**: 耐久テスト中の WARN は仕様。CI へ取り込む際はポリシーで WARN→INFO へ切り替えつつ、`accumulated_flags` と CSV のドロップ統計を閾値評価する（`tools/run_coupled_benchmark.py` は自動 Warning を出力）。
 
 ### 13.5 診断ログを使ったデバッグワークフロー
 1. **収集**: `chrono_coupled_constraint2d_get_diagnostics` の結果（`flags`, `rank`, `condition_number`, pivot 値）と、式別反力 `last_distance_force_eq[]` / `last_angle_force_eq[]` を CSV に記録。`tests/test_coupled_constraint_endurance` が雛形。

@@ -109,6 +109,13 @@ int main(void) {
     eq2.spring_angle_damping = 1.0;
     chrono_coupled_constraint2d_add_equation(&constraint, &eq2);
 
+    ChronoCoupledConditionWarningPolicy_C policy;
+    chrono_coupled_constraint2d_get_condition_warning_policy(&constraint, &policy);
+    policy.enable_logging = 0;
+    policy.enable_auto_recover = 1;
+    policy.max_drop = chrono_coupled_constraint2d_get_equation_count(&constraint);
+    chrono_coupled_constraint2d_set_condition_warning_policy(&constraint, &policy);
+
     ChronoConstraint2DBase_C *constraints[1] = {&constraint.base};
     ChronoConstraint2DBatchConfig_C cfg;
     memset(&cfg, 0, sizeof(cfg));
@@ -124,7 +131,9 @@ int main(void) {
     fprintf(csv,
             "step,time,distance,angle,eq0_force_distance,eq1_force_distance,eq2_force_distance,"
             "eq0_force_angle,eq1_force_angle,eq2_force_angle,eq0_impulse,eq1_impulse,eq2_impulse,"
-            "diagnostics_flags,condition_number\n");
+            "diagnostics_flags,condition_number,active_equations,drop_events_step,drop_index_mask_step,"
+            "drop_events_total,recovery_events_step,recovery_steps_step,recovery_events_total,"
+            "pending_drop_count,max_pending_steps_running\n");
 
     const double dt = 0.0035;
     const int total_steps = 7200;
@@ -138,6 +147,20 @@ int main(void) {
     double max_angle_force = 0.0;
     double max_condition = 0.0;
     unsigned int accumulated_flags = 0u;
+
+    int total_eq = chrono_coupled_constraint2d_get_equation_count(&constraint);
+    if (total_eq < 1) {
+        total_eq = 1;
+    }
+    int prev_active[CHRONO_COUPLED_MAX_EQ];
+    int pending_drop_step[CHRONO_COUPLED_MAX_EQ];
+    for (int i = 0; i < total_eq; ++i) {
+        prev_active[i] = constraint.equation_active[i];
+        pending_drop_step[i] = -1;
+    }
+    int drop_events_total = 0;
+    int recovery_events_total = 0;
+    int max_pending_steps_running = 0;
 
     for (int step = 0; step < total_steps; ++step) {
         if (step == switch_step_a) {
@@ -197,6 +220,49 @@ int main(void) {
             max_condition = condition_number;
         }
 
+        int drop_events_step = 0;
+        unsigned int drop_index_mask_step = 0u;
+        int recovery_events_step = 0;
+        int recovery_steps_step = -1;
+        for (int eq = 0; eq < total_eq; ++eq) {
+            int current_active = constraint.equation_active[eq];
+            if (prev_active[eq] && !current_active) {
+                drop_events_step += 1;
+                drop_index_mask_step |= (1u << eq);
+                pending_drop_step[eq] = step;
+            } else if (!prev_active[eq] && current_active) {
+                recovery_events_step += 1;
+                if (pending_drop_step[eq] >= 0) {
+                    int steps_to_recover = step - pending_drop_step[eq];
+                    if (steps_to_recover > recovery_steps_step) {
+                        recovery_steps_step = steps_to_recover;
+                    }
+                    pending_drop_step[eq] = -1;
+                }
+            }
+            prev_active[eq] = current_active;
+        }
+        drop_events_total += drop_events_step;
+        recovery_events_total += recovery_events_step;
+
+        int pending_drop_count = 0;
+        for (int eq = 0; eq < total_eq; ++eq) {
+            if (pending_drop_step[eq] >= 0) {
+                pending_drop_count += 1;
+                int pending_duration = step - pending_drop_step[eq];
+                if (pending_duration > max_pending_steps_running) {
+                    max_pending_steps_running = pending_duration;
+                }
+            }
+        }
+
+        int active_equations = 0;
+        for (int eq = 0; eq < total_eq; ++eq) {
+            if (constraint.equation_active[eq]) {
+                active_equations += 1;
+            }
+        }
+
         double time = step * dt;
         double fd0 = constraint.last_distance_force_eq[0];
         double fd1 = constraint.last_distance_force_eq[1];
@@ -209,7 +275,7 @@ int main(void) {
         double li2 = constraint.last_distance_impulse_eq[2];
 
         fprintf(csv,
-                "%d,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%u,%.6e\n",
+                "%d,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%u,%.6e,%d,%d,%u,%d,%d,%d,%d,%d\n",
                 step,
                 time,
                 distance,
@@ -224,7 +290,16 @@ int main(void) {
                 li1,
                 li2,
                 diag_flags,
-                condition_number);
+                condition_number,
+                active_equations,
+                drop_events_step,
+                drop_index_mask_step,
+                drop_events_total,
+                recovery_events_step,
+                recovery_steps_step,
+                recovery_events_total,
+                pending_drop_count,
+                max_pending_steps_running);
     }
 
     fclose(csv);

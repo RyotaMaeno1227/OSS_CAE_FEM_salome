@@ -1,0 +1,108 @@
+use_cases:
+  - id: tele_yaw_control
+    description: テレスコピック＋ヨー制御（ブーム距離と旋回角を連動）
+    base:
+      ratio_distance: 1.0
+      ratio_angle: 0.4
+      target_offset: 0.0
+      softness_distance: 0.014
+      softness_angle: 0.028
+      spring_distance:
+        stiffness: 38.0
+        damping: 3.0
+      spring_angle:
+        stiffness: 18.0
+        damping: 0.85
+      baumgarte: 0.38
+      slop: 0.0006
+      max_correction: 0.09
+    notes:
+      - 90 度以上の姿勢切替時は `max_correction` を引き上げる。
+      - 条件数監視には `log_cooldown=0.25` を推奨。
+
+  - id: cam_follow_adjust
+    description: カム機構の追従補正（位相遅れを target_offset で調整）
+    base:
+      ratio_distance: 0.48
+      ratio_angle: -0.32
+      target_offset: 0.012
+      softness_distance: 0.018
+      softness_angle: 0.024
+      spring_distance:
+        stiffness: 24.0
+        damping: 2.5
+      spring_angle:
+        stiffness: 12.0
+        damping: 0.75
+      baumgarte: 0.38
+      slop: 0.0006
+      max_correction: 0.09
+    extra_equations:
+      - ratio_distance: 0.55
+        ratio_angle: -0.25
+        target_offset: -0.012
+        softness_distance: 0.02
+        softness_angle: 0.03
+        spring_distance:
+          stiffness: 20.0
+          damping: 2.2
+        spring_angle:
+          stiffness: 10.0
+          damping: 0.7
+    notes:
+      - プロフィール変化前に `target_offset` を一度 0 へ戻すと過渡振動を抑えやすい。
+
+  - id: counterbalance_beam
+    description: カウンターバランス梁（距離主導＋角度補助）
+    base:
+      ratio_distance: 0.85
+      ratio_angle: -0.3
+      target_offset: 0.0
+      softness_distance: 0.013
+      softness_angle: 0.022
+      spring_distance:
+        stiffness: 42.0
+        damping: 3.2
+      spring_angle:
+        stiffness: 20.0
+        damping: 0.9
+      baumgarte: 0.38
+      slop: 0.0006
+      max_correction: 0.09
+    extra_equations:
+      - ratio_distance: 0.35
+        ratio_angle: 0.65
+        target_offset: 0.0
+        softness_distance: 0.02
+        softness_angle: 0.028
+    notes:
+      - 自動ドロップ用に `max_drop=1` を設定し、補助式を優先的に無効化する。
+
+  - id: docking_guide
+    description: ドッキングガイド（位置＋姿勢合わせ）
+    base:
+      ratio_distance: 0.72
+      ratio_angle: -0.25
+      target_offset: 0.0
+      softness_distance: 0.02
+      softness_angle: 0.034
+      spring_distance:
+        stiffness: 30.0
+        damping: 2.6
+      spring_angle:
+        stiffness: 14.0
+        damping: 0.8
+      baumgarte: 0.38
+      slop: 0.0006
+      max_correction: 0.09
+    staged_adjustments:
+      - stage: capture
+        step_hint: 1200
+        target_offset: 0.02
+      - stage: final_alignment
+        ratio_distance: 0.55
+        ratio_angle: -0.35
+        softness_distance: 0.024
+        softness_angle: 0.036
+    notes:
+      - 接触解決と併用する場合は `velocity_iterations=24`, `position_iterations=6` を推奨。

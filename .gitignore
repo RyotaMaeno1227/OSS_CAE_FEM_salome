@@ -37,5 +37,8 @@ chrono-C-all/examples/prismatic_slider
 chrono-C-all/tests/test_*
 chrono-C-all/tests/bench_*
 
+# Benchmark outputs
+data/coupled_benchmark_metrics.csv
+
 # Keep test source files tracked
 !chrono-C-all/tests/*.c

@@ -45,18 +45,18 @@
 
 ## 8. API 互換マトリクス（初版）
 
-| 機能領域 | 2D API/構造体 | 3D 想定（案） | 移行メモ |
-|----------|---------------|---------------|----------|
-| 基底構造 | `ChronoConstraint2DBase_C` | `ChronoConstraintCommon_C`（新規） + `typedef ChronoConstraintCommon_C ChronoConstraint3DBase_C;` | 2D ヘッダは typedef 維持。 |
-| Ops テーブル | `ChronoConstraint2DOps_C` | `ChronoConstraintCommonOps_C`（同型） | フィールド名・関数ポインタは同一。 |
-| バッチソルバ | `chrono_constraint2d_batch_solve` | `chrono_constraint_batch_solve`（共通実装）、2D/3D ラッパ | ワークスペース API も共通化。 |
-| ワークスペース | `ChronoConstraint2DBatchWorkspace_C` | `ChronoConstraintBatchWorkspace_C` | メモリ確保関数を関数ポインタ化。 |
-| ボディ API | `ChronoBody2D_C` | `ChronoBodyCommon_C` + `ChronoBody3D_C` | 2D ラッパで既存フィールドレイアウト保持。 |
-| 距離拘束 | `chrono_distance_constraint2d_*` | `chrono_distance_constraint3d_*` ラッパ → 共通実装 | 3D 版は 3 軸 Jacobian を追加。 |
-| 回転拘束 | `chrono_revolute_constraint2d_*` | `chrono_revolute_constraint3d_*` | Ops 呼び出しの差分は姿勢計算のみ。 |
-| Coupled 拘束 | `chrono_coupled_constraint2d_*` | `chrono_coupled_constraint3d_*` or 汎用化 | 行列サイズが 4×4 まで拡張。 |
-| 診断 | `ChronoCoupledConstraint2DDiagnostics_C` | `ChronoConstraintDiagnostics_C`（共通） | pivot 情報配列サイズをパラメータ化。 |
-| ログ基盤 | `chrono_log_warn`（予定） | 同一 API | ログレベル enum を共通ヘッダへ移行。 |
+| 機能領域 | 2D API/構造体 | 3D 想定（案） | 移行メモ | 初期評価コメント |
+|----------|---------------|---------------|----------|------------------|
+| 基底構造 | `ChronoConstraint2DBase_C` | `ChronoConstraintCommon_C`（新規） + `typedef ChronoConstraintCommon_C ChronoConstraint3DBase_C;` | 2D ヘッダは typedef 維持。 | 構造体サイズを据え置ける見込み。ABI テスト必須。 |
+| Ops テーブル | `ChronoConstraint2DOps_C` | `ChronoConstraintCommonOps_C`（同型） | フィールド名・関数ポインタは同一。 | 追加作業ほぼ不要。既存コードをそのまま流用可能。 |
+| バッチソルバ | `chrono_constraint2d_batch_solve` | `chrono_constraint_batch_solve`（共通実装）、2D/3D ラッパ | ワークスペース API も共通化。 | ループ構造は再利用可。Jacobian 尺度差で精度回帰テストが必要。 |
+| ワークスペース | `ChronoConstraint2DBatchWorkspace_C` | `ChronoConstraintBatchWorkspace_C` | メモリ確保関数を関数ポインタ化。 | バッファ種別が増える想定。再割当テストを追加したい。 |
+| ボディ API | `ChronoBody2D_C` | `ChronoBodyCommon_C` + `ChronoBody3D_C` | 2D ラッパで既存フィールドレイアウト保持。 | クォータニオン管理が未整備。math 層の先行実装が前提。 |
+| 距離拘束 | `chrono_distance_constraint2d_*` | `chrono_distance_constraint3d_*` ラッパ → 共通実装 | 3D 版は 3 軸 Jacobian を追加。 | 係数行列が 1×3→1×6 に拡張。専用ユニットテストが必要。 |
+| 回転拘束 | `chrono_revolute_constraint2d_*` | `chrono_revolute_constraint3d_*` | Ops 呼び出しの差分は姿勢計算のみ。 | 角度表現をクォータニオンへ置換。制御ゲインの再検証が必要。 |
+| Coupled 拘束 | `chrono_coupled_constraint2d_*` | `chrono_coupled_constraint3d_*` or 汎用化 | 行列サイズが 4×4 まで拡張。 | 方程式数が増えると条件数が悪化しやすい。ベンチを先行実装。 |
+| 診断 | `ChronoCoupledConstraint2DDiagnostics_C` | `ChronoConstraintDiagnostics_C`（共通） | pivot 情報配列サイズをパラメータ化。 | 3D 用に pivot ベクトル長を可変化する必要あり。 |
+| ログ基盤 | `chrono_log_warn`（予定） | 同一 API | ログレベル enum を共通ヘッダへ移行。 | API 追加コスト小。CI で WARN 粒度を共通化する。 |
 
 ## 9. 抽象化レイヤ設計案
 

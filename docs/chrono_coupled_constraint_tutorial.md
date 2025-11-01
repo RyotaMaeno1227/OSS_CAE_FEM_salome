@@ -4,6 +4,7 @@
 各シナリオは **距離比（ratio_distance）**、**角度比（ratio_angle）**、**柔構造（softness / spring）** の組み合わせを段階的に設定できるようにしています。
 
 > テストや可視化スクリプトは `tests/test_coupled_constraint*.c`、`tools/plot_coupled_constraint_endurance.py` を参照してください。
+> 各ユースケースのパラメータは `data/coupled_constraint_presets.yaml` にも整理してあり、スクリプトからそのまま読み込めます。
 
 ---
 
@@ -170,3 +171,20 @@ chrono_coupled_constraint2d_set_condition_warning_policy(&coupled, &policy);
 3. 目標値をステージごとに切り替える場合は CSV に「ステージ ID」列を追加しておくと、可視化で境界が明確になる。
 4. WARN ログを INFO へ落とす際は、ポリシーの `enable_logging=0` ではなく、今後追加予定のログレベルフラグを利用する。
 5. 可視化後は最大誤差や条件数を README のワークフローに沿って分析し、マイクロベンチで再現性を確認する。
+
+---
+
+## 7. 実行検証ログ（2025-10-21）
+
+- **テスト実行**  
+  - コマンド: `./tests/test_coupled_constraint`  
+  - 結果: `Coupled constraint test passed.`（条件数警告は発生せず、診断ランクが能動式数と一致）
+- **耐久 CSV の生成**  
+  - コマンド: `./tests/test_coupled_constraint_endurance`  
+  - 出力: `data/coupled_constraint_endurance.csv`（7200 サンプル、drop/recovery フィールド付き）  
+  - WARN ログは `log_cooldown=0` 設定で連続発火するため、後続の CI ではポリシーでレベル抑制を推奨。
+- **可視化サマリ**  
+  - コマンド: `python tools/plot_coupled_constraint_endurance.py data/coupled_constraint_endurance.csv --skip-plot`  
+  - 主な指標: `max condition number = 1.088e+01`、`condition warnings = 7200 (100%)`、`rank deficient = 0`  
+    - 式別ピーク: `eq0 force_distance = 1.63e+01`, `eq0 force_angle = 3.35e+01`, `eq2 force_distance = 7.36e+00`, `eq2 force_angle = 1.33e+01`  
+  - `matplotlib` が無い環境でも `--skip-plot` でテキストサマリを取得可能。プロットが必要な場合は `pip install matplotlib` を実行し、`--output` で画像を保存する。

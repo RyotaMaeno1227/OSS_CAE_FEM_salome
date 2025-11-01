@@ -1,5 +1,6 @@
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
@@ -10,6 +11,21 @@
 #include "../include/chrono_body2d.h"
 #include "../include/chrono_constraint2d.h"
 #include "../include/chrono_logging.h"
+
+typedef struct {
+    int eq_count;
+    double epsilon;
+    double max_condition;
+    double avg_condition;
+    double avg_solve_time_us;
+    int drop_events;
+    unsigned int drop_index_mask;
+    int recovery_events;
+    double avg_recovery_steps;
+    int max_recovery_steps;
+    int unrecovered_drops;
+    int max_pending_steps;
+} CoupledBenchResult;
 
 static double bench_now(void) {
 #ifdef _OPENMP
@@ -38,12 +54,12 @@ static void init_body(ChronoBody2D_C *body) {
     body->angular_velocity = 0.45;
 }
 
-static void configure_warning_policy(ChronoCoupledConstraint2D_C *constraint) {
+static void configure_warning_policy(ChronoCoupledConstraint2D_C *constraint, int equation_count) {
     ChronoCoupledConditionWarningPolicy_C policy;
     chrono_coupled_constraint2d_get_condition_warning_policy(constraint, &policy);
     policy.enable_logging = 0;
-    policy.enable_auto_recover = 0;
-    policy.max_drop = 1;
+    policy.enable_auto_recover = 1;
+    policy.max_drop = equation_count > 0 ? equation_count : 1;
     chrono_coupled_constraint2d_set_condition_warning_policy(constraint, &policy);
 }
 
@@ -74,7 +90,7 @@ static void reset_bodies(ChronoBody2D_C *anchor, ChronoBody2D_C *body) {
     init_body(body);
 }
 
-static void bench_case(int equation_count, double epsilon) {
+static CoupledBenchResult bench_case(int equation_count, double epsilon) {
     ChronoBody2D_C anchor;
     ChronoBody2D_C body;
     reset_bodies(&anchor, &body);
@@ -96,8 +112,8 @@ static void bench_case(int equation_count, double epsilon) {
                                      1.0,
                                      0.0,
                                      0.0);
-    configure_warning_policy(&constraint);
     configure_equations(&constraint, equation_count, epsilon);
+    configure_warning_policy(&constraint, equation_count);
 
     ChronoConstraint2DBase_C *constraints[1] = {&constraint.base};
     ChronoConstraint2DBatchConfig_C cfg;
@@ -109,52 +125,176 @@ static void bench_case(int equation_count, double epsilon) {
     const double dt = 0.0025;
     const int warmup_steps = 40;
     const int measure_steps = 400;
+    const int total_steps = warmup_steps + measure_steps;
 
-    for (int step = 0; step < warmup_steps; ++step) {
-        chrono_constraint2d_batch_solve(constraints, 1, dt, &cfg, NULL);
-        chrono_body2d_integrate_explicit(&body, dt);
-        chrono_body2d_reset_forces(&body);
+    int total_eq = chrono_coupled_constraint2d_get_equation_count(&constraint);
+    if (total_eq < 1) {
+        total_eq = 1;
     }
+
+    int prev_active[CHRONO_COUPLED_MAX_EQ];
+    int pending_drop_step[CHRONO_COUPLED_MAX_EQ];
+    for (int i = 0; i < total_eq; ++i) {
+        prev_active[i] = constraint.equation_active[i];
+        pending_drop_step[i] = -1;
+    }
+
+    int drop_events = 0;
+    unsigned int drop_index_mask = 0u;
+    int recovery_events = 0;
+    double recovery_steps_total = 0.0;
+    int max_recovery_steps = 0;
+    int max_pending_steps = 0;
 
     double max_condition = 0.0;
     double sum_condition = 0.0;
     int condition_samples = 0;
 
-    double start_time = bench_now();
-    for (int step = 0; step < measure_steps; ++step) {
+    double start_time = 0.0;
+
+    for (int step = 0; step < total_steps; ++step) {
+        if (step == warmup_steps) {
+            start_time = bench_now();
+            sum_condition = 0.0;
+            condition_samples = 0;
+            max_condition = 0.0;
+        }
+
         chrono_constraint2d_batch_solve(constraints, 1, dt, &cfg, NULL);
         chrono_body2d_integrate_explicit(&body, dt);
         chrono_body2d_reset_forces(&body);
+
         const ChronoCoupledConstraint2DDiagnostics_C *diag =
             chrono_coupled_constraint2d_get_diagnostics(&constraint);
-        if (diag) {
+        if (diag && step >= warmup_steps) {
             double condition = diag->condition_number;
             max_condition = fmax(max_condition, condition);
             sum_condition += condition;
             condition_samples += 1;
         }
-    }
-    double end_time = bench_now();
 
+        for (int eq = 0; eq < total_eq; ++eq) {
+            int current_active = constraint.equation_active[eq];
+            if (prev_active[eq] && !current_active) {
+                drop_events += 1;
+                drop_index_mask |= (1u << eq);
+                pending_drop_step[eq] = step;
+            } else if (!prev_active[eq] && current_active) {
+                recovery_events += 1;
+                if (pending_drop_step[eq] >= 0) {
+                    int recovery_steps = step - pending_drop_step[eq];
+                    recovery_steps_total += (double)recovery_steps;
+                    if (recovery_steps > max_recovery_steps) {
+                        max_recovery_steps = recovery_steps;
+                    }
+                    pending_drop_step[eq] = -1;
+                }
+            }
+            prev_active[eq] = current_active;
+        }
+
+        for (int eq = 0; eq < total_eq; ++eq) {
+            if (pending_drop_step[eq] >= 0) {
+                int pending_duration = step - pending_drop_step[eq];
+                if (pending_duration > max_pending_steps) {
+                    max_pending_steps = pending_duration;
+                }
+            }
+        }
+    }
+
+    double end_time = bench_now();
     double avg_condition = condition_samples > 0 ? sum_condition / (double)condition_samples : 0.0;
     double avg_time_us = ((end_time - start_time) / (double)measure_steps) * 1e6;
 
-    printf("%d,%.1e,%.6e,%.6e,%.3f\n",
-           equation_count,
-           epsilon,
-           max_condition,
-           avg_condition,
-           avg_time_us);
+    int unrecovered = 0;
+    for (int eq = 0; eq < total_eq; ++eq) {
+        if (pending_drop_step[eq] >= 0) {
+            unrecovered += 1;
+            int pending_duration = total_steps - pending_drop_step[eq];
+            if (pending_duration > max_pending_steps) {
+                max_pending_steps = pending_duration;
+            }
+        }
+    }
+
+    CoupledBenchResult result;
+    result.eq_count = equation_count;
+    result.epsilon = epsilon;
+    result.max_condition = max_condition;
+    result.avg_condition = avg_condition;
+    result.avg_solve_time_us = avg_time_us;
+    result.drop_events = drop_events;
+    result.drop_index_mask = drop_index_mask;
+    result.recovery_events = recovery_events;
+    result.avg_recovery_steps =
+        (recovery_events > 0) ? (recovery_steps_total / (double)recovery_events) : 0.0;
+    result.max_recovery_steps = max_recovery_steps;
+    result.unrecovered_drops = unrecovered;
+    result.max_pending_steps = max_pending_steps;
+    return result;
 }
 
-int main(void) {
+static void write_result(FILE *out, const CoupledBenchResult *result) {
+    fprintf(out,
+            "%d,%.1e,%.6e,%.6e,%.3f,%d,%u,%d,%.3f,%d,%d,%d\n",
+            result->eq_count,
+            result->epsilon,
+            result->max_condition,
+            result->avg_condition,
+            result->avg_solve_time_us,
+            result->drop_events,
+            result->drop_index_mask,
+            result->recovery_events,
+            result->avg_recovery_steps,
+            result->max_recovery_steps,
+            result->unrecovered_drops,
+            result->max_pending_steps);
+}
+
+static void print_usage(const char *program) {
+    fprintf(stderr, "Usage: %s [--output path]\n", program);
+}
+
+int main(int argc, char **argv) {
+    const char *output_path = NULL;
+    for (int i = 1; i < argc; ++i) {
+        if (strcmp(argv[i], "--output") == 0) {
+            if (i + 1 >= argc) {
+                print_usage(argv[0]);
+                return 1;
+            }
+            output_path = argv[++i];
+        } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
+            print_usage(argv[0]);
+            return 0;
+        } else {
+            fprintf(stderr, "Unknown argument: %s\n", argv[i]);
+            print_usage(argv[0]);
+            return 1;
+        }
+    }
+
+    FILE *out = stdout;
+    if (output_path) {
+        out = fopen(output_path, "w");
+        if (!out) {
+            fprintf(stderr, "Failed to open output file: %s\n", output_path);
+            return 1;
+        }
+    }
+
+    fprintf(out,
+            "eq_count,epsilon,max_condition,avg_condition,avg_solve_time_us,"
+            "drop_events,drop_index_mask,recovery_events,avg_recovery_steps,"
+            "max_recovery_steps,unrecovered_drops,max_pending_steps\n");
+
     const int equation_counts[] = {1, 2, 3, 4};
     const size_t eq_count_total = sizeof(equation_counts) / sizeof(equation_counts[0]);
     const double epsilons[] = {0.0, 1e-4, 1e-6, 1e-8};
     const size_t epsilon_total = sizeof(epsilons) / sizeof(epsilons[0]);
 
-    chrono_log_set_level(CHRONO_LOG_LEVEL_WARNING);
-    printf("eq_count,epsilon,max_condition,avg_condition,avg_solve_time_us\n");
+    chrono_log_set_level(CHRONO_LOG_LEVEL_ERROR);
 
     for (size_t i = 0; i < eq_count_total; ++i) {
         int eq_count = equation_counts[i];
@@ -163,8 +303,13 @@ int main(void) {
             if (eq_count == 1 && epsilon != 0.0) {
                 continue;
             }
-            bench_case(eq_count, epsilon);
+            CoupledBenchResult result = bench_case(eq_count, epsilon);
+            write_result(out, &result);
         }
+    }
+
+    if (out != stdout) {
+        fclose(out);
     }
 
     return 0;
