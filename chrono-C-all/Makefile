@@ -13,6 +13,7 @@ TEST_TARGETS := \
 	$(TEST_DIR)/test_distance_angle_constraint \
 	$(TEST_DIR)/test_distance_angle_endurance \
 	$(TEST_DIR)/test_coupled_constraint \
+	$(TEST_DIR)/test_coupled_constraint_endurance \
 	$(TEST_DIR)/test_circle_collision_regression \
 	$(TEST_DIR)/test_circle_collision_oblique \
 	$(TEST_DIR)/test_circle_collision_resting \
@@ -42,7 +43,8 @@ TEST_TARGETS := \
 	$(TEST_DIR)/test_constraint_batch_solve
 
 BENCH_TARGETS := \
-	$(TEST_DIR)/bench_island_solver
+	$(TEST_DIR)/bench_island_solver \
+	$(TEST_DIR)/bench_coupled_constraint
 
 EXAMPLE_TARGETS := \
 	$(EXAMPLE_DIR)/newton_cradle \

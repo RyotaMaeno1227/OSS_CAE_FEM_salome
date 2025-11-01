@@ -208,3 +208,38 @@
 - 連続接触シミュレーションテスト (`test_circle_collision_continuous`) を追加し、接触マネージャを用いた複数フレームの滑り/反発処理を確認。
 - 拘束＋接触を合わせた並列テスト (`test_island_contact_constraint`) を追加し、アイランド統合後の競合がないことを確認。
 - 長時間接触回帰 (`test_contact_manager_longrun`) を追加し、マニフォールド再利用の持続性を検証。
+
+## 13. Coupled 拘束ユースケース／チューニング事例（2025-10-21）
+
+- 対象: 距離＋角度を線形結合し、複数式（`CHRONO_COUPLED_MAX_EQ`=4）を同時に解く `ChronoCoupledConstraint2D_C`
+- 目的: 既存 2D シーンのパターン把握と、テスト／ロギング／チューニング時の指針を確立する
+
+### 13.1 代表ユースケース
+- **テレスコピック＋ヨー制御**: ブーム先端の距離制御と旋回角を組み合わせ、`ratio_distance=1.0` × `ratio_angle=0.4` で目標姿勢を連動。距離ソフトネス 0.012-0.018、角度ソフトネス 0.025-0.04 が安定域。
+- **カム機構の追従補正**: 従動節の距離誤差と角度エラーを一次結合し、`target_offset` で位相調整。追加式で `ratio_distance` を 0.5 未満に抑えると、角速度スパイクを緩和できる。
+- **カウンターバランス梁**: 主拘束を距離主導（`ratio_distance` > 0.8）にし、補助式に `ratio_angle=-0.3` を持たせてモーメントの釣り合いを保持。角度スプリング 15-22 N·m/rad を加えるとドリフト抑制が容易。
+- **ドッキングガイド**: 位置×姿勢の連動でズレ吸収する用途。`tests/test_coupled_constraint` の `extra` 式（距離 0.55 / 角度 -0.25）をテンプレートに、接線方向の制御を別拘束で補完する。
+
+### 13.2 パラメータチューニング指針
+- **Baumgarte/Slop**: 0.35-0.4 と 5e-4-7e-4 の組み合わせが耐久テストで最も安定。大きな目標切り替えがある場合は `max_correction` を 0.08-0.1 に引き上げる。
+- **ソフトネス**: グローバル値（`chrono_coupled_constraint2d_set_softness_*`）は 0.015 前後を基準に、式ごとの上書きで急峻な制御点を局所調整する。角度側は距離側の 1.5-2 倍が目安。
+- **スプリング／ダンパ**: 距離 30-45 N/m、角度 15-25 N·m/rad が標準。急峻な比率変更を扱う場合は式別に 20 N/m / 10 N·m/rad を追加し、`tests/test_coupled_constraint_endurance` と同条件でドリフトを確認。
+- **追加式の管理**: `chrono_coupled_constraint2d_add_equation` で 2 本目以降を登録したら、切り替え時に `chrono_coupled_constraint2d_set_equation` を介し差分更新しないとウォームスタート値が途切れる。大きな比率変更前に `target_offset` をゼロへ戻すと過渡振動が抑えられる。
+- **ログ観測**: `constraint.last_distance_force_eq[i]` / `last_angle_force_eq[i]` を CSV へ落とし込み、`tools/plot_coupled_constraint_endurance.py` でピーク検査や条件数の推移を確認。CI 用のサマリ抽出スクリプト（最大値・警告回数の統計化）は別途追加予定。警告を INFO へダウングレードする場合でも、距離誤差や `diagnostics.condition_number` との相関を可視化しておく。
+
+### 13.3 診断・警告運用
+- **診断フィールド**: `ChronoCoupledConstraint2DDiagnostics_C` は `flags`（`CHRONO_COUPLED_DIAG_*`）、`rank`、`condition_number`、pivot 最小/最大を提供。閾値超過時に `CHRONO_COUPLED_DIAG_CONDITION_WARNING` が立つため、CI ではこのビットの回数を集計する。
+- **ポリシー設定**: `ChronoCoupledConditionWarningPolicy_C` で `enable_logging`（デフォルト WARN 出力）、`log_cooldown`（秒換算タイマー）、`enable_auto_recover`（最小対角式のドロップ）、`max_drop` を制御。ドロップが発生した場合は `diagnostics.rank` が能動式数と一致することを確認する。
+- **標準ログ基盤との統合**: `chrono_log_warn` をデフォルトハンドラとしてバインドし、ポリシー側に `ChronoLogLevel` 相当の切り替えフラグを追加する予定。CI や長時間テストでは WARN→INFO へダウングレードし、stderr 汚染を抑えつつ `diagnostics.condition_number` の閾値監視は継続する。
+
+### 13.4 テスト＆検証フロー
+- **単体テスト**: `tests/test_coupled_constraint` で式追加・条件数警告・自動式ドロップを網羅。新しい比率やソフトネスを導入する場合はここへケース追加。
+- **耐久テスト**: `tests/test_coupled_constraint_endurance` は 7200 ステップで複数段階のターゲット切り替えを実施。CSV を `tools/plot_coupled_constraint_endurance.py` でプロットし、最大誤差・最大力・条件数をサマリへ抽出。
+- **ベンチ指標**: マイクロベンチ（近日実装）では「式数」「diagnostics.condition_number」「Gauss-Jordan の反復/ドロップ回数」「solve 時間(ns)」を計測する。目安は条件数 1e6 以内でドロップ 0、1e10 クラスで 1-2 式ドロップ、1 ステップ 200 µs 未満（デスクトップ CPU）。
+- **ログレビュー**: 耐久テスト中の WARN は仕様。CI へ取り込む際はポリシーで WARN→INFO へ切り替えつつ、`accumulated_flags` を閾値評価するスクリプトを追加する。
+
+### 13.5 診断ログを使ったデバッグワークフロー
+1. **収集**: `chrono_coupled_constraint2d_get_diagnostics` の結果（`flags`, `rank`, `condition_number`, pivot 値）と、式別反力 `last_distance_force_eq[]` / `last_angle_force_eq[]` を CSV に記録。`tests/test_coupled_constraint_endurance` が雛形。
+2. **可視化**: `python tools/plot_coupled_constraint_endurance.py data/coupled_constraint_endurance.csv --output out.png` を実行し、条件数ピークと WARN ログのタイムスタンプを照合。必要に応じ `phase_id` 列を追加してステージ境界を描画。
+3. **分析**: 条件数が長時間高止まりする場合は、該当ステップの `equation_active[]` と `diagnostics.rank` を比較し、自動ドロップが働いたか判断。補助式の `ratio_*` を調整するか、`softness_*` を増やして安定化を図る。
+4. **再検証**: パラメータ更新後は `tests/test_coupled_constraint` とマイクロベンチ（実装予定）を再実行し、条件数・反力ピークが改善されたか確認する。CI 取り込み時は WARN→INFO フラグを設定した上で、CSV の最大値を自動チェックするスクリプトを追加予定。

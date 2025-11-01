@@ -79,6 +79,10 @@ static void coupled_constraint_condition_policy_set_default(ChronoCoupledConditi
     policy->log_cooldown = CHRONO_COUPLED_CONDITION_LOG_COOLDOWN_DEFAULT;
     policy->enable_auto_recover = 0;
     policy->max_drop = CHRONO_COUPLED_CONDITION_MAX_DROP_DEFAULT;
+    policy->log_level = CHRONO_LOG_LEVEL_WARNING;
+    policy->log_category = CHRONO_LOG_CATEGORY_CONSTRAINT;
+    policy->log_callback = NULL;
+    policy->log_user_data = NULL;
 }
 
 static int coupled_constraint_drop_weak_equation(ChronoCoupledConstraint2D_C *constraint,
@@ -139,12 +143,28 @@ static int coupled_constraint_try_log_condition_warning(ChronoCoupledConstraint2
     if (policy->log_cooldown > 0.0 && constraint->condition_warning_log_timer < policy->log_cooldown) {
         return 0;
     }
-    fprintf(stderr,
-            "[ChronoCoupledConstraint2D] condition warning: cond=%.3e threshold=%.3e active_eq=%d auto_recover=%s\n",
-            condition,
-            (double)CHRONO_COUPLED_CONDITION_THRESHOLD,
-            active_count,
-            policy->enable_auto_recover ? (recovery_applied ? "applied" : "enabled") : "disabled");
+    ChronoCoupledConditionWarningEvent_C event;
+    event.condition_number = condition;
+    event.threshold = (double)CHRONO_COUPLED_CONDITION_THRESHOLD;
+    event.active_equations = active_count;
+    event.auto_recover_enabled = policy->enable_auto_recover ? 1 : 0;
+    event.recovery_applied = recovery_applied ? 1 : 0;
+    event.level = policy->log_level;
+    event.category = policy->log_category;
+    if (policy->log_callback) {
+        policy->log_callback(constraint, &event, policy->log_user_data);
+    } else {
+        const char *auto_recover_state =
+            event.auto_recover_enabled ? (event.recovery_applied ? "applied" : "enabled") : "disabled";
+        chrono_log_write(event.level,
+                         event.category,
+                         "[ChronoCoupledConstraint2D] condition warning: cond=%.3e threshold=%.3e active_eq=%d "
+                         "auto_recover=%s",
+                         event.condition_number,
+                         event.threshold,
+                         event.active_equations,
+                         auto_recover_state);
+    }
     constraint->condition_warning_log_timer = 0.0;
     return 1;
 }
@@ -1242,6 +1262,36 @@ void chrono_coupled_constraint2d_get_condition_warning_policy(
     *out_policy = constraint->condition_policy;
 }
 
+void chrono_coupled_constraint2d_set_condition_warning_callback(
+    ChronoCoupledConstraint2D_C *constraint,
+    ChronoCoupledConditionWarningCallback_C callback,
+    void *user_data) {
+    if (!constraint) {
+        return;
+    }
+    constraint->condition_policy.log_callback = callback;
+    constraint->condition_policy.log_user_data = callback ? user_data : NULL;
+}
+
+void chrono_coupled_constraint2d_set_condition_warning_log_level(
+    ChronoCoupledConstraint2D_C *constraint,
+    ChronoLogLevel_C level,
+    ChronoLogCategory_C category) {
+    if (!constraint) {
+        return;
+    }
+    if (level < CHRONO_LOG_LEVEL_TRACE) {
+        level = CHRONO_LOG_LEVEL_TRACE;
+    } else if (level > CHRONO_LOG_LEVEL_ERROR) {
+        level = CHRONO_LOG_LEVEL_ERROR;
+    }
+    if (category < CHRONO_LOG_CATEGORY_GENERAL || category > CHRONO_LOG_CATEGORY_BENCHMARK) {
+        category = CHRONO_LOG_CATEGORY_CONSTRAINT;
+    }
+    constraint->condition_policy.log_level = level;
+    constraint->condition_policy.log_category = category;
+}
+
 void chrono_coupled_constraint2d_set_condition_warning_policy(
     ChronoCoupledConstraint2D_C *constraint,
     const ChronoCoupledConditionWarningPolicy_C *policy) {
@@ -1260,6 +1310,19 @@ void chrono_coupled_constraint2d_set_condition_warning_policy(
         } else {
             constraint->condition_policy.max_drop = CHRONO_COUPLED_CONDITION_MAX_DROP_DEFAULT;
         }
+        if (policy->log_level < CHRONO_LOG_LEVEL_TRACE || policy->log_level > CHRONO_LOG_LEVEL_ERROR) {
+            constraint->condition_policy.log_level = CHRONO_LOG_LEVEL_WARNING;
+        } else {
+            constraint->condition_policy.log_level = policy->log_level;
+        }
+        if (policy->log_category < CHRONO_LOG_CATEGORY_GENERAL ||
+            policy->log_category > CHRONO_LOG_CATEGORY_BENCHMARK) {
+            constraint->condition_policy.log_category = CHRONO_LOG_CATEGORY_CONSTRAINT;
+        } else {
+            constraint->condition_policy.log_category = policy->log_category;
+        }
+        constraint->condition_policy.log_callback = policy->log_callback;
+        constraint->condition_policy.log_user_data = policy->log_callback ? policy->log_user_data : NULL;
     }
     if (constraint->condition_policy.log_cooldown <= 0.0) {
         constraint->condition_warning_log_timer = 0.0;

@@ -8,6 +8,7 @@ extern "C" {
 #include <stddef.h>
 
 #include "chrono_body2d.h"
+#include "chrono_logging.h"
 
 typedef void (*ChronoConstraint2DPrepareFunc)(void *constraint, double dt);
 typedef void (*ChronoConstraint2DStepFunc)(void *constraint);
@@ -233,6 +234,8 @@ typedef struct ChronoDistanceAngleConstraint2D_C {
     double accumulated_angle_impulse;
 } ChronoDistanceAngleConstraint2D_C;
 
+struct ChronoCoupledConstraint2D_C;
+
 typedef struct ChronoCoupledConstraint2DDiagnostics_C {
     unsigned int flags;
     int rank;
@@ -241,11 +244,30 @@ typedef struct ChronoCoupledConstraint2DDiagnostics_C {
     double max_pivot;
 } ChronoCoupledConstraint2DDiagnostics_C;
 
+typedef struct ChronoCoupledConditionWarningEvent_C {
+    double condition_number;
+    double threshold;
+    int active_equations;
+    int auto_recover_enabled;
+    int recovery_applied;
+    ChronoLogLevel_C level;
+    ChronoLogCategory_C category;
+} ChronoCoupledConditionWarningEvent_C;
+
+typedef void (*ChronoCoupledConditionWarningCallback_C)(
+    const struct ChronoCoupledConstraint2D_C *constraint,
+    const ChronoCoupledConditionWarningEvent_C *event,
+    void *user_data);
+
 typedef struct ChronoCoupledConditionWarningPolicy_C {
     int enable_logging;
     double log_cooldown;
     int enable_auto_recover;
     int max_drop;
+    ChronoLogLevel_C log_level;
+    ChronoLogCategory_C log_category;
+    ChronoCoupledConditionWarningCallback_C log_callback;
+    void *log_user_data;
 } ChronoCoupledConditionWarningPolicy_C;
 
 typedef struct ChronoCoupledConstraint2DEquationDesc_C {
@@ -556,6 +578,14 @@ chrono_coupled_constraint2d_get_diagnostics(const ChronoCoupledConstraint2D_C *c
 void chrono_coupled_constraint2d_get_condition_warning_policy(
     const ChronoCoupledConstraint2D_C *constraint,
     ChronoCoupledConditionWarningPolicy_C *out_policy);
+void chrono_coupled_constraint2d_set_condition_warning_callback(
+    ChronoCoupledConstraint2D_C *constraint,
+    ChronoCoupledConditionWarningCallback_C callback,
+    void *user_data);
+void chrono_coupled_constraint2d_set_condition_warning_log_level(
+    ChronoCoupledConstraint2D_C *constraint,
+    ChronoLogLevel_C level,
+    ChronoLogCategory_C category);
 void chrono_coupled_constraint2d_set_condition_warning_policy(
     ChronoCoupledConstraint2D_C *constraint,
     const ChronoCoupledConditionWarningPolicy_C *policy);
