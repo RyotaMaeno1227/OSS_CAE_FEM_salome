@@ -79,9 +79,9 @@
    - Coupled 拘束用のマイクロベンチ（多数の式を抱える拘束をアイランド内に並べ、条件数／反復回数／解法時間を計測）を次スプリントで追加。結果を CSV 化し、CI の nightly ベンチに組み込む計画。
 3. **CI / 可視化連携**  
    - GitHub Actions 等でテスト自動実行（ローカルでの再現性重視、後日CI環境を検討）。  
-   - `tools/plot_coupled_constraint_endurance.py` に Markdown/HTML サマリ出力と `--skip-plot` オプションを追加し、ヘッドレス CI から `--no-show` と組み合わせてレポート生成できるようにした。  
-   - `tools/archive_coupled_constraint_endurance.py` で耐久 CSV を SHA-256 ハッシュで重複判定しつつ `data/endurance_archive/` に時刻付きで保存、`latest.*`（CSV/Markdown/HTML）と manifest を更新する運用を整備。  
-   - 週次（月曜 03:15 UTC）ワークフロー `.github/workflows/coupled_endurance.yml` を追加し、アーカイブ＋可視化＋アーティファクト化まで自動実行（`coupled_endurance-${{github.run_id}}` として `latest.csv/.summary.*` と manifest を収集）。
+   - `tools/plot_coupled_constraint_endurance.py` に Markdown/HTML/JSON サマリ出力と `--skip-plot`/しきい値判定オプションを追加し、ヘッドレス CI から `--no-show` と組み合わせてレポート生成および自動ゲートが可能。  
+   - `tools/archive_coupled_constraint_endurance.py` で耐久 CSV を SHA-256 ハッシュで重複判定しつつ `data/endurance_archive/` に時刻付きで保存、`latest.*`（CSV/Markdown/HTML/JSON）と manifest を更新、`--prune-duplicates` と `--max-entries` で履歴を整理できるようにした。  
+   - 週次（月曜 03:15 UTC）ワークフロー `.github/workflows/coupled_endurance.yml` を追加し、アーカイブ＋可視化＋アーティファクト化＋重複整理まで自動実行（`coupled_endurance-${{github.run_id}}` として `latest.csv/.summary.*` と manifest を収集）。
 
 ## 4. マイルストンとタスク一覧
 | フェーズ | 想定期間 | 主タスク | 成果物 | 進捗 |

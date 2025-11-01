@@ -27,7 +27,9 @@ jobs:
           python tools/archive_coupled_constraint_endurance.py \
             --archive-dir data/endurance_archive \
             --manifest data/endurance_archive/manifest.json \
-            --label "${{ github.workflow }}:${{ github.run_id }}"
+            --label "${{ github.workflow }}:${{ github.run_id }}" \
+            --prune-duplicates \
+            --max-entries 26
 
       - name: Generate endurance summaries
         run: |
@@ -37,7 +39,8 @@ jobs:
             --dpi 160 \
             --no-show \
             --summary-md data/endurance_archive/latest.summary.md \
-            --summary-html data/endurance_archive/latest.summary.html
+            --summary-html data/endurance_archive/latest.summary.html \
+            --summary-json data/endurance_archive/latest.summary.json
 
       - name: Upload endurance artifacts
         uses: actions/upload-artifact@v4
@@ -48,7 +51,9 @@ jobs:
             data/endurance_archive/latest.png
             data/endurance_archive/latest.summary.md
             data/endurance_archive/latest.summary.html
+            data/endurance_archive/latest.summary.json
             data/endurance_archive/manifest.json
             data/endurance_archive/*.csv
             data/endurance_archive/*.csv.summary.md
             data/endurance_archive/*.csv.summary.html
+            data/endurance_archive/*.csv.summary.json

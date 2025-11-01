@@ -2,6 +2,7 @@
 """Plot helper for coupled constraint endurance CSV logs."""
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -68,9 +69,28 @@ def parse_args() -> argparse.Namespace:
         help="Write HTML summary to the specified path.",
     )
     parser.add_argument(
+        "--summary-json",
+        help="Write JSON summary to the specified path.",
+    )
+    parser.add_argument(
         "--skip-plot",
         action="store_true",
         help="Skip figure generation (useful when only summaries are required).",
+    )
+    parser.add_argument(
+        "--fail-on-max-condition",
+        type=float,
+        help="Exit with code 3 if max condition number exceeds this threshold.",
+    )
+    parser.add_argument(
+        "--fail-on-warning-ratio",
+        type=float,
+        help="Exit with code 4 if warning ratio exceeds this threshold (0.0 - 1.0).",
+    )
+    parser.add_argument(
+        "--fail-on-rank-ratio",
+        type=float,
+        help="Exit with code 5 if rank-deficient ratio exceeds this threshold (0.0 - 1.0).",
     )
     return parser.parse_args()
 
@@ -147,10 +167,18 @@ def main() -> int:
         return 1
 
     try:
-       data = load_csv(csv_path)
+        data = load_csv(csv_path)
     except ValueError as exc:
         print(f"Error while reading {csv_path}: {exc}", file=sys.stderr)
         return 1
+
+    if args.fail_on_warning_ratio is not None and not 0.0 <= args.fail_on_warning_ratio <= 1.0:
+        print("Error: --fail-on-warning-ratio expects a value between 0.0 and 1.0.", file=sys.stderr)
+        return 2
+    if args.fail_on_rank_ratio is not None and not 0.0 <= args.fail_on_rank_ratio <= 1.0:
+        print("Error: --fail-on-rank-ratio expects a value between 0.0 and 1.0.", file=sys.stderr)
+        return 2
+
     summary = compute_summary(data)
     print(summary_as_plain_text(summary))
 
@@ -166,6 +194,37 @@ def main() -> int:
         summary_html_path.write_text(summary_as_html(summary), encoding="utf-8")
         print(f"Wrote HTML summary to {summary_html_path}")
 
+    if args.summary_json:
+        summary_json_path = Path(args.summary_json).expanduser()
+        summary_json_path.parent.mkdir(parents=True, exist_ok=True)
+        summary_json_path.write_text(
+            json.dumps(summary.to_dict(), indent=2) + "\n",
+            encoding="utf-8",
+        )
+        print(f"Wrote JSON summary to {summary_json_path}")
+
+    violation_exit_code = 0
+    if args.fail_on_max_condition is not None and summary.max_condition > args.fail_on_max_condition:
+        print(
+            f"Max condition number {summary.max_condition:.3e} exceeds threshold {args.fail_on_max_condition:.3e}",
+            file=sys.stderr,
+        )
+        violation_exit_code = max(violation_exit_code, 3)
+
+    if args.fail_on_warning_ratio is not None and summary.warn_ratio > args.fail_on_warning_ratio:
+        print(
+            f"Warning ratio {summary.warn_ratio:.3f} exceeds threshold {args.fail_on_warning_ratio:.3f}",
+            file=sys.stderr,
+        )
+        violation_exit_code = max(violation_exit_code, 4)
+
+    if args.fail_on_rank_ratio is not None and summary.rank_ratio > args.fail_on_rank_ratio:
+        print(
+            f"Rank-deficient ratio {summary.rank_ratio:.3f} exceeds threshold {args.fail_on_rank_ratio:.3f}",
+            file=sys.stderr,
+        )
+        violation_exit_code = max(violation_exit_code, 5)
+
     if args.skip_plot:
         if args.output:
             print("Error: --skip-plot cannot be combined with --output.", file=sys.stderr)
@@ -173,7 +232,7 @@ def main() -> int:
         if args.show:
             print("Error: --skip-plot cannot be combined with --show.", file=sys.stderr)
             return 2
-        return 0
+        return violation_exit_code
 
     try:
         fig, _ = plot(data)
@@ -195,7 +254,7 @@ def main() -> int:
         plt = _import_pyplot()
         plt.close(fig)
 
-    return 0
+    return violation_exit_code
 
 
 if __name__ == "__main__":

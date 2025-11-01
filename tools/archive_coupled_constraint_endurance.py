@@ -66,6 +66,16 @@ def parse_args() -> argparse.Namespace:
         default="latest",
         help="Prefix for refreshable outputs (e.g. latest.csv). Set empty to disable.",
     )
+    parser.add_argument(
+        "--prune-duplicates",
+        action="store_true",
+        help="Remove older archive entries that share the same hash.",
+    )
+    parser.add_argument(
+        "--max-entries",
+        type=int,
+        help="Keep only the most recent N entries (after deduplication).",
+    )
     return parser.parse_args()
 
 
@@ -152,9 +162,17 @@ def archive_single_run(
     if generate_summary:
         summary_md_path = archive_dir / f"{filename}.summary.md"
         summary_html_path = archive_dir / f"{filename}.summary.html"
+        summary_json_path = archive_dir / f"{filename}.summary.json"
         summary_md_path.write_text(summary_as_markdown(summary) + "\n", encoding="utf-8")
         summary_html_path.write_text(summary_as_html(summary), encoding="utf-8")
-        print(f"Wrote summaries: {summary_md_path.name}, {summary_html_path.name}")
+        summary_json_path.write_text(
+            json.dumps(summary.to_dict(), indent=2) + "\n",
+            encoding="utf-8",
+        )
+        print(
+            "Wrote summaries: "
+            f"{summary_md_path.name}, {summary_html_path.name}, {summary_json_path.name}"
+        )
 
     entries.append(entry)
     entries.sort(key=lambda item: item["timestamp"])  # type: ignore[index]
@@ -185,16 +203,104 @@ def refresh_latest_outputs(
 
     latest_md = archive_dir / f"{latest_prefix}.summary.md"
     latest_html = archive_dir / f"{latest_prefix}.summary.html"
+    latest_json = archive_dir / f"{latest_prefix}.summary.json"
     md_text = summary_as_markdown(summary) + "\n"
     html_text = summary_as_html(summary)
+    json_text = json.dumps(summary.to_dict(), indent=2) + "\n"
 
     if dry_run:
-        print(f"[dry-run] Would refresh {latest_md} / {latest_html}")
+        print(f"[dry-run] Would refresh {latest_md} / {latest_html} / {latest_json}")
         return
 
     latest_md.write_text(md_text, encoding="utf-8")
     latest_html.write_text(html_text, encoding="utf-8")
-    print(f"Updated {latest_md} and {latest_html}")
+    latest_json.write_text(json_text, encoding="utf-8")
+    print(f"Updated {latest_md}, {latest_html}, and {latest_json}")
+
+
+def _delete_archive_artifacts(archive_dir: Path, filename: str, dry_run: bool) -> None:
+    targets = [
+        archive_dir / filename,
+        archive_dir / f"{filename}.summary.md",
+        archive_dir / f"{filename}.summary.html",
+        archive_dir / f"{filename}.summary.json",
+    ]
+    for path in targets:
+        if not path.exists():
+            continue
+        if dry_run:
+            print(f"[dry-run] Would remove {path}")
+        else:
+            path.unlink()
+            print(f"Removed {path}")
+
+
+def prune_duplicate_entries(
+    manifest: Dict[str, object],
+    archive_dir: Path,
+    dry_run: bool,
+) -> int:
+    entries: List[Dict[str, object]] = manifest["entries"]  # type: ignore[assignment]
+    if not entries:
+        return 0
+
+    ordered = sorted(entries, key=lambda item: item["timestamp"], reverse=True)  # type: ignore[index]
+    kept: List[Dict[str, object]] = []
+    seen_hashes = set()
+    removed = 0
+
+    for entry in ordered:
+        file_hash = entry.get("hash_sha256")
+        if file_hash in seen_hashes:
+            removed += 1
+            archive_name = entry.get("archive_path")
+            if archive_name:
+                _delete_archive_artifacts(archive_dir, archive_name, dry_run)
+            continue
+        seen_hashes.add(file_hash)
+        kept.append(entry)
+
+    kept = sorted(kept, key=lambda item: item["timestamp"])  # type: ignore[index]
+
+    if not dry_run:
+        manifest["entries"] = kept
+
+    if removed:
+        print(f"Pruned {removed} duplicate archive entr{'y' if removed == 1 else 'ies'}.")
+    else:
+        print("No duplicate archives detected.")
+
+    return removed
+
+
+def enforce_max_entries(
+    manifest: Dict[str, object],
+    archive_dir: Path,
+    max_entries: int,
+    dry_run: bool,
+) -> int:
+    if max_entries <= 0:
+        raise ValueError("--max-entries must be positive.")
+
+    entries: List[Dict[str, object]] = manifest["entries"]  # type: ignore[assignment]
+    if len(entries) <= max_entries:
+        print(f"Archive contains {len(entries)} entries (<= {max_entries}); nothing to prune.")
+        return 0
+
+    ordered = sorted(entries, key=lambda item: item["timestamp"], reverse=True)  # type: ignore[index]
+    kept = ordered[:max_entries]
+    trimmed = ordered[max_entries:]
+
+    for entry in trimmed:
+        archive_name = entry.get("archive_path")
+        if archive_name:
+            _delete_archive_artifacts(archive_dir, archive_name, dry_run)
+
+    if not dry_run:
+        manifest["entries"] = sorted(kept, key=lambda item: item["timestamp"])  # type: ignore[index]
+
+    print(f"Trimmed {len(trimmed)} archive entr{'y' if len(trimmed) == 1 else 'ies'} to enforce max={max_entries}.")
+    return len(trimmed)
 
 
 def main() -> int:
@@ -253,6 +359,25 @@ def main() -> int:
         )
 
         print()
+
+    if args.prune_duplicates:
+        prune_duplicate_entries(
+            manifest=manifest,
+            archive_dir=archive_dir,
+            dry_run=args.dry_run,
+        )
+
+    if args.max_entries is not None:
+        try:
+            enforce_max_entries(
+                manifest=manifest,
+                archive_dir=archive_dir,
+                max_entries=args.max_entries,
+                dry_run=args.dry_run,
+            )
+        except ValueError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 2
 
     if args.dry_run:
         print("Dry-run complete; manifest not updated.")
