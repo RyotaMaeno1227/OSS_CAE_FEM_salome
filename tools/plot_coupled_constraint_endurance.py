@@ -1,27 +1,31 @@
 #!/usr/bin/env python3
-"""
-Plot helper for coupled constraint endurance CSV logs.
-
-Usage:
-    python tools/plot_coupled_constraint_endurance.py [path/to/csv] --output figure.png
-"""
+"""Plot helper for coupled constraint endurance CSV logs."""
 
 import argparse
-import csv
-import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
 
-import matplotlib.pyplot as plt
+from coupled_constraint_endurance_analysis import (
+    CHRONO_COUPLED_DIAG_CONDITION_WARNING,
+    CHRONO_COUPLED_DIAG_RANK_DEFICIENT,
+    compute_summary,
+    default_csv_path,
+    load_csv,
+    summary_as_html,
+    summary_as_markdown,
+    summary_as_plain_text,
+)
 
-CHRONO_COUPLED_DIAG_RANK_DEFICIENT = 0x1
-CHRONO_COUPLED_DIAG_CONDITION_WARNING = 0x2
 
-
-def default_csv_path() -> Path:
-    project_root = Path(__file__).resolve().parent.parent
-    return project_root / "data" / "coupled_constraint_endurance.csv"
+def _import_pyplot():
+    try:
+        import matplotlib.pyplot as plt  # type: ignore
+    except ModuleNotFoundError as exc:  # pragma: no cover - import guard
+        raise RuntimeError(
+            "matplotlib is required for plotting. "
+            "Install it (pip install matplotlib) or run with --skip-plot."
+        ) from exc
+    return plt
 
 
 def parse_args() -> argparse.Namespace:
@@ -55,88 +59,24 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Do not display the figure window (useful for CI pipelines).",
     )
+    parser.add_argument(
+        "--summary-md",
+        help="Write Markdown summary to the specified path.",
+    )
+    parser.add_argument(
+        "--summary-html",
+        help="Write HTML summary to the specified path.",
+    )
+    parser.add_argument(
+        "--skip-plot",
+        action="store_true",
+        help="Skip figure generation (useful when only summaries are required).",
+    )
     return parser.parse_args()
 
 
-def _collect_equation_indices(fieldnames: List[str], suffix: str) -> List[int]:
-    indices = []
-    prefix = "eq"
-    for name in fieldnames:
-        if not name.startswith(prefix) or not name.endswith(suffix):
-            continue
-        middle = name[len(prefix) : -len(suffix)]
-        if not middle.isdigit():
-            continue
-        indices.append(int(middle))
-    return sorted(set(indices))
-
-
-def load_csv(path: Path) -> Dict[str, object]:
-    with path.open("r", newline="") as handle:
-        reader = csv.DictReader(handle)
-        if not reader.fieldnames:
-            raise ValueError("CSV file does not contain a header row.")
-
-        eq_ids = _collect_equation_indices(reader.fieldnames, "_force_distance")
-        if not eq_ids:
-            raise ValueError("Could not identify equation columns in the CSV.")
-
-        time: List[float] = []
-        distance: List[float] = []
-        angle: List[float] = []
-        condition: List[float] = []
-        flags: List[int] = []
-        eq_force_distance: Dict[int, List[float]] = {idx: [] for idx in eq_ids}
-        eq_force_angle: Dict[int, List[float]] = {idx: [] for idx in eq_ids}
-        eq_impulse: Dict[int, List[float]] = {idx: [] for idx in eq_ids}
-
-        for row in reader:
-            try:
-                time.append(float(row["time"]))
-                distance.append(float(row["distance"]))
-                angle.append(float(row["angle"]))
-                condition.append(float(row["condition_number"]))
-                flags.append(int(row["diagnostics_flags"]))
-            except (ValueError, KeyError) as exc:
-                raise ValueError(f"Malformed row encountered: {row}") from exc
-
-            for idx in eq_ids:
-                force_dist_key = f"eq{idx}_force_distance"
-                force_ang_key = f"eq{idx}_force_angle"
-                impulse_key = f"eq{idx}_impulse"
-                eq_force_distance[idx].append(float(row.get(force_dist_key, 0.0)))
-                eq_force_angle[idx].append(float(row.get(force_ang_key, 0.0)))
-                eq_impulse[idx].append(float(row.get(impulse_key, 0.0)))
-
-    return {
-        "time": time,
-        "distance": distance,
-        "angle": angle,
-        "condition": condition,
-        "flags": flags,
-        "eq_ids": eq_ids,
-        "eq_force_distance": eq_force_distance,
-        "eq_force_angle": eq_force_angle,
-        "eq_impulse": eq_impulse,
-    }
-
-
-def summarize(data: Dict[str, object]) -> None:
-    time = data["time"]
-    condition = data["condition"]
-    flags = data["flags"]
-
-    max_condition = max(condition) if condition else 0.0
-    warn_frames = sum(1 for f in flags if f & CHRONO_COUPLED_DIAG_CONDITION_WARNING)
-    rank_frames = sum(1 for f in flags if f & CHRONO_COUPLED_DIAG_RANK_DEFICIENT)
-
-    print(f"Loaded {len(time)} samples.")
-    print(f"Maximum condition number: {max_condition:.3e}")
-    print(f"Condition warning frames: {warn_frames}")
-    print(f"Rank deficient frames: {rank_frames}")
-
-
-def plot(data: Dict[str, object]) -> Tuple[plt.Figure, List[plt.Axes]]:
+def plot(data: dict):
+    plt = _import_pyplot()
     time = data["time"]
     distance = data["distance"]
     angle = data["angle"]
@@ -207,13 +147,39 @@ def main() -> int:
         return 1
 
     try:
-        data = load_csv(csv_path)
+       data = load_csv(csv_path)
     except ValueError as exc:
         print(f"Error while reading {csv_path}: {exc}", file=sys.stderr)
         return 1
+    summary = compute_summary(data)
+    print(summary_as_plain_text(summary))
 
-    summarize(data)
-    fig, _ = plot(data)
+    if args.summary_md:
+        summary_md_path = Path(args.summary_md).expanduser()
+        summary_md_path.parent.mkdir(parents=True, exist_ok=True)
+        summary_md_path.write_text(summary_as_markdown(summary) + "\n", encoding="utf-8")
+        print(f"Wrote Markdown summary to {summary_md_path}")
+
+    if args.summary_html:
+        summary_html_path = Path(args.summary_html).expanduser()
+        summary_html_path.parent.mkdir(parents=True, exist_ok=True)
+        summary_html_path.write_text(summary_as_html(summary), encoding="utf-8")
+        print(f"Wrote HTML summary to {summary_html_path}")
+
+    if args.skip_plot:
+        if args.output:
+            print("Error: --skip-plot cannot be combined with --output.", file=sys.stderr)
+            return 2
+        if args.show:
+            print("Error: --skip-plot cannot be combined with --show.", file=sys.stderr)
+            return 2
+        return 0
+
+    try:
+        fig, _ = plot(data)
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
 
     if args.output:
         output_path = Path(args.output).expanduser()
@@ -223,8 +189,10 @@ def main() -> int:
 
     should_show = args.show or (not args.no_show and not args.output)
     if should_show:
+        plt = _import_pyplot()
         plt.show()
     else:
+        plt = _import_pyplot()
         plt.close(fig)
 
     return 0

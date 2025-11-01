@@ -156,3 +156,25 @@ double angle_torque = coupled.last_angle_force;       // N*m
 ```
 
 距離リード側をやや硬く（ソフトネスは 0.01-0.02）、角度リード側は角速度揺らぎを抑えるため 0.02-0.04 を目安にすると安定しやすくなります。ターゲットをステージごとに切り替える場合は、距離スプリングの剛性を 30-45 N/m、角度側を 15-25 N*m/rad 程度に設定し、`tests/test_coupled_constraint` を回帰ベースラインとして Slop / Baumgarte / damping を調整してください。最新の `last_distance_force` / `last_angle_force` ログを CSV 化すると、`docs/planar_constraint_visualization.m` と同様のプロットに組み込めます。
+
+### Coupled diagnostics workflow
+
+1. **ログ収集**  
+   - テストまたはシミュレーション内で `chrono_coupled_constraint2d_get_diagnostics(constraint)` の戻り値を取得し、`condition_number`, `rank`, `flags` を CSV へ追記します。耐久テスト（`tests/test_coupled_constraint_endurance.c`）は `../data/coupled_constraint_endurance.csv` を出力するサンプルです。  
+   - 条件数警告を抑制し過ぎないよう、`ChronoCoupledConditionWarningPolicy_C` の `log_cooldown` を 0.25-0.5 秒程度に設定し、WARN ログを `chrono_log_warn`（今後統合予定）経由で収集します。
+
+2. **可視化**  
+   ```bash
+   python tools/plot_coupled_constraint_endurance.py \
+       data/coupled_constraint_endurance.csv \
+       --output artifacts/coupled_endurance.png
+   ```
+   - グラフにはステップ毎の距離／角度誤差、式別反力（`last_distance_force_eq[i]` / `last_angle_force_eq[i]`）、条件数、診断フラグが描画されます。  
+   - ステージ切替を追跡したい場合は CSV に `phase_id` 列を追加し、スクリプトの凡例で判別します。
+
+3. **ボトルネック特定**  
+   - 条件数が `1e6` を超える区間を抽出し、同タイムスタンプの WARN ログと付き合わせます。  
+   - 反力ピークが 2 本目以降の式（`last_*_force_eq[1+]`）に集中する場合、追加式の `ratio_*` や `softness_*` を見直します。  
+   - 自動ドロップが発生している場合は `diagnostics.rank` と `constraint.equation_active[]` が一致しているか確認し、必要に応じて `max_drop` を引き上げるか式の定義を調整します。
+
+> 代表的なパラメータ例と ASCII 図は `docs/chrono_coupled_constraint_tutorial.md` を参照してください。

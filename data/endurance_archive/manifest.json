@@ -1,0 +1,47 @@
+{
+  "entries": [
+    {
+      "archive_path": "coupled_constraint_endurance_20251101T140017Z_956b5f52.csv",
+      "hash_sha256": "956b5f52363482f1c4c4d786e49830ac767416fcbc62c1f4f7213da531793942",
+      "label": null,
+      "source": "/home/rmaen/highperformanceFEM/data/coupled_constraint_endurance.csv",
+      "summary": {
+        "duration": 25.1965,
+        "eq_force_angle_max": {
+          "eq0": 28.970914,
+          "eq1": 7.947552,
+          "eq2": 14.351789
+        },
+        "eq_force_distance_max": {
+          "eq0": 26.959696,
+          "eq1": 12.981343,
+          "eq2": 12.769631
+        },
+        "eq_ids": [
+          "eq0",
+          "eq1",
+          "eq2"
+        ],
+        "eq_impulse_max": {
+          "eq0": 0.030981,
+          "eq1": 0.092267,
+          "eq2": 0.019594
+        },
+        "max_angle_abs": 0.509333,
+        "max_condition": 543465900.0,
+        "max_distance_abs": 0.748197,
+        "mean_condition": 537144875.0,
+        "median_condition": 543465900.0,
+        "rank_frames": 0,
+        "rank_ratio": 0.0,
+        "samples": 7200,
+        "time_end": 25.1965,
+        "time_start": 0.0,
+        "warn_frames": 7200,
+        "warn_ratio": 1.0
+      },
+      "timestamp": "2025-11-01T14:00:17Z"
+    }
+  ],
+  "version": 1
+}
