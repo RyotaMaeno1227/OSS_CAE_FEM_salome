@@ -9,6 +9,7 @@ from pathlib import Path
 from coupled_constraint_endurance_analysis import (
     CHRONO_COUPLED_DIAG_CONDITION_WARNING,
     CHRONO_COUPLED_DIAG_RANK_DEFICIENT,
+    COUPLED_SUMMARY_VERSION,
     compute_summary,
     default_csv_path,
     load_csv,
@@ -131,9 +132,17 @@ def _validate_summary_schema(payload: dict) -> None:
         "eq_impulse_max",
     }
 
-    missing = [key for key in (*required_numeric_fields, *required_dict_fields, "eq_ids") if key not in payload]
+    missing = [key for key in (*required_numeric_fields, *required_dict_fields, "eq_ids", "version") if key not in payload]
     if missing:
         raise ValueError(f"Summary payload missing fields: {', '.join(sorted(missing))}")
+
+    version = payload["version"]
+    if not isinstance(version, int):
+        raise ValueError(f"Field 'version' must be an integer, got {type(version).__name__}")
+    if version > COUPLED_SUMMARY_VERSION:
+        raise ValueError(
+            f"Summary version {version} is newer than supported {COUPLED_SUMMARY_VERSION}."
+        )
 
     for key in required_numeric_fields:
         value = payload[key]

@@ -40,6 +40,16 @@ Coupled 拘束の耐久スイートは `.github/workflows/coupled_endurance.yml`
    - しきい値は CI のログに出ている値をそのまま使うか、`.github/workflows/coupled_endurance.yml` 内の `ARCHIVE_MAX_*` と合わせて確認してください。
    - `--summary-json` で生成されたファイルは `_validate_summary_schema` による検証を通過済みです。フォーマット違反がある場合はコマンドが終了コード 2 で即終了します。
 3. 可視化が必要な場合は `--skip-plot` を外し、`--output figure.png` を追加するとグラフを生成できます（ローカルでのみ推奨）。
+4. GitHub CLI (`gh`) を利用できる環境であれば、`tools/fetch_endurance_artifact.py` を実行することで失敗したワークフローのアーティファクト取得と再現コマンド生成を自動化できます。
+
+   ```bash
+   python tools/fetch_endurance_artifact.py 1234567890 \
+     --output-dir tmp/endurance \
+     --summary-out repro/latest.summary.json
+   ```
+
+   - `1234567890` には Actions の Run ID もしくは Run URL を指定します。
+   - ダウンロード後、スクリプトが提示するコマンドを実行すると CI と同じ閾値で検証できます。
 
 ---
 
@@ -59,6 +69,13 @@ Coupled 拘束の耐久スイートは `.github/workflows/coupled_endurance.yml`
 - 最新ログのサマリを CLI で確認:  
   `python tools/plot_coupled_constraint_endurance.py data/coupled_constraint_endurance.csv --skip-plot --summary-json /tmp/summary.json --no-show`
 - 重複判定や世代管理を確認:  
-  `python tools/archive_coupled_constraint_endurance.py --dry-run --prune-duplicates --max-entries 10 --max-age-days 120`
+  `python tools/archive_coupled_constraint_endurance.py --dry-run --prune-duplicates --max-entries 10 --max-age-days 120 --plan-csv /tmp/endurance_plan.csv`
 
 CI での失敗を再現したら、原因調査の結果やパラメータ変更をこのドキュメント、または `docs/chrono_2d_development_plan.md` の CI セクションに追記して共有してください。
+
+---
+
+## 6. サマリ JSON の互換性ポリシー
+- JSON には `version` キーが含まれており、現在のスキーマは `1` です。フィールド追加など互換な拡張を行う場合は既存ツールが理解できる初期値（例: `0.0` や空文字）を付与し、破壊的変更が必要な場合のみ `version` をインクリメントしてください。
+- ツール側の `_validate_summary_schema` は、自身が対応していない新しい `version` を検出すると終了コード 2 で停止します。CI に反映する際は、バージョンを上げたスクリプトとワークフロー設定を一度に更新すること。
+- バージョン更新時はこのセクションに変更点と後方互換ガイドを追記し、`COUPLED_SUMMARY_VERSION` の値と合わせて管理します。

@@ -188,3 +188,74 @@ chrono_coupled_constraint2d_set_condition_warning_policy(&coupled, &policy);
   - 主な指標: `max condition number = 1.088e+01`、`condition warnings = 7200 (100%)`、`rank deficient = 0`  
     - 式別ピーク: `eq0 force_distance = 1.63e+01`, `eq0 force_angle = 3.35e+01`, `eq2 force_distance = 7.36e+00`, `eq2 force_angle = 1.33e+01`  
   - `matplotlib` が無い環境でも `--skip-plot` でテキストサマリを取得可能。プロットが必要な場合は `pip install matplotlib` を実行し、`--output` で画像を保存する。
+
+---
+
+## 8. 画像／動画メディアの生成と再利用
+
+Coupled 拘束の挙動を共有する際は、静止画に加えて GIF/MP4 アニメーションを `docs/media/coupled/` 以下に配置する運用とします。Python ツールを使った生成手順は以下のとおりです。
+
+1. **静止画の出力**
+   ```bash
+   mkdir -p docs/media/coupled
+   python tools/plot_coupled_constraint_endurance.py \
+     data/coupled_constraint_endurance.csv \
+     --output docs/media/coupled/endurance_overview.png \
+     --no-show
+   ```
+   - `--output` に保存パスを指定すると PNG が出力されます。CI では `--no-show` を付けてウィンドウ表示を抑止してください。
+
+2. **アニメーション（GIF/MP4）の生成**
+   - 例として GIF を作る場合:
+     ```bash
+     python - <<'PY'
+     from pathlib import Path
+     import matplotlib.pyplot as plt
+     from matplotlib import animation
+     from coupled_constraint_endurance_analysis import load_csv, default_csv_path
+
+     csv_path = Path("data/coupled_constraint_endurance.csv")
+     data = load_csv(csv_path)
+     time = data["time"]
+     distance = data["distance"]
+     condition = data["condition"]
+
+     fig, ax = plt.subplots(figsize=(10, 4))
+     line_dist, = ax.plot([], [], color="C0", label="distance [m]")
+     ax2 = ax.twinx()
+     line_cond, = ax2.plot([], [], color="C3", label="condition number")
+     ax.set_xlim(min(time), max(time))
+     ax.set_ylim(min(distance), max(distance))
+     ax2.set_ylim(min(condition), max(condition))
+     ax.set_xlabel("time [s]")
+     ax.set_ylabel("distance [m]")
+     ax2.set_ylabel("condition number")
+
+     def init():
+         line_dist.set_data([], [])
+         line_cond.set_data([], [])
+         return line_dist, line_cond
+
+     def update(frame):
+         line_dist.set_data(time[:frame], distance[:frame])
+         line_cond.set_data(time[:frame], condition[:frame])
+         return line_dist, line_cond
+
+     ani = animation.FuncAnimation(fig, update, frames=len(time), init_func=init, blit=True, interval=8)
+     Path("docs/media/coupled").mkdir(parents=True, exist_ok=True)
+     ani.save("docs/media/coupled/endurance_overview.gif", writer="pillow", fps=30)
+     ani.save("docs/media/coupled/endurance_overview.mp4", writer="ffmpeg", fps=30)
+     PY
+     ```
+   - `ffmpeg` がインストールされていれば MP4 も同時に生成できます。GIF のみ欲しい場合は `ani.save(..., writer="pillow")` の行だけで構いません。
+
+3. **ドキュメントから参照**
+   - Markdown で埋め込む場合は `docs/` からの相対パスを使用します。
+     ```markdown
+     ![Coupled endurance overview](media/coupled/endurance_overview.gif)
+     ```
+   - README など他ドキュメントから再利用する際は、生成物の更新日と対応する CSV/テスト実行ログを合わせて記載してください。
+
+4. **保守のポイント**
+   - 生成したメディアに合わせて `docs/media/coupled/README.md`（任意）に更新日時と元データを残すと追跡が容易です。
+   - 大容量化を避けるため、GIF は 10 MB を目安に `fps` やフレーム数を調整してください。必要に応じて `animation.FuncAnimation` の `frames` をサンプリング間隔で間引きます。

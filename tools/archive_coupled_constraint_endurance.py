@@ -6,6 +6,7 @@ Archive coupled constraint endurance CSV logs and keep summaries fresh.
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import json
 import sys
@@ -86,6 +87,10 @@ def parse_args() -> argparse.Namespace:
         type=float,
         help="Fail if an input CSV exceeds the given size (in MiB).",
     )
+    parser.add_argument(
+        "--plan-csv",
+        help="Optional path to write planned operations (CSV format).",
+    )
     return parser.parse_args()
 
 
@@ -131,6 +136,74 @@ def parse_timestamp(value: str) -> datetime:
     return datetime.fromisoformat(value)
 
 
+def _record_action(
+    plan_records: Optional[List[Dict[str, str]]],
+    *,
+    action: str,
+    target: str,
+    detail: str = "",
+    hash_sha256: str = "",
+    reason: str = "",
+) -> None:
+    if plan_records is None:
+        return
+    plan_records.append(
+        {
+            "action": action,
+            "target": target,
+            "detail": detail,
+            "hash": hash_sha256,
+            "reason": reason,
+        }
+    )
+
+
+def _print_plan_summary(plan_records: List[Dict[str, str]], heading: str) -> None:
+    if not plan_records:
+        print(f"{heading}: none")
+        return
+
+    print(heading)
+    header = ("Action", "Target", "Detail", "Hash", "Reason")
+    rows = [header]
+    for record in plan_records:
+        rows.append(
+            (
+                record.get("action", ""),
+                record.get("target", ""),
+                record.get("detail", ""),
+                record.get("hash", ""),
+                record.get("reason", ""),
+            )
+        )
+
+    col_widths = [max(len(str(row[idx])) for row in rows) for idx in range(len(header))]
+    for idx, row in enumerate(rows):
+        line = "  ".join(str(cell).ljust(col_widths[col_idx]) for col_idx, cell in enumerate(row))
+        if idx == 0:
+            print(line)
+            print("  ".join("-" * col_widths[col_idx] for col_idx in range(len(header))))
+        else:
+            print(line)
+
+
+def _write_plan_csv(path: Path, plan_records: List[Dict[str, str]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=["action", "target", "detail", "hash", "reason"])
+        writer.writeheader()
+        for record in plan_records:
+            writer.writerow(
+                {
+                    "action": record.get("action", ""),
+                    "target": record.get("target", ""),
+                    "detail": record.get("detail", ""),
+                    "hash": record.get("hash", ""),
+                    "reason": record.get("reason", ""),
+                }
+            )
+
+
 def ensure_list(value: Optional[List[str]]) -> List[str]:
     return value or [str(default_csv_path())]
 
@@ -147,10 +220,19 @@ def archive_single_run(
     generate_summary: bool,
     dry_run: bool,
     max_file_size_bytes: Optional[int],
+    plan_records: Optional[List[Dict[str, str]]],
 ) -> Optional[Dict[str, object]]:
     entries: List[Dict[str, object]] = manifest["entries"]  # type: ignore[assignment]
     existing = next((entry for entry in entries if entry.get("hash_sha256") == file_hash), None)
     if existing:
+        _record_action(
+            plan_records,
+            action="skip-duplicate",
+            target=str(csv_path),
+            detail=existing.get("archive_path", ""),
+            hash_sha256=file_hash,
+            reason="duplicate-hash",
+        )
         print(
             f"Skipping archive for {csv_path} (duplicate of {existing.get('archive_path')})."
         )
@@ -159,6 +241,14 @@ def archive_single_run(
     if max_file_size_bytes is not None:
         file_size = csv_path.stat().st_size
         if file_size > max_file_size_bytes:
+            _record_action(
+                plan_records,
+                action="reject-large-file",
+                target=str(csv_path),
+                detail=f"{file_size} bytes",
+                hash_sha256=file_hash,
+                reason="max-file-size",
+            )
             raise RuntimeError(
                 f"Input CSV {csv_path} is {file_size / (1024 * 1024):.2f} MiB, which exceeds the limit "
                 f"of {max_file_size_bytes / (1024 * 1024):.2f} MiB."
@@ -178,11 +268,27 @@ def archive_single_run(
 
     if dry_run:
         print(f"[dry-run] Would copy {csv_path} -> {archive_path}")
+        _record_action(
+            plan_records,
+            action="archive",
+            target=str(csv_path),
+            detail=archive_path.name,
+            hash_sha256=file_hash,
+            reason="planned",
+        )
         entries.append(entry)
         return entry
 
     shutil.copy2(csv_path, archive_path)
     print(f"Archived {csv_path} -> {archive_path}")
+    _record_action(
+        plan_records,
+        action="archive",
+        target=str(csv_path),
+        detail=archive_path.name,
+        hash_sha256=file_hash,
+        reason="completed",
+    )
 
     if generate_summary:
         summary_md_path = archive_dir / f"{filename}.summary.md"
@@ -198,6 +304,14 @@ def archive_single_run(
             "Wrote summaries: "
             f"{summary_md_path.name}, {summary_html_path.name}, {summary_json_path.name}"
         )
+        _record_action(
+            plan_records,
+            action="write-summaries",
+            target=archive_path.name,
+            detail="markdown/html/json",
+            hash_sha256=file_hash,
+            reason="completed",
+        )
 
     entries.append(entry)
     entries.sort(key=lambda item: item["timestamp"])  # type: ignore[index]
@@ -211,6 +325,7 @@ def refresh_latest_outputs(
     latest_prefix: str,
     generate_summary: bool,
     dry_run: bool,
+    plan_records: Optional[List[Dict[str, str]]],
 ) -> None:
     if not latest_prefix:
         return
@@ -222,6 +337,13 @@ def refresh_latest_outputs(
         archive_dir.mkdir(parents=True, exist_ok=True)
         shutil.copy2(csv_path, latest_csv)
         print(f"Updated {latest_csv}")
+    _record_action(
+        plan_records,
+        action="refresh-latest",
+        target=str(latest_csv),
+        detail="csv",
+        reason="dry-run" if dry_run else "completed",
+    )
 
     if not generate_summary:
         return
@@ -235,15 +357,35 @@ def refresh_latest_outputs(
 
     if dry_run:
         print(f"[dry-run] Would refresh {latest_md} / {latest_html} / {latest_json}")
+        _record_action(
+            plan_records,
+            action="refresh-latest",
+            target=str(latest_md),
+            detail="markdown/html/json",
+            reason="dry-run",
+        )
         return
 
     latest_md.write_text(md_text, encoding="utf-8")
     latest_html.write_text(html_text, encoding="utf-8")
     latest_json.write_text(json_text, encoding="utf-8")
     print(f"Updated {latest_md}, {latest_html}, and {latest_json}")
+    _record_action(
+        plan_records,
+        action="refresh-latest",
+        target=str(latest_md),
+        detail="markdown/html/json",
+        reason="dry-run" if dry_run else "completed",
+    )
 
 
-def _delete_archive_artifacts(archive_dir: Path, filename: str, dry_run: bool) -> None:
+def _delete_archive_artifacts(
+    archive_dir: Path,
+    filename: str,
+    dry_run: bool,
+    plan_records: Optional[List[Dict[str, str]]],
+    reason: str = "",
+) -> None:
     targets = [
         archive_dir / filename,
         archive_dir / f"{filename}.summary.md",
@@ -258,12 +400,20 @@ def _delete_archive_artifacts(archive_dir: Path, filename: str, dry_run: bool) -
         else:
             path.unlink()
             print(f"Removed {path}")
+        _record_action(
+            plan_records,
+            action="delete",
+            target=str(path),
+            detail="planned" if dry_run else "removed",
+            reason=reason or ("dry-run" if dry_run else "completed"),
+        )
 
 
 def prune_duplicate_entries(
     manifest: Dict[str, object],
     archive_dir: Path,
     dry_run: bool,
+    plan_records: Optional[List[Dict[str, str]]],
 ) -> int:
     entries: List[Dict[str, object]] = manifest["entries"]  # type: ignore[assignment]
     if not entries:
@@ -280,7 +430,9 @@ def prune_duplicate_entries(
             removed += 1
             archive_name = entry.get("archive_path")
             if archive_name:
-                _delete_archive_artifacts(archive_dir, archive_name, dry_run)
+                _delete_archive_artifacts(
+                    archive_dir, archive_name, dry_run, plan_records, reason="duplicate-prune"
+                )
             continue
         seen_hashes.add(file_hash)
         kept.append(entry)
@@ -303,6 +455,7 @@ def enforce_max_entries(
     archive_dir: Path,
     max_entries: int,
     dry_run: bool,
+    plan_records: Optional[List[Dict[str, str]]],
 ) -> int:
     if max_entries <= 0:
         raise ValueError("--max-entries must be positive.")
@@ -319,7 +472,9 @@ def enforce_max_entries(
     for entry in trimmed:
         archive_name = entry.get("archive_path")
         if archive_name:
-            _delete_archive_artifacts(archive_dir, archive_name, dry_run)
+            _delete_archive_artifacts(
+                archive_dir, archive_name, dry_run, plan_records, reason="max-entries"
+            )
 
     if not dry_run:
         manifest["entries"] = sorted(kept, key=lambda item: item["timestamp"])  # type: ignore[index]
@@ -333,6 +488,7 @@ def enforce_max_age(
     archive_dir: Path,
     max_age_days: int,
     dry_run: bool,
+    plan_records: Optional[List[Dict[str, str]]],
 ) -> int:
     if max_age_days <= 0:
         raise ValueError("--max-age-days must be positive.")
@@ -359,7 +515,9 @@ def enforce_max_age(
             removed += 1
             archive_name = entry.get("archive_path")
             if archive_name:
-                _delete_archive_artifacts(archive_dir, archive_name, dry_run)
+                _delete_archive_artifacts(
+                    archive_dir, archive_name, dry_run, plan_records, reason="max-age"
+                )
         else:
             kept.append(entry)
 
@@ -403,6 +561,9 @@ def main() -> int:
         int(args.max_file_size_mb * 1024 * 1024) if args.max_file_size_mb is not None else None
     )
 
+    plan_records: List[Dict[str, str]] = []
+    plan_csv_path = Path(args.plan_csv).expanduser() if args.plan_csv else None
+
     inputs = [Path(item).expanduser() for item in ensure_list(args.inputs)]
 
     for csv_path in inputs:
@@ -434,6 +595,7 @@ def main() -> int:
                 generate_summary=not args.no_summary,
                 dry_run=args.dry_run,
                 max_file_size_bytes=max_file_size_bytes,
+                plan_records=plan_records,
             )
         except RuntimeError as exc:
             print(f"Error: {exc}", file=sys.stderr)
@@ -446,6 +608,7 @@ def main() -> int:
             latest_prefix=args.latest_prefix,
             generate_summary=not args.no_summary,
             dry_run=args.dry_run,
+            plan_records=plan_records,
         )
 
         print()
@@ -455,6 +618,7 @@ def main() -> int:
             manifest=manifest,
             archive_dir=archive_dir,
             dry_run=args.dry_run,
+            plan_records=plan_records,
         )
 
     if args.max_entries is not None:
@@ -464,6 +628,7 @@ def main() -> int:
                 archive_dir=archive_dir,
                 max_entries=args.max_entries,
                 dry_run=args.dry_run,
+                plan_records=plan_records,
             )
         except ValueError as exc:
             print(f"Error: {exc}", file=sys.stderr)
@@ -476,10 +641,18 @@ def main() -> int:
                 archive_dir=archive_dir,
                 max_age_days=args.max_age_days,
                 dry_run=args.dry_run,
+                plan_records=plan_records,
             )
         except ValueError as exc:
             print(f"Error: {exc}", file=sys.stderr)
             return 2
+
+    heading = "Dry-run plan" if args.dry_run else "Operation summary"
+    _print_plan_summary(plan_records, heading)
+
+    if plan_csv_path:
+        _write_plan_csv(plan_csv_path, plan_records)
+        print(f"Wrote plan CSV to {plan_csv_path}")
 
     if args.dry_run:
         print("Dry-run complete; manifest not updated.")

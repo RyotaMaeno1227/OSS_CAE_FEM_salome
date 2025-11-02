@@ -1,0 +1,10 @@
+warnings:
+  max_solve_time_us: 20.0
+  max_condition: 1.0e9
+  max_pending_steps: 1200
+
+failures:
+  solve_time_us: 10.0
+  max_condition: 1.0e6
+  max_pending_steps: 800
+  unrecovered_drops: 4

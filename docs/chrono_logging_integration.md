@@ -133,3 +133,4 @@ void coupled_attach_warning_logger(ChronoCoupledConstraint2D_C *constraint) {
 - CI や週次ジョブでログを解析するときは、`tools/run_coupled_benchmark.py` を使用すると CSV （`data/coupled_benchmark_metrics.csv`）と警告通知（GitHub Actions の `::warning::`）を同時に取得できます。
 - 長時間テスト（`tests/test_coupled_constraint_endurance`）の CSV には、ドロップ回数や再解ステップまでの時間など詳細メトリクスを付加しており、ログと組み合わせることで異常検知が容易になります。
 - アプリ側でログファイルをローテーションする場合は、`chrono_log_set_handler` で常に最新の `FILE*` を渡すか、ハンドラ内部でローテーション検知を実装してください。
+- 1 つの `chrono_log_set_handler` しか登録できないため、複数のログ先へ届けたい場合はテスト (`tests/test_coupled_logging_integration.c`) のように「デマルチハンドラ」を作成し、その中で複数の処理（ファイル記録＋既存ロガーなど）を呼び出してください。

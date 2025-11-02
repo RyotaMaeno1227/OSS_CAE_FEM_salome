@@ -7,22 +7,53 @@
 #include "../include/chrono_logging.h"
 
 typedef struct TestLogger {
-    int count;
+    int info_count;
+    int warn_count;
+    int error_count;
+    int total_count;
     char last_message[256];
 } TestLogger;
 
-static void test_log_handler(ChronoLogLevel_C level,
-                             ChronoLogCategory_C category,
-                             const char *message,
-                             void *user_data) {
-    (void)level;
+typedef struct MultiLogger {
+    TestLogger *primary;
+    TestLogger *secondary;
+} MultiLogger;
+
+static void record_message(TestLogger *logger,
+                           ChronoLogLevel_C level,
+                           ChronoLogCategory_C category,
+                           const char *message) {
     (void)category;
-    if (!user_data || !message) {
+    if (!logger || !message) {
         return;
     }
-    TestLogger *logger = (TestLogger *)user_data;
-    logger->count += 1;
+    logger->total_count += 1;
+    switch (level) {
+        case CHRONO_LOG_LEVEL_INFO:
+            logger->info_count += 1;
+            break;
+        case CHRONO_LOG_LEVEL_WARNING:
+            logger->warn_count += 1;
+            break;
+        case CHRONO_LOG_LEVEL_ERROR:
+            logger->error_count += 1;
+            break;
+        default:
+            break;
+    }
     snprintf(logger->last_message, sizeof(logger->last_message), "%s", message);
+}
+
+static void multi_log_handler(ChronoLogLevel_C level,
+                              ChronoLogCategory_C category,
+                              const char *message,
+                              void *user_data) {
+    if (!user_data) {
+        return;
+    }
+    MultiLogger *multi = (MultiLogger *)user_data;
+    record_message(multi->primary, level, category, message);
+    record_message(multi->secondary, level, category, message);
 }
 
 static void init_anchor(ChronoBody2D_C *anchor) {
@@ -85,9 +116,21 @@ int main(void) {
     policy.max_drop = 2;
     chrono_coupled_constraint2d_set_condition_warning_policy(&constraint, &policy);
 
-    TestLogger logger = {0};
-    chrono_log_set_handler(test_log_handler, &logger);
-    chrono_log_set_level(CHRONO_LOG_LEVEL_WARNING);
+    TestLogger logger_a;
+    TestLogger logger_b;
+    memset(&logger_a, 0, sizeof(logger_a));
+    memset(&logger_b, 0, sizeof(logger_b));
+
+    MultiLogger multi;
+    multi.primary = &logger_a;
+    multi.secondary = &logger_b;
+
+    chrono_log_set_handler(multi_log_handler, &multi);
+    chrono_log_set_level(CHRONO_LOG_LEVEL_TRACE);
+
+    chrono_log_write(CHRONO_LOG_LEVEL_INFO, CHRONO_LOG_CATEGORY_GENERAL, "info message");
+    chrono_log_write(CHRONO_LOG_LEVEL_WARNING, CHRONO_LOG_CATEGORY_GENERAL, "warning message");
+    chrono_log_write(CHRONO_LOG_LEVEL_ERROR, CHRONO_LOG_CATEGORY_GENERAL, "error message");
 
     ChronoConstraint2DBase_C *constraints[1] = {&constraint.base};
     ChronoConstraint2DBatchConfig_C cfg;
@@ -109,16 +152,34 @@ int main(void) {
         return 1;
     }
 
-    if (logger.count <= 0) {
-        fprintf(stderr, "Expected custom logger to receive at least one warning.\n");
+    if (logger_a.info_count <= 0 || logger_a.warn_count <= 0 || logger_a.error_count <= 0) {
+        fprintf(stderr, "Primary logger did not receive all expected levels (info=%d warn=%d error=%d).\n",
+                logger_a.info_count,
+                logger_a.warn_count,
+                logger_a.error_count);
         return 1;
     }
 
-    if (strstr(logger.last_message, "condition warning") == NULL) {
-        fprintf(stderr, "Unexpected log message: %s\n", logger.last_message);
+    if (logger_b.total_count != logger_a.total_count) {
+        fprintf(stderr,
+                "Secondary logger count mismatch (primary=%d secondary=%d).\n",
+                logger_a.total_count,
+                logger_b.total_count);
         return 1;
     }
 
-    printf("Captured %d warning(s): %s\n", logger.count, logger.last_message);
+    if (strstr(logger_a.last_message, "condition warning") == NULL) {
+        fprintf(stderr, "Unexpected last message: %s\n", logger_a.last_message);
+        return 1;
+    }
+
+    chrono_log_set_handler(NULL, NULL);
+
+    printf("Primary captured %d entries (info=%d warn=%d error=%d).\n",
+           logger_a.total_count,
+           logger_a.info_count,
+           logger_a.warn_count,
+           logger_a.error_count);
+    printf("Secondary captured %d entries.\n", logger_b.total_count);
     return 0;
 }

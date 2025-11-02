@@ -8,8 +8,9 @@ import csv
 import statistics
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+import json
 from pathlib import Path
-from typing import Dict, Iterable, List, Sequence, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 
 @dataclass
@@ -154,11 +155,36 @@ def render_markdown(runs: List[RunRecord], aggregates: List[EqAggregate]) -> str
     return "\n".join(lines) + "\n"
 
 
-def render_html(markdown: str) -> str:
-    # Basic conversion: wrap Markdown string in <pre> while retaining tables.
-    # For tables, replace Markdown delimiters with <table> elements.
+def _build_timeline_datasets(runs: List[RunRecord]) -> Tuple[List[str], Dict[str, List[Optional[float]]], Dict[str, List[Optional[int]]]]:
+    runs_sorted = sorted(runs, key=lambda run: run.timestamp)
+    labels = [datetime.fromtimestamp(run.timestamp, tz=timezone.utc).isoformat() for run in runs_sorted]
+    eq_ids = sorted({row.eq_count for run in runs_sorted for row in run.rows})
+    condition_map: Dict[str, List[Optional[float]]] = {f"eq{eq}": [] for eq in eq_ids}
+    pending_map: Dict[str, List[Optional[int]]] = {f"eq{eq}": [] for eq in eq_ids}
+
+    for run in runs_sorted:
+        row_map = {row.eq_count: row for row in run.rows}
+        for eq in eq_ids:
+            key = f"eq{eq}"
+            if eq in row_map:
+                condition_map[key].append(row_map[eq].max_condition)
+                pending_map[key].append(row_map[eq].max_pending_steps)
+            else:
+                condition_map[key].append(None)
+                pending_map[key].append(None)
+
+    return labels, condition_map, pending_map
+
+
+def render_html(markdown: str, runs: List[RunRecord]) -> str:
     rows = markdown.strip().splitlines()
-    html_lines: List[str] = ["<html>", "<head><meta charset=\"utf-8\"><title>Coupled Benchmark Report</title></head>", "<body>"]
+    html_lines: List[str] = [
+        "<html>",
+        "<head><meta charset=\"utf-8\"><title>Coupled Benchmark Report</title>",
+        '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>',
+        "</head>",
+        "<body>",
+    ]
     table_buffer: List[str] = []
 
     def flush_table() -> None:
@@ -187,6 +213,39 @@ def render_html(markdown: str) -> str:
         elif line:
             html_lines.append(f"<p>{line}</p>")
     flush_table()
+    if runs:
+        labels, condition_map, pending_map = _build_timeline_datasets(runs)
+        html_lines.append('<h2>Condition Number Timeline</h2>')
+        html_lines.append('<canvas id="conditionChart" height="200"></canvas>')
+        html_lines.append('<h2>Pending Steps Timeline</h2>')
+        html_lines.append('<canvas id="pendingChart" height="200"></canvas>')
+        html_lines.append("<script>")
+        html_lines.append("const conditionLabels = " + json.dumps(labels) + ";")
+        html_lines.append("const conditionDatasets = [];")
+        for key, values in condition_map.items():
+            html_lines.append(
+                "conditionDatasets.push({label: '"
+                + key
+                + "', data: "
+                + json.dumps(values)
+                + ", spanGaps: true});"
+            )
+        html_lines.append(
+            "new Chart(document.getElementById('conditionChart'), {type: 'line', data: {labels: conditionLabels, datasets: conditionDatasets}, options: {responsive: true, plugins: {legend: {position: 'bottom'}}, scales: {y: {type: 'logarithmic', min: 1}}}});")
+
+        html_lines.append("const pendingDatasets = [];")
+        for key, values in pending_map.items():
+            html_lines.append(
+                "pendingDatasets.push({label: '"
+                + key
+                + "', data: "
+                + json.dumps(values)
+                + ", spanGaps: true});"
+            )
+        html_lines.append(
+            "new Chart(document.getElementById('pendingChart'), {type: 'line', data: {labels: conditionLabels, datasets: pendingDatasets}, options: {responsive: true, plugins: {legend: {position: 'bottom'}}, scales: {y: {beginAtZero: true}}}});")
+        html_lines.append("</script>")
+
     html_lines.append("</body></html>")
     return "\n".join(html_lines)
 
@@ -224,7 +283,7 @@ def main() -> int:
         print(markdown)
 
     if args.output_html:
-        html = render_html(markdown)
+        html = render_html(markdown, runs)
         html_path = Path(args.output_html).expanduser()
         html_path.parent.mkdir(parents=True, exist_ok=True)
         html_path.write_text(html, encoding="utf-8")

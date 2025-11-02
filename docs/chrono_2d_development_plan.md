@@ -81,7 +81,7 @@
    - GitHub Actions 等でテスト自動実行（ローカルでの再現性重視、後日CI環境を検討）。  
    - `tools/plot_coupled_constraint_endurance.py` に Markdown/HTML/JSON サマリ出力と `--skip-plot`/しきい値判定オプションを追加し、ヘッドレス CI から `--no-show` と組み合わせてレポート生成および自動ゲートが可能。  
    - `tools/archive_coupled_constraint_endurance.py` で耐久 CSV を SHA-256 ハッシュで重複判定しつつ `data/endurance_archive/` に時刻付きで保存、`latest.*`（CSV/Markdown/HTML/JSON）と manifest を更新、`--prune-duplicates`/`--max-entries`/`--max-age-days`/`--max-file-size-mb` で履歴や容量を整理できるようにした。  
-   - 週次（月曜 03:15 UTC）ワークフロー `.github/workflows/coupled_endurance.yml` を追加し、アーカイブ＋可視化＋アーティファクト化＋重複整理まで自動実行（`coupled_endurance-${{github.run_id}}` として `latest.csv/.summary.*` と manifest を収集）。必要に応じて `ARCHIVE_MAX_ENTRIES`/`ARCHIVE_MAX_AGE_DAYS`/`ARCHIVE_MAX_FILE_SIZE_MB` 環境変数で閾値を上書き可能。CI 失敗時の調査手順は `docs/coupled_endurance_ci_troubleshooting.md` を参照。
+   - 週次（月曜 03:15 UTC）ワークフロー `.github/workflows/coupled_endurance.yml` を追加し、アーカイブ＋可視化＋アーティファクト化＋重複整理まで自動実行（`coupled_endurance-${{github.run_id}}` として `latest.csv/.summary.*` と manifest を収集）。必要に応じて `ARCHIVE_MAX_ENTRIES`/`ARCHIVE_MAX_AGE_DAYS`/`ARCHIVE_MAX_FILE_SIZE_MB` 環境変数で閾値を上書き可能。CI 失敗時の調査手順は `docs/coupled_endurance_ci_troubleshooting.md` を参照。失敗時のアーティファクト取得は `tools/fetch_endurance_artifact.py` を利用すると Run ID から自動で再現コマンドが得られる。
 
 ## 4. マイルストンとタスク一覧
 | フェーズ | 想定期間 | 主タスク | 成果物 | 進捗 |
@@ -228,7 +228,7 @@
 - **ソフトネス**: グローバル値（`chrono_coupled_constraint2d_set_softness_*`）は 0.015 前後を基準に、式ごとの上書きで急峻な制御点を局所調整する。角度側は距離側の 1.5-2 倍が目安。
 - **スプリング／ダンパ**: 距離 30-45 N/m、角度 15-25 N·m/rad が標準。急峻な比率変更を扱う場合は式別に 20 N/m / 10 N·m/rad を追加し、`tests/test_coupled_constraint_endurance` と同条件でドリフトを確認。
 - **追加式の管理**: `chrono_coupled_constraint2d_add_equation` で 2 本目以降を登録したら、切り替え時に `chrono_coupled_constraint2d_set_equation` を介し差分更新しないとウォームスタート値が途切れる。大きな比率変更前に `target_offset` をゼロへ戻すと過渡振動が抑えられる。
-- **ログ観測**: `constraint.last_distance_force_eq[i]` / `last_angle_force_eq[i]` を CSV へ落とし込み、`tools/plot_coupled_constraint_endurance.py` でピーク検査や条件数の推移を確認。`tests/test_coupled_constraint_endurance` の CSV にはドロップ数・対象式 index・再解ステップ数を追記済み。週次ジョブでは `tools/run_coupled_benchmark.py` を用いて `data/coupled_benchmark_metrics.csv` と GitHub Actions Warning を自動収集する。
+- **ログ観測**: `constraint.last_distance_force_eq[i]` / `last_angle_force_eq[i]` を CSV へ落とし込み、`tools/plot_coupled_constraint_endurance.py` でピーク検査や条件数の推移を確認。`tests/test_coupled_constraint_endurance` の CSV にはドロップ数・対象式 index・再解ステップ数を追記済み。週次ジョブでは `tools/run_coupled_benchmark.py`（閾値は `config/coupled_benchmark_thresholds.yaml` で共通化）を用いて `data/coupled_benchmark_metrics.csv` と GitHub Actions Warning を自動収集し、`tools/summarize_coupled_benchmark_history.py` で Markdown/HTML レポートと簡易グラフ（条件数・pending 推移）を生成する。
 
 ### 13.3 診断・警告運用
 - **診断フィールド**: `ChronoCoupledConstraint2DDiagnostics_C` は `flags`（`CHRONO_COUPLED_DIAG_*`）、`rank`、`condition_number`、pivot 最小/最大を提供。閾値超過時に `CHRONO_COUPLED_DIAG_CONDITION_WARNING` が立つため、CI ではこのビットの回数を集計する。

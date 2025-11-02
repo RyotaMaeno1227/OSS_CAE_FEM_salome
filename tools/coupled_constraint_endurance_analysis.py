@@ -15,6 +15,7 @@ from typing import Dict, List, Tuple, TypedDict
 
 CHRONO_COUPLED_DIAG_RANK_DEFICIENT = 0x1
 CHRONO_COUPLED_DIAG_CONDITION_WARNING = 0x2
+COUPLED_SUMMARY_VERSION = 1
 
 
 class CoupledConstraintData(TypedDict):
@@ -91,6 +92,7 @@ class CoupledConstraintSummary:
     def to_dict(self) -> Dict[str, object]:
         """Return a JSON-serialisable view."""
         payload = asdict(self)
+        payload["version"] = COUPLED_SUMMARY_VERSION
         # Ensure keys are friendly for JSON (convert int keys to str)
         payload["eq_force_distance_max"] = {
             f"eq{key}": value for key, value in self.eq_force_distance_max.items()
@@ -327,6 +329,7 @@ def summary_as_html(summary: CoupledConstraintSummary) -> str:
 __all__ = [
     "CHRONO_COUPLED_DIAG_RANK_DEFICIENT",
     "CHRONO_COUPLED_DIAG_CONDITION_WARNING",
+    "COUPLED_SUMMARY_VERSION",
     "CoupledConstraintData",
     "CoupledConstraintSummary",
     "compute_summary",

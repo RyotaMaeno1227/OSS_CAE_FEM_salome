@@ -13,7 +13,12 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
+
+try:
+    import yaml  # type: ignore
+except ImportError:
+    yaml = None  # type: ignore
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -199,6 +204,10 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         help="Directory containing the Makefile for building the benchmark.",
     )
     parser.add_argument(
+        "--config",
+        help="Optional YAML/JSON config file specifying warning/failure thresholds.",
+    )
+    parser.add_argument(
         "--skip-build",
         action="store_true",
         help="Skip running 'make bench' before executing the benchmark.",
@@ -206,19 +215,19 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     parser.add_argument(
         "--max-solve-time-us",
         type=float,
-        default=Thresholds.max_solve_time_us,
+        default=None,
         help="Warning threshold for average solve time (microseconds).",
     )
     parser.add_argument(
         "--max-condition",
         type=float,
-        default=Thresholds.max_condition,
+        default=None,
         help="Warning threshold for maximum condition number.",
     )
     parser.add_argument(
         "--max-pending-steps",
         type=int,
-        default=Thresholds.max_pending_steps,
+        default=None,
         help="Warning threshold for pending drop steps duration.",
     )
     parser.add_argument(
@@ -244,12 +253,95 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _load_config(path: Path) -> Dict[str, object]:
+    if not path.exists():
+        raise FileNotFoundError(f"Config file not found: {path}")
+    if path.suffix.lower() in {".json"}:
+        import json
+
+        with path.open("r", encoding="utf-8") as handle:
+            return json.load(handle)
+    if path.suffix.lower() in {".yaml", ".yml"}:
+        if yaml is None:
+            raise RuntimeError("PyYAML is required to load YAML configuration files.")
+        with path.open("r", encoding="utf-8") as handle:
+            return yaml.safe_load(handle)
+    raise RuntimeError(f"Unsupported config extension: {path.suffix}")
+
+
+def _apply_threshold_config(config: Dict[str, object]) -> Tuple[Thresholds, FailThresholds]:
+    warnings_cfg = config.get("warnings") if isinstance(config, dict) else None
+    failures_cfg = config.get("failures") if isinstance(config, dict) else None
+
+    thresholds = Thresholds()
+    fail_thresholds = FailThresholds()
+
+    if isinstance(warnings_cfg, dict):
+        if "max_solve_time_us" in warnings_cfg:
+            thresholds.max_solve_time_us = float(warnings_cfg["max_solve_time_us"])
+        if "max_condition" in warnings_cfg:
+            thresholds.max_condition = float(warnings_cfg["max_condition"])
+        if "max_pending_steps" in warnings_cfg:
+            thresholds.max_pending_steps = int(warnings_cfg["max_pending_steps"])
+
+    if isinstance(failures_cfg, dict):
+        if "solve_time_us" in failures_cfg:
+            fail_thresholds.solve_time_us = float(failures_cfg["solve_time_us"])
+        if "max_condition" in failures_cfg:
+            fail_thresholds.max_condition = float(failures_cfg["max_condition"])
+        if "max_pending_steps" in failures_cfg:
+            fail_thresholds.max_pending_steps = int(failures_cfg["max_pending_steps"])
+        if "unrecovered_drops" in failures_cfg:
+            fail_thresholds.unrecovered_drops = int(failures_cfg["unrecovered_drops"])
+
+    return thresholds, fail_thresholds
+
+
 def main(argv: List[str]) -> int:
     args = parse_args(argv)
 
     bench_path = Path(args.bench_path)
     output_path = Path(args.output)
     build_dir = Path(args.build_dir)
+    config_thresholds: Optional[Tuple[Thresholds, FailThresholds]] = None
+
+    if args.config:
+        config_data = _load_config(Path(args.config).expanduser())
+        config_thresholds = _apply_threshold_config(config_data)
+
+    if config_thresholds is not None:
+        thresholds, fail_thresholds = config_thresholds
+    else:
+        thresholds, fail_thresholds = Thresholds(), FailThresholds()
+
+    if args.max_solve_time_us is not None:
+        thresholds.max_solve_time_us = args.max_solve_time_us
+    if args.max_condition is not None:
+        thresholds.max_condition = args.max_condition
+    if args.max_pending_steps is not None:
+        thresholds.max_pending_steps = args.max_pending_steps
+
+    if args.fail_on_solve_time_us is not None:
+        fail_thresholds.solve_time_us = args.fail_on_solve_time_us
+    if args.fail_on_max_condition is not None:
+        fail_thresholds.max_condition = args.fail_on_max_condition
+    if args.fail_on_max_pending_steps is not None:
+        fail_thresholds.max_pending_steps = args.fail_on_max_pending_steps
+    if args.fail_on_unrecovered is not None:
+        fail_thresholds.unrecovered_drops = args.fail_on_unrecovered
+
+    if fail_thresholds.max_pending_steps is not None and fail_thresholds.max_pending_steps < 0:
+        print("Error: max pending steps hard limit must be non-negative.", file=sys.stderr)
+        return 2
+    if fail_thresholds.unrecovered_drops is not None and fail_thresholds.unrecovered_drops < 0:
+        print("Error: unrecovered drop hard limit must be non-negative.", file=sys.stderr)
+        return 2
+    if fail_thresholds.solve_time_us is not None and fail_thresholds.solve_time_us <= 0:
+        print("Error: solve time hard limit must be positive.", file=sys.stderr)
+        return 2
+    if fail_thresholds.max_condition is not None and fail_thresholds.max_condition <= 0:
+        print("Error: max condition hard limit must be positive.", file=sys.stderr)
+        return 2
 
     if not args.skip_build:
         build_benchmark(build_dir)
@@ -260,19 +352,6 @@ def main(argv: List[str]) -> int:
     if not rows:
         emit_warning("[CoupledBench] CSV is empty - benchmark likely failed to emit results")
         return 1
-
-    if args.fail_on_max_pending_steps is not None and args.fail_on_max_pending_steps < 0:
-        print("Error: --fail-on-max-pending-steps must be non-negative.", file=sys.stderr)
-        return 2
-    if args.fail_on_unrecovered is not None and args.fail_on_unrecovered < 0:
-        print("Error: --fail-on-unrecovered must be non-negative.", file=sys.stderr)
-        return 2
-    if args.fail_on_solve_time_us is not None and args.fail_on_solve_time_us <= 0:
-        print("Error: --fail-on-solve-time-us must be positive.", file=sys.stderr)
-        return 2
-    if args.fail_on_max_condition is not None and args.fail_on_max_condition <= 0:
-        print("Error: --fail-on-max-condition must be positive.", file=sys.stderr)
-        return 2
 
     thresholds = Thresholds(
         max_solve_time_us=args.max_solve_time_us,
