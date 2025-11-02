@@ -224,6 +224,11 @@ def render_markdown(
                     )
                 )
 
+    if metadata and metadata.get("svg_paths"):
+        lines.append("")
+        for path in metadata["svg_paths"]:
+            lines.append(f"![Condition Trends]({path})")
+
     return "\n".join(lines) + "\n"
 
 
@@ -381,8 +386,169 @@ def render_html(
             "new Chart(document.getElementById('pendingChart'), {type: 'line', data: {labels: conditionLabels, datasets: pendingDatasets}, options: {responsive: true, plugins: {legend: {position: 'bottom'}}, scales: {y: {beginAtZero: true}}}});")
         html_lines.append("</script>")
 
+    if metadata and metadata.get("svg_paths"):
+        html_lines.append('<h2>Condition Trends (SVG)</h2>')
+        for path in metadata["svg_paths"]:
+            html_lines.append(f'<img src="{path}" alt="Condition trends" style="max-width:100%;height:auto;"/>')
+
     html_lines.append("</body></html>")
     return "\n".join(html_lines)
+
+
+def generate_svg_charts(runs: List[RunRecord], output_dir: Path) -> List[Path]:
+    if not runs:
+        return []
+    labels, condition_map, _, condition_ma_map = _build_timeline_datasets(runs)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    svg_path = output_dir / "condition_trends.svg"
+    _write_condition_svg(labels, condition_map, condition_ma_map, svg_path)
+    return [svg_path]
+
+
+def _write_condition_svg(
+    labels: List[str],
+    datasets: Dict[str, List[Optional[float]]],
+    moving_datasets: Dict[str, List[Optional[float]]],
+    output_path: Path,
+) -> None:
+    width, height = 800, 260
+    margin_left = 60
+    margin_right = 20
+    margin_top = 40
+    margin_bottom = 40
+    inner_width = width - margin_left - margin_right
+    inner_height = height - margin_top - margin_bottom
+
+    values = [val for series in datasets.values() for val in series if val and val > 0]
+    if not values:
+        values = [1.0]
+    min_val = min(values)
+    max_val = max(values)
+    if min_val <= 0:
+        min_val = min(val for val in values if val > 0)
+    if min_val == max_val:
+        max_val = min_val * 1.1
+    min_log = math.log10(min_val)
+    max_log = math.log10(max_val)
+    denom = max(max_log - min_log, 1e-6)
+
+    def x_coord(index: int) -> float:
+        if len(labels) == 1:
+            return margin_left + inner_width / 2
+        return margin_left + inner_width * index / (len(labels) - 1)
+
+    def y_coord(value: float) -> float:
+        value = max(value, 1e-12)
+        rel = (math.log10(value) - min_log) / denom
+        rel = max(0.0, min(1.0, rel))
+        return margin_top + (1 - rel) * inner_height
+
+    palette = [
+        "#1f77b4",
+        "#ff7f0e",
+        "#2ca02c",
+        "#d62728",
+        "#9467bd",
+        "#8c564b",
+    ]
+
+    svg_lines = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
+        f'<rect x="0" y="0" width="{width}" height="{height}" fill="#ffffff" stroke="#dddddd"/>',
+    ]
+
+    # Axes
+    svg_lines.append(
+        f'<line x1="{margin_left}" y1="{margin_top}" x2="{margin_left}" y2="{margin_top + inner_height}" '
+        'stroke="#333" stroke-width="1"/>'
+    )
+    svg_lines.append(
+        f'<line x1="{margin_left}" y1="{margin_top + inner_height}" x2="{margin_left + inner_width}" '
+        'y2="{margin_top + inner_height}" stroke="#333" stroke-width="1"/>'
+    )
+
+    # Y-axis ticks
+    for tick in range(5):
+        frac = tick / 4 if 4 else 0
+        log_value = min_log + denom * (1 - frac)
+        value = 10 ** log_value
+        y = margin_top + inner_height * frac
+        svg_lines.append(
+            f'<line x1="{margin_left - 5}" y1="{y:.1f}" x2="{margin_left}" y2="{y:.1f}" stroke="#555" stroke-width="1"/>'
+        )
+        svg_lines.append(
+            f'<text x="{margin_left - 10}" y="{y + 4:.1f}" font-size="10" text-anchor="end">{value:.1e}</text>'
+        )
+
+    # X-axis labels (limit to avoid clutter)
+    max_labels = 6
+    step = max(1, len(labels) // max_labels)
+    for idx in range(0, len(labels), step):
+        x = x_coord(idx)
+        svg_lines.append(
+            f'<line x1="{x:.1f}" y1="{margin_top + inner_height}" x2="{x:.1f}" y2="{margin_top + inner_height + 4}" stroke="#555" stroke-width="1"/>'
+        )
+        svg_lines.append(
+            f'<text x="{x:.1f}" y="{margin_top + inner_height + 16:.1f}" font-size="10" text-anchor="middle">{labels[idx][:10]}</text>'
+        )
+
+    # Plot datasets
+    for index, (key, series) in enumerate(datasets.items()):
+        color = palette[index % len(palette)]
+        commands = []
+        pen_up = True
+        for idx, value in enumerate(series):
+            if value is None or value <= 0:
+                pen_up = True
+                continue
+            x = x_coord(idx)
+            y = y_coord(value)
+            if pen_up:
+                commands.append(f"M{x:.1f},{y:.1f}")
+                pen_up = False
+            else:
+                commands.append(f"L{x:.1f},{y:.1f}")
+        if commands:
+            svg_lines.append(
+                f'<path d="{' '.join(commands)}" fill="none" stroke="{color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>'
+            )
+        ma_series = moving_datasets.get(key)
+        if ma_series:
+            commands = []
+            pen_up = True
+            for idx, value in enumerate(ma_series):
+                if value is None or value <= 0:
+                    pen_up = True
+                    continue
+                x = x_coord(idx)
+                y = y_coord(value)
+                if pen_up:
+                    commands.append(f"M{x:.1f},{y:.1f}")
+                    pen_up = False
+                else:
+                    commands.append(f"L{x:.1f},{y:.1f}")
+            if commands:
+                svg_lines.append(
+                    f'<path d="{' '.join(commands)}" fill="none" stroke="{color}" stroke-width="1.5" stroke-dasharray="6 3" opacity="0.6"/>'
+                )
+
+    # Legend
+    legend_x = margin_left + 10
+    legend_y = margin_top - 20
+    svg_lines.append(f'<text x="{legend_x}" y="{legend_y}" font-size="12" font-weight="bold">Condition Number (log10)</text>')
+    legend_y += 16
+    for index, key in enumerate(datasets.keys()):
+        color = palette[index % len(palette)]
+        svg_lines.append(
+            f'<line x1="{legend_x}" y1="{legend_y - 6}" x2="{legend_x + 20}" y2="{legend_y - 6}" stroke="{color}" stroke-width="2"/>'
+        )
+        svg_lines.append(
+            f'<text x="{legend_x + 26}" y="{legend_y}" font-size="11">{key}</text>'
+        )
+        legend_y += 14
+
+    svg_lines.append("</svg>")
+    output_path.write_text("\n".join(svg_lines), encoding="utf-8")
 
 
 def parse_args() -> argparse.Namespace:
@@ -391,6 +557,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-md", help="Write Markdown report to the specified path.")
     parser.add_argument("--output-html", help="Write HTML report to the specified path.")
     parser.add_argument("--latest", type=int, help="Limit processing to the most recent N runs.")
+    parser.add_argument("--output-svg-dir", help="Destination directory for generated SVG charts.")
     return parser.parse_args()
 
 
@@ -406,8 +573,16 @@ def main() -> int:
     if args.latest is not None and args.latest > 0:
         runs = runs[: args.latest]
 
+    svg_paths: List[Path] = []
+    if args.output_svg_dir:
+        svg_dir = Path(args.output_svg_dir).expanduser()
+        svg_paths = generate_svg_charts(runs, svg_dir)
+
     aggregates = aggregate_by_eq(runs)
-    markdown = render_markdown(runs, aggregates)
+    metadata: Dict[str, object] = {}
+    if svg_paths:
+        metadata["svg_paths"] = [str(path) for path in svg_paths]
+    markdown = render_markdown(runs, aggregates, metadata if metadata else None)
 
     if args.output_md:
         md_path = Path(args.output_md).expanduser()
@@ -418,7 +593,7 @@ def main() -> int:
         print(markdown)
 
     if args.output_html:
-        html = render_html(markdown, runs)
+        html = render_html(markdown, runs, metadata if metadata else None)
         html_path = Path(args.output_html).expanduser()
         html_path.parent.mkdir(parents=True, exist_ok=True)
         html_path.write_text(html, encoding="utf-8")

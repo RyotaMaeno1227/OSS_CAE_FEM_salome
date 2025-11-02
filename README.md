@@ -15,11 +15,14 @@
 ## Coupled Benchmark Site
 
 - Weekly GitHub Pages deployments build `site/` via `tools/build_coupled_benchmark_site.py`. The bundle embeds generation timestamp, commit hash, and a link to `config/coupled_benchmark_thresholds.yaml`.
+- An Atom feed (`feed.xml`) is emitted alongside `index.html`; GitHub Pages serves it automatically for consumers that want notifications.
+- Structured SVG charts (`svg/condition_trends.svg`) are generated to keep diffs light compared with raster screenshots.
 - Local reproduction:
 
   ```bash
   python3 tools/run_coupled_benchmark.py \
     --config config/coupled_benchmark_thresholds.yaml \
+    --csv-validation-jsonl logs/csv_issues.jsonl \
     --csv-validation fail \
     --output data/coupled_benchmark_metrics.csv
 

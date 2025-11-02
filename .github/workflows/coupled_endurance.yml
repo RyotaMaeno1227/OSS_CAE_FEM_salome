@@ -60,6 +60,21 @@ jobs:
             --fail-on-max-condition 5.0e8 \
             --fail-on-rank-ratio 0.05
 
+      - name: Prepare notification payloads
+        env:
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python tools/compose_endurance_notification.py \
+            --summary-json data/endurance_archive/latest.summary.json \
+            --plan-markdown data/endurance_archive/plan.md \
+            --run-id ${{ github.run_id }} \
+            --run-url "$RUN_URL" \
+            --status "$JOB_STATUS" \
+            --artifact-name coupled-endurance-${{ github.run_id }} \
+            --output-slack data/endurance_archive/notification_slack.json \
+            --output-email data/endurance_archive/notification_email.txt
+
       - name: Upload endurance artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -73,6 +88,8 @@ jobs:
             data/endurance_archive/latest.summary.json
             data/endurance_archive/plan.csv
             data/endurance_archive/plan.md
+            data/endurance_archive/notification_slack.json
+            data/endurance_archive/notification_email.txt
             data/endurance_archive/manifest.json
             data/endurance_archive/*.csv
             data/endurance_archive/*.csv.summary.md
@@ -92,69 +109,14 @@ jobs:
             echo "WEBHOOK_URL not set; skipping notification."
             exit 0
           fi
-          payload=$(python - <<'PY'
-import json
-import os
-from pathlib import Path
-
-summary_path = Path("data/endurance_archive/latest.summary.json")
-plan_md_path = Path("data/endurance_archive/plan.md")
-summary = {}
-if summary_path.exists():
-    try:
-        summary = json.loads(summary_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        summary = {"error": "Failed to parse latest.summary.json"}
-
-plan_markdown = plan_md_path.read_text(encoding="utf-8") if plan_md_path.exists() else None
-
-status = os.environ.get("JOB_STATUS", "unknown")
-run_url = os.environ.get("GITHUB_RUN_URL", "")
-run_id = os.environ.get("GITHUB_RUN_ID", "")
-
-fields = []
-if summary:
-    fields = [
-        {"title": "Samples", "value": str(summary.get("samples", "n/a")), "short": True},
-        {"title": "Max condition", "value": f"{summary.get('max_condition', 0):.3e}" if isinstance(summary.get("max_condition"), (int, float)) else str(summary.get('max_condition')), "short": True},
-        {"title": "Warning ratio", "value": f"{summary.get('warn_ratio', 0):.3%}" if isinstance(summary.get("warn_ratio"), (int, float)) else str(summary.get('warn_ratio')), "short": True},
-        {"title": "Rank ratio", "value": f"{summary.get('rank_ratio', 0):.3%}" if isinstance(summary.get("rank_ratio"), (int, float)) else str(summary.get('rank_ratio')), "short": True},
-    ]
-
-payload = {
-    "text": f"[Coupled Endurance] {status.upper()} - Run {run_id}",
-    "attachments": [
-        {
-            "title": "Run details",
-            "title_link": run_url,
-            "fields": fields,
-            "footer": "Artifacts include latest.summary.json and latest.csv",
-        }
-    ],
-}
-
-if summary:
-    payload["attachments"].append(
-        {
-            "title": "latest.summary.json (excerpt)",
-            "text": json.dumps(summary, indent=2)[:4000],
-            "mrkdwn_in": ["text"],
-        }
-    )
-
-if plan_markdown:
-    payload["attachments"].append(
-        {
-            "title": "Plan overview",
-            "text": plan_markdown[:4000],
-            "mrkdwn_in": ["text"],
-        }
-    )
-
-print(json.dumps(payload))
-PY
-)
+          payload=$(cat data/endurance_archive/notification_slack.json)
           curl -X POST -H 'Content-Type: application/json' --data "$payload" "$WEBHOOK_URL"
+
+      - name: Print email notification draft
+        if: always()
+        run: |
+          echo "--- Coupled Endurance email notification ---"
+          cat data/endurance_archive/notification_email.txt
 
       - name: Generate repro command (fallback)
         if: failure()
@@ -163,12 +125,20 @@ PY
           REPO: ${{ github.repository }}
         run: |
           mkdir -p data/endurance_archive/repro
+          COMMENT_OPTS=""
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            COMMENT_OPTS="--post-comment --comment-target pr/${{ github.event.pull_request.number }}"
+          fi
+          if [ "${{ github.event_name }}" = "issues" ]; then
+            COMMENT_OPTS="--post-comment --comment-target issue/${{ github.event.issue.number }}"
+          fi
           python tools/fetch_endurance_artifact.py \
             ${{ github.run_id }} \
             --output-dir data/endurance_archive/repro \
             --summary-out data/endurance_archive/repro/latest.summary.json \
             --comment-file data/endurance_archive/repro/comment.md \
             --repo "${REPO}" \
-            --max-retries 3
+            --max-retries 3 \
+            $COMMENT_OPTS
           echo "--- Coupled Endurance repro comment ---"
           cat data/endurance_archive/repro/comment.md

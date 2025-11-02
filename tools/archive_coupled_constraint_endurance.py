@@ -13,7 +13,7 @@ import sys
 import shutil
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from coupled_constraint_endurance_analysis import (
     CoupledConstraintSummary,
@@ -94,6 +94,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--plan-markdown",
         help="Optional path to write planned operations (Markdown format).",
+    )
+    parser.add_argument(
+        "--exclude-config",
+        help="Path to YAML/JSON file listing archive filenames to preserve.",
     )
     return parser.parse_args()
 
@@ -235,6 +239,43 @@ def _write_plan_markdown(path: Path, plan_records: List[Dict[str, str]]) -> None
         )
 
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _load_exclude_config(path: Optional[str]) -> Set[str]:
+    if not path:
+        return set()
+    cfg_path = Path(path).expanduser()
+    if not cfg_path.exists():
+        raise FileNotFoundError(f"Exclude config not found: {cfg_path}")
+
+    content = cfg_path.read_text(encoding="utf-8")
+    data: Optional[object] = None
+    if cfg_path.suffix.lower() in {".yaml", ".yml"}:
+        try:
+            import yaml  # type: ignore
+        except ImportError as exc:  # pragma: no cover - optional dependency
+            raise RuntimeError("PyYAML is required to load YAML exclude configs.") from exc
+        data = yaml.safe_load(content)
+    else:
+        data = json.loads(content)
+
+    if data is None:
+        return set()
+
+    if isinstance(data, dict):
+        if "files" in data and isinstance(data["files"], list):
+            items = data["files"]
+        elif "exclude" in data and isinstance(data["exclude"], list):
+            items = data["exclude"]
+        else:
+            raise ValueError("Exclude config must contain 'files' or 'exclude' list when using object form.")
+    elif isinstance(data, list):
+        items = data
+    else:
+        raise ValueError("Exclude config must be a list or object containing a list.")
+
+    result = {str(item) for item in items if isinstance(item, (str, int))}
+    return set(result)
 
 
 def archive_single_run(
@@ -413,6 +454,7 @@ def _delete_archive_artifacts(
     filename: str,
     dry_run: bool,
     plan_records: Optional[List[Dict[str, str]]],
+    exclude_names: Set[str],
     reason: str = "",
 ) -> None:
     targets = [
@@ -423,6 +465,15 @@ def _delete_archive_artifacts(
     ]
     for path in targets:
         if not path.exists():
+            continue
+        if path.name == filename and filename in exclude_names:
+            _record_action(
+                plan_records,
+                action="skip-excluded",
+                target=str(path),
+                detail="preserved",
+                reason=reason or "excluded",
+            )
             continue
         if dry_run:
             print(f"[dry-run] Would remove {path}")
@@ -443,6 +494,7 @@ def prune_duplicate_entries(
     archive_dir: Path,
     dry_run: bool,
     plan_records: Optional[List[Dict[str, str]]],
+    exclude_names: Set[str],
 ) -> int:
     entries: List[Dict[str, object]] = manifest["entries"]  # type: ignore[assignment]
     if not entries:
@@ -456,11 +508,26 @@ def prune_duplicate_entries(
     for entry in ordered:
         file_hash = entry.get("hash_sha256")
         if file_hash in seen_hashes:
-            removed += 1
             archive_name = entry.get("archive_path")
             if archive_name:
+                if archive_name in exclude_names:
+                    _record_action(
+                        plan_records,
+                        action="skip-excluded",
+                        target=str(archive_dir / archive_name),
+                        detail="preserved",
+                        reason="duplicate-prune",
+                    )
+                    kept.append(entry)
+                    continue
+                removed += 1
                 _delete_archive_artifacts(
-                    archive_dir, archive_name, dry_run, plan_records, reason="duplicate-prune"
+                    archive_dir,
+                    archive_name,
+                    dry_run,
+                    plan_records,
+                    exclude_names,
+                    reason="duplicate-prune",
                 )
             continue
         seen_hashes.add(file_hash)
@@ -485,6 +552,7 @@ def enforce_max_entries(
     max_entries: int,
     dry_run: bool,
     plan_records: Optional[List[Dict[str, str]]],
+    exclude_names: Set[str],
 ) -> int:
     if max_entries <= 0:
         raise ValueError("--max-entries must be positive.")
@@ -498,18 +566,38 @@ def enforce_max_entries(
     kept = ordered[:max_entries]
     trimmed = ordered[max_entries:]
 
+    final_kept = list(kept)
+    removed_count = 0
     for entry in trimmed:
         archive_name = entry.get("archive_path")
         if archive_name:
+            if archive_name in exclude_names:
+                _record_action(
+                    plan_records,
+                    action="skip-excluded",
+                    target=str(archive_dir / archive_name),
+                    detail="preserved",
+                    reason="max-entries",
+                )
+                final_kept.append(entry)
+                continue
             _delete_archive_artifacts(
-                archive_dir, archive_name, dry_run, plan_records, reason="max-entries"
+                archive_dir,
+                archive_name,
+                dry_run,
+                plan_records,
+                exclude_names,
+                reason="max-entries",
             )
+            removed_count += 1
 
     if not dry_run:
-        manifest["entries"] = sorted(kept, key=lambda item: item["timestamp"])  # type: ignore[index]
+        manifest["entries"] = sorted(final_kept, key=lambda item: item["timestamp"])  # type: ignore[index]
 
-    print(f"Trimmed {len(trimmed)} archive entr{'y' if len(trimmed) == 1 else 'ies'} to enforce max={max_entries}.")
-    return len(trimmed)
+    print(
+        f"Trimmed {removed_count} archive entr{'y' if removed_count == 1 else 'ies'} to enforce max={max_entries}."
+    )
+    return removed_count
 
 
 def enforce_max_age(
@@ -518,6 +606,7 @@ def enforce_max_age(
     max_age_days: int,
     dry_run: bool,
     plan_records: Optional[List[Dict[str, str]]],
+    exclude_names: Set[str],
 ) -> int:
     if max_age_days <= 0:
         raise ValueError("--max-age-days must be positive.")
@@ -541,14 +630,29 @@ def enforce_max_age(
             continue
 
         if entry_time < cutoff:
-            removed += 1
             archive_name = entry.get("archive_path")
+            if archive_name and archive_name in exclude_names:
+                _record_action(
+                    plan_records,
+                    action="skip-excluded",
+                    target=str(archive_dir / archive_name),
+                    detail="preserved",
+                    reason="max-age",
+                )
+                kept.append(entry)
+                continue
+            removed += 1
             if archive_name:
                 _delete_archive_artifacts(
-                    archive_dir, archive_name, dry_run, plan_records, reason="max-age"
+                    archive_dir,
+                    archive_name,
+                    dry_run,
+                    plan_records,
+                    exclude_names,
+                    reason="max-age",
                 )
-        else:
-            kept.append(entry)
+            continue
+        kept.append(entry)
 
     if not dry_run:
         manifest["entries"] = sorted(kept, key=lambda item: item["timestamp"])  # type: ignore[index]
@@ -593,6 +697,9 @@ def main() -> int:
     plan_records: List[Dict[str, str]] = []
     plan_csv_path = Path(args.plan_csv).expanduser() if args.plan_csv else None
     plan_markdown_path = Path(args.plan_markdown).expanduser() if args.plan_markdown else None
+    exclude_names = _load_exclude_config(args.exclude_config)
+    if exclude_names:
+        print(f"Exclusion list detected ({len(exclude_names)} entries): {sorted(exclude_names)}")
 
     inputs = [Path(item).expanduser() for item in ensure_list(args.inputs)]
 
@@ -649,6 +756,7 @@ def main() -> int:
             archive_dir=archive_dir,
             dry_run=args.dry_run,
             plan_records=plan_records,
+            exclude_names=exclude_names,
         )
 
     if args.max_entries is not None:
@@ -659,6 +767,7 @@ def main() -> int:
                 max_entries=args.max_entries,
                 dry_run=args.dry_run,
                 plan_records=plan_records,
+                exclude_names=exclude_names,
             )
         except ValueError as exc:
             print(f"Error: {exc}", file=sys.stderr)
@@ -672,6 +781,7 @@ def main() -> int:
                 max_age_days=args.max_age_days,
                 dry_run=args.dry_run,
                 plan_records=plan_records,
+                exclude_names=exclude_names,
             )
         except ValueError as exc:
             print(f"Error: {exc}", file=sys.stderr)

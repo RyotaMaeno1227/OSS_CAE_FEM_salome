@@ -84,6 +84,24 @@ h1. メンテナンス
 スクリーンショットは UI 変更時に差し替え、キャプション（例:「Actions 実行ログ例」）を明記してください。Wiki 上では画像を中央揃えにし、縮小されないよう幅を指定します。
 テンプレートを具現化した見本は `docs/wiki_samples/coupled_endurance_article_sample.md` に保存しているため、差し替え時は同ファイルを複製して日付・担当者・リンクを更新してください。
 
+### 7.1 スクリーンショット添付要件
+
+| ファイル名（提案） | 撮影タイミング | 取得手順 | 更新基準 |
+|--------------------|---------------|----------|----------|
+| `actions_overview.png` | CI 失敗検知時または月次レビュー | GitHub Actions の対象ワークフロー → `archive-and-summarize` ステップを展開し、ブラウザの開発者ツールで 1280px 幅に固定 → PNG で保存 | 週次（失敗発生時）、最低でも月次で更新 |
+| `summary_kpi.png` | 新しい `latest.summary.html` が生成されたとき | アーティファクトから HTML を開き、表領域のみをスクリーンキャプチャ | `max_condition` など KPI が変化したタイミング |
+| `endurance_media.gif` / `endurance_media.mp4` | 耐久テストを再実行したとき | `docs/chrono_coupled_constraint_tutorial.md` セクション 9 の手順を使用 | 四半期ごと、またはメディアが 6 か月以上古い場合 |
+| `local_repro_terminal.png` | ローカル検証を共有したい場合 | `plot_coupled_constraint_endurance.py` 実行ターミナルを 80x25 以上でキャプチャ | 任意（重大インシデント時に添付） |
+
+保存先は `docs/media/coupled/` 配下とし、Wiki へ添付後も Git で履歴を管理します。PNG は 1 MB 以下、GIF/MP4 は 10 MB 以下を目安にしてください。
+
+### 7.2 運用チェックリスト
+- [ ] 最新の CI 実行結果を確認し、失敗ステップがないかチェックした。
+- [ ] 新しい `latest.summary.*` を取得し、KPI 値を記事に反映した。
+- [ ] スクリーンショット / メディアを撮り直し、Wiki および `docs/media/coupled/` に更新した。
+- [ ] 変更内容（パラメータ調整やしきい値変更）を Slack `#chrono-constraints` に報告した。
+- [ ] 次回担当者へ引き継ぎメモ（更新日、未解決課題）を残した。
+
 ## 7. 公開プロセス（社内 Wiki 同期）
 1. PR マージ後 24 時間以内にテンプレートを使用して記事を更新。
 2. スクリーンショット・GIF を添付し、プレビュー表示を確認。

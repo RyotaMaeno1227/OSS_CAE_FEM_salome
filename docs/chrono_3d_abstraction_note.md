@@ -58,6 +58,33 @@
 | 診断 | `ChronoCoupledConstraint2DDiagnostics_C` | `ChronoConstraintDiagnostics_C`（共通） | pivot 情報配列サイズをパラメータ化。 | 3D 用に pivot ベクトル長を可変化する必要あり。 | 8 | 3 |
 | ログ基盤 | `chrono_log_warn`（予定） | 同一 API | ログレベル enum を共通ヘッダへ移行。 | API 追加コスト小。CI で WARN 粒度を共通化する。 | 6 | 2 |
 
+### 8.1 Visual Progress Templates
+
+To surface progress in status reports, embed either Markdown-style progress bars or a lightweight Gantt table.
+
+**Progress bar example (GitHub-flavored Markdown)**
+```markdown
+| Component | Progress |
+|-----------|----------|
+| Common Constraint Base | ![70%](https://progress-bar.dev/70/?title=70%25) |
+| Batch Solver | ![35%](https://progress-bar.dev/35/?title=35%25) |
+| Coupled 3D Extension | ![10%](https://progress-bar.dev/10/?title=10%25) |
+```
+- The `progress-bar.dev` badge renders in GitHub issues/PRs. For offline docs, replace with inline SVG hosted under `docs/media/badges/`.
+
+**ASCII Gantt snippet (monthly granularity)**
+```markdown
+| Component              | 2025-10 | 2025-11 | 2025-12 | 2026-01 |
+|------------------------|---------|---------|---------|---------|
+| Common Constraint Base | ████▌   | ██████  |         |         |
+| Batch Solver           | ██      | ███     | ████    | █████   |
+| Coupled 3D Extension   |         |         | ██      | ███     |
+```
+- Use full block `█` for planned work, `▌` for partially completed weeks, and leave cells blank for idle months.
+- When embedding in Confluence, apply a monospaced font to preserve alignment (`{code}` macro).
+
+Both templates should reference the same KPI values (工数 / リスク). Update them during your monthly review alongside the table above.
+
 ## 9. 抽象化レイヤ設計案
 
 ```

@@ -47,3 +47,28 @@ The workflow `.github/workflows/coupled_benchmark.yml` now:
 4. Publishes the contents of `site/` to GitHub Pages using `actions/deploy-pages`.
 
 The published URL is shown in the workflow summary under the `deploy` job.
+
+## 5. Threshold-change notifications
+
+- Use `tools/notify_threshold_change.py` to emit a Slack/Webhook message whenever
+  `config/coupled_benchmark_thresholds.yaml` changes.
+- Example (dry run):
+
+  ```bash
+  python3 tools/notify_threshold_change.py --dry-run
+  ```
+
+- To push a real notification, set `COUPLED_THRESHOLD_WEBHOOK` (or pass
+  `--webhook`) in your CI workflow and invoke the script after detecting a
+  config diff. The script summarises warning/failure thresholds and includes the
+  current commit SHA for traceability.
+- 参考ワークフローイメージ:
+
+  ```yaml
+  - name: Notify threshold update
+    if: contains(github.event.pull_request.changed_files, 'config/coupled_benchmark_thresholds.yaml')
+    run: |
+      python3 tools/notify_threshold_change.py --config config/coupled_benchmark_thresholds.yaml
+    env:
+      COUPLED_THRESHOLD_WEBHOOK: ${{ secrets.COUPLED_THRESHOLD_WEBHOOK }}
+  ```

@@ -41,6 +41,7 @@ chrono-C-all/examples/logging_integration_demo
 # Benchmark outputs
 data/coupled_benchmark_metrics.csv
 site/
+test.log
 
 # Keep test source files tracked
 !chrono-C-all/tests/*.c

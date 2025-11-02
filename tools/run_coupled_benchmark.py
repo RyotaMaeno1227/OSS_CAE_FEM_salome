@@ -8,10 +8,12 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import math
 import os
 import subprocess
 import sys
+from datetime import datetime, timezone
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
@@ -117,31 +119,94 @@ def load_csv(path: Path) -> Tuple[List[BenchRow], List[str]]:
     return rows, header
 
 
-def validate_csv_content(header: List[str], rows: List[BenchRow]) -> List[str]:
-    issues: List[str] = []
+def validate_csv_content(header: List[str], rows: List[BenchRow]) -> List[Dict[str, object]]:
+    issues: List[Dict[str, object]] = []
     missing = [column for column in EXPECTED_COLUMNS if column not in header]
     if missing:
-        issues.append(f"CSV missing expected columns: {', '.join(sorted(missing))}")
+        issues.append(
+            {
+                "type": "missing_columns",
+                "message": f"CSV missing expected columns: {', '.join(sorted(missing))}",
+                "columns": missing,
+            }
+        )
     for index, row in enumerate(rows, start=1):
         row_ctx = f"row {index}"
         if row.eq_count <= 0:
-            issues.append(f"{row_ctx}: eq_count should be positive (got {row.eq_count})")
+            issues.append(
+                {
+                    "type": "invalid_eq_count",
+                    "row": index,
+                    "value": row.eq_count,
+                    "message": f"{row_ctx}: eq_count should be positive (got {row.eq_count})",
+                }
+            )
         if not math.isfinite(row.epsilon):
-            issues.append(f"{row_ctx}: epsilon is not finite (got {row.epsilon})")
+            issues.append(
+                {
+                    "type": "invalid_epsilon",
+                    "row": index,
+                    "value": row.epsilon,
+                    "message": f"{row_ctx}: epsilon is not finite (got {row.epsilon})",
+                }
+            )
         if row.max_condition < 0.0 or not math.isfinite(row.max_condition):
-            issues.append(f"{row_ctx}: max_condition invalid (got {row.max_condition})")
+            issues.append(
+                {
+                    "type": "invalid_max_condition",
+                    "row": index,
+                    "value": row.max_condition,
+                    "message": f"{row_ctx}: max_condition invalid (got {row.max_condition})",
+                }
+            )
         if row.avg_solve_time_us < 0.0 or not math.isfinite(row.avg_solve_time_us):
-            issues.append(f"{row_ctx}: avg_solve_time_us invalid (got {row.avg_solve_time_us})")
+            issues.append(
+                {
+                    "type": "invalid_avg_solve_time",
+                    "row": index,
+                    "value": row.avg_solve_time_us,
+                    "message": f"{row_ctx}: avg_solve_time_us invalid (got {row.avg_solve_time_us})",
+                }
+            )
         if row.max_pending_steps < 0:
-            issues.append(f"{row_ctx}: max_pending_steps negative (got {row.max_pending_steps})")
+            issues.append(
+                {
+                    "type": "invalid_max_pending_steps",
+                    "row": index,
+                    "value": row.max_pending_steps,
+                    "message": f"{row_ctx}: max_pending_steps negative (got {row.max_pending_steps})",
+                }
+            )
         for label, value in (
             ("drop_events", row.drop_events),
             ("recovery_events", row.recovery_events),
             ("unrecovered_drops", row.unrecovered_drops),
         ):
             if value < 0:
-                issues.append(f"{row_ctx}: {label} negative (got {value})")
+                issues.append(
+                    {
+                        "type": "invalid_" + label,
+                        "row": index,
+                        "value": value,
+                        "message": f"{row_ctx}: {label} negative (got {value})",
+                    }
+                )
     return issues
+
+
+def write_jsonl(path: Path, level: str, issues: List[Dict[str, object]]) -> None:
+    if not issues:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now(timezone.utc).isoformat()
+    with path.open("a", encoding="utf-8") as handle:
+        for issue in issues:
+            payload = {
+                "timestamp": timestamp,
+                "level": level,
+                **issue,
+            }
+            handle.write(json.dumps(payload) + "\n")
 
 
 def emit_warning(message: str) -> None:
@@ -263,6 +328,10 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         help="CSV validation mode (warn by default).",
     )
     parser.add_argument(
+        "--csv-validation-jsonl",
+        help="Optional path to append CSV validation issues in JSON Lines format.",
+    )
+    parser.add_argument(
         "--skip-build",
         action="store_true",
         help="Skip running 'make bench' before executing the benchmark.",
@@ -312,8 +381,6 @@ def _load_config(path: Path) -> Dict[str, object]:
     if not path.exists():
         raise FileNotFoundError(f"Config file not found: {path}")
     if path.suffix.lower() in {".json"}:
-        import json
-
         with path.open("r", encoding="utf-8") as handle:
             return json.load(handle)
     if path.suffix.lower() in {".yaml", ".yml"}:
@@ -408,13 +475,33 @@ def main(argv: List[str]) -> int:
 
     rows, header = load_csv(output_path)
     csv_issues = validate_csv_content(header, rows)
-    if args.csv_validation == "warn":
-        for issue in csv_issues:
-            emit_warning(f"[CoupledBench CSV] {issue}")
-    elif args.csv_validation == "fail" and csv_issues:
-        for issue in csv_issues:
-            print(f"CSV validation error: {issue}", file=sys.stderr)
-        return 6
+    jsonl_path = Path(args.csv_validation_jsonl).expanduser() if args.csv_validation_jsonl else None
+    if csv_issues:
+        level = {
+            "off": "info",
+            "warn": "warning",
+            "fail": "error",
+        }[args.csv_validation if args.csv_validation in {"off", "warn", "fail"} else "off"]
+        if jsonl_path:
+            write_jsonl(jsonl_path, level, csv_issues)
+        if args.csv_validation == "warn":
+            for issue in csv_issues:
+                emit_warning(f"[CoupledBench CSV] {issue['message']}")
+        elif args.csv_validation == "fail":
+            for issue in csv_issues:
+                print(f"CSV validation error: {issue['message']}", file=sys.stderr)
+            return 6
+    elif jsonl_path and args.csv_validation != "off":
+        write_jsonl(
+            jsonl_path,
+            "ok",
+            [
+                {
+                    "type": "csv_validation",
+                    "message": "CSV validation passed",
+                }
+            ],
+        )
 
     if not rows:
         emit_warning("[CoupledBench] CSV is empty - benchmark likely failed to emit results")

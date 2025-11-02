@@ -40,7 +40,7 @@ Coupled 拘束の耐久スイートは `.github/workflows/coupled_endurance.yml`
    - しきい値は CI のログに出ている値をそのまま使うか、`.github/workflows/coupled_endurance.yml` 内の `ARCHIVE_MAX_*` と合わせて確認してください。
    - `--summary-json` で生成されたファイルは `_validate_summary_schema` による検証を通過済みです。フォーマット違反がある場合はコマンドが終了コード 2 で即終了します。
 3. 可視化が必要な場合は `--skip-plot` を外し、`--output figure.png` を追加するとグラフを生成できます（ローカルでのみ推奨）。
-4. GitHub CLI (`gh`) を利用できる環境であれば、`tools/fetch_endurance_artifact.py` を実行することで失敗したワークフローのアーティファクト取得と再現コマンド生成を自動化できます。Run ID が分からない場合は `--interactive` を付与すると `gh run list` の結果から選択できます。`--comment-file` で Markdown を保存し、`--post-comment --comment-target pr/<番号>` のように指定すれば `gh pr comment` で即時共有も可能です。
+4. GitHub CLI (`gh`) を利用できる環境であれば、`tools/fetch_endurance_artifact.py` を実行することで失敗したワークフローのアーティファクト取得と再現コマンド生成を自動化できます。Run ID が分からない場合は `--interactive` を付与すると `gh run list` の結果から選択できます。`--comment-file` で Markdown を保存し、`--post-comment --comment-target pr/<番号>` のように指定すれば `gh pr comment` で即時共有も可能です（コメントには再現コマンド、plan.csv/plan.md のローカルパス、summary version が自動で含まれます）。
 
    ```bash
    python tools/fetch_endurance_artifact.py 1234567890 \
@@ -86,12 +86,17 @@ Coupled 拘束の耐久スイートは `.github/workflows/coupled_endurance.yml`
   `python tools/plot_coupled_constraint_endurance.py data/coupled_constraint_endurance.csv --skip-plot --summary-json /tmp/summary.json --no-show`
 - 重複判定や世代管理を確認:  
   `python tools/archive_coupled_constraint_endurance.py --dry-run --prune-duplicates --max-entries 10 --max-age-days 120 --plan-csv /tmp/endurance_plan.csv`
+- Webhook 通知のローカル確認:  
+  `python tools/mock_webhook_server.py --port 9000`
 
 CI での失敗を再現したら、原因調査の結果やパラメータ変更をこのドキュメント、または `docs/chrono_2d_development_plan.md` の CI セクションに追記して共有してください。
 
 ---
 
 ## 7. サマリ JSON の互換性ポリシー
+- JSON には `version` キーが含まれており、現在のスキーマは `1` です。フィールド追加など互換な拡張を行う場合は既存ツールが理解できる初期値（例: `0.0` や空文字）を付与し、破壊的変更が必要な場合のみ `version` をインクリメントしてください。
+- ツール側の `_validate_summary_schema` は、自身が対応していない新しい `version` を検出すると終了コード 2 で停止します。CI に反映する際は、バージョンを上げたスクリプトとワークフロー設定を一度に更新すること。
+- バージョン更新時はこのセクションに変更点と後方互換ガイドを追記し、`COUPLED_SUMMARY_VERSION` の値と合わせて管理します。
 
 ---
 
@@ -116,6 +121,16 @@ Plan overview
 2. `tools/fetch_endurance_artifact.py ${{run_id}} --output-dir tmp/endurance --comment-file tmp/comment.md` を実行し、再現コマンドとコメントテンプレートを取得。
 3. 生成されたコメントを Pull Request や Issue に投稿（`--post-comment --comment-target pr/<番号>`）し、再現結果・暫定対応を共有。
 4. 必要に応じて `plan.csv`/`plan.md` を用いて保持ポリシーを調整し、再実行または閾値変更を提案する。
-- JSON には `version` キーが含まれており、現在のスキーマは `1` です。フィールド追加など互換な拡張を行う場合は既存ツールが理解できる初期値（例: `0.0` や空文字）を付与し、破壊的変更が必要な場合のみ `version` をインクリメントしてください。
-- ツール側の `_validate_summary_schema` は、自身が対応していない新しい `version` を検出すると終了コード 2 で停止します。CI に反映する際は、バージョンを上げたスクリプトとワークフロー設定を一度に更新すること。
-- バージョン更新時はこのセクションに変更点と後方互換ガイドを追記し、`COUPLED_SUMMARY_VERSION` の値と合わせて管理します。
+
+ローカルで通知内容を検証したい場合は `tools/mock_webhook_server.py` を起動し、Webhook 先を `http://127.0.0.1:9000` などに向けると受信 payload が `mock_webhook_logs/` に保存されます。
+
+---
+
+## 9. 最頻発失敗ケースまとめ
+
+| 失敗パターン | 想定原因 | 対応手順 | 再発防止策 |
+|--------------|----------|----------|------------|
+| `--fail-on-max-condition` 超過 | Coupled 式が不安定（ソフトネス不足）やターゲット急変 | `tools/fetch_endurance_artifact.py` で再現 → `plan.md` を見て該当 CSV を確認 → ソフトネス/スプリング調整を検討 | 診断ポリシーで auto-drop を有効化し、条件数上限を調整 |
+| `--max-file-size-mb` 超過 | CSV ログが肥大化（長期実行/高頻度サンプリング） | `plan.md` で該当ファイルを確認し、必要に応じて `exclude-config` に追加 → サンプリング周期を見直し | `tools/archive_coupled_constraint_endurance.py --exclude-config config/endurance_exclude.yaml` で例外設定を管理 |
+| `--max-entries` での削除 | アーカイブ保持上限を超える | `plan.md` の `max-entries` 行をレビュー → 削除したくないファイルは保留リストに追加し再実行 | `exclude-config` に保護するファイル名を記載し、定期的に manifest を整理 |
+| Webhook が未送信 | `ENDURANCE_ALERT_WEBHOOK` 未設定 | シークレット設定を見直し、CI ログの "WEBHOOK_URL not set" を確認 | `tools/mock_webhook_server.py` でローカル検証し、実環境でも 200 応答を確認 |

@@ -173,6 +173,8 @@ def build_comment_body(
     download_dir: Path,
     summary: Optional[dict],
     repro_cmd: Sequence[str],
+    plan_csv: Optional[Path],
+    plan_md: Optional[Path],
 ) -> str:
     run_url = f"https://github.com/{repo}/actions/runs/{run_id}" if repo else None
 
@@ -184,6 +186,7 @@ def build_comment_body(
     ]
 
     if summary:
+        version = summary.get("version")
         metrics = [
             ("Samples", summary.get("samples", "n/a")),
             (
@@ -211,11 +214,21 @@ def build_comment_body(
                 else summary.get("duration"),
             ),
         ]
+        if version is not None:
+            metrics.insert(0, ("Summary version", version))
         lines.append("")
         lines.append("| Metric | Value |")
         lines.append("| --- | --- |")
         for key, value in metrics:
             lines.append(f"| {key} | {value} |")
+
+    if plan_csv or plan_md:
+        lines.append("")
+        lines.append("### Plan Files")
+        if plan_csv:
+            lines.append(f"- CSV: `{Path(plan_csv)}`")
+        if plan_md:
+            lines.append(f"- Markdown: `{Path(plan_md)}`")
 
     lines.append("")
     lines.append("### Reproduction Command")
@@ -282,6 +295,8 @@ def main() -> int:
 
     csv_path = find_artifact_file(download_target, "latest.csv")
     summary_path = find_artifact_file(download_target, "latest.summary.json")
+    plan_csv_path = find_artifact_file(download_target, "plan.csv")
+    plan_md_path = find_artifact_file(download_target, "plan.md")
 
     if not csv_path:
         print("Warning: latest.csv not found in artifact.", file=sys.stderr)
@@ -298,6 +313,11 @@ def main() -> int:
             print(f"Warning: failed to parse summary JSON: {exc}", file=sys.stderr)
     else:
         print("Warning: latest.summary.json not found in artifact.", file=sys.stderr)
+
+    if plan_csv_path:
+        print(f"Located plan CSV at {plan_csv_path}")
+    if plan_md_path:
+        print(f"Located plan Markdown at {plan_md_path}")
 
     repro_summary = Path(args.summary_out).expanduser()
     repro_summary.parent.mkdir(parents=True, exist_ok=True)
@@ -324,6 +344,8 @@ def main() -> int:
         download_dir=download_target,
         summary=summary_data,
         repro_cmd=repro_cmd,
+        plan_csv=plan_csv_path,
+        plan_md=plan_md_path,
     )
 
     if args.comment_file:
