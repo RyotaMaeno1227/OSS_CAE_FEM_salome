@@ -263,7 +263,10 @@ def _load_config(path: Path) -> Dict[str, object]:
             return json.load(handle)
     if path.suffix.lower() in {".yaml", ".yml"}:
         if yaml is None:
-            raise RuntimeError("PyYAML is required to load YAML configuration files.")
+            raise RuntimeError(
+                f"PyYAML is required to load YAML configuration files ({path}). "
+                "Install it with `pip install pyyaml` or provide a JSON config."
+            )
         with path.open("r", encoding="utf-8") as handle:
             return yaml.safe_load(handle)
     raise RuntimeError(f"Unsupported config extension: {path.suffix}")

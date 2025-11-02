@@ -53,3 +53,61 @@ print(tele["base"]["ratio_distance"], tele["base"]["ratio_angle"])
 3. CI（`coupled_endurance.yml`）でパラメータを参照している場合は、Pull Request のチェックリストに「YAML → CI → ドキュメント反映済み」を追加してください。
 
 このチートシートは、Coupled 拘束のチューニングやトラブルシュートを素早く行うためのショートカットとして活用してください。
+
+## 5. PDF/ポスター化ガイド
+
+### 5.1 Pandoc を用いた Markdown → PDF
+1. 依存インストール（TeX Live または MiKTeX 等の LaTeX 環境）。  
+   Ubuntu 例: `sudo apt-get install pandoc texlive-latex-extra texlive-fonts-recommended`
+2. コマンド例:
+   ```bash
+   pandoc docs/coupled_constraint_presets_cheatsheet.md \
+     -o out/coupled_constraint_presets_cheatsheet.pdf \
+     --pdf-engine=xelatex \
+     -V geometry:margin=18mm \
+     -V mainfont="Noto Sans CJK JP"
+   ```
+   - `geometry` で余白を指定し、ポスター用途なら `margin=12mm` に縮めると情報量を増やせます。
+   - `mainfont` は日本語フォントを適宜調整（Windows: `"Yu Gothic"`、macOS: `"Hiragino Sans"` など）。
+3. 表が見切れる場合は、Markdown 部分に `:---:` より幅の広いカラムを使うか、`-V tables=true` オプションで LaTeX の longtable を有効化してください。
+
+### 5.2 LaTeX テンプレート（再利用可）
+シンプルなポスター用テンプレート例。Pandoc を使わず直接 LaTeX に差し込みたい場合に利用します。
+
+```tex
+\documentclass[a4paper,landscape]{article}
+\usepackage{geometry}
+\geometry{left=12mm,right=12mm,top=12mm,bottom=12mm}
+\usepackage{fontspec}
+\setmainfont{Noto Sans CJK JP}
+\usepackage{array,longtable,xcolor}
+\definecolor{headerbg}{HTML}{1F4E79}
+\definecolor{headerfg}{HTML}{FFFFFF}
+
+\begin{document}
+\section*{Coupled Constraint Presets}
+
+\rowcolors{2}{gray!10}{white}
+\begin{longtable}{>{\bfseries}p{35mm}p{40mm}p{18mm}p{18mm}p{25mm}p{30mm}p{40mm}}
+\rowcolor{headerbg}{\color{headerfg}ID} & {\color{headerfg}用途} & {\color{headerfg}距離比} & {\color{headerfg}角度比} & {\color{headerfg}柔構造} & {\color{headerfg}バネ係数} & {\color{headerfg}備考} \\
+\endfirsthead
+\rowcolor{headerbg}{\color{headerfg}ID} & {\color{headerfg}用途} & {\color{headerfg}距離比} & {\color{headerfg}角度比} & {\color{headerfg}柔構造} & {\color{headerfg}バネ係数} & {\color{headerfg}備考} \\
+\endhead
+tele\_yaw\_control & ブーム距離＋ヨー連動 & 1.00 & 0.40 & 0.014 / 0.028 & 38.0 N/m / 18.0 N·m/rad & 90°超は max\_correction↑ \\
+cam\_follow\_adjust & カム位相補正 & 0.48 & -0.32 & 0.018 / 0.024 & 24.0 / 12.0 & 補助式 index1 を追加 \\
+counterbalance\_beam & カウンターバランス梁 & 0.85 & -0.30 & 0.013 / 0.022 & 42.0 / 20.0 & max\_drop=1 で補助式ドロップ \\
+docking\_guide & ドッキング誘導 & 0.72 & -0.25 & 0.020 / 0.034 & 30.0 / 14.0 & ステージ更新で target\_offset 調整 \\
+\end{longtable}
+
+\bigskip
+推奨レンジ: ratio\_distance 0.3–1.2, ratio\_angle -0.5–0.5, softness 距離 0.012–0.025, 角度 0.020–0.040
+
+\end{document}
+```
+
+- YAML から自動生成したい場合は、上記テンプレートのテーブル行をスクリプト（Python + Jinja2 など）で動的に埋め込むと繰り返し利用が容易です。
+- 長尺ポスターにする際は `landscape` を `portrait` に変更し、`p{mm}` の幅を目的に合わせて調整してください。
+
+### 5.3 運用メモ
+- PDF に変換したファイルは `docs/media/coupled/` もしくは社内ストレージの `/posters/` に保存し、Wiki のクイックリンクから参照できるようにします。
+- 印刷時の推奨サイズ：A3（ランドスケープ）。A4 で印刷する場合はフォントサイズ 10–11pt 目安。

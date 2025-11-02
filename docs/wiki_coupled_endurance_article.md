@@ -39,6 +39,58 @@
   - メディアファイルが半年以内に更新されているか
 - **変更フロー**: 変更が発生した場合は Pull Request に記事更新内容を含め、Merge 後 24 時間以内に社内 Wiki を同期。Wiki 側には「最終同期日」と PR リンクを記載する。
 
-## 6. 備考
+## 6. Wiki 投稿テンプレート（見出し・スクリーンショット指示）
+
+以下は Confluence 想定の原稿テンプレートです。社内ツールへコピーして利用してください（角括弧内は差し替え）。
+
+```
+{info:title=Coupled Endurance Nightly / CI 運用}
+最終更新: [yyyy-mm-dd]（担当: [氏名]） / リンク: [Pull Request URL]
+{info}
+
+h1. 概要
+* 対象ジョブ: GitHub Actions *coupled_endurance.yml*
+* 目的: Coupled 拘束の長時間安定性監視
+* 成果物: latest.csv, latest.summary.{json,md,html}, GIF/MP4, CI artifacts
+
+h1. クイックリンク
+* [CI トラブルシュート手順書|<社内パス>/coupled_endurance_ci_troubleshooting]
+* [チュートリアル / メディア生成|<社内パス>/chrono_coupled_constraint_tutorial]
+* [パラメータ YAML|<Git リポジトリ URL>/data/coupled_constraint_presets.yaml]
+* [チートシート PDF|<社内ストレージ>/coupled_constraint_presets_cheatsheet.pdf]
+* [アーティファクト一覧|https://github.com/<org>/<repo>/actions?...]
+
+h1. 運用フロー
+1. 失敗検知 – Actions の *archive-and-summarize* ステップが赤になっていないか確認
+2. ログ確認 – latest.summary.json の *max_condition*, *warn_ratio*, *rank_ratio* を記録
+3. 再現と対処 – ローカルで `python tools/plot_coupled_constraint_endurance.py ...` を実行
+4. 報告 – #chrono-constraints へ結果と対応案を共有
+
+h2. 参考スクリーンショット
+* Actions 実行画面（FAILED のハイライト箇所） – 最新 1 件は必ず更新
+* latest.summary.html の KPI 表（例: max condition / warn ratio） – 余白を切り抜き 1024px 幅目安
+* plot_coupled_constraint_endurance.py の出力グラフ – GIF または PNG、タイトル・凡例が見える解像度
+
+h1. メディア更新フロー
+* docs/media/coupled/ 配下の画像・GIF・MP4 を更新
+* スクリーンショットは PNG 形式（幅 1280px 推奨）
+* 旧データは cloud storage の `archive/<yyyy-mm>` へ退避
+
+h1. メンテナンス
+* ローテーションと定期レビューの記録
+* しきい値変更時のサマリと決定者
+```
+
+スクリーンショットは UI 変更時に差し替え、キャプション（例:「Actions 実行ログ例」）を明記してください。Wiki 上では画像を中央揃えにし、縮小されないよう幅を指定します。
+
+## 7. 公開プロセス（社内 Wiki 同期）
+1. PR マージ後 24 時間以内にテンプレートを使用して記事を更新。
+2. スクリーンショット・GIF を添付し、プレビュー表示を確認。
+3. Wiki の「最終更新日」「同期に使用したコミット SHA」「関係者（レビュー／承認）」を明記。
+4. 更新完了後、`#chrono-constraints` チャンネルで通知（記事 URL、更新内容要約、担当）。  
+   誰かが引き継げるようにチケットまたは Wiki の「担当者」フィールドを更新する。
+5. 次回ローテーション担当者へコメントまたは Wiki タスクを割り当て、次回レビュー予定日を設定。
+
+## 8. 備考
 - 内部 Wiki へ掲載する際は、GitHub や社内 GitLab 等の具体的な URL を正式なものに置き換えてください。
 - 本草案は `docs/wiki_coupled_endurance_article.md` としてリポジトリ内で管理し、変更履歴を追跡します。Wiki の更新忘れを防ぐため、PR テンプレートに「Wiki 同期済み」チェックボックスを追加することを推奨します。

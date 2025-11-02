@@ -9,7 +9,7 @@ import argparse
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Sequence
 
 
 def parse_args() -> argparse.Namespace:
@@ -52,6 +52,17 @@ def parse_args() -> argparse.Namespace:
         default="repro/latest.summary.json",
         help="Path where the repro command will write the JSON summary (default: %(default)s).",
     )
+    parser.add_argument(
+        "--interactive",
+        action="store_true",
+        help="Interactively select a run via `gh run list` if run_id is omitted.",
+    )
+    parser.add_argument(
+        "--max-retries",
+        type=int,
+        default=2,
+        help="Number of retries for failed download commands (default: %(default)s).",
+    )
     return parser.parse_args()
 
 
@@ -84,13 +95,73 @@ def find_artifact_file(root: Path, filename: str) -> Optional[Path]:
     return min(matches, key=lambda p: len(p.parts))
 
 
+def interactive_select_run(gh_path: str) -> str:
+    list_cmd = [gh_path, "run", "list", "--limit", "20", "--json", "databaseId,headBranch,status,conclusion,displayTitle"]
+    try:
+        output = subprocess.check_output(list_cmd, text=True)
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError(f"`{' '.join(list_cmd)}` failed with exit code {exc.returncode}") from exc
+
+    import json  # local import to avoid eager dependency when not needed
+
+    try:
+        runs = json.loads(output)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("Failed to parse gh run list output.") from exc
+
+    if not runs:
+        raise RuntimeError("No recent workflow runs found.")
+
+    print("Select a workflow run:")
+    for idx, run in enumerate(runs, start=1):
+        ident = run.get("databaseId", "n/a")
+        branch = run.get("headBranch", "unknown")
+        status = run.get("status", "?")
+        conclusion = run.get("conclusion") or "-"
+        title = run.get("displayTitle", "")
+        print(f"  {idx:2d}) #{ident} [{status}/{conclusion}] {branch} - {title}")
+
+    while True:
+        selection = input("Enter run number (or 'q' to abort): ").strip()
+        if selection.lower() == "q":
+            raise RuntimeError("Selection aborted by user.")
+        if selection.isdigit():
+            idx = int(selection)
+            if 1 <= idx <= len(runs):
+                return str(runs[idx - 1].get("databaseId"))
+        print("Invalid selection. Please try again.")
+
+
+def download_with_retries(cmd: Sequence[str], max_retries: int) -> None:
+    attempt = 0
+    while True:
+        try:
+            run_command(list(cmd))
+            return
+        except RuntimeError as exc:
+            if attempt >= max_retries:
+                raise
+            attempt += 1
+            print(f"Warning: {exc}. Retrying ({attempt}/{max_retries})...")
+
+
 def main() -> int:
     args = parse_args()
 
-    try:
-        run_id = derive_run_id(args.run_id)
-    except ValueError as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+    if args.run_id:
+        try:
+            run_id = derive_run_id(args.run_id)
+        except ValueError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+    elif args.interactive:
+        try:
+            run_id = interactive_select_run(args.gh_path)
+        except RuntimeError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+    else:
+        print("Error: run_id is required unless --interactive is used.", file=sys.stderr)
         return 1
 
     output_dir = Path(args.output_dir).expanduser().resolve()
@@ -101,7 +172,7 @@ def main() -> int:
     ensure_directory(download_target)
 
     print(f"Downloading artifact '{artifact_name}' for run {run_id} into {download_target}")
-    run_command(
+    download_with_retries(
         [
             args.gh_path,
             "run",
@@ -111,7 +182,8 @@ def main() -> int:
             artifact_name,
             "--dir",
             str(download_target),
-        ]
+        ],
+        max(args.max_retries, 0),
     )
 
     csv_path = find_artifact_file(download_target, "latest.csv")

@@ -43,6 +43,7 @@ jobs:
             --manifest data/endurance_archive/manifest.json \
             --label "${{ github.workflow }}:${{ github.run_id }}" \
             --prune-duplicates \
+            --plan-csv data/endurance_archive/plan.csv \
             $EXTRA_ARGS
 
       - name: Generate endurance summaries
@@ -69,6 +70,7 @@ jobs:
             data/endurance_archive/latest.summary.md
             data/endurance_archive/latest.summary.html
             data/endurance_archive/latest.summary.json
+            data/endurance_archive/plan.csv
             data/endurance_archive/manifest.json
             data/endurance_archive/*.csv
             data/endurance_archive/*.csv.summary.md

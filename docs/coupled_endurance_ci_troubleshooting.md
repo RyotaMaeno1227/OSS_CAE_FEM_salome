@@ -40,7 +40,7 @@ Coupled 拘束の耐久スイートは `.github/workflows/coupled_endurance.yml`
    - しきい値は CI のログに出ている値をそのまま使うか、`.github/workflows/coupled_endurance.yml` 内の `ARCHIVE_MAX_*` と合わせて確認してください。
    - `--summary-json` で生成されたファイルは `_validate_summary_schema` による検証を通過済みです。フォーマット違反がある場合はコマンドが終了コード 2 で即終了します。
 3. 可視化が必要な場合は `--skip-plot` を外し、`--output figure.png` を追加するとグラフを生成できます（ローカルでのみ推奨）。
-4. GitHub CLI (`gh`) を利用できる環境であれば、`tools/fetch_endurance_artifact.py` を実行することで失敗したワークフローのアーティファクト取得と再現コマンド生成を自動化できます。
+4. GitHub CLI (`gh`) を利用できる環境であれば、`tools/fetch_endurance_artifact.py` を実行することで失敗したワークフローのアーティファクト取得と再現コマンド生成を自動化できます。Run ID が分からない場合は `--interactive` を付与すると `gh run list` の結果から選択できます。
 
    ```bash
    python tools/fetch_endurance_artifact.py 1234567890 \
@@ -53,7 +53,23 @@ Coupled 拘束の耐久スイートは `.github/workflows/coupled_endurance.yml`
 
 ---
 
-## 4. 失敗原因別の対処フロー
+## 4. Plan CSV (`--plan-csv`) の読み方
+
+`tools/archive_coupled_constraint_endurance.py` で `--plan-csv` を指定すると、実行（またはドライランで予定）された操作を `plan.csv` に記録します。CI では `data/endurance_archive/plan.csv` がアーティファクトとして添付されるため、削除や整理の判断材料になります。
+
+| 列 | 概要 | 判断のヒント |
+|----|------|--------------|
+| `action` | 実施（予定）した操作の種別。`archive`、`refresh-latest`、`write-summaries`、`delete` 等。 | `delete` が意図しないファイルに向いていないか確認。 |
+| `target` | 操作対象パス。 | `latest.*` か履歴 CSV かを識別し、保護すべきファイルが含まれていないかをチェック。 |
+| `detail` | 補足情報。生成ファイル名や `markdown/html/json` など。 | 新規作成されたアーカイブ名を把握可能。 |
+| `hash` | 入力 CSV の SHA-256。 | 同一ハッシュが並ぶ場合は重複データとしてスキップされた記録。 |
+| `reason` | 操作理由や状態。`planned`、`completed`、`dry-run`、`max-entries`、`max-age` など。 | 上限超過による削除 (`max-entries` / `max-age`) だけを抽出してレビューすると効率的。 |
+
+ドライランでは `reason` が `planned` や `dry-run` になり、本番実行では `completed` に変わります。`max-entries` や `max-age` で削除されるケースが想定外であれば、閾値や保持ポリシーを見直してください。
+
+---
+
+## 5. 失敗原因別の対処フロー
 
 | トリガー | 典型的な対処 | 備考 |
 |---------|--------------|------|
@@ -65,7 +81,7 @@ Coupled 拘束の耐久スイートは `.github/workflows/coupled_endurance.yml`
 
 ---
 
-## 5. 役に立つコマンド
+## 6. 役に立つコマンド
 - 最新ログのサマリを CLI で確認:  
   `python tools/plot_coupled_constraint_endurance.py data/coupled_constraint_endurance.csv --skip-plot --summary-json /tmp/summary.json --no-show`
 - 重複判定や世代管理を確認:  
@@ -75,7 +91,7 @@ CI での失敗を再現したら、原因調査の結果やパラメータ変�
 
 ---
 
-## 6. サマリ JSON の互換性ポリシー
+## 7. サマリ JSON の互換性ポリシー
 - JSON には `version` キーが含まれており、現在のスキーマは `1` です。フィールド追加など互換な拡張を行う場合は既存ツールが理解できる初期値（例: `0.0` や空文字）を付与し、破壊的変更が必要な場合のみ `version` をインクリメントしてください。
 - ツール側の `_validate_summary_schema` は、自身が対応していない新しい `version` を検出すると終了コード 2 で停止します。CI に反映する際は、バージョンを上げたスクリプトとワークフロー設定を一度に更新すること。
 - バージョン更新時はこのセクションに変更点と後方互換ガイドを追記し、`COUPLED_SUMMARY_VERSION` の値と合わせて管理します。
