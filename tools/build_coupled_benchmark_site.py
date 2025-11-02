@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
+from datetime import datetime, timezone
 from pathlib import Path
 
 from summarize_coupled_benchmark_history import (
@@ -38,6 +40,11 @@ def parse_args() -> argparse.Namespace:
         type=int,
         help="Limit processing to the most recent N runs.",
     )
+    parser.add_argument(
+        "--threshold-config",
+        default="config/coupled_benchmark_thresholds.yaml",
+        help="Path to the shared threshold configuration file (used for linking on the site).",
+    )
     return parser.parse_args()
 
 
@@ -56,9 +63,28 @@ def main() -> int:
     if args.latest is not None and args.latest > 0:
         runs = runs[: args.latest]
 
+    generated_at = datetime.now(timezone.utc).isoformat()
+    config_path = Path(args.threshold_config).as_posix()
+    repo = os.environ.get("GITHUB_REPOSITORY")
+    ref_name = os.environ.get("GITHUB_REF_NAME")
+    commit_sha = os.environ.get("GITHUB_SHA")
+
+    if repo and ref_name:
+        config_url = f"https://github.com/{repo}/blob/{ref_name}/{config_path}"
+    else:
+        config_url = config_path
+
+    metadata = {
+        "generated_at": generated_at,
+        "config_path": config_path,
+        "config_url": config_url,
+        "git_commit": commit_sha[:7] if commit_sha else None,
+        "git_ref": ref_name,
+    }
+
     aggregates = aggregate_by_eq(runs)
-    markdown = render_markdown(runs, aggregates)
-    html = render_html(markdown, runs)
+    markdown = render_markdown(runs, aggregates, metadata=metadata)
+    html = render_html(markdown, runs, metadata=metadata)
 
     index_path = output_dir / "index.html"
     index_path.write_text(html, encoding="utf-8")

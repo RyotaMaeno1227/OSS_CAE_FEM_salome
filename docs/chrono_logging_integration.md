@@ -134,3 +134,12 @@ void coupled_attach_warning_logger(ChronoCoupledConstraint2D_C *constraint) {
 - 長時間テスト（`tests/test_coupled_constraint_endurance`）の CSV には、ドロップ回数や再解ステップまでの時間など詳細メトリクスを付加しており、ログと組み合わせることで異常検知が容易になります。
 - アプリ側でログファイルをローテーションする場合は、`chrono_log_set_handler` で常に最新の `FILE*` を渡すか、ハンドラ内部でローテーション検知を実装してください。
 - 1 つの `chrono_log_set_handler` しか登録できないため、複数のログ先へ届けたい場合はテスト (`tests/test_coupled_logging_integration.c`) のように「デマルチハンドラ」を作成し、その中で複数の処理（ファイル記録＋既存ロガーなど）を呼び出してください。
+
+## 6. CI でのログ統合チェック
+
+- `make tests` には `tests/test_coupled_logging_integration` が含まれており、INFO/WARN/ERROR レベルとマルチシンク構成を検証します。GitHub Actions でも同テストが実行され、失敗すると “Logging integration check” が赤くなります。
+- 失敗した場合の確認ポイント:
+  1. 直前に追加したカスタムハンドラで `chrono_log_set_handler(NULL, NULL)` によるクリーンアップを忘れていないか。
+  2. Coupled 拘束の警告ポリシー（`ChronoCoupledConditionWarningPolicy_C`）で `enable_logging` や `log_cooldown` を無効化していないか。
+  3. ハンドラ内で重い処理や例外が発生していないか（`fprintf` の失敗など）。
+- 詳細な再現: `./chrono-C-all/tests/test_coupled_logging_integration` をローカルで実行し、標準出力に表示されるキャプチャ件数が期待通りか確認してください。

@@ -17,10 +17,13 @@ If PyYAML is not available, you can either install it as above or pass a JSON co
 ```bash
 python3 tools/run_coupled_benchmark.py \
   --config config/coupled_benchmark_thresholds.yaml \
+  --csv-validation fail \
   --output data/coupled_benchmark_metrics.csv
 ```
 
 The command emits the same warnings and hard failures as the CI workflow.
+Use `--csv-validation` (`off`, `warn`, `fail`) to control how CSV anomalies
+are treated; setting it to `fail` mirrors the CI gate.
 
 ## 3. Generate the static site bundle
 

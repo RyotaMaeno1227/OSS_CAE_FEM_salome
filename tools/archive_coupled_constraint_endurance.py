@@ -91,6 +91,10 @@ def parse_args() -> argparse.Namespace:
         "--plan-csv",
         help="Optional path to write planned operations (CSV format).",
     )
+    parser.add_argument(
+        "--plan-markdown",
+        help="Optional path to write planned operations (Markdown format).",
+    )
     return parser.parse_args()
 
 
@@ -206,6 +210,31 @@ def _write_plan_csv(path: Path, plan_records: List[Dict[str, str]]) -> None:
 
 def ensure_list(value: Optional[List[str]]) -> List[str]:
     return value or [str(default_csv_path())]
+
+
+def _escape_markdown(text: str) -> str:
+    return text.replace("|", "\\|")
+
+
+def _write_plan_markdown(path: Path, plan_records: List[Dict[str, str]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not plan_records:
+        path.write_text("No planned operations.\n", encoding="utf-8")
+        return
+
+    lines = ["| Action | Target | Detail | Hash | Reason |", "| --- | --- | --- | --- | --- |"]
+    for record in plan_records:
+        lines.append(
+            "| {} | {} | {} | {} | {} |".format(
+                _escape_markdown(record.get("action", "")),
+                _escape_markdown(record.get("target", "")),
+                _escape_markdown(record.get("detail", "")),
+                _escape_markdown(record.get("hash", "")),
+                _escape_markdown(record.get("reason", "")),
+            )
+        )
+
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def archive_single_run(
@@ -563,6 +592,7 @@ def main() -> int:
 
     plan_records: List[Dict[str, str]] = []
     plan_csv_path = Path(args.plan_csv).expanduser() if args.plan_csv else None
+    plan_markdown_path = Path(args.plan_markdown).expanduser() if args.plan_markdown else None
 
     inputs = [Path(item).expanduser() for item in ensure_list(args.inputs)]
 
@@ -653,6 +683,10 @@ def main() -> int:
     if plan_csv_path:
         _write_plan_csv(plan_csv_path, plan_records)
         print(f"Wrote plan CSV to {plan_csv_path}")
+
+    if plan_markdown_path:
+        _write_plan_markdown(plan_markdown_path, plan_records)
+        print(f"Wrote plan Markdown to {plan_markdown_path}")
 
     if args.dry_run:
         print("Dry-run complete; manifest not updated.")

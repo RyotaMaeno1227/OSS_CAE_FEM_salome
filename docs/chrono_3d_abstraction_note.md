@@ -45,18 +45,18 @@
 
 ## 8. API 互換マトリクス（初版）
 
-| 機能領域 | 2D API/構造体 | 3D 想定（案） | 移行メモ | 初期評価コメント |
-|----------|---------------|---------------|----------|------------------|
-| 基底構造 | `ChronoConstraint2DBase_C` | `ChronoConstraintCommon_C`（新規） + `typedef ChronoConstraintCommon_C ChronoConstraint3DBase_C;` | 2D ヘッダは typedef 維持。 | 構造体サイズを据え置ける見込み。ABI テスト必須。 |
-| Ops テーブル | `ChronoConstraint2DOps_C` | `ChronoConstraintCommonOps_C`（同型） | フィールド名・関数ポインタは同一。 | 追加作業ほぼ不要。既存コードをそのまま流用可能。 |
-| バッチソルバ | `chrono_constraint2d_batch_solve` | `chrono_constraint_batch_solve`（共通実装）、2D/3D ラッパ | ワークスペース API も共通化。 | ループ構造は再利用可。Jacobian 尺度差で精度回帰テストが必要。 |
-| ワークスペース | `ChronoConstraint2DBatchWorkspace_C` | `ChronoConstraintBatchWorkspace_C` | メモリ確保関数を関数ポインタ化。 | バッファ種別が増える想定。再割当テストを追加したい。 |
-| ボディ API | `ChronoBody2D_C` | `ChronoBodyCommon_C` + `ChronoBody3D_C` | 2D ラッパで既存フィールドレイアウト保持。 | クォータニオン管理が未整備。math 層の先行実装が前提。 |
-| 距離拘束 | `chrono_distance_constraint2d_*` | `chrono_distance_constraint3d_*` ラッパ → 共通実装 | 3D 版は 3 軸 Jacobian を追加。 | 係数行列が 1×3→1×6 に拡張。専用ユニットテストが必要。 |
-| 回転拘束 | `chrono_revolute_constraint2d_*` | `chrono_revolute_constraint3d_*` | Ops 呼び出しの差分は姿勢計算のみ。 | 角度表現をクォータニオンへ置換。制御ゲインの再検証が必要。 |
-| Coupled 拘束 | `chrono_coupled_constraint2d_*` | `chrono_coupled_constraint3d_*` or 汎用化 | 行列サイズが 4×4 まで拡張。 | 方程式数が増えると条件数が悪化しやすい。ベンチを先行実装。 |
-| 診断 | `ChronoCoupledConstraint2DDiagnostics_C` | `ChronoConstraintDiagnostics_C`（共通） | pivot 情報配列サイズをパラメータ化。 | 3D 用に pivot ベクトル長を可変化する必要あり。 |
-| ログ基盤 | `chrono_log_warn`（予定） | 同一 API | ログレベル enum を共通ヘッダへ移行。 | API 追加コスト小。CI で WARN 粒度を共通化する。 |
+| 機能領域 | 2D API/構造体 | 3D 想定（案） | 移行メモ | 初期評価コメント | 想定工数 (人日) | リスクスコア (1–5) |
+|----------|---------------|---------------|----------|------------------|----------------|--------------------|
+| 基底構造 | `ChronoConstraint2DBase_C` | `ChronoConstraintCommon_C`（新規） + `typedef ChronoConstraintCommon_C ChronoConstraint3DBase_C;` | 2D ヘッダは typedef 維持。 | 構造体サイズを据え置ける見込み。ABI テスト必須。 | 12 | 2 |
+| Ops テーブル | `ChronoConstraint2DOps_C` | `ChronoConstraintCommonOps_C`（同型） | フィールド名・関数ポインタは同一。 | 追加作業ほぼ不要。既存コードをそのまま流用可能。 | 4 | 1 |
+| バッチソルバ | `chrono_constraint2d_batch_solve` | `chrono_constraint_batch_solve`（共通実装）、2D/3D ラッパ | ワークスペース API も共通化。 | ループ構造は再利用可。Jacobian 尺度差で精度回帰テストが必要。 | 20 | 4 |
+| ワークスペース | `ChronoConstraint2DBatchWorkspace_C` | `ChronoConstraintBatchWorkspace_C` | メモリ確保関数を関数ポインタ化。 | バッファ種別が増える想定。再割当テストを追加したい。 | 10 | 3 |
+| ボディ API | `ChronoBody2D_C` | `ChronoBodyCommon_C` + `ChronoBody3D_C` | 2D ラッパで既存フィールドレイアウト保持。 | クォータニオン管理が未整備。math 層の先行実装が前提。 | 18 | 4 |
+| 距離拘束 | `chrono_distance_constraint2d_*` | `chrono_distance_constraint3d_*` ラッパ → 共通実装 | 3D 版は 3 軸 Jacobian を追加。 | 係数行列が 1×3→1×6 に拡張。専用ユニットテストが必要。 | 15 | 3 |
+| 回転拘束 | `chrono_revolute_constraint2d_*` | `chrono_revolute_constraint3d_*` | Ops 呼び出しの差分は姿勢計算のみ。 | 角度表現をクォータニオンへ置換。制御ゲインの再検証が必要。 | 14 | 4 |
+| Coupled 拘束 | `chrono_coupled_constraint2d_*` | `chrono_coupled_constraint3d_*` or 汎用化 | 行列サイズが 4×4 まで拡張。 | 方程式数が増えると条件数が悪化しやすい。ベンチを先行実装。 | 22 | 5 |
+| 診断 | `ChronoCoupledConstraint2DDiagnostics_C` | `ChronoConstraintDiagnostics_C`（共通） | pivot 情報配列サイズをパラメータ化。 | 3D 用に pivot ベクトル長を可変化する必要あり。 | 8 | 3 |
+| ログ基盤 | `chrono_log_warn`（予定） | 同一 API | ログレベル enum を共通ヘッダへ移行。 | API 追加コスト小。CI で WARN 粒度を共通化する。 | 6 | 2 |
 
 ## 9. 抽象化レイヤ設計案
 
@@ -96,6 +96,28 @@
 - [ ] 新規 3D API を追加する際、既存 C ヘッダに `#ifdef CHRONO_ENABLE_3D` ガードを導入した。
 - [ ] ログ基盤のレベル切替（WARN/INFO）が 2D/3D 双方で同じ enum 値を使うことを確認した。
 - [ ] 3D テスト導入後、CI マトリクス（smoke/extended/nightly）でタイムアウトしないか測定した。
+
+### 10.1 月次進捗レポート案
+
+```markdown
+## 3D Constraint Migration Status (YYYY-MM)
+
+| コンポーネント | ステータス | 今月の進捗 | 次月アクション | 想定工数消化 (人日) | リスクスコア | メモ |
+|----------------|------------|-----------|---------------|--------------------|--------------|------|
+| 共通拘束ベース | 設計草稿済み | ABI テスト項目洗い出し完了 | typedef 置換 PoC を実施 | 4 / 12 | 2 | ABI check script draft ready |
+| バッチソルバ共通化 | 要件定義中 | OpenMP 計測ログ収集 | 3×3 math ヘルパ統合 | 3 / 20 | 4 | 既存ベンチに 5% 劣化 |
+| … | … | … | … | … | … | … |
+
+### ブロッカー
+- [ ] Math ヘルパ 4×4 実装レビュー待ち（担当: Kobayashi、期限: 11/15）
+- [ ] ログ API 仕様確定待ち（担当: Suzuki、期限: 11/08）
+
+### 共有事項
+- Coupled 3D ベンチ仕様案を 11/01 技術定例でレビュー予定。
+- GitHub Projects の KPI 列（工数・リスク）を更新済み。
+```
+
+上記テンプレートは `docs/chrono_3d_progress_template.md` として共有予定。KPI はテーブルの数値と一致するよう週次で見直してください。
 
 ## 11. 技術移行ステータス表（ドラフト）
 

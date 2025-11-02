@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import math
 import os
 import subprocess
 import sys
@@ -88,11 +89,59 @@ def run_benchmark(bench_path: Path, output_path: Path) -> None:
     run_command([str(bench_path), "--output", str(output_path)])
 
 
-def load_csv(path: Path) -> List[BenchRow]:
+EXPECTED_COLUMNS = [
+    "eq_count",
+    "epsilon",
+    "max_condition",
+    "avg_condition",
+    "avg_solve_time_us",
+    "drop_events",
+    "drop_index_mask",
+    "recovery_events",
+    "avg_recovery_steps",
+    "max_recovery_steps",
+    "unrecovered_drops",
+    "max_pending_steps",
+]
+
+
+def load_csv(path: Path) -> Tuple[List[BenchRow], List[str]]:
     with path.open("r", newline="") as handle:
         reader = csv.DictReader(handle)
-        rows = [BenchRow.from_dict(row) for row in reader]
-    return rows
+        header = reader.fieldnames or []
+        missing = [column for column in EXPECTED_COLUMNS if column not in header]
+        if missing:
+            rows: List[BenchRow] = []
+        else:
+            rows = [BenchRow.from_dict(row) for row in reader]
+    return rows, header
+
+
+def validate_csv_content(header: List[str], rows: List[BenchRow]) -> List[str]:
+    issues: List[str] = []
+    missing = [column for column in EXPECTED_COLUMNS if column not in header]
+    if missing:
+        issues.append(f"CSV missing expected columns: {', '.join(sorted(missing))}")
+    for index, row in enumerate(rows, start=1):
+        row_ctx = f"row {index}"
+        if row.eq_count <= 0:
+            issues.append(f"{row_ctx}: eq_count should be positive (got {row.eq_count})")
+        if not math.isfinite(row.epsilon):
+            issues.append(f"{row_ctx}: epsilon is not finite (got {row.epsilon})")
+        if row.max_condition < 0.0 or not math.isfinite(row.max_condition):
+            issues.append(f"{row_ctx}: max_condition invalid (got {row.max_condition})")
+        if row.avg_solve_time_us < 0.0 or not math.isfinite(row.avg_solve_time_us):
+            issues.append(f"{row_ctx}: avg_solve_time_us invalid (got {row.avg_solve_time_us})")
+        if row.max_pending_steps < 0:
+            issues.append(f"{row_ctx}: max_pending_steps negative (got {row.max_pending_steps})")
+        for label, value in (
+            ("drop_events", row.drop_events),
+            ("recovery_events", row.recovery_events),
+            ("unrecovered_drops", row.unrecovered_drops),
+        ):
+            if value < 0:
+                issues.append(f"{row_ctx}: {label} negative (got {value})")
+    return issues
 
 
 def emit_warning(message: str) -> None:
@@ -206,6 +255,12 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     parser.add_argument(
         "--config",
         help="Optional YAML/JSON config file specifying warning/failure thresholds.",
+    )
+    parser.add_argument(
+        "--csv-validation",
+        choices=["off", "warn", "fail"],
+        default="warn",
+        help="CSV validation mode (warn by default).",
     )
     parser.add_argument(
         "--skip-build",
@@ -351,28 +406,24 @@ def main(argv: List[str]) -> int:
 
     run_benchmark(bench_path, output_path)
 
-    rows = load_csv(output_path)
+    rows, header = load_csv(output_path)
+    csv_issues = validate_csv_content(header, rows)
+    if args.csv_validation == "warn":
+        for issue in csv_issues:
+            emit_warning(f"[CoupledBench CSV] {issue}")
+    elif args.csv_validation == "fail" and csv_issues:
+        for issue in csv_issues:
+            print(f"CSV validation error: {issue}", file=sys.stderr)
+        return 6
+
     if not rows:
         emit_warning("[CoupledBench] CSV is empty - benchmark likely failed to emit results")
         return 1
-
-    thresholds = Thresholds(
-        max_solve_time_us=args.max_solve_time_us,
-        max_condition=args.max_condition,
-        max_pending_steps=args.max_pending_steps,
-    )
 
     print("Coupled benchmark metrics summary:")
     print(summarize(rows))
 
     ok = evaluate_thresholds(rows, thresholds)
-
-    fail_thresholds = FailThresholds(
-        solve_time_us=args.fail_on_solve_time_us,
-        max_condition=args.fail_on_max_condition,
-        max_pending_steps=args.fail_on_max_pending_steps,
-        unrecovered_drops=args.fail_on_unrecovered,
-    )
     failures = collect_failures(rows, fail_thresholds)
     if failures:
         for message in failures:

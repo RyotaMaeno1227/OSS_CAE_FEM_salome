@@ -259,3 +259,91 @@ Coupled 拘束の挙動を共有する際は、静止画に加えて GIF/MP4 ア
 4. **保守のポイント**
    - 生成したメディアに合わせて `docs/media/coupled/README.md`（任意）に更新日時と元データを残すと追跡が容易です。
    - 大容量化を避けるため、GIF は 10 MB を目安に `fps` やフレーム数を調整してください。必要に応じて `animation.FuncAnimation` の `frames` をサンプリング間隔で間引きます。
+
+---
+
+## 9. ケーススタディ: Endurance Drift アニメーションと GitHub Pages 埋め込み
+
+社内レビュー用に作成した GIF/MP4 を GitHub Pages へ公開し、資料から参照する具体例です。`docs/` ディレクトリを Pages の公開対象に設定している前提で記載します。
+
+1. **素材生成コマンド**
+   ```bash
+   python tools/plot_coupled_constraint_endurance.py \
+     data/coupled_constraint_endurance.csv \
+     --output docs/media/coupled/endurance_overview.png \
+     --no-show
+
+   python - <<'PY'
+   from pathlib import Path
+   import matplotlib.pyplot as plt
+   from matplotlib import animation
+   from coupled_constraint_endurance_analysis import load_csv
+
+   csv_path = Path("data/coupled_constraint_endurance.csv")
+   data = load_csv(csv_path)
+   stride = 4  # 4 サンプルに 1 回フレーム化して容量削減
+
+   time = data["time"][::stride]
+   distance = data["distance"][::stride]
+   condition = data["condition"][::stride]
+
+   fig, ax = plt.subplots(figsize=(9.6, 4.8))
+   line_dist, = ax.plot([], [], color="C0", label="distance [m]")
+   ax2 = ax.twinx()
+   line_cond, = ax2.plot([], [], color="C3", label="condition number")
+   ax.set_xlim(min(time), max(time))
+   ax.set_ylim(min(distance), max(distance))
+   ax2.set_ylim(min(condition), max(condition))
+   ax.set_xlabel("time [s]")
+   ax.set_ylabel("distance [m]")
+   ax2.set_ylabel("condition number")
+
+   def init():
+       line_dist.set_data([], [])
+       line_cond.set_data([], [])
+       return line_dist, line_cond
+
+   def update(frame):
+       line_dist.set_data(time[:frame], distance[:frame])
+       line_cond.set_data(time[:frame], condition[:frame])
+       return line_dist, line_cond
+
+   ani = animation.FuncAnimation(fig, update, frames=len(time), init_func=init, blit=True, interval=50)
+   out_dir = Path("docs/media/coupled")
+   out_dir.mkdir(parents=True, exist_ok=True)
+   ani.save(out_dir / "endurance_overview.gif", writer="pillow", fps=20)
+   ani.save(out_dir / "endurance_overview.mp4", writer="ffmpeg", fps=24)
+   PY
+   ```
+   - `stride` を調整することで GIF を数 MB 程度に抑えられます。
+   - `fps=24` 以上にすると MP4 再生が滑らかになりますが、GIF は容量が増えるため 20 前後に設定しています。
+
+2. **GitHub Pages 公開**
+   - `git add docs/media/coupled/endurance_overview.*` → Pull Request → `main` へ反映。
+   - リポジトリ設定で Pages のソースを `main` / `docs/` に設定すると、`https://<org>.github.io/<repo>/media/coupled/endurance_overview.gif` で公開されます。
+   - サイズ上限を監視する場合は CI に以下のようなチェックを追加します:
+     ```bash
+     find docs/media/coupled -type f -size +12M -print && exit 1 || exit 0
+     ```
+
+3. **埋め込み例**
+   - Markdown（同リポジトリのドキュメント内）:
+     ```markdown
+     ![Endurance overview](media/coupled/endurance_overview.gif)
+     ```
+   - GitHub Pages / Wiki の HTML ブロック:
+     ```html
+     <video controls loop muted playsinline width="960">
+       <source src="https://<org>.github.io/<repo>/media/coupled/endurance_overview.mp4" type="video/mp4">
+       <source src="https://<org>.github.io/<repo>/media/coupled/endurance_overview.gif" type="image/gif">
+       Your browser does not support the video tag.
+     </video>
+     ```
+   - Slack 等へ共有する場合は MP4 を添付すると再生互換性が高いです。
+
+4. **公開チェックリスト**
+   - GitHub Pages のデプロイログでファイルが含まれているか確認。
+   - GIF/MP4 の再生を実機ブラウザで確認し、カクつく場合は `stride` や `fps` を見直す。
+   - 参照先（README, Wiki, 社内ポータルなど）のリンクチェックを `npm exec broken-link-checker -- --allow-redirect` 等で定期的に実施。
+
+> GitHub Pages の設定は *Settings → Pages → Build and deployment* から `Source: Deploy from a branch`, `Branch: main`, `Folder: /docs` を選択してください。

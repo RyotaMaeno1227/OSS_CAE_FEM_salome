@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import math
 import statistics
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -116,10 +117,59 @@ def aggregate_by_eq(runs: Iterable[RunRecord]) -> List[EqAggregate]:
     return aggregates
 
 
-def render_markdown(runs: List[RunRecord], aggregates: List[EqAggregate]) -> str:
+def compute_trend_metrics(runs: List[RunRecord]) -> List[Dict[str, Optional[float]]]:
+    runs_sorted = sorted(runs, key=lambda run: run.timestamp)
+    eq_ids = sorted({row.eq_count for run in runs_sorted for row in run.rows})
+    metrics: List[Dict[str, Optional[float]]] = []
+    for eq in eq_ids:
+        series: List[Optional[float]] = []
+        for run in runs_sorted:
+            match = next((row for row in run.rows if row.eq_count == eq), None)
+            series.append(match.max_condition if match else None)
+        numeric_series = [value for value in series if value is not None]
+        if not numeric_series:
+            continue
+        latest = numeric_series[-1]
+        previous = numeric_series[-2] if len(numeric_series) >= 2 else None
+        delta = latest - previous if previous is not None else None
+        pct = (delta / previous * 100.0) if previous not in (None, 0.0) else None
+        window = numeric_series[-3:]
+        moving_avg = statistics.mean(window) if window else latest
+        metrics.append(
+            {
+                "eq_count": eq,
+                "latest": latest,
+                "previous": previous,
+                "delta": delta,
+                "pct": pct,
+                "moving_avg": moving_avg,
+            }
+        )
+    return metrics
+
+
+def render_markdown(
+    runs: List[RunRecord],
+    aggregates: List[EqAggregate],
+    metadata: Optional[Dict[str, object]] = None,
+) -> str:
     lines: List[str] = []
     lines.append("# Coupled Benchmark Report")
     lines.append("")
+    if metadata:
+        banner_parts = []
+        generated = metadata.get("generated_at")
+        if generated:
+            banner_parts.append(f"Generated: {generated}")
+        commit = metadata.get("git_commit")
+        if commit:
+            banner_parts.append(f"Commit: {commit}")
+        config_url = metadata.get("config_url") or metadata.get("config_path")
+        if config_url:
+            banner_parts.append(f"Thresholds: {config_url}")
+        if banner_parts:
+            lines.append("> " + " | ".join(banner_parts))
+            lines.append("")
     lines.append("## Aggregate by Equation Count")
     lines.append("| eq_count | samples | mean solve [µs] | max solve [µs] | max condition | mean drops | mean unrecovered |")
     lines.append("|---------:|--------:|----------------:|---------------:|--------------:|-----------:|-----------------:|")
@@ -152,10 +202,63 @@ def render_markdown(runs: List[RunRecord], aggregates: List[EqAggregate]) -> str
             stamp = datetime.fromtimestamp(run.timestamp, tz=timezone.utc).isoformat()
             lines.append(f"| {index} | {stamp} | `{run.path}` |")
 
+    if runs:
+        trend = compute_trend_metrics(runs)
+        if trend:
+            lines.append("")
+            lines.append("## Condition Trend")
+            lines.append("| eq_count | latest | previous | delta | pct change [%] | moving avg (last 3) |")
+            lines.append("|---------:|-------:|---------:|------:|---------------:|------------------:|")
+            for item in trend:
+                prev = item["previous"]
+                delta = item["delta"]
+                pct = item["pct"]
+                lines.append(
+                    "| {eq_count} | {latest:.3e} | {prev} | {delta} | {pct} | {ma:.3e} |".format(
+                        eq_count=item["eq_count"],
+                        latest=item["latest"],
+                        prev=f"{prev:.3e}" if prev is not None else "-",
+                        delta=f"{delta:.3e}" if delta is not None else "-",
+                        pct=f"{pct:.2f}" if pct is not None else "-",
+                        ma=item["moving_avg"],
+                    )
+                )
+
     return "\n".join(lines) + "\n"
 
 
-def _build_timeline_datasets(runs: List[RunRecord]) -> Tuple[List[str], Dict[str, List[Optional[float]]], Dict[str, List[Optional[int]]]]:
+def _moving_average(series: List[Optional[float]], window: int = 3) -> List[Optional[float]]:
+    results: List[Optional[float]] = []
+    numeric_series: List[float] = []
+    for value in series:
+        if value is None:
+            numeric_series.append(float("nan"))
+        else:
+            numeric_series.append(value)
+    for idx, value in enumerate(series):
+        if value is None:
+            results.append(None)
+            continue
+        window_values = [
+            numeric_series[i]
+            for i in range(max(0, idx - window + 1), idx + 1)
+            if not math.isnan(numeric_series[i])
+        ]
+        if window_values:
+            results.append(statistics.mean(window_values))
+        else:
+            results.append(value)
+    return results
+
+
+def _build_timeline_datasets(
+    runs: List[RunRecord],
+) -> Tuple[
+    List[str],
+    Dict[str, List[Optional[float]]],
+    Dict[str, List[Optional[int]]],
+    Dict[str, List[Optional[float]]],
+]:
     runs_sorted = sorted(runs, key=lambda run: run.timestamp)
     labels = [datetime.fromtimestamp(run.timestamp, tz=timezone.utc).isoformat() for run in runs_sorted]
     eq_ids = sorted({row.eq_count for run in runs_sorted for row in run.rows})
@@ -173,10 +276,18 @@ def _build_timeline_datasets(runs: List[RunRecord]) -> Tuple[List[str], Dict[str
                 condition_map[key].append(None)
                 pending_map[key].append(None)
 
-    return labels, condition_map, pending_map
+    condition_ma_map: Dict[str, List[Optional[float]]] = {
+        key: _moving_average(values, window=3) for key, values in condition_map.items()
+    }
+
+    return labels, condition_map, pending_map, condition_ma_map
 
 
-def render_html(markdown: str, runs: List[RunRecord]) -> str:
+def render_html(
+    markdown: str,
+    runs: List[RunRecord],
+    metadata: Optional[Dict[str, object]] = None,
+) -> str:
     rows = markdown.strip().splitlines()
     html_lines: List[str] = [
         "<html>",
@@ -213,8 +324,24 @@ def render_html(markdown: str, runs: List[RunRecord]) -> str:
         elif line:
             html_lines.append(f"<p>{line}</p>")
     flush_table()
+    if metadata:
+        banner_parts = []
+        generated = metadata.get("generated_at")
+        if generated:
+            banner_parts.append(f"Generated: {generated}")
+        commit = metadata.get("git_commit")
+        if commit:
+            banner_parts.append(f"Commit: {commit}")
+        config_url = metadata.get("config_url")
+        config_label = metadata.get("config_path") or metadata.get("config_url")
+        if config_url and config_label:
+            banner_parts.append(f"Thresholds: <a href=\"{config_url}\">{config_label}</a>")
+        elif config_label:
+            banner_parts.append(f"Thresholds: {config_label}")
+        if banner_parts:
+            html_lines.append("<p><strong>" + " | ".join(banner_parts) + "</strong></p>")
     if runs:
-        labels, condition_map, pending_map = _build_timeline_datasets(runs)
+        labels, condition_map, pending_map, condition_ma_map = _build_timeline_datasets(runs)
         html_lines.append('<h2>Condition Number Timeline</h2>')
         html_lines.append('<canvas id="conditionChart" height="200"></canvas>')
         html_lines.append('<h2>Pending Steps Timeline</h2>')
@@ -229,6 +356,14 @@ def render_html(markdown: str, runs: List[RunRecord]) -> str:
                 + "', data: "
                 + json.dumps(values)
                 + ", spanGaps: true});"
+            )
+        for key, values in condition_ma_map.items():
+            html_lines.append(
+                "conditionDatasets.push({label: '"
+                + key
+                + " (MA3)', data: "
+                + json.dumps(values)
+                + ", spanGaps: true, borderDash: [6,3], borderWidth: 2});"
             )
         html_lines.append(
             "new Chart(document.getElementById('conditionChart'), {type: 'line', data: {labels: conditionLabels, datasets: conditionDatasets}, options: {responsive: true, plugins: {legend: {position: 'bottom'}}, scales: {y: {type: 'logarithmic', min: 1}}}});")

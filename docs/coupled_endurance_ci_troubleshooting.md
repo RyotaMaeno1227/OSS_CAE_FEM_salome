@@ -40,7 +40,7 @@ Coupled 拘束の耐久スイートは `.github/workflows/coupled_endurance.yml`
    - しきい値は CI のログに出ている値をそのまま使うか、`.github/workflows/coupled_endurance.yml` 内の `ARCHIVE_MAX_*` と合わせて確認してください。
    - `--summary-json` で生成されたファイルは `_validate_summary_schema` による検証を通過済みです。フォーマット違反がある場合はコマンドが終了コード 2 で即終了します。
 3. 可視化が必要な場合は `--skip-plot` を外し、`--output figure.png` を追加するとグラフを生成できます（ローカルでのみ推奨）。
-4. GitHub CLI (`gh`) を利用できる環境であれば、`tools/fetch_endurance_artifact.py` を実行することで失敗したワークフローのアーティファクト取得と再現コマンド生成を自動化できます。Run ID が分からない場合は `--interactive` を付与すると `gh run list` の結果から選択できます。
+4. GitHub CLI (`gh`) を利用できる環境であれば、`tools/fetch_endurance_artifact.py` を実行することで失敗したワークフローのアーティファクト取得と再現コマンド生成を自動化できます。Run ID が分からない場合は `--interactive` を付与すると `gh run list` の結果から選択できます。`--comment-file` で Markdown を保存し、`--post-comment --comment-target pr/<番号>` のように指定すれば `gh pr comment` で即時共有も可能です。
 
    ```bash
    python tools/fetch_endurance_artifact.py 1234567890 \
@@ -55,7 +55,7 @@ Coupled 拘束の耐久スイートは `.github/workflows/coupled_endurance.yml`
 
 ## 4. Plan CSV (`--plan-csv`) の読み方
 
-`tools/archive_coupled_constraint_endurance.py` で `--plan-csv` を指定すると、実行（またはドライランで予定）された操作を `plan.csv` に記録します。CI では `data/endurance_archive/plan.csv` がアーティファクトとして添付されるため、削除や整理の判断材料になります。
+`tools/archive_coupled_constraint_endurance.py` で `--plan-csv` と `--plan-markdown` を指定すると、実行（またはドライランで予定）された操作を `plan.csv` と `plan.md` に記録します。CI では両ファイルがアーティファクトとして添付され、Webhook 通知にも `plan.md` の抜粋が流れるため、削除や整理の判断材料になります。
 
 | 列 | 概要 | 判断のヒント |
 |----|------|--------------|
@@ -92,6 +92,30 @@ CI での失敗を再現したら、原因調査の結果やパラメータ変�
 ---
 
 ## 7. サマリ JSON の互換性ポリシー
+
+---
+
+## 8. Webhook 通知サンプルと対応フロー
+
+Webhook を有効化すると、Slack 等には次のようなメッセージが届きます。
+
+```
+[Coupled Endurance] FAILURE - Run 1234567890
+- Samples: 7200 / Max condition: 5.43e+08
+- Warning ratio: 100.00% / Rank ratio: 0.00%
+Run details ▶ https://github.com/acme/highperformanceFEM/actions/runs/1234567890
+
+Plan overview
+| Action | Target | Detail | Hash | Reason |
+| archive | ... | ... | ... | completed |
+```
+
+推奨される一次対応フローは以下の通りです。
+
+1. 通知に貼り付けられた `plan.md` で削除予定のファイルが想定通りか確認する。閾値超過 (`max-entries`/`max-age`) が妥当か判断。
+2. `tools/fetch_endurance_artifact.py ${{run_id}} --output-dir tmp/endurance --comment-file tmp/comment.md` を実行し、再現コマンドとコメントテンプレートを取得。
+3. 生成されたコメントを Pull Request や Issue に投稿（`--post-comment --comment-target pr/<番号>`）し、再現結果・暫定対応を共有。
+4. 必要に応じて `plan.csv`/`plan.md` を用いて保持ポリシーを調整し、再実行または閾値変更を提案する。
 - JSON には `version` キーが含まれており、現在のスキーマは `1` です。フィールド追加など互換な拡張を行う場合は既存ツールが理解できる初期値（例: `0.0` や空文字）を付与し、破壊的変更が必要な場合のみ `version` をインクリメントしてください。
 - ツール側の `_validate_summary_schema` は、自身が対応していない新しい `version` を検出すると終了コード 2 で停止します。CI に反映する際は、バージョンを上げたスクリプトとワークフロー設定を一度に更新すること。
 - バージョン更新時はこのセクションに変更点と後方互換ガイドを追記し、`COUPLED_SUMMARY_VERSION` の値と合わせて管理します。

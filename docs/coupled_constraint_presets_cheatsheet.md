@@ -111,3 +111,31 @@ docking\_guide & ドッキング誘導 & 0.72 & -0.25 & 0.020 / 0.034 & 30.0 / 1
 ### 5.3 運用メモ
 - PDF に変換したファイルは `docs/media/coupled/` もしくは社内ストレージの `/posters/` に保存し、Wiki のクイックリンクから参照できるようにします。
 - 印刷時の推奨サイズ：A3（ランドスケープ）。A4 で印刷する場合はフォントサイズ 10–11pt 目安。
+
+### 5.4 依存パッケージと検証ログ
+
+| 目的 | 推奨パッケージ |
+|------|----------------|
+| Pandoc 本体 | <https://github.com/jgm/pandoc/releases> からバイナリ取得、または `apt-get install pandoc` |
+| LaTeX エンジン | TeX Live (`texlive-full` or `texlive-latex-extra`), MiKTeX, あるいは `tectonic` |
+| フォント | Noto Sans CJK / Yu Gothic / Hiragino など日本語対応フォント |
+
+ローカル環境では `pip install pandoc` を試行したものの、PyPI に対応パッケージが存在しないため失敗しました。ログを以下に残します。
+
+```bash
+$ pip install pandoc
+Defaulting to user installation because normal site-packages is not writeable
+WARNING: Retrying ... Failed to establish a new connection: [Errno -2] Name or service not known
+...
+ERROR: Could not find a version that satisfies the requirement pandoc (from versions: none)
+ERROR: No matching distribution found for pandoc
+```
+
+そのため、Linux 環境では以下のようにパッケージマネージャ経由でのインストールを推奨します。
+
+```bash
+sudo apt-get update
+sudo apt-get install pandoc texlive-latex-extra texlive-fonts-recommended
+```
+
+依存を揃えた後、再度セクション 5.1 の Pandoc コマンドを実行すると PDF が生成されます。`--verbose` オプションを付けるとフォント埋め込みや警告が確認しやすく、CI では `pandoc ... || { tail -n 50 pandoc.log; exit 1; }` のようにログを収集する運用を推奨します。

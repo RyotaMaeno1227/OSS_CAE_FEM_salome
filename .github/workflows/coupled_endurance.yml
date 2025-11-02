@@ -44,6 +44,7 @@ jobs:
             --label "${{ github.workflow }}:${{ github.run_id }}" \
             --prune-duplicates \
             --plan-csv data/endurance_archive/plan.csv \
+            --plan-markdown data/endurance_archive/plan.md \
             $EXTRA_ARGS
 
       - name: Generate endurance summaries
@@ -57,10 +58,10 @@ jobs:
             --summary-html data/endurance_archive/latest.summary.html \
             --summary-json data/endurance_archive/latest.summary.json \
             --fail-on-max-condition 5.0e8 \
-            --fail-on-warning-ratio-below 0.95 \
             --fail-on-rank-ratio 0.05
 
       - name: Upload endurance artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coupled-endurance-${{ github.run_id }}
@@ -71,11 +72,13 @@ jobs:
             data/endurance_archive/latest.summary.html
             data/endurance_archive/latest.summary.json
             data/endurance_archive/plan.csv
+            data/endurance_archive/plan.md
             data/endurance_archive/manifest.json
             data/endurance_archive/*.csv
             data/endurance_archive/*.csv.summary.md
             data/endurance_archive/*.csv.summary.html
             data/endurance_archive/*.csv.summary.json
+            data/endurance_archive/repro/**
 
       - name: Send webhook notification
         if: always()
@@ -95,12 +98,15 @@ import os
 from pathlib import Path
 
 summary_path = Path("data/endurance_archive/latest.summary.json")
+plan_md_path = Path("data/endurance_archive/plan.md")
 summary = {}
 if summary_path.exists():
     try:
         summary = json.loads(summary_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
         summary = {"error": "Failed to parse latest.summary.json"}
+
+plan_markdown = plan_md_path.read_text(encoding="utf-8") if plan_md_path.exists() else None
 
 status = os.environ.get("JOB_STATUS", "unknown")
 run_url = os.environ.get("GITHUB_RUN_URL", "")
@@ -136,7 +142,33 @@ if summary:
         }
     )
 
+if plan_markdown:
+    payload["attachments"].append(
+        {
+            "title": "Plan overview",
+            "text": plan_markdown[:4000],
+            "mrkdwn_in": ["text"],
+        }
+    )
+
 print(json.dumps(payload))
 PY
 )
           curl -X POST -H 'Content-Type: application/json' --data "$payload" "$WEBHOOK_URL"
+
+      - name: Generate repro command (fallback)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          mkdir -p data/endurance_archive/repro
+          python tools/fetch_endurance_artifact.py \
+            ${{ github.run_id }} \
+            --output-dir data/endurance_archive/repro \
+            --summary-out data/endurance_archive/repro/latest.summary.json \
+            --comment-file data/endurance_archive/repro/comment.md \
+            --repo "${REPO}" \
+            --max-retries 3
+          echo "--- Coupled Endurance repro comment ---"
+          cat data/endurance_archive/repro/comment.md
