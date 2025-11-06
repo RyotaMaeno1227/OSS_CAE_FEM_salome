@@ -51,6 +51,10 @@ class BenchRow:
     epsilon: float
     max_condition: float
     avg_condition: float
+    max_condition_spectral: float
+    avg_condition_spectral: float
+    max_condition_gap: float
+    avg_condition_gap: float
     avg_solve_time_us: float
     drop_events: int
     drop_index_mask: int
@@ -67,6 +71,10 @@ class BenchRow:
             epsilon=float(row["epsilon"]),
             max_condition=float(row["max_condition"]),
             avg_condition=float(row["avg_condition"]),
+            max_condition_spectral=float(row.get("max_condition_spectral", row["max_condition"])),
+            avg_condition_spectral=float(row.get("avg_condition_spectral", row["avg_condition"])),
+            max_condition_gap=float(row.get("max_condition_gap", "0.0")),
+            avg_condition_gap=float(row.get("avg_condition_gap", "0.0")),
             avg_solve_time_us=float(row["avg_solve_time_us"]),
             drop_events=int(row["drop_events"]),
             drop_index_mask=int(row["drop_index_mask"]),
@@ -96,6 +104,10 @@ EXPECTED_COLUMNS = [
     "epsilon",
     "max_condition",
     "avg_condition",
+    "max_condition_spectral",
+    "avg_condition_spectral",
+    "max_condition_gap",
+    "avg_condition_gap",
     "avg_solve_time_us",
     "drop_events",
     "drop_index_mask",
@@ -157,6 +169,24 @@ def validate_csv_content(header: List[str], rows: List[BenchRow]) -> List[Dict[s
                     "row": index,
                     "value": row.max_condition,
                     "message": f"{row_ctx}: max_condition invalid (got {row.max_condition})",
+                }
+            )
+        if row.max_condition_spectral < 0.0 or not math.isfinite(row.max_condition_spectral):
+            issues.append(
+                {
+                    "type": "invalid_max_condition_spectral",
+                    "row": index,
+                    "value": row.max_condition_spectral,
+                    "message": f"{row_ctx}: max_condition_spectral invalid (got {row.max_condition_spectral})",
+                }
+            )
+        if row.max_condition_gap < 0.0 or not math.isfinite(row.max_condition_gap):
+            issues.append(
+                {
+                    "type": "invalid_max_condition_gap",
+                    "row": index,
+                    "value": row.max_condition_gap,
+                    "message": f"{row_ctx}: max_condition_gap invalid (got {row.max_condition_gap})",
                 }
             )
         if row.avg_solve_time_us < 0.0 or not math.isfinite(row.avg_solve_time_us):

@@ -63,25 +63,18 @@
    - 拘束・接触をまとめたアイランド分割と並列実行への布石。  
    - `chrono_island2d_build`・`chrono_island2d_solve` を実装済み（OpenMP 対応）。今後は形状拡張／新拘束追加後の統合稼働を想定。
 
-### 3.4 テスト & ツール
-1. **単体テスト整備**  
-   - 各拘束・接触ケースの数値回帰テストを `tests/` 以下に追加。  
-   - `test_island_parallel_contacts`・`test_island_builder` でアイランド分割の正当性と並列経路を検証。  
-   - `test_polygon_collision` で凸ポリゴン／円の接触検出と解決を回帰し、`test_polygon_mass_properties` で質量・慣性の数値精度を確認。  
-   - `test_polygon_slope_friction`・`test_polygon_spin_collision` で斜面摩擦・回転ポリゴン衝突シナリオを網羅、`test_capsule_edge_collision` でカプセル・エッジの組合せを検証。  
-   - `test_island_polygon_longrun` でポリゴン同士の接触と距離拘束を同一アイランド内で長時間駆動し、ウォームスタート統合を回帰。  
-   - `test_contact_manager_longrun` でマニフォールドの再利用・ウォームスタート安定性を長時間回帰。  
-   - `make test` で全テストが実行されるよう連携。
-2. **ベンチマーク/デモ**  
-   - パフォーマンス検証用のベンチスイートを整備し、改善効果を把握。  
-   - `tests/bench_island_solver` を追加（呼び出し例: `make bench` または `./tests/bench_island_solver 128 400 8`）。スレッド数スイープ結果をログに出力。  
-   - `examples/planar_constraint_demo` を追加し、`docs/planar_constraint_visualization.m` でモータ／リミット挙動を教材用に可視化できるようにした。  
-   - Coupled 拘束用のマイクロベンチ（多数の式を抱える拘束をアイランド内に並べ、条件数／反復回数／解法時間を計測）を次スプリントで追加。結果を CSV 化し、CI の nightly ベンチに組み込む計画。
-3. **CI / 可視化連携**  
-   - GitHub Actions 等でテスト自動実行（ローカルでの再現性重視、後日CI環境を検討）。  
-   - `tools/plot_coupled_constraint_endurance.py` に Markdown/HTML/JSON サマリ出力と `--skip-plot`/しきい値判定オプションを追加し、ヘッドレス CI から `--no-show` と組み合わせてレポート生成および自動ゲートが可能。  
-   - `tools/archive_coupled_constraint_endurance.py` で耐久 CSV を SHA-256 ハッシュで重複判定しつつ `data/endurance_archive/` に時刻付きで保存、`latest.*`（CSV/Markdown/HTML/JSON）と manifest を更新、`--prune-duplicates`/`--max-entries`/`--max-age-days`/`--max-file-size-mb`/`--plan-markdown` で履歴や容量を整理。保護したいアーカイブは `--exclude-config`（YAML/JSON）で保留リストに登録可能。  
-   - 週次（月曜 03:15 UTC）ワークフロー `.github/workflows/coupled_endurance.yml` を追加し、アーカイブ＋可視化＋アーティファクト化＋重複整理まで自動実行（`coupled_endurance-${{github.run_id}}` として `latest.csv/.summary.*` と manifest を収集）。通知は `tools/compose_endurance_notification.py` で Slack/メール共通テンプレートを生成し、失敗時には `tools/fetch_endurance_artifact.py` が自動的に再現コマンドとコメントを生成するフォールバックを追加。CI 失敗時の調査手順は `docs/coupled_endurance_ci_troubleshooting.md` を参照。
+### 3.4 テスト & ベンチマーク（計算コア対象）
+
+| カテゴリ | 目的 | 該当テスト / ベンチ | 主な指標 |
+|----------|------|---------------------|----------|
+| 拘束（単体） | 距離・回転・スライダの Jacobian / Warm start を回帰 | `test_distance_constraint_multi`, `test_revolute_constraint`, `test_prismatic_constraint`, `test_planar_constraint` | 速度誤差、反復数、一致チェック |
+| Coupled 解法 | 多式拘束の安定性と条件数監視 | `test_coupled_constraint`, `test_coupled_constraint_endurance`, `bench_coupled_constraint` | 条件数、ドロップ回数、ピボット最小値 |
+| 接触コア | 円/凸ポリゴンの接触・摩擦モデル検証 | `test_circle_collision_*`, `test_polygon_collision`, `test_contact_manager_longrun` | 滑り速度、反発係数、マニフォールド保持 |
+| 島分割 & 並列 | Union-Find / OpenMP の一貫性とスケール | `test_island_builder`, `test_island_parallel_contacts`, `bench_island_solver` | 島数、並列 vs 直列の一致、スループット |
+| 継続回帰 | 長時間シナリオでのドリフト検出 | `test_planar_constraint_longrun`, `test_polygon_spin_collision`, `test_distance_angle_endurance` | ドリフト量、安定化効果 |
+
+- 上表に含まれないユーティリティ系（例: `test_coupled_logging_integration`）は任意機能扱いとし、Appendix へ移行予定 (`docs/optional_features_appendix_plan.md` 参照)。
+- CI は上記カテゴリから最小限セットを実行し、数値解の健全性に集中する。メディア生成や通知は CI スコープ外。
 
 ## 4. マイルストンとタスク一覧
 | フェーズ | 想定期間 | 主タスク | 成果物 | 進捗 |
@@ -109,9 +102,13 @@
 - 拘束フレームワークに `ChronoConstraint2DOps_C`/`ChronoConstraint2DBase_C` を導入し、距離拘束を新インターフェースへ移行。
 - 距離拘束バッチソルバ (`chrono_constraint2d_batch_solve`) と OpenMP ベースの SMP 対応を実装し、`test_constraint_batch_solve` で並列／直列の一致を検証。
   - アイランド分割を Union-Find＋ハッシュマップベースに刷新し、大規模拘束でも高速にグルーピング可能にした。
-- **次のアクション候補**
+- **チュートリアル／教育コンテンツ（計算コア向け）**
+  - `FEM4C/docs/FEM_LEARNING_GUIDE.md` と `FEM4C/docs/tutorial_manual.md` を参照し、Coupled 拘束・接触ソルバの基本計算フローを学べる最小教材を整備する。
+  - 導出メモ (`docs/coupled_constraint_solver_math.md`) や移行計画 (`docs/coupled_island_migration_plan.md`) と連携し、数式・サンプルコード・テストケースへの導線をまとめる。
+  - 教材は Markdown ベースで管理し、通知や可視化など計算に直結しない話題は appendix に切り分ける。
+- **次のアクション候補（計算コア限定）**
   1. 摩擦付き接触での複数接触点・マンifold拡張（複数点、永続性）を検討し、継続接触の安定化を図る。
-  2. ボディ/素材ごとの摩擦係数設定APIを検討し、テストを拡張（複数組み合わせ）。
+  2. Coupled 拘束の多式解法で 3D 版と同等の安定性を得るため、条件数改善やピボット選択の最適化を進める。
 
 ## 9. バッチソルバ最適化メモ（2025-10-19）
 - 目的: `chrono_constraint2d_batch_solve` 内で繰り返し確保している中間配列（アイランドID、サイズ、オフセット、並び替えバッファなど）を再利用可能なワークスペースに移し、ヒープ割り当てコストと断片化を低減する。
@@ -231,18 +228,18 @@
 - **ログ観測**: `constraint.last_distance_force_eq[i]` / `last_angle_force_eq[i]` を CSV へ落とし込み、`tools/plot_coupled_constraint_endurance.py` でピーク検査や条件数の推移を確認。`tests/test_coupled_constraint_endurance` の CSV にはドロップ数・対象式 index・再解ステップ数を追記済み。週次ジョブでは `tools/run_coupled_benchmark.py`（閾値は `config/coupled_benchmark_thresholds.yaml` で共通化）を用いて `data/coupled_benchmark_metrics.csv` と GitHub Actions Warning を自動収集し、`tools/summarize_coupled_benchmark_history.py` で Markdown/HTML レポートと簡易グラフ（条件数・pending 推移）を生成、さらに `.github/workflows/coupled_benchmark.yml` が GitHub Pages へ自動デプロイする（ローカル手順は `docs/coupled_benchmark_setup.md` を参照）。
 
 ### 13.3 診断・警告運用
-- **診断フィールド**: `ChronoCoupledConstraint2DDiagnostics_C` は `flags`（`CHRONO_COUPLED_DIAG_*`）、`rank`、`condition_number`、pivot 最小/最大を提供。閾値超過時に `CHRONO_COUPLED_DIAG_CONDITION_WARNING` が立つため、CI ではこのビットの回数を集計する。
+- **診断フィールド**: `ChronoCoupledConstraint2DDiagnostics_C` は `flags`（`CHRONO_COUPLED_DIAG_*`）、`rank`、行和推定の `condition_number`、固有値ベースの `condition_number_spectral`、`min/max_pivot`、`min/max_eigenvalue` を提供。閾値超過時に `CHRONO_COUPLED_DIAG_CONDITION_WARNING` が立つため、CI ではこのビットの回数を集計する。
 - **ポリシー設定**: `ChronoCoupledConditionWarningPolicy_C` で `enable_logging`（デフォルト WARN 出力）、`log_cooldown`（秒換算タイマー）、`enable_auto_recover`（最小対角式のドロップ）、`max_drop` を制御。ドロップが発生した場合は `diagnostics.rank` が能動式数と一致することを確認する。
-- **標準ログ基盤との統合**: `chrono_log` のハンドラ差し替え手順は `docs/chrono_logging_integration.md` に集約済み。CI や長時間テストでは WARN→INFO へダウングレードし、stderr 汚染を抑えつつ `diagnostics.condition_number` の閾値監視を継続する。
+- **標準ログ基盤との統合**: `chrono_log` のハンドラ差し替え手順は `docs/chrono_logging_integration.md` に集約済み。CI や長時間テストでは WARN→INFO へダウングレードし、stderr 汚染を抑えつつ `max(diagnostics.condition_number, diagnostics.condition_number_spectral)` の閾値監視を継続する。
 
 ### 13.4 テスト＆検証フロー
 - **単体テスト**: `tests/test_coupled_constraint` で式追加・条件数警告・自動式ドロップを網羅。新しい比率やソフトネスを導入する場合はここへケース追加。
 - **耐久テスト**: `tests/test_coupled_constraint_endurance` は 7200 ステップで複数段階のターゲット切り替えを実施。CSV を `tools/plot_coupled_constraint_endurance.py` でプロットし、最大誤差・最大力・条件数をサマリへ抽出。
-- **ベンチ指標**: マイクロベンチ（近日実装）では「式数」「diagnostics.condition_number」「Gauss-Jordan の反復/ドロップ回数」「solve 時間(ns)」を計測する。目安は条件数 1e6 以内でドロップ 0、1e10 クラスで 1-2 式ドロップ、1 ステップ 200 µs 未満（デスクトップ CPU）。
+- **ベンチ指標**: マイクロベンチ（近日実装）では「式数」「diagnostics.condition_number / condition_number_spectral」「condition gap」「Gauss-Jordan の反復/ドロップ回数」「solve 時間(ns)」を計測する。目安は条件数 1e6 以内でドロップ 0、1e10 クラスで 1-2 式ドロップ、1 ステップ 200 µs 未満（デスクトップ CPU）。
 - **ログレビュー**: 耐久テスト中の WARN は仕様。CI へ取り込む際はポリシーで WARN→INFO へ切り替えつつ、`accumulated_flags` と CSV のドロップ統計を閾値評価する（`tools/run_coupled_benchmark.py` は自動 Warning を出力）。
 
 ### 13.5 診断ログを使ったデバッグワークフロー
-1. **収集**: `chrono_coupled_constraint2d_get_diagnostics` の結果（`flags`, `rank`, `condition_number`, pivot 値）と、式別反力 `last_distance_force_eq[]` / `last_angle_force_eq[]` を CSV に記録。`tests/test_coupled_constraint_endurance` が雛形。
+1. **収集**: `chrono_coupled_constraint2d_get_diagnostics` の結果（`flags`, `rank`, `condition_number`, `condition_number_spectral`, pivot 値, eigen 値）と、式別反力 `last_distance_force_eq[]` / `last_angle_force_eq[]` を CSV に記録。`tests/test_coupled_constraint_endurance` が雛形。
 2. **可視化**: `python tools/plot_coupled_constraint_endurance.py data/coupled_constraint_endurance.csv --output out.png` を実行し、条件数ピークと WARN ログのタイムスタンプを照合。必要に応じ `phase_id` 列を追加してステージ境界を描画。
 3. **分析**: 条件数が長時間高止まりする場合は、該当ステップの `equation_active[]` と `diagnostics.rank` を比較し、自動ドロップが働いたか判断。補助式の `ratio_*` を調整するか、`softness_*` を増やして安定化を図る。
 4. **再検証**: パラメータ更新後は `tests/test_coupled_constraint` とマイクロベンチ（実装予定）を再実行し、条件数・反力ピークが改善されたか確認する。CI 取り込み時は WARN→INFO フラグを設定した上で、CSV の最大値を自動チェックするスクリプトを追加予定。

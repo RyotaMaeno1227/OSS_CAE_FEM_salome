@@ -20,6 +20,10 @@ class BenchRow:
     epsilon: float
     max_condition: float
     avg_condition: float
+    max_condition_spectral: float
+    avg_condition_spectral: float
+    max_condition_gap: float
+    avg_condition_gap: float
     avg_solve_time_us: float
     drop_events: int
     drop_index_mask: int
@@ -36,6 +40,10 @@ class BenchRow:
             epsilon=float(row["epsilon"]),
             max_condition=float(row["max_condition"]),
             avg_condition=float(row["avg_condition"]),
+            max_condition_spectral=float(row.get("max_condition_spectral", row["max_condition"])),
+            avg_condition_spectral=float(row.get("avg_condition_spectral", row["avg_condition"])),
+            max_condition_gap=float(row.get("max_condition_gap", "0.0")),
+            avg_condition_gap=float(row.get("avg_condition_gap", "0.0")),
             avg_solve_time_us=float(row["avg_solve_time_us"]),
             drop_events=int(row["drop_events"]),
             drop_index_mask=int(row["drop_index_mask"]),
@@ -61,6 +69,9 @@ class EqAggregate:
     avg_solve_mean: float
     avg_solve_max: float
     max_condition: float
+    max_condition_spectral: float
+    max_condition_gap: float
+    avg_condition_gap: float
     drop_mean: float
     unrecovered_mean: float
 
@@ -103,6 +114,9 @@ def aggregate_by_eq(runs: Iterable[RunRecord]) -> List[EqAggregate]:
         avg_solve_samples = [row.avg_solve_time_us for row in rows]
         drop_samples = [row.drop_events for row in rows]
         unrecovered_samples = [row.unrecovered_drops for row in rows]
+        spectral_samples = [row.max_condition_spectral for row in rows]
+        gap_samples = [row.max_condition_gap for row in rows]
+        avg_gap_samples = [row.avg_condition_gap for row in rows]
         aggregates.append(
             EqAggregate(
                 eq_count=eq_count,
@@ -110,6 +124,9 @@ def aggregate_by_eq(runs: Iterable[RunRecord]) -> List[EqAggregate]:
                 avg_solve_mean=statistics.mean(avg_solve_samples) if avg_solve_samples else 0.0,
                 avg_solve_max=max(avg_solve_samples) if avg_solve_samples else 0.0,
                 max_condition=max(row.max_condition for row in rows) if rows else 0.0,
+                max_condition_spectral=max(spectral_samples) if spectral_samples else 0.0,
+                max_condition_gap=max(gap_samples) if gap_samples else 0.0,
+                avg_condition_gap=statistics.mean(avg_gap_samples) if avg_gap_samples else 0.0,
                 drop_mean=statistics.mean(drop_samples) if drop_samples else 0.0,
                 unrecovered_mean=statistics.mean(unrecovered_samples) if unrecovered_samples else 0.0,
             )
@@ -125,7 +142,11 @@ def compute_trend_metrics(runs: List[RunRecord]) -> List[Dict[str, Optional[floa
         series: List[Optional[float]] = []
         for run in runs_sorted:
             match = next((row for row in run.rows if row.eq_count == eq), None)
-            series.append(match.max_condition if match else None)
+            if match:
+                effective = max(match.max_condition, match.max_condition_spectral)
+            else:
+                effective = None
+            series.append(effective)
         numeric_series = [value for value in series if value is not None]
         if not numeric_series:
             continue
@@ -171,12 +192,13 @@ def render_markdown(
             lines.append("> " + " | ".join(banner_parts))
             lines.append("")
     lines.append("## Aggregate by Equation Count")
-    lines.append("| eq_count | samples | mean solve [µs] | max solve [µs] | max condition | mean drops | mean unrecovered |")
-    lines.append("|---------:|--------:|----------------:|---------------:|--------------:|-----------:|-----------------:|")
+    lines.append("| eq_count | samples | mean solve [µs] | max solve [µs] | max κ (bound) | max κ (spectral) | max gap | avg gap | mean drops | mean unrecovered |")
+    lines.append("|---------:|--------:|----------------:|---------------:|--------------:|------------------:|---------:|---------:|-----------:|-----------------:|")
     for agg in aggregates:
         lines.append(
             f"| {agg.eq_count} | {agg.sample_count} | {agg.avg_solve_mean:.3f} | {agg.avg_solve_max:.3f} | "
-            f"{agg.max_condition:.3e} | {agg.drop_mean:.2f} | {agg.unrecovered_mean:.2f} |"
+            f"{agg.max_condition:.3e} | {agg.max_condition_spectral:.3e} | {agg.max_condition_gap:.3e} | "
+            f"{agg.avg_condition_gap:.3e} | {agg.drop_mean:.2f} | {agg.unrecovered_mean:.2f} |"
         )
 
     if runs:
@@ -185,11 +207,12 @@ def render_markdown(
         lines.append("## Latest Run Snapshot")
         lines.append(f"Source: `{latest.path}`")
         lines.append("")
-        lines.append("| eq_count | epsilon | avg solve [µs] | max condition | drops | unrecovered |")
-        lines.append("|---------:|--------:|----------------:|--------------:|------:|------------:|")
+        lines.append("| eq_count | epsilon | avg solve [µs] | max κ (bound) | max κ (spectral) | gap | drops | unrecovered |")
+        lines.append("|---------:|--------:|----------------:|--------------:|------------------:|----:|------:|------------:|")
         for row in sorted(latest.rows, key=lambda r: (r.eq_count, r.epsilon)):
             lines.append(
                 f"| {row.eq_count} | {row.epsilon:.1e} | {row.avg_solve_time_us:.3f} | {row.max_condition:.3e} | "
+                f"{row.max_condition_spectral:.3e} | {row.max_condition_gap:.3e} | "
                 f"{row.drop_events} | {row.unrecovered_drops} |"
             )
 
@@ -275,8 +298,10 @@ def _build_timeline_datasets(
         for eq in eq_ids:
             key = f"eq{eq}"
             if eq in row_map:
-                condition_map[key].append(row_map[eq].max_condition)
-                pending_map[key].append(row_map[eq].max_pending_steps)
+                row = row_map[eq]
+                effective = max(row.max_condition, row.max_condition_spectral)
+                condition_map[key].append(effective)
+                pending_map[key].append(row.max_pending_steps)
             else:
                 condition_map[key].append(None)
                 pending_map[key].append(None)

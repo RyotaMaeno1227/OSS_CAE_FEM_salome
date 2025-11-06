@@ -242,6 +242,9 @@ typedef struct ChronoCoupledConstraint2DDiagnostics_C {
     double condition_number;
     double min_pivot;
     double max_pivot;
+    double condition_number_spectral;
+    double min_eigenvalue;
+    double max_eigenvalue;
 } ChronoCoupledConstraint2DDiagnostics_C;
 
 typedef struct ChronoCoupledConditionWarningEvent_C {

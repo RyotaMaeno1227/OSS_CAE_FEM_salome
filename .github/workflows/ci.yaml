@@ -20,17 +20,31 @@ jobs:
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y build-essential
 
-      - name: Run unit tests
+      - name: Build test binaries
+        working-directory: chrono-C-all
+        run: |
+          make clean
+          make tests
+
+      - name: Run regression suite
         id: run_tests
         working-directory: chrono-C-all
         continue-on-error: true
         run: |
-          make clean
+          rm -f ../test.log
           set -o pipefail
-          make tests 2>&1 | tee ../test.log
+          if make test > ../test.log 2>&1; then
+            echo "Test run completed. Showing tail of test.log:"
+            tail -n 120 ../test.log
+            exit 0
+          else
+            echo "Test run failed. Showing tail of test.log:"
+            tail -n 400 ../test.log
+            exit 1
+          fi
 
       - name: Upload test log
-        if: steps.run_tests.outcome == 'failure'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: chrono-tests
@@ -39,15 +53,3 @@ jobs:
       - name: Fail if tests failed
         if: steps.run_tests.outcome == 'failure'
         run: exit 1
-
-      - name: Run island solver benchmark
-        if: steps.run_tests.outcome == 'success'
-        working-directory: chrono-C-all
-        run: |
-          make bench | tee bench.log
-
-      - name: Upload bench log
-        uses: actions/upload-artifact@v4
-        with:
-          name: island-solver-bench
-          path: chrono-C-all/bench.log

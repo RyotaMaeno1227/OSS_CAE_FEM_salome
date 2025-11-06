@@ -96,10 +96,11 @@ def write_feed(
         else:
             link_href = rel_path
 
-        summary_parts = [
-            f"eq{row.eq_count}: κ={row.max_condition:.2e}"
-            for row in run.rows[: min(3, len(run.rows))]
-        ]
+        summary_parts = []
+        for row in run.rows[: min(3, len(run.rows))]:
+            summary_parts.append(
+                f"eq{row.eq_count}: κ_b={row.max_condition:.2e}, κ_s={row.max_condition_spectral:.2e}, Δ={row.max_condition_gap:.2e}"
+            )
         summary_text = ", ".join(summary_parts) if summary_parts else "No data"
         entry_id = f"{feed_id}/{run.path.name}-{int(run.timestamp)}"
 

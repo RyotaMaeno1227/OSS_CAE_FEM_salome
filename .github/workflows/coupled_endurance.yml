@@ -60,6 +60,18 @@ jobs:
             --fail-on-max-condition 5.0e8 \
             --fail-on-rank-ratio 0.05
 
+      - name: Trim endurance CSV columns
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for csv in data/endurance_archive/*.csv; do
+            name=$(basename "$csv")
+            if [ "$name" = "plan.csv" ]; then
+              continue
+            fi
+            python tools/filter_coupled_endurance_log.py "$csv" --drop-step
+          done
+
       - name: Prepare notification payloads
         env:
           JOB_STATUS: ${{ job.status }}

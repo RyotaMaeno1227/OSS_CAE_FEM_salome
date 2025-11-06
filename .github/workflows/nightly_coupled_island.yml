@@ -1,0 +1,44 @@
+name: Nightly Coupled & Island Regression
+
+on:
+  schedule:
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  nightly-regression:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential python3
+
+      - name: Build coupled/island regression tests
+        working-directory: chrono-C-all
+        run: |
+          make clean
+          make \
+            tests/test_coupled_constraint \
+            tests/test_coupled_constraint_endurance \
+            tests/test_island_contact_constraint \
+            tests/test_island_parallel_contacts \
+            tests/test_island_polygon_longrun
+
+      - name: Run nightly regression suite
+        run: |
+          python tools/run_nightly_regressions.py \
+            --log-dir artifacts/nightly/logs \
+            --output-csv artifacts/nightly/regression_results.csv \
+            --timeout 900
+
+      - name: Upload regression artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coupled-island-nightly
+          path: |
+            artifacts/nightly/regression_results.csv
+            artifacts/nightly/logs

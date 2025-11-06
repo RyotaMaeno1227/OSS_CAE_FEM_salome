@@ -1,4 +1,5 @@
 #include <math.h>
+#include <float.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -131,9 +132,10 @@ int main(void) {
     fprintf(csv,
             "step,time,distance,angle,eq0_force_distance,eq1_force_distance,eq2_force_distance,"
             "eq0_force_angle,eq1_force_angle,eq2_force_angle,eq0_impulse,eq1_impulse,eq2_impulse,"
-            "diagnostics_flags,condition_number,active_equations,drop_events_step,drop_index_mask_step,"
-            "drop_events_total,recovery_events_step,recovery_steps_step,recovery_events_total,"
-            "pending_drop_count,max_pending_steps_running\n");
+            "diagnostics_flags,condition_number,condition_number_spectral,condition_gap,min_eigenvalue,"
+            "max_eigenvalue,active_equations,drop_events_step,drop_index_mask_step,drop_events_total,"
+            "recovery_events_step,recovery_steps_step,recovery_events_total,pending_drop_count,"
+            "max_pending_steps_running\n");
 
     const double dt = 0.0035;
     const int total_steps = 7200;
@@ -145,7 +147,12 @@ int main(void) {
     double max_angle_error = 0.0;
     double max_distance_force = 0.0;
     double max_angle_force = 0.0;
-    double max_condition = 0.0;
+    double max_condition_bound = 0.0;
+    double max_condition_spectral = 0.0;
+    double max_condition_gap = 0.0;
+    double max_condition_effective = 0.0;
+    double min_eigen_observed = DBL_MAX;
+    double max_eigen_observed = -DBL_MAX;
     unsigned int accumulated_flags = 0u;
 
     int total_eq = chrono_coupled_constraint2d_get_equation_count(&constraint);
@@ -215,9 +222,34 @@ int main(void) {
             chrono_coupled_constraint2d_get_diagnostics(&constraint);
         unsigned int diag_flags = diag ? diag->flags : 0u;
         double condition_number = diag ? diag->condition_number : 0.0;
+        double condition_spectral = diag ? diag->condition_number_spectral : 0.0;
+        double condition_gap = fabs(condition_spectral - condition_number);
+        double eigen_min = diag ? diag->min_eigenvalue : 0.0;
+        double eigen_max = diag ? diag->max_eigenvalue : 0.0;
+        double condition_effective = condition_number;
+        if (condition_spectral > 0.0) {
+            condition_effective = fmax(condition_effective, condition_spectral);
+        }
         accumulated_flags |= diag_flags;
-        if (condition_number > max_condition) {
-            max_condition = condition_number;
+        if (condition_number > max_condition_bound) {
+            max_condition_bound = condition_number;
+        }
+        if (condition_spectral > max_condition_spectral) {
+            max_condition_spectral = condition_spectral;
+        }
+        if (condition_gap > max_condition_gap) {
+            max_condition_gap = condition_gap;
+        }
+        if (condition_effective > max_condition_effective) {
+            max_condition_effective = condition_effective;
+        }
+        if (diag) {
+            if (eigen_min < min_eigen_observed) {
+                min_eigen_observed = eigen_min;
+            }
+            if (eigen_max > max_eigen_observed) {
+                max_eigen_observed = eigen_max;
+            }
         }
 
         int drop_events_step = 0;
@@ -275,7 +307,7 @@ int main(void) {
         double li2 = constraint.last_distance_impulse_eq[2];
 
         fprintf(csv,
-                "%d,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%u,%.6e,%d,%d,%u,%d,%d,%d,%d,%d\n",
+                "%d,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%u,%.6e,%.6e,%.6e,%.6e,%.6e,%d,%d,%u,%d,%d,%d,%d,%d,%d\n",
                 step,
                 time,
                 distance,
@@ -291,6 +323,10 @@ int main(void) {
                 li2,
                 diag_flags,
                 condition_number,
+                condition_spectral,
+                condition_gap,
+                eigen_min,
+                eigen_max,
                 active_equations,
                 drop_events_step,
                 drop_index_mask_step,
@@ -342,10 +378,11 @@ int main(void) {
         return 1;
     }
 
-    if (max_condition > 5e9) {
+    if (max_condition_effective > 5e9) {
         fprintf(stderr,
-                "Coupled endurance failed: condition number too high (%.6e).\n",
-                max_condition);
+                "Coupled endurance failed: condition number too high (bound=%.6e, spectral=%.6e).\n",
+                max_condition_bound,
+                max_condition_spectral);
         return 1;
     }
 

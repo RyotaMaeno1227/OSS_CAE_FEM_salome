@@ -253,8 +253,13 @@ static void coupled_constraint_clear_equation_buffers(ChronoCoupledConstraint2D_
     constraint->diagnostics.condition_number = 0.0;
     constraint->diagnostics.min_pivot = 0.0;
     constraint->diagnostics.max_pivot = 0.0;
+    constraint->diagnostics.condition_number_spectral = 0.0;
+    constraint->diagnostics.min_eigenvalue = 0.0;
+    constraint->diagnostics.max_eigenvalue = 0.0;
 }
 
+/* Derivation of the matrix build and pivot policy is documented in
+ * docs/coupled_constraint_solver_math.md for cross-reference. */
 static int coupled_constraint_invert_matrix(const double *src,
                                             double *dst,
                                             int n,
@@ -270,19 +275,39 @@ static int coupled_constraint_invert_matrix(const double *src,
             inv[i][j] = (i == j) ? 1.0 : 0.0;
         }
     }
+    double scale[CHRONO_COUPLED_MAX_EQ];
+    for (int i = 0; i < n; ++i) {
+        double max_row = 0.0;
+        for (int j = 0; j < n; ++j) {
+            double val = fabs(a[i][j]);
+            if (val > max_row) {
+                max_row = val;
+            }
+        }
+        if (max_row < pivot_epsilon) {
+            max_row = 1.0;
+        }
+        scale[i] = max_row;
+    }
     double local_min = 0.0;
     double local_max = 0.0;
     int local_rank = 0;
     for (int col = 0; col < n; ++col) {
         int pivot_row = col;
-        double pivot_val = fabs(a[pivot_row][col]);
-        for (int row = col + 1; row < n; ++row) {
+        double pivot_metric = -1.0;
+        for (int row = col; row < n; ++row) {
             double val = fabs(a[row][col]);
-            if (val > pivot_val) {
-                pivot_val = val;
+            double row_scale = scale[row];
+            if (row_scale < pivot_epsilon) {
+                row_scale = pivot_epsilon;
+            }
+            double metric = val / row_scale;
+            if (metric > pivot_metric) {
+                pivot_metric = metric;
                 pivot_row = row;
             }
         }
+        double pivot_val = fabs(a[pivot_row][col]);
         if (pivot_val < pivot_epsilon) {
             continue;
         }
@@ -295,6 +320,9 @@ static int coupled_constraint_invert_matrix(const double *src,
                 inv[col][k] = inv[pivot_row][k];
                 inv[pivot_row][k] = tmp;
             }
+            double tmp_scale = scale[col];
+            scale[col] = scale[pivot_row];
+            scale[pivot_row] = tmp_scale;
         }
         double pivot = a[col][col];
         if (local_rank == 0) {
@@ -376,6 +404,124 @@ static double coupled_constraint_condition_bound(const double *matrix, int n) {
         upper = CHRONO_COUPLED_PIVOT_EPSILON;
     }
     return upper / lower;
+}
+
+static int coupled_constraint_symmetric_eigenvalues(const double *matrix,
+                                                    int n,
+                                                    double *eigenvalues) {
+    if (!matrix || !eigenvalues || n <= 0 || n > CHRONO_COUPLED_MAX_EQ) {
+        return 0;
+    }
+    double a[CHRONO_COUPLED_MAX_EQ][CHRONO_COUPLED_MAX_EQ];
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            a[i][j] = matrix[i * CHRONO_COUPLED_MAX_EQ + j];
+        }
+    }
+    if (n == 1) {
+        eigenvalues[0] = a[0][0];
+        return 1;
+    }
+    const int max_iterations = 32;
+    const double tolerance = 1e-12;
+    for (int iter = 0; iter < max_iterations; ++iter) {
+        int p = 0;
+        int q = 1;
+        double max_off = 0.0;
+        for (int i = 0; i < n; ++i) {
+            for (int j = i + 1; j < n; ++j) {
+                double val = fabs(a[i][j]);
+                if (val > max_off) {
+                    max_off = val;
+                    p = i;
+                    q = j;
+                }
+            }
+        }
+        if (max_off < tolerance) {
+            break;
+        }
+        double app = a[p][p];
+        double aqq = a[q][q];
+        double apq = a[p][q];
+        if (fabs(apq) < tolerance) {
+            continue;
+        }
+        double tau = (aqq - app) / (2.0 * apq);
+        double t_sign = (tau >= 0.0) ? 1.0 : -1.0;
+        double t = t_sign / (fabs(tau) + sqrt(1.0 + tau * tau));
+        double c = 1.0 / sqrt(1.0 + t * t);
+        double s = t * c;
+        a[p][p] = app - t * apq;
+        a[q][q] = aqq + t * apq;
+        a[p][q] = 0.0;
+        a[q][p] = 0.0;
+        for (int k = 0; k < n; ++k) {
+            if (k == p || k == q) {
+                continue;
+            }
+            double aik = a[k][p];
+            double ajk = a[k][q];
+            double new_aik = c * aik - s * ajk;
+            double new_ajk = c * ajk + s * aik;
+            a[k][p] = new_aik;
+            a[p][k] = new_aik;
+            a[k][q] = new_ajk;
+            a[q][k] = new_ajk;
+        }
+    }
+    for (int i = 0; i < n; ++i) {
+        eigenvalues[i] = a[i][i];
+    }
+    return 1;
+}
+
+static double coupled_constraint_spectral_condition(const double *matrix,
+                                                    int n,
+                                                    double epsilon,
+                                                    double *min_eigenvalue,
+                                                    double *max_eigenvalue) {
+    double eigenvalues[CHRONO_COUPLED_MAX_EQ] = {0.0};
+    if (!coupled_constraint_symmetric_eigenvalues(matrix, n, eigenvalues)) {
+        if (min_eigenvalue) {
+            *min_eigenvalue = 0.0;
+        }
+        if (max_eigenvalue) {
+            *max_eigenvalue = 0.0;
+        }
+        return 0.0;
+    }
+    double min_raw = eigenvalues[0];
+    double max_raw = eigenvalues[0];
+    double min_abs = fabs(eigenvalues[0]);
+    double max_abs = min_abs;
+    for (int i = 1; i < n; ++i) {
+        double value = eigenvalues[i];
+        if (value < min_raw) {
+            min_raw = value;
+        }
+        if (value > max_raw) {
+            max_raw = value;
+        }
+        double abs_val = fabs(value);
+        if (abs_val < min_abs) {
+            min_abs = abs_val;
+        }
+        if (abs_val > max_abs) {
+            max_abs = abs_val;
+        }
+    }
+    if (min_eigenvalue) {
+        *min_eigenvalue = min_raw;
+    }
+    if (max_eigenvalue) {
+        *max_eigenvalue = max_raw;
+    }
+    if (max_abs < epsilon) {
+        return 0.0;
+    }
+    double denominator = fmax(min_abs, epsilon);
+    return max_abs / denominator;
 }
 
 static void chrono_distance_constraint2d_prepare_impl(void *constraint_ptr, double dt);
@@ -1445,6 +1591,9 @@ static void chrono_coupled_constraint2d_prepare_impl(void *constraint_ptr, doubl
     constraint->diagnostics.condition_number = 0.0;
     constraint->diagnostics.min_pivot = 0.0;
     constraint->diagnostics.max_pivot = 0.0;
+    constraint->diagnostics.condition_number_spectral = 0.0;
+    constraint->diagnostics.min_eigenvalue = 0.0;
+    constraint->diagnostics.max_eigenvalue = 0.0;
 
     for (int i = 0; i < CHRONO_COUPLED_MAX_EQ; ++i) {
         constraint->gamma_eq[i] = 0.0;
@@ -1526,7 +1675,11 @@ static void chrono_coupled_constraint2d_prepare_impl(void *constraint_ptr, doubl
     double min_pivot = 0.0;
     double max_pivot = 0.0;
     int rank = 0;
-    double condition = 0.0;
+    double condition_bound = 0.0;
+    double spectral_condition = 0.0;
+    double condition_metric = 0.0;
+    double eigen_min = 0.0;
+    double eigen_max = 0.0;
     int success = 0;
     int condition_recovery_applied = 0;
     int drops_applied = 0;
@@ -1550,8 +1703,17 @@ static void chrono_coupled_constraint2d_prepare_impl(void *constraint_ptr, doubl
                                              &min_pivot,
                                              &max_pivot,
                                              &rank)) {
-            condition = coupled_constraint_condition_bound(base_local, active_count);
-            if (condition > CHRONO_COUPLED_CONDITION_THRESHOLD) {
+            condition_bound = coupled_constraint_condition_bound(base_local, active_count);
+            spectral_condition = coupled_constraint_spectral_condition(base_local,
+                                                                       active_count,
+                                                                       CHRONO_COUPLED_PIVOT_EPSILON,
+                                                                       &eigen_min,
+                                                                       &eigen_max);
+            condition_metric = condition_bound;
+            if (spectral_condition > condition_metric) {
+                condition_metric = spectral_condition;
+            }
+            if (condition_metric > CHRONO_COUPLED_CONDITION_THRESHOLD) {
                 constraint->diagnostics.flags |= CHRONO_COUPLED_DIAG_CONDITION_WARNING;
                 int can_drop = 0;
                 int previous_active = active_count;
@@ -1566,13 +1728,13 @@ static void chrono_coupled_constraint2d_prepare_impl(void *constraint_ptr, doubl
                     drops_applied += 1;
                     condition_recovery_applied = 1;
                     coupled_constraint_try_log_condition_warning(constraint,
-                                                                 condition,
+                                                                 condition_metric,
                                                                  previous_active,
                                                                  1);
                     continue;
                 }
                 coupled_constraint_try_log_condition_warning(constraint,
-                                                             condition,
+                                                             condition_metric,
                                                              active_count,
                                                              condition_recovery_applied);
             }
@@ -1622,12 +1784,18 @@ static void chrono_coupled_constraint2d_prepare_impl(void *constraint_ptr, doubl
         constraint->diagnostics.min_pivot = 0.0;
         constraint->diagnostics.max_pivot = 0.0;
         constraint->diagnostics.condition_number = 0.0;
+        constraint->diagnostics.condition_number_spectral = 0.0;
+        constraint->diagnostics.min_eigenvalue = 0.0;
+        constraint->diagnostics.max_eigenvalue = 0.0;
     } else {
         constraint->diagnostics.rank = rank;
         constraint->diagnostics.min_pivot = min_pivot;
         constraint->diagnostics.max_pivot = max_pivot;
-        constraint->diagnostics.condition_number = condition;
-        if (condition > CHRONO_COUPLED_CONDITION_THRESHOLD) {
+        constraint->diagnostics.condition_number = condition_bound;
+        constraint->diagnostics.condition_number_spectral = spectral_condition;
+        constraint->diagnostics.min_eigenvalue = eigen_min;
+        constraint->diagnostics.max_eigenvalue = eigen_max;
+        if (condition_metric > CHRONO_COUPLED_CONDITION_THRESHOLD) {
             constraint->diagnostics.flags |= CHRONO_COUPLED_DIAG_CONDITION_WARNING;
         }
     }

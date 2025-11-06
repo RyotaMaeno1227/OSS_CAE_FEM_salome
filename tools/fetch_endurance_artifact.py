@@ -83,6 +83,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Post the generated comment using gh issue/pr comment.",
     )
+    parser.add_argument(
+        "--console-comment-only",
+        action="store_true",
+        help="Restrict comment output to the console log (skip GitHub comment posting).",
+    )
     return parser.parse_args()
 
 
@@ -354,7 +359,12 @@ def main() -> int:
         comment_path.write_text(comment_body, encoding="utf-8")
         print(f"Wrote comment Markdown to {comment_path}")
 
-    if args.post_comment:
+    if args.console_comment_only and args.post_comment:
+        print("Console-only mode enabled; skipping GitHub comment posting.", file=sys.stderr)
+
+    should_post_comment = args.post_comment and not args.console_comment_only
+
+    if should_post_comment:
         if not args.comment_target:
             print("Error: --post-comment requires --comment-target.", file=sys.stderr)
             return 1

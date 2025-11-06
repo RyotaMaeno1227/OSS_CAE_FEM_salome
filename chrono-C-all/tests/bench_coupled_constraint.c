@@ -17,6 +17,10 @@ typedef struct {
     double epsilon;
     double max_condition;
     double avg_condition;
+    double max_condition_spectral;
+    double avg_condition_spectral;
+    double max_condition_gap;
+    double avg_condition_gap;
     double avg_solve_time_us;
     int drop_events;
     unsigned int drop_index_mask;
@@ -148,6 +152,10 @@ static CoupledBenchResult bench_case(int equation_count, double epsilon) {
 
     double max_condition = 0.0;
     double sum_condition = 0.0;
+    double max_condition_spectral = 0.0;
+    double sum_condition_spectral = 0.0;
+    double max_condition_gap = 0.0;
+    double sum_condition_gap = 0.0;
     int condition_samples = 0;
 
     double start_time = 0.0;
@@ -167,9 +175,18 @@ static CoupledBenchResult bench_case(int equation_count, double epsilon) {
         const ChronoCoupledConstraint2DDiagnostics_C *diag =
             chrono_coupled_constraint2d_get_diagnostics(&constraint);
         if (diag && step >= warmup_steps) {
-            double condition = diag->condition_number;
-            max_condition = fmax(max_condition, condition);
-            sum_condition += condition;
+            double condition_bound = diag->condition_number;
+            double condition_spectral = diag->condition_number_spectral;
+            if (condition_spectral <= 0.0) {
+                condition_spectral = condition_bound;
+            }
+            double condition_gap = fabs(condition_spectral - condition_bound);
+            max_condition = fmax(max_condition, condition_bound);
+            max_condition_spectral = fmax(max_condition_spectral, condition_spectral);
+            max_condition_gap = fmax(max_condition_gap, condition_gap);
+            sum_condition += condition_bound;
+            sum_condition_spectral += condition_spectral;
+            sum_condition_gap += condition_gap;
             condition_samples += 1;
         }
 
@@ -205,6 +222,10 @@ static CoupledBenchResult bench_case(int equation_count, double epsilon) {
 
     double end_time = bench_now();
     double avg_condition = condition_samples > 0 ? sum_condition / (double)condition_samples : 0.0;
+    double avg_condition_spectral =
+        condition_samples > 0 ? sum_condition_spectral / (double)condition_samples : 0.0;
+    double avg_condition_gap =
+        condition_samples > 0 ? sum_condition_gap / (double)condition_samples : 0.0;
     double avg_time_us = ((end_time - start_time) / (double)measure_steps) * 1e6;
 
     int unrecovered = 0;
@@ -223,6 +244,10 @@ static CoupledBenchResult bench_case(int equation_count, double epsilon) {
     result.epsilon = epsilon;
     result.max_condition = max_condition;
     result.avg_condition = avg_condition;
+    result.max_condition_spectral = max_condition_spectral;
+    result.avg_condition_spectral = avg_condition_spectral;
+    result.max_condition_gap = max_condition_gap;
+    result.avg_condition_gap = avg_condition_gap;
     result.avg_solve_time_us = avg_time_us;
     result.drop_events = drop_events;
     result.drop_index_mask = drop_index_mask;
@@ -237,11 +262,15 @@ static CoupledBenchResult bench_case(int equation_count, double epsilon) {
 
 static void write_result(FILE *out, const CoupledBenchResult *result) {
     fprintf(out,
-            "%d,%.1e,%.6e,%.6e,%.3f,%d,%u,%d,%.3f,%d,%d,%d\n",
+            "%d,%.1e,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,%.3f,%d,%u,%d,%.3f,%d,%d,%d\n",
             result->eq_count,
             result->epsilon,
             result->max_condition,
             result->avg_condition,
+            result->max_condition_spectral,
+            result->avg_condition_spectral,
+            result->max_condition_gap,
+            result->avg_condition_gap,
             result->avg_solve_time_us,
             result->drop_events,
             result->drop_index_mask,
@@ -285,9 +314,9 @@ int main(int argc, char **argv) {
     }
 
     fprintf(out,
-            "eq_count,epsilon,max_condition,avg_condition,avg_solve_time_us,"
-            "drop_events,drop_index_mask,recovery_events,avg_recovery_steps,"
-            "max_recovery_steps,unrecovered_drops,max_pending_steps\n");
+            "eq_count,epsilon,max_condition,avg_condition,max_condition_spectral,avg_condition_spectral,"
+            "max_condition_gap,avg_condition_gap,avg_solve_time_us,drop_events,drop_index_mask,"
+            "recovery_events,avg_recovery_steps,max_recovery_steps,unrecovered_drops,max_pending_steps\n");
 
     const int equation_counts[] = {1, 2, 3, 4};
     const size_t eq_count_total = sizeof(equation_counts) / sizeof(equation_counts[0]);

@@ -57,7 +57,7 @@ void chrono_distance_angle_constraint2d_set_angle_spring(...);
 | `last_impulse_eq[]` / `last_distance_impulse_eq[]` / `last_angle_impulse_eq[]` | 直近の式別インパルス（N*s / N*m*s）。 |
 | `last_distance_force_eq[]` / `last_angle_force_eq[]` | `solve_velocity` 射影結果（インパルス / dt）とスプリング反力の合算。CSV や可視化に利用可能。 |
 | `inv_mass_matrix[][]` | 有効な線形式に対する 1〜4 次の有効質量行列（SPD）。Gauss-Jordan による小規模解でホットキャッシュ化。 |
-| `diagnostics` | `flags`（ランク欠損・条件数超過）、`rank`、`condition_number`、`min/max_pivot` を格納。`chrono_coupled_constraint2d_get_diagnostics` で取得可能。 |
+| `diagnostics` | `flags`（ランク欠損・条件数超過）、`rank`、行和ベースの `condition_number`、固有値ベースの `condition_number_spectral`、`min/max_pivot`、`min/max_eigenvalue` を格納。`chrono_coupled_constraint2d_get_diagnostics` で取得可能。 |
 | `condition_policy` | 条件数閾値超過時のロギングクールダウン、最小ピボット式の自動ドロップ許可数などを保持するポリシー。`chrono_coupled_constraint2d_set_condition_warning_policy` で設定。 |
 
 `ChronoCoupledConditionWarningPolicy_C` は `enable_logging`（初期値 1）、`log_cooldown`（初期値 0.25 s）、`enable_auto_recover`（初期値 0）、`max_drop`（初期値 1）を持つシンプルな構造体。デフォルトでは標準エラーへ診断を出力するのみで、`enable_auto_recover` を 1 にすると条件数閾値を超えた際に最小対角要素を持つ式を最大 `max_drop` 本まで自動で無効化し、現行ステップの解を継続させる。

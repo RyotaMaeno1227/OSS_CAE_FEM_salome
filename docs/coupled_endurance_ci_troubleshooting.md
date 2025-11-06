@@ -57,6 +57,8 @@ Coupled 拘束の耐久スイートは `.github/workflows/coupled_endurance.yml`
 
 `tools/archive_coupled_constraint_endurance.py` で `--plan-csv` と `--plan-markdown` を指定すると、実行（またはドライランで予定）された操作を `plan.csv` と `plan.md` に記録します。CI では両ファイルがアーティファクトとして添付され、Webhook 通知にも `plan.md` の抜粋が流れるため、削除や整理の判断材料になります。
 
+素早く重複や自己相殺をチェックしたい場合は `python tools/lint_endurance_plan.py data/endurance_archive/plan.csv` を実行すると、同一ハッシュの多重登録や同一ターゲットに対する `archive`/`delete` の衝突を一覧できます。
+
 | 列 | 概要 | 判断のヒント |
 |----|------|--------------|
 | `action` | 実施（予定）した操作の種別。`archive`、`refresh-latest`、`write-summaries`、`delete` 等。 | `delete` が意図しないファイルに向いていないか確認。 |
@@ -84,6 +86,14 @@ Coupled 拘束の耐久スイートは `.github/workflows/coupled_endurance.yml`
 ## 6. 役に立つコマンド
 - 最新ログのサマリを CLI で確認:  
   `python tools/plot_coupled_constraint_endurance.py data/coupled_constraint_endurance.csv --skip-plot --summary-json /tmp/summary.json --no-show`
+- 最低限の列だけにトリミングしてアーティファクト容量を削減:  
+  `python tools/filter_coupled_endurance_log.py data/endurance_archive/latest.csv --drop-step`
+- Plan CSV の重複・削除重複を lint:  
+  `python tools/lint_endurance_plan.py data/endurance_archive/plan.csv`
+- Coupled ベンチの JSONL から条件数異常を抽出:  
+  `python tools/extract_condition_anomalies.py logs/csv_issues.jsonl`
+- 診断 CSV ログを Markdown レポート化:  
+  `python tools/diagnostic_log_report.py data/coupled_constraint_endurance.csv --output out/diagnostics.md`
 - 重複判定や世代管理を確認:  
   `python tools/archive_coupled_constraint_endurance.py --dry-run --prune-duplicates --max-entries 10 --max-age-days 120 --plan-csv /tmp/endurance_plan.csv`
 - Webhook 通知のローカル確認:  
@@ -119,7 +129,7 @@ Plan overview
 
 1. 通知に貼り付けられた `plan.md` で削除予定のファイルが想定通りか確認する。閾値超過 (`max-entries`/`max-age`) が妥当か判断。
 2. `tools/fetch_endurance_artifact.py ${{run_id}} --output-dir tmp/endurance --comment-file tmp/comment.md` を実行し、再現コマンドとコメントテンプレートを取得。
-3. 生成されたコメントを Pull Request や Issue に投稿（`--post-comment --comment-target pr/<番号>`）し、再現結果・暫定対応を共有。
+3. 生成されたコメントを Pull Request や Issue に投稿（`--post-comment --comment-target pr/<番号>`）。通知を避けたい場合は `--console-comment-only` を付けてコンソール出力のみにする。
 4. 必要に応じて `plan.csv`/`plan.md` を用いて保持ポリシーを調整し、再実行または閾値変更を提案する。
 
 ローカルで通知内容を検証したい場合は `tools/mock_webhook_server.py` を起動し、Webhook 先を `http://127.0.0.1:9000` などに向けると受信 payload が `mock_webhook_logs/` に保存されます。
