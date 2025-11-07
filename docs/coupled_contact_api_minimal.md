@@ -2,42 +2,45 @@
 
 計算コアを駆動するために必要な C API の最小セットを整理する。ここに挙げない補助 API（ログ、通知、メディア生成など）は任意機能として Appendix へ分離する。
 
-## 1. Coupled Constraint
+## フェーズ別 API
 
-| 関数 | 用途 | 参照 |
-|------|------|------|
-| `chrono_coupled_constraint2d_init` | アンカー・軸・初期比率から拘束を初期化 | `chrono-C-all/include/chrono_constraint2d.h:540` |
-| `chrono_coupled_constraint2d_prepare` | 時刻 `dt` を受け取り、質量・バイアス・行列を再計算 | `chrono-C-all/include/chrono_constraint2d.h:592` |
-| `chrono_coupled_constraint2d_apply_warm_start` | 前フレームのインパルスでウォームスタート | `chrono-C-all/include/chrono_constraint2d.h:593` |
-| `chrono_coupled_constraint2d_solve_velocity` | 速度レベルの補正を適用 | `chrono-C-all/include/chrono_constraint2d.h:594` |
-| `chrono_coupled_constraint2d_solve_position` | 位置レベルの補正を適用 | `chrono-C-all/include/chrono_constraint2d.h:595` |
-| `chrono_coupled_constraint2d_get_diagnostics` | ランク・条件数・ピボットを取得し数値安定性を確認 | `chrono-C-all/include/chrono_constraint2d.h:577` |
-| `chrono_coupled_constraint2d_set_equation` / `add_equation` | 多式拘束の設定（最大 4 式） | `chrono-C-all/include/chrono_constraint2d.h:570`, `chrono-C-all/include/chrono_constraint2d.h:572` |
+### フェーズ 1: 初期化（Init）
 
-> 上記以外の setter（例: `set_condition_warning_log_level`）は運用補助とみなし、Appendix へ移行予定。
+| コンポーネント | 関数 | 主な用途 | 参照 |
+|----------------|------|----------|------|
+| Coupled 拘束 | `chrono_coupled_constraint2d_init` | アンカー、軸、比率、ばね・ダンパを登録して Equation バッファを初期化 | `chrono-C-all/include/chrono_constraint2d.h:540` |
+| Coupled 拘束 | `chrono_coupled_constraint2d_set_equation` / `chrono_coupled_constraint2d_add_equation` | 多式拘束（最大 4 式）の追加・更新 | `chrono-C-all/include/chrono_constraint2d.h:570`, `:572` |
+| 接触管理 | `chrono_contact_manifold2d_init` / `reset` / `set_bodies` | Manifold の準備、ボディ紐付け | `chrono-C-all/include/chrono_collision2d.h:39`-`45` |
+| 接触管理 | `chrono_contact_manager2d_begin_step` | ステップ開始時のマニフォールド状態クリア | `chrono-C-all/include/chrono_collision2d.h:69` |
+| 島ソルバ | `chrono_island2d_workspace_init` / `reset` | 島情報用ワークスペースのメモリ確保・再利用 | `chrono-C-all/include/chrono_island2d.h:69`-`71` |
 
-## 2. Contact Core
+### フェーズ 2: 解法（Solve）
 
-| 関数 | 用途 | 参照 |
-|------|------|------|
-| `chrono_contact_manifold2d_init/reset/set_bodies` | マニフォールドの初期化・ボディ紐付け | `chrono-C-all/include/chrono_collision2d.h:39`-`chrono-C-all/include/chrono_collision2d.h:45` |
-| `chrono_contact_manager2d_begin_step/end_step` | 1 ステップ内でのマニフォールド管理開始／終了 | `chrono-C-all/include/chrono_collision2d.h:69`-`chrono-C-all/include/chrono_collision2d.h:70` |
-| `chrono_collision2d_detect_*` | 幾何ペアごとの衝突検出 | `chrono-C-all/include/chrono_collision2d.h:83`-`chrono-C-all/include/chrono_collision2d.h:130` |
-| `chrono_collision2d_resolve_*` | 検出結果から接触マニフォールドを生成 | `chrono-C-all/include/chrono_collision2d.h:132`-`chrono-C-all/include/chrono_collision2d.h:159` |
-| `chrono_contact_manager2d_update_contact` | Manifold と検出結果を突き合わせる共通ルート | `chrono-C-all/include/chrono_collision2d.h:78`-`chrono-C-all/include/chrono_collision2d.h:81` |
+| コンポーネント | 関数 | 主な用途 | 参照 |
+|----------------|------|----------|------|
+| Coupled 拘束 | `chrono_coupled_constraint2d_prepare` | `dt` を受け取り、KKT ブロックとバイアスを更新 | `chrono-C-all/include/chrono_constraint2d.h:592` |
+| Coupled 拘束 | `chrono_coupled_constraint2d_apply_warm_start` | 前フレームのインパルスでウォームスタート | `chrono-C-all/include/chrono_constraint2d.h:593` |
+| Coupled 拘束 | `chrono_coupled_constraint2d_solve_velocity` | 速度レベルの拘束補正と λ 更新 | `chrono-C-all/include/chrono_constraint2d.h:594` |
+| Coupled 拘束 | `chrono_coupled_constraint2d_solve_position` | 位置ドリフト補正（Baumgarte） | `chrono-C-all/include/chrono_constraint2d.h:595` |
+| 接触管理 | `chrono_collision2d_detect_*` | 幾何ペアごとの衝突検出（円/ポリゴン/カプセル/エッジ） | `chrono-C-all/include/chrono_collision2d.h:83`-`130` |
+| 接触管理 | `chrono_collision2d_resolve_*` | 検出結果から Manifold を構築し拘束量を計算 | `chrono-C-all/include/chrono_collision2d.h:132`-`159` |
+| 接触管理 | `chrono_contact_manager2d_update_contact` | 検出結果をマニフォールドへ反映 | `chrono-C-all/include/chrono_collision2d.h:78`-`81` |
+| 島ソルバ | `chrono_island2d_build` | 拘束・接触から連結成分（島）を生成 | `chrono-C-all/include/chrono_island2d.h:73`-`77` |
+| 島ソルバ | `chrono_island2d_solve` | 島単位で `constraint_config` を使い解法を実行 | `chrono-C-all/include/chrono_island2d.h:79`-`81` |
+| 島ソルバ | `chrono_island2d_workspace_free` | ワークスペースの解放（シャットダウン時） | `chrono-C-all/include/chrono_island2d.h:70` |
 
-## 3. Island Solver 接続部
+### フェーズ 3: ダイアグノスティクス & モニタリング
 
-| 関数 | 用途 | 参照 |
-|------|------|------|
-| `chrono_island2d_workspace_init/reset/free` | 島ワークスペースの確保と再利用 | `chrono-C-all/include/chrono_island2d.h:69`-`chrono-C-all/include/chrono_island2d.h:71` |
-| `chrono_island2d_build` | 拘束・接触から島を構築 | `chrono-C-all/include/chrono_island2d.h:73`-`chrono-C-all/include/chrono_island2d.h:77` |
-| `chrono_island2d_solve` | 各島の拘束解法を実行 | `chrono-C-all/include/chrono_island2d.h:79`-`chrono-C-all/include/chrono_island2d.h:81` |
+| コンポーネント | 関数 | 主な用途 | 参照 |
+|----------------|------|----------|------|
+| Coupled 拘束 | `chrono_coupled_constraint2d_get_diagnostics` | ランク、条件数、Pivot 最小値/最大値を取得 | `chrono-C-all/include/chrono_constraint2d.h:577` |
+| Coupled 拘束 | `chrono_coupled_constraint2d_get_condition_warning_policy` / `set_condition_warning_policy` | 条件数ワーニングの自動ドロップやログ設定 | `chrono-C-all/include/chrono_constraint2d.h:578`, `:589` |
+| 接触管理 | `chrono_contact_manager2d_end_step` | ステップ終了時のマニフォールド集計・後処理 | `chrono-C-all/include/chrono_collision2d.h:70` |
+| 島ソルバ | `ChronoIsland2DSolveConfig_C` (`enable_parallel`, `constraint_config`) | 並列モードや反復回数のトラッキング設定 | `chrono-C-all/include/chrono_island2d.h:65` |
 
 > `ChronoIsland2DSolveConfig_C` では `constraint_config` と `enable_parallel` のみを扱い、ログや計測フックは任意機能として別管理とする。
 
 ## 4. 非コア API の扱い
 
-- ログレベル変更、条件数通知コールバック、メディア生成スクリプト等は Appendix `docs/optional_features_appendix_plan.md` 側へ移動予定。
+- ログレベル変更、条件数通知コールバック、メディア生成スクリプト等は `docs/appendix_optional_ops.md` を参照（Appendix C/D）。  
 - 上記に含まれない追加 API を導入する場合は、数値解に直接寄与するかを基準にこのリストへ加えるかを判断する。
-

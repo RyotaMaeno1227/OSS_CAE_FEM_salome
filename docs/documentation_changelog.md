@@ -16,15 +16,20 @@
 
 | ドキュメント | 主な変更内容 | 担当 | 備考 |
 |--------------|--------------|------|------|
-| `docs/chrono_coupled_constraint_tutorial.md` | Stride を用いた `matplotlib` アニメーション例と GitHub Pages 埋め込みクイックリファレンスを追加 | Cチーム（Mori） | Section 9.1/9.2 として追補 |
+| `docs/chrono_coupled_constraint_tutorial.md` | メディア公開手順を付録へ移し、本編は数値チューニングに専念 | Cチーム（Mori） | Section 9.1 リダイレクト |
 | `docs/chrono_3d_abstraction_note.md` | KPI/ガントを拘束・接触・並列タスクへ再編し、月次メモを数値指標基準に更新 | アーキ WG（Sato） | Section 10 のテンプレート強化 |
-| `docs/wiki_coupled_endurance_article.md` | Wiki 投稿テンプレ利用ガイドと公開後チェック手順を明文化 | DevOps（Suzuki） | Section 6/7 の補足 |
-| `docs/wiki_samples/coupled_endurance_article_sample.md` | 付録としてテンプレ全文・スクリーンショット一覧・公開フロー確認リストを追加 | DevOps（Suzuki） | 付録 A/B/C を新設 |
+| `docs/wiki_coupled_endurance_article.md` | 運用テンプレ／チェックリストを付録へ移動し、本文をサマリに集約 | DevOps（Suzuki） | Section 6/7 をリダイレクト |
+| `docs/wiki_samples/coupled_endurance_article_sample.md` | 付録を削除し、付録ファイル参照のみに整理 | DevOps（Suzuki） | Appendix 参照導線 |
 | `docs/coupled_island_migration_plan.md` | Coupled/Island 解法の差分と chrono-main への移行ステップを整理 | Cチーム（Mori） | 新規追加 |
 | `docs/coupled_constraint_solver_math.md` | Coupled 拘束の行列導出・ピボット戦略を数式付きで解説 | Cチーム（Mori） | 新規追加 |
-| `docs/optional_features_appendix_plan.md` | 運用・通知系コンテンツを Appendix へ移す計画を作成 | ドキュメント班（Nakajima） | 新規追加 |
+| `docs/coupled_constraint_tutorial_draft.md` | Coupled 拘束の学習ドラフト（数式→実装→テスト）を新設 | Cチーム（Mori） | 新規追加 |
+| `docs/appendix_optional_ops.md` | オペレーション（メディア／Wiki／ログ／ベンチ）を集約した付録を作成 | ドキュメント班（Nakajima） | 新規追加 |
+| `docs/optional_features_appendix_plan.md` | 運用・通知系コンテンツを Appendix へ移す計画を更新 | ドキュメント班（Nakajima） | Appendix 実装に合わせ調整 |
 | `docs/chrono_2d_development_plan.md` | テスト一覧を計算コアに限定したカテゴリ表へ更新 | Cチーム（Mori） | Section 3.4 |
-| `docs/coupled_contact_api_minimal.md` | Coupled/接触に必要な最小 API セットを明文化 | Cチーム（Mori） | 新規追加 |
+| `docs/coupled_contact_api_minimal.md` | Init/Solve/Diagnostics のフェーズ別 API 表へ再構成 | Cチーム（Mori） | 構成変更 |
+| `docs/chrono_logging_integration.md` | 運用ヒントを付録へ移動し、本編を API 解説に集中 | DevOps（Suzuki） | Section 5 |
+| `docs/coupled_benchmark_setup.md` | 付録への移行に伴い本編をリダイレクト化 | DevOps（Suzuki） | Appendix D 参照 |
+| `docs/chrono_3d_abstraction_note.md` | KPI/ガントを最新進捗値（拘束・接触・並列）へ更新 | アーキ WG（Sato） | Section 10 |
 
 ## 運用メモ
 - 変更日・担当者・Pull Request を必ず記録する。表は最新が上に来るように追記。

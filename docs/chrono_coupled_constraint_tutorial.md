@@ -350,64 +350,9 @@ Coupled 拘束の挙動を共有する際は、静止画に加えて GIF/MP4 ア
 
 ---
 
-### 9.1 Stride/Matplotlib アニメーション Tips
+### 9.1 追加オペレーション資料
 
-`matplotlib.animation.FuncAnimation` でフレーム総数が多い CSV を扱う際は、単純に `stride`（間引き間隔）を設けるだけでサイズと描画時間を大幅に削減できます。以下は Section 9 のケーススタディを簡略化したサンプルです。
-
-```python
-from pathlib import Path
-
-import matplotlib.pyplot as plt
-from matplotlib import animation
-
-from coupled_constraint_endurance_analysis import load_csv
-
-csv_path = Path("data/coupled_constraint_endurance.csv")
-data = load_csv(csv_path)
-stride = 5  # 5 サンプルごとに 1 フレームを生成
-
-time = data["time"][::stride]
-distance = data["distance"][::stride]
-condition = data["condition"][::stride]
-
-fig, ax = plt.subplots(figsize=(9.6, 4.8))
-ax2 = ax.twinx()
-line_dist, = ax.plot([], [], color="C0", label="distance [m]")
-line_cond, = ax2.plot([], [], color="C3", label="condition number")
-ax.set_xlim(time[0], time[-1])
-ax.set_xlabel("time [s]")
-ax.set_ylabel("distance [m]")
-ax2.set_ylabel("condition number")
-
-def update(frame_index: int):
-    upto = frame_index + 1
-    line_dist.set_data(time[:upto], distance[:upto])
-    line_cond.set_data(time[:upto], condition[:upto])
-    return line_dist, line_cond
-
-ani = animation.FuncAnimation(fig, update, frames=len(time), blit=True, interval=40)
-ani.save("docs/media/coupled/endurance_stride5.gif", writer="pillow", fps=20)
-ani.save("docs/media/coupled/endurance_stride5.mp4", writer="ffmpeg", fps=24)
-```
-
-- `stride` 値は CSV サイズや目標ファイルサイズに合わせて調整してください。`len(time) // stride` が 4000 フレームを超える場合はさらに間引きを検討します。
-- `interval` はフレーム間隔 [ms] です。GIF を軽量化したい場合は `interval` を 60–80 ms に伸ばすと容量を抑えやすくなります。
-
-### 9.2 GitHub Pages 埋め込みクイックリファレンス
-
-- Markdown で参照する場合:
-  ```markdown
-  ![Endurance overview stride 5](media/coupled/endurance_stride5.gif)
-  ```
-- HTML ブロック（`<video>`）で埋め込む場合:
-  ```html
-  <video controls loop muted playsinline width="960">
-    <source src="https://<org>.github.io/<repo>/media/coupled/endurance_stride5.mp4" type="video/mp4">
-    <source src="https://<org>.github.io/<repo>/media/coupled/endurance_stride5.gif" type="image/gif">
-    Your browser does not support the video tag.
-  </video>
-  ```
-- Pages へ公開する GIF/MP4 は上限 10–12 MB を目安にし、Pull Request では `du -h docs/media/coupled/endurance_stride5.*` でサイズを確認してからレビュー依頼を出すとスムーズです。
+> メディア生成や GitHub Pages への公開手順は `docs/appendix_optional_ops.md` の **A. Media Publishing & Sharing** を参照してください。チュートリアル本編では数値チューニングに集中し、運用作業は付録へ分離しました。
 
 ---
 
