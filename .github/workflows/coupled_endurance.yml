@@ -60,6 +60,14 @@ jobs:
             --fail-on-max-condition 5.0e8 \
             --fail-on-rank-ratio 0.05
 
+      - name: Generate diagnostics overview
+        run: |
+          python tools/diagnostic_log_report.py \
+            data/endurance_archive/latest.csv \
+            --output data/endurance_archive/latest.diagnostics.md \
+            --max-anomalies 12 \
+            | tee data/endurance_archive/latest.diagnostics_console.log
+
       - name: Validate latest.summary schema
         run: |
           python tools/validate_latest_summary_schema.py \
@@ -80,6 +88,8 @@ jobs:
             python tools/filter_coupled_endurance_log.py "$csv" --drop-step
           done
 
+      # Uses the default GITHUB_TOKEN (actions:read scope). Each invocation consumes
+      # up to ~2 GitHub REST quota units per workflow run when --weeks <= 8.
       - name: Summarize archive failure rate
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -91,7 +101,8 @@ jobs:
             --weeks 8 \
             --output-chart data/endurance_archive/archive_failure_rate.png \
             --output-slack data/endurance_archive/archive_failure_rate_slack.json \
-            --output-json data/endurance_archive/archive_failure_rate.json
+            --output-json data/endurance_archive/archive_failure_rate.json \
+            --output-markdown data/endurance_archive/archive_failure_rate.md
 
       - name: Prepare notification payloads
         env:
@@ -102,6 +113,7 @@ jobs:
             --summary-json data/endurance_archive/latest.summary.json \
             --plan-markdown data/endurance_archive/plan.md \
             --summary-validation-report data/endurance_archive/latest.summary.validation.md \
+            --diagnostics-report data/endurance_archive/latest.diagnostics_console.log \
             --run-id ${{ github.run_id }} \
             --run-url "$RUN_URL" \
             --status "$JOB_STATUS" \
@@ -122,6 +134,8 @@ jobs:
             data/endurance_archive/latest.summary.json
             data/endurance_archive/latest.summary.validation.md
             data/endurance_archive/latest.summary.validation.json
+            data/endurance_archive/latest.diagnostics.md
+            data/endurance_archive/latest.diagnostics_console.log
             data/endurance_archive/plan.csv
             data/endurance_archive/plan.md
             data/endurance_archive/notification_slack.json
@@ -129,6 +143,7 @@ jobs:
             data/endurance_archive/archive_failure_rate.png
             data/endurance_archive/archive_failure_rate.json
             data/endurance_archive/archive_failure_rate_slack.json
+            data/endurance_archive/archive_failure_rate.md
             data/endurance_archive/manifest.json
             data/endurance_archive/*.csv
             data/endurance_archive/*.csv.summary.md

@@ -74,3 +74,15 @@ python3 tools/filter_ci_failures.py test.log --output test_coupled_island.log
   pprint.pp(next(case for case in presets["use_cases"] if case["id"] == "docking_guide"))
   PY
   ```
+
+- When updating a preset, capture the solver behaviour with multiple relaxation factors so reviewers can spot regressions:
+
+  ```bash
+  ./chrono-C-all/tests/bench_coupled_constraint \
+    --omega 0.85 \
+    --omega 1.0 \
+    --omega 1.15 \
+    --output data/diagnostics/bench_coupled_constraint_multi.csv
+  ```
+
+- The resulting CSV can be dropped into design docs or pasted directly into PRs (`tools/plot_coupled_constraint_endurance.py --summary-json` for quick stats). Hands-on Chapter 02 links back here so tutorials, presets, and benchmarks stay in sync.

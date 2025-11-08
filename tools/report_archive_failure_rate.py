@@ -12,10 +12,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
 import requests
 
 
@@ -73,9 +69,18 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         help="Optional path for a machine-readable JSON summary.",
     )
     parser.add_argument(
+        "--output-markdown",
+        help="Optional path for a Markdown history table.",
+    )
+    parser.add_argument(
         "--timezone",
         default="UTC",
         help="Timezone label used in chart annotations (no conversion is performed).",
+    )
+    parser.add_argument(
+        "--skip-chart",
+        action="store_true",
+        help="Skip PNG chart generation (useful when matplotlib is unavailable).",
     )
     return parser.parse_args(argv)
 
@@ -203,6 +208,15 @@ def write_chart(
     output_path: Path,
     timezone_label: str,
 ) -> None:
+    try:
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt  # noqa: WPS433
+    except ModuleNotFoundError as exc:  # pragma: no cover - environment dependent
+        raise RuntimeError(
+            "matplotlib is required for chart output. Install it or run with --skip-chart."
+        ) from exc
     fig, ax = plt.subplots(figsize=(10, 4))
     if not data:
         ax.text(
@@ -243,6 +257,24 @@ def write_chart(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=160)
     plt.close(fig)
+
+
+def write_markdown(data: List[Tuple[dt.date, Dict[str, object]]], output_path: Path) -> None:
+    lines = ["# Coupled Endurance Archive Failure Rate", ""]
+    if not data:
+        lines.append("_No workflow runs found for the requested window._")
+    else:
+        lines.append("| Week start | Runs | Failures | Failure rate | Run IDs |")
+        lines.append("|-----------|------:|---------:|--------------:|--------|")
+        for week, stats in data:
+            rate = stats["failure_rate"] * 100.0
+            run_ids = ", ".join(str(run_id) for run_id in stats["run_ids"])
+            lines.append(
+                f"| {week.isoformat()} | {stats['total']} | {stats['failures']} | {rate:.1f}% | {run_ids or 'n/a'} |"
+            )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
 
 
 def build_slack_payload(
@@ -289,11 +321,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     buckets = bucket_by_week(runs)
 
-    write_chart(
-        data=buckets,
-        output_path=Path(args.output_chart),
-        timezone_label=args.timezone,
-    )
+    if not args.skip_chart:
+        write_chart(
+            data=buckets,
+            output_path=Path(args.output_chart),
+            timezone_label=args.timezone,
+        )
 
     slack_payload = build_slack_payload(
         repo=args.repo,
@@ -323,6 +356,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             ],
         }
         Path(args.output_json).write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    if args.output_markdown:
+        write_markdown(buckets, Path(args.output_markdown))
     return 0
 
 

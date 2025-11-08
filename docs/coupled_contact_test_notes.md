@@ -35,3 +35,12 @@ Coupled 拘束と Contact 拘束を同一島で解く際の意図と判定方法
 - `docs/coupled_constraint_solver_math.md` §3 条件数評価  
 - `docs/coupled_island_migration_plan.md` §6 進捗テンプレート  
 - `docs/appendix_optional_ops.md` **A/B/C**（ログ解析・Wiki テンプレ・通知）
+
+## 6. 3DOF Jacobian 統合計画
+
+- `tests/test_contact_jacobian_3dof` で検証している Rolling/Torsional 行を `test_island_parallel_contacts` へ統合し、Coupled + Contact の複合ケースで `chrono_contact2d_build_jacobian_3dof` が渡されるようにする。
+- 手順案:
+  1. `test_island_parallel_contacts` に Circle-on-ground の Rolling/Torsional 追加ケースを挿入し、`ChronoContactJacobian3DOF_C` を構築してログへ書き出す。
+  2. `compare_results` のトレースへ 3 行分の反力を追加し、並列モードでも一致するかを Assert。
+  3. CI で `tests/test_contact_jacobian_3dof` を段階的に縮退させ、最終的にはファイルをヘッダのみのサニティチェックへ差し替える。
+- これにより、Coupled + Contact の回帰テストが 3D 拡張に備えた形で一本化される。

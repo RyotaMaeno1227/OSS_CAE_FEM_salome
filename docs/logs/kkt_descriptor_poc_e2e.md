@@ -63,3 +63,11 @@ time,case,method,kappa_bound,kappa_spectral,min_pivot,max_pivot
 - The descriptor backend now emits per-step pivot rows that are mirrored into `ChronoCoupledConstraintDiagnostics_C`.
 - Both solvers share the same Jacobi eigen estimator; the only differences in Δκ_s came from floating-point accumulate order.
 - `tests/test_coupled_constraint --use-kkt-descriptor --mark-stage 1.2:stage_capture --mark-stage 2.4:stage_final` was used to stamp the CSV for tutorial screenshots.
+
+### ABI policy for constraint diagnostics
+
+- `chrono_constraint_common.h` carries `ChronoConstraintCommon_C` and `ChronoConstraintDiagnostics_C`. Any field addition must:
+  1. Extend the shared struct and update the static assertions in `chrono_constraint2d.h`.
+  2. Re-run `chrono-C-all/tests/test_constraint_common_abi` so CI captures the new layout (add offsets to the printf if necessary).
+  3. Update the descriptor PoC log (`--descriptor-log`) plus `tools/compare_kkt_logs.py` so the new field is visible in weekly reports.
+- This keeps the 2D and future 3D backends ABI-compatible while still allowing us to grow the diagnostics payload.

@@ -24,3 +24,8 @@ Small-matrix inversion throughput (successes/s)
 
 - 4×4 inversion is ~2.4× slower than 2×2 but still well below the per-step budget of the Coupled block (took ≈38 ns per solve on this host).
 - These helpers are dimension agnostic and will be re-used by the 3D descriptor layer; keeping the code in one place simplifies ABI review and profiling.
+
+## Integration notes
+
+- `src/chrono_constraint_kkt_backend.c` now delegates to `chrono_smallmat_invert_with_history(...)`, so the KKT backend and descriptor layer share the same pivot history/min/max logic.
+- Future 3D descriptors only need to extend `CHRONO_SMALL_MAT_MAX_N`; the backend automatically mirrors `pivot_history[]` into `ChronoConstraintDiagnostics_C`.

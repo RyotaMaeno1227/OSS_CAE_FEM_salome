@@ -51,6 +51,7 @@
 | 2024-07-29 | Mori | Kobayashi | `latest.summary.*` KPI の Wiki 反映、Slack 報告 | `lint_endurance_plan.py` 改定案を Appendix B.5 へ共有 |
 | 2024-08-05 | Kobayashi | Suzuki | Nightly ベンチ結果レビュー、Appendix B.4 公開プロセス点検 | `compare_benchmark_results.py` の diff を wiki へ添付 |
 | 2024-08-12 | Suzuki | Tanaka | `docs/coupled_endurance_ci_troubleshooting.md` リンク更新、Webhook 試験ログの共有 | ENDURANCE_ALERT_WEBHOOK 検証ログを #chrono-constraints に投稿 |
+| 2024-08-19 | Tanaka | Mori | B.3/B.4 チェックリスト棚卸し、workflow_dispatch 監視 | Slack/Webhook で schema/failure-rate digest を要確認（GH token 未設定のため保留） |
 
-最終同期日: **2024-08-13** （更新担当: Mori / レビュー: Kobayashi）  
-次回レビュー予定: 2024-08-19 週（Appendix B.5 ローテーション表に従う）
+最終同期日: **2024-08-19** （更新担当: Tanaka / レビュー: Mori）  
+次回レビュー予定: 2024-08-26 週（Appendix B.5 ローテーション表に従う）

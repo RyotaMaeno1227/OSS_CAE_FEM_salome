@@ -9,9 +9,7 @@
 #include <omp.h>
 #endif
 
-#ifndef _OPENMP
 static int g_tbb_stub_warned = 0;
-#endif
 
 typedef struct ChronoIsland2DBodyMapEntry {
     ChronoBody2D_C *key;
@@ -651,11 +649,15 @@ void chrono_island2d_solve(const ChronoIsland2DWorkspace_C *workspace,
     int use_tbb_backend = (prefer_tbb && enable_parallel && workspace->island_count > 1);
 
     if (use_tbb_backend) {
-#ifdef _OPENMP
-#pragma omp parallel for schedule(dynamic)
-#endif
+        if (!g_tbb_stub_warned) {
+            chrono_log_write(CHRONO_LOG_LEVEL_INFO,
+                             CHRONO_LOG_CATEGORY_SOLVER,
+                             "TBB backend requested – stub path executing islands serially");
+            g_tbb_stub_warned = 1;
+        }
         for (size_t island_idx = 0; island_idx < workspace->island_count; ++island_idx) {
             ChronoIsland2D_C *island = &workspace->islands[island_idx];
+
             if (island->constraint_count > 0) {
                 chrono_constraint2d_batch_solve(island->constraints,
                                                 island->constraint_count,
@@ -663,23 +665,32 @@ void chrono_island2d_solve(const ChronoIsland2DWorkspace_C *workspace,
                                                 &constraint_cfg,
                                                 NULL);
             }
+
             if (island->contact_count > 0) {
-                for (size_t i = 0; i < island->contact_count; ++i) {
-                    ChronoContactPair2D_C *pair = island->contacts[i];
-                    if (pair) {
-                        chrono_contact_manager2d_end_step((ChronoContactManager2D_C *)pair);
+                for (size_t contact_idx = 0; contact_idx < island->contact_count; ++contact_idx) {
+                    ChronoContactPair2D_C *pair = island->contacts[contact_idx];
+                    if (!pair) {
+                        continue;
+                    }
+                    ChronoContactManifold2D_C *manifold = &pair->manifold;
+                    ChronoBody2D_C *body_a = pair->body_a;
+                    ChronoBody2D_C *body_b = pair->body_b;
+                    for (int point_idx = 0; point_idx < manifold->num_points; ++point_idx) {
+                        ChronoContactPoint2D_C *point = &manifold->points[point_idx];
+                        if (!point->is_active || !point->contact.has_contact) {
+                            continue;
+                        }
+                        chrono_collision2d_resolve_contact(body_a,
+                                                           body_b,
+                                                           &point->contact,
+                                                           manifold->combined_restitution,
+                                                           manifold->combined_friction_static,
+                                                           manifold->combined_friction_dynamic,
+                                                           manifold);
                     }
                 }
             }
         }
-#ifndef _OPENMP
-        if (!g_tbb_stub_warned) {
-            chrono_log_write(CHRONO_LOG_LEVEL_INFO,
-                             CHRONO_LOG_CATEGORY_SOLVER,
-                             "TBB backend requested but OpenMP is unavailable; ran islands serially.");
-            g_tbb_stub_warned = 1;
-        }
-#endif
         return;
     }
 

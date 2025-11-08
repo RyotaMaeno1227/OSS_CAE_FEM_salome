@@ -1,0 +1,4 @@
+scheduler,threads,elapsed_seconds,steps,dt,notes
+auto,4,9.214e-03,200,0.01,"OpenMP static scheduling (reference)"
+openmp,4,1.0432e-02,200,0.01,"Forced OpenMP backend from CLI"
+tbb_stub,1,1.3848e-02,200,0.01,"Stub fallback (serial, log level INFO)"

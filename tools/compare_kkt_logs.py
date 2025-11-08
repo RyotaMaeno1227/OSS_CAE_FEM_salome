@@ -7,7 +7,7 @@ import argparse
 import csv
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, Tuple
+from typing import Dict, Tuple
 
 
 @dataclass
@@ -18,6 +18,10 @@ class KKTRecord:
     kappa_spectral: float
     min_pivot: float
     max_pivot: float
+    log_level_request: str
+    log_level_actual: str
+    log_category: str
+    pivot_primary: float
 
 
 def parse_args() -> argparse.Namespace:
@@ -47,6 +51,7 @@ def load_records(path: Path) -> Dict[Tuple[str, int], KKTRecord]:
         for row in reader:
             scenario = row.get("scenario", "").strip() or "default"
             eq_count = int(row["eq_count"])
+            pivot_primary = float(row.get("pivot_log_primary", "0.0"))
             records[(scenario, eq_count)] = KKTRecord(
                 scenario=scenario,
                 eq_count=eq_count,
@@ -54,6 +59,10 @@ def load_records(path: Path) -> Dict[Tuple[str, int], KKTRecord]:
                 kappa_spectral=float(row["kappa_spectral"]),
                 min_pivot=float(row["min_pivot"]),
                 max_pivot=float(row["max_pivot"]),
+                log_level_request=row.get("log_level_request", ""),
+                log_level_actual=row.get("log_level_actual", ""),
+                log_category=row.get("log_category", ""),
+                pivot_primary=pivot_primary,
             )
     return records
 
@@ -76,9 +85,9 @@ def generate_report(chrono_c: Dict[Tuple[str, int], KKTRecord],
         "# Weekly KKT / Spectral Comparison",
         "",
         "| Scenario | eq_count | κ̂ (Chrono-C) | κ̂ (chrono-main) | Δκ̂ | κ_s (Chrono-C) | "
-        "κ_s (chrono-main) | Δκ_s | min pivot Δ | max pivot Δ | Status |",
+        "κ_s (chrono-main) | Δκ_s | min pivot Δ | max pivot Δ | pivot₀ Δ | Log levels (C/main) | Status |",
         "|----------|---------:|--------------:|-----------------:|-----:|---------------:|"
-        "------------------:|------:|-------------:|-------------:|--------|",
+        "------------------:|------:|-------------:|-------------:|-----------:|---------------------|--------|",
     ]
     for key in keys:
         chrono_c_rec = chrono_c.get(key)
@@ -100,7 +109,7 @@ def generate_report(chrono_c: Dict[Tuple[str, int], KKTRecord],
 
         lines.append(
             "| {scenario} | {eq_count} | {c_bound} | {m_bound} | {d_bound} | "
-            "{c_spec} | {m_spec} | {d_spec} | {d_min} | {d_max} | {status} |".format(
+            "{c_spec} | {m_spec} | {d_spec} | {d_min} | {d_max} | {d_pivot0} | {log_c}/{log_m} | {status} |".format(
                 scenario=scenario,
                 eq_count=eq_count,
                 c_bound=val_or_na(chrono_c_rec.kappa_bound if chrono_c_rec else None),
@@ -123,6 +132,12 @@ def generate_report(chrono_c: Dict[Tuple[str, int], KKTRecord],
                     chrono_c_rec.max_pivot if chrono_c_rec else None,
                     chrono_main_rec.max_pivot if chrono_main_rec else None,
                 ),
+                d_pivot0=format_diff(
+                    chrono_c_rec.pivot_primary if chrono_c_rec else None,
+                    chrono_main_rec.pivot_primary if chrono_main_rec else None,
+                ),
+                log_c=(chrono_c_rec.log_level_actual if chrono_c_rec else "n/a"),
+                log_m=(chrono_main_rec.log_level_actual if chrono_main_rec else "n/a"),
                 status=status,
             )
         )

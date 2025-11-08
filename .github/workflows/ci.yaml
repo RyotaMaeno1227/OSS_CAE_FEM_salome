@@ -53,6 +53,15 @@ jobs:
               exit 1
           fi
 
+      - name: Verify coupled descriptor diagnostics
+        if: always()
+        working-directory: chrono-C-all
+        run: |
+          mkdir -p ../artifacts/descriptor
+          tests/test_coupled_constraint \
+            --use-kkt-descriptor \
+            --descriptor-log ../artifacts/descriptor/kkt_descriptor_ci.csv
+
       - name: Tag coupled/island ranges
         if: always()
         run: |
@@ -62,6 +71,14 @@ jobs:
         if: always()
         run: |
           python3 tools/filter_ci_failures.py test.log --output test_coupled_island.log
+
+      - name: Lint coupled endurance CSV headers
+        if: always()
+        run: |
+          python3 tools/filter_coupled_endurance_log.py \
+            data/coupled_constraint_endurance.csv \
+            --lint-only \
+            --require condition_number_spectral,condition_gap,min_eigenvalue,max_eigenvalue,active_equations,drop_events_total
 
       - name: Validate endurance CSV filter
         if: always()
@@ -101,6 +118,7 @@ jobs:
             artifacts/ci/condition_gap_report.md
             artifacts/ci/sample_latest_summary.md
             artifacts/ci/sample_latest_summary.json
+            artifacts/descriptor/kkt_descriptor_ci.csv
 
       - name: Fail if tests failed
         if: steps.run_tests.outcome == 'failure'

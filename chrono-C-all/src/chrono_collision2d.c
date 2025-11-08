@@ -35,6 +35,10 @@ static void normalize(double v[2]) {
     }
 }
 
+static double cross2(const double a[2], const double b[2]) {
+    return a[0] * b[1] - a[1] * b[0];
+}
+
 static void support_circle(const ChronoBody2D_C *body, const double dir[2], double out[2]) {
     double direction[2] = {dir[0], dir[1]};
     normalize(direction);
@@ -1032,10 +1036,6 @@ int chrono_collision2d_detect_polygon_edge(const ChronoBody2D_C *polygon_body,
                                           ChronoContact2D_C *contact) {
     return chrono_collision2d_detect_convex_gjk(polygon_body, edge_body, contact);
 }
-static double cross2(const double a[2], const double b[2]) {
-    return a[0] * b[1] - a[1] * b[0];
-}
-
 static int chrono_collision2d_resolve_single(ChronoBody2D_C *body_a,
                                              ChronoBody2D_C *body_b,
                                              const ChronoContact2D_C *contact,

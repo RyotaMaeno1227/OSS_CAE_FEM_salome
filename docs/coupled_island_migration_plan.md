@@ -64,6 +64,11 @@ Chrono-C の Coupled 拘束と島ソルバを Chrono C++ (`chrono-main`) と同�
 
 - KKT PoC のエビデンス: `docs/logs/kkt_descriptor_poc_e2e.md` にバッチソルバとの整合ログ、pivot 列、Δκ_s を記録済み。Slack 週次共有時はこのログへのリンクを貼る。 
 - Chrono-C vs chrono-main の条件数差分は `tools/compare_kkt_logs.py` で自動集計し、`docs/reports/kkt_spectral_weekly.md` として毎週更新する。
+- TBB スケジューラはまだスタブ（serial fallback）のため、`bench_island_solver --scheduler tbb` は 1 スレッド測定のみ。`docs/island_scheduler_poc.md` に PoC 呼び出し例とログ出力を追記済み。
+- 残りの 20–25% は以下のサブタスクに分解して追う:
+  1. KKT descriptor backend の E2E フェーズ（`--use-kkt-descriptor` CI での log diff、ログアーカイブの自動比較）。
+  2. 実 TBB 実装（oneTBB のビルド／リンク、CI matrix 追加、`chrono_island2d_solve` の backend 選択）。
+  3. Coupled+Contact 3DOF の island 統合テスト（`test_island_parallel_contacts` + Jacobian ログ比較）。
 
 ### 6.2 ASCII ガント（四半期スナップショット）
 ```

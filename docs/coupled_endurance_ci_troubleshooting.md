@@ -158,3 +158,41 @@ Webhook 連携を有効化する前に、以下の手順でペイロードを検
 3. ワークフローを `workflow_dispatch` で起動し、「Send webhook notification」「Send failure-rate digest」の両ステップが 200 応答で完了するか確認。  
 4. `mock_webhook_logs/<timestamp>.json` に保存された payload をレビューし、Slack で想定している `attachments` と `tags` (`COUPLED`, `ENDURANCE`) が含まれているかチェックする。  
 5. 問題なければ Webhook URL を本番値へ戻し、`mock_webhook_logs/` から検証ログを Issue/PR に添付して周知する。
+
+> Slack 通知には schema validation の Markdown（`latest.summary.validation.md`）が `<details>` ブロックで埋め込まれる。Status が `SKIPPED` の場合は最新 `latest.summary.json` が欠落していることを意味するので、アーティファクトを確認してから再走する。
+
+---
+
+## 11. Schema validation レポートの共有
+
+`tools/validate_latest_summary_schema.py` の Markdown/JSON 出力は以下の 2 通りで共有できる。
+
+1. **Workflow artifact**  
+   - CI では `artifacts/ci/sample_latest_summary.{md,json}`、Endurance 週次では `data/endurance_archive/latest.summary.validation.{md,json}` が自動的に添付される。  
+   - コメントに貼り付ける場合は `gh run download <run-id> --name coupled-endurance-<run-id>` → `cat data/endurance_archive/latest.summary.validation.md`.
+2. **Gist**  
+   ```bash
+   gh gist create \
+     data/endurance_archive/latest.summary.validation.md \
+     --filename latest.summary.validation.md \
+     --description "Coupled Endurance schema validation (run $RUN_ID)"
+   ```
+   Slack では `<https://gist.github.com/<id>|Schema validation gist>` として貼り付けると折りたたみリンク扱いにできる。`compose_endurance_notification.py` の `--summary-validation-report` 引数を使うと自動的に `<details>` ブロックで同じ内容が添付される。
+
+サンプル: Run [#8723419085](https://github.com/RyotaMaeno1227/OSS_CAE_FEM_salome/actions/runs/8723419085)（Max condition 超過）では `Schema validation: PASS` が Slack の「Run details」フィールドに表示され、展開リンクから Markdown 全文を確認できる。
+
+---
+
+## 12. diagnostics.md / console 出力のチェック
+
+`coupled_endurance.yml` は `tools/diagnostic_log_report.py data/endurance_archive/latest.csv --output ... | tee ...` を実行し、コンソール出力を Slack の `<details>` ブロック経由で添付するようになった。差分確認手順:
+
+1. アーティファクトから `latest.diagnostics.md` と `latest.diagnostics_console.log` を取得する。
+2. Slack の「Diagnostics console (truncated)」ブロックを展開し、`tee` で保存されたログと diff (`diff -u diagnostics_console.log slack_snippet.txt`) を取る。
+3. フォーマットを変更する場合は Appendix C の check-list（ログ統合）に沿って「Markdown / console の差異なし」を確認し、`tools/compose_endurance_notification.py` の `--diagnostics-report` へ新パスを渡す。
+
+---
+
+## 13. Failure-rate ヒストリー
+
+Archive failure-rate の週次サマリは `tools/report_archive_failure_rate.py` で PNG/Markdown/JSON として生成され、`docs/reports/coupled_endurance_failure_history.md` に貼り付ける。ネットワーク制限があるローカル環境では `--skip-chart` を使い JSON/Markdown のみ生成し、PNG は CI の成果物を流用する。

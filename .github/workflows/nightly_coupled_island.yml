@@ -112,16 +112,35 @@ EOF
         run: |
           mkdir -p artifacts/nightly
           PLAN=data/endurance_archive/plan.csv
+          REPORT=artifacts/nightly/endurance_plan_lint.txt
+          JSON=artifacts/nightly/endurance_plan_lint.json
           if [ -f "$PLAN" ]; then
-            python3 tools/lint_endurance_plan.py \
+            set -o pipefail
+            if python3 tools/lint_endurance_plan.py \
               "$PLAN" \
               --max-delete 10 \
               --max-delete-max-age 6 \
               --max-delete-max-entries 6 \
               --fail-on-duplicates \
-              | tee artifacts/nightly/endurance_plan_lint.txt
+              | tee "$REPORT"; then
+              STATUS="PASS"
+            else
+              STATUS="FAIL"
+            fi
+            cat <<EOF > "$JSON"
+{
+  "status": "$STATUS",
+  "plan": "$PLAN"
+}
+EOF
           else
-            echo "Plan CSV not found at $PLAN; skipping lint." | tee artifacts/nightly/endurance_plan_lint.txt
+            echo "Plan CSV not found at $PLAN; skipping lint." | tee "$REPORT"
+            cat <<'EOF' > "$JSON"
+{
+  "status": "SKIPPED",
+  "message": "Plan CSV not available on nightly runner"
+}
+EOF
           fi
 
       - name: Upload regression artifacts
@@ -141,5 +160,6 @@ EOF
             artifacts/nightly/benchmark_diff.md
             artifacts/nightly/benchmark_diff.csv
             artifacts/nightly/endurance_plan_lint.txt
+            artifacts/nightly/endurance_plan_lint.json
             artifacts/nightly/latest_summary_validation.md
             artifacts/nightly/latest_summary_validation.json

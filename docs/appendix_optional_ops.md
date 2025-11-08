@@ -141,6 +141,7 @@ h1. メンテナンス
 - [ ] `docs/pm_status_YYYY-MM-DD.md` と `docs/coupled_island_migration_plan.md` の KPI 表を同じ値に更新し、B.5.1 の担当欄を埋めた。  
 - [ ] Contact + Coupled テスト運用（B.6）でログ解析／通知分岐をレビューした。  
 - [ ] リンク検証チェックリスト（B.7）を実行し、結果を記録した。
+- [ ] `workflow_dispatch` で `coupled_endurance.yml` を起動し、Slack/Webhook に schema validation 抜粋と failure-rate digest が届いたことを Appendix B.5.1 の表へ Run ID 付きで記録した。
 
 ### B.4 公開プロセス
 1. PR マージ後 24 時間以内に Wiki を更新。  
@@ -171,6 +172,11 @@ h1. メンテナンス
 | 定期レビュー | 四半期ごとに YAML/チートシート差異、CI しきい値、`docs/media/coupled/` の更新日を確認。 |
 | 変更フロー | PR に Wiki 変更内容を含め、Merge 後 24 時間以内に Wiki を同期。Wiki には最終同期日と PR リンクを明記。 |
 | 付随メモ | `docs/media/coupled/` 更新時は生成日時と `tests/test_coupled_constraint_endurance` ログを記録し、Slack へ報告。 |
+
+#### B.5.2 Slack / Webhook 検証メモ
+- `tools/compose_endurance_notification.py --summary-validation-report latest.summary.validation.md --diagnostics-report latest.diagnostics_console.log` を指定すると、Slack 側で `<details>` ブロック付きの Schema / Diagnostics が展開できる。Status が `SKIPPED` の場合は `latest.summary.json` や `plan.csv` が生成されていない合図なので、`data/endurance_archive` をダウンロードして原因を確認する。  
+- `tools/fetch_endurance_artifact.py --auto-latest --workflow coupled_endurance.yml --run-status failure --job-name archive-and-summarize` で最新 Run ID を取得し、`--comment-file` で生成された Markdown をそのまま Slack や issue へ貼り付ける。  
+- Failure-rate digest (`archive_failure_rate_{png,md,json}`) は週次アーティファクトにも保存される。CI ログのコメントに Run ID を残し、`docs/reports/coupled_endurance_failure_history.md` へリンクを追記する。
 
 #### B.5.1 KPI Update Rotation
 | 曜日 | 対象ドキュメント | 主担当 | バックアップ | メモ |
@@ -220,6 +226,11 @@ h1. メンテナンス
   2. `ChronoCoupledConditionWarningPolicy_C` の `enable_logging`、`log_cooldown` を誤って無効化していないか。  
   3. ハンドラ内で重い処理や例外（`fprintf` 失敗など）が起きていないか。  
 - 再現手順: `./chrono-C-all/tests/test_coupled_logging_integration` を実行し、標準出力に表示されるキャプチャ件数を確認する。
+
+### C.2 GitHub API / Failure-rate Digests
+- `tools/report_archive_failure_rate.py` は `--weeks 8` でも 2 リクエスト（workflow runs + jobs）で完了する。`GITHUB_TOKEN` の既定 `actions:read` で十分だが、組織ポリシーによりブロックされる場合は `GH_TOKEN` に `repo` scope を付けて上書きする。  
+- GitHub へ到達できないローカル環境では `--skip-chart` を付与し、`archive_failure_rate.md/json` だけを生成する。PNG は Actions artifact から取得して `docs/reports/coupled_endurance_failure_history.md` に貼る。  
+- Slack/Webhook 向けには `archive_failure_rate_slack.json` をそのまま `curl -X POST ... --data` に渡せる。Webhook 切替時は `tools/mock_webhook_server.py` で 200 応答を確認してから本番 URL を設定する。
 
 ---
 
