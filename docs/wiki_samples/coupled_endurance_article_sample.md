@@ -12,6 +12,7 @@
 ## クイックリンク
 - [CI トラブルシュート手順書](../coupled_endurance_ci_troubleshooting.md)
 - [Coupled チュートリアル（メディア生成手順）](../chrono_coupled_constraint_tutorial.md)
+- [Hands-on ガイド](../coupled_constraint_hands_on.md)
 - [パラメータ YAML](../../data/coupled_constraint_presets.yaml)
 - [チートシート PDF](../coupled_constraint_presets_cheatsheet.md)
 - [アーティファクト一覧](https://github.com/example/highperformanceFEM/actions?query=workflow%3A%22Coupled+Endurance%22)
@@ -33,10 +34,15 @@
    を実行。超過要因を特定し、`data/coupled_constraint_presets.yaml` を見直す。
 4. **報告** – Slack `#chrono-constraints` に検知状況・対処案・次アクションを共有。
 
-### スクリーンショットガイド
-- Actions 実行画面（最新 1 件、失敗ステップを赤枠で囲む）
-- `latest.summary.html` の KPI 表（max condition / warn ratio / rank ratio が見える範囲）
-- `docs/media/coupled/endurance_overview.gif` または MP4 サムネイル
+## KPI の見方
+| KPI | 説明 | 閾値（例） |
+|-----|------|------------|
+| `max_condition` | Coupled 拘束の最大条件数 | `1.0e8` |
+| `warn_ratio` | `condition_warning` フラグの割合 | `<= 0.05` |
+| `rank_ratio` | ランク欠損フレーム割合 | `<= 0.01` |
+| `dropping_equations` | 自動ドロップ回数 | `<= 1` |
+
+> 判定ロジックは `docs/coupled_constraint_solver_math.md` と `docs/coupled_contact_test_notes.md` を参照。
 
 ## メディア更新
 - コマンド例:
@@ -63,7 +69,7 @@
 - **Wiki 同期フロー**
   1. Git 更新内容を確認し、本ファイルをテンプレとして流用。
   2. 最終更新日・担当・PR リンクを差し替え。
-  3. スクリーンショットを貼り替え、キャプションを付ける。
+  3. スクリーンショットを貼り替え（詳細は `docs/appendix_optional_ops.md` を参照）、キャプションを付ける。
   4. 公開後、Slack で通知し次担当へタスクを引き継ぐ。
 
 ---

@@ -20,6 +20,7 @@ class BenchRow:
     max_condition_spectral: float
     max_condition_gap: float
     avg_condition_gap: float
+    scenario: str = "default"
 
     @staticmethod
     def from_dict(row: Dict[str, str]) -> "BenchRow":
@@ -30,6 +31,7 @@ class BenchRow:
             max_condition_spectral=float(row.get("max_condition_spectral", row["max_condition"])),
             max_condition_gap=float(row.get("max_condition_gap", "0.0")),
             avg_condition_gap=float(row.get("avg_condition_gap", "0.0")),
+            scenario=row.get("scenario", "default"),
         )
 
     def ratio(self) -> float:
@@ -90,6 +92,52 @@ def aggregate_by_eq(rows: Iterable[BenchRow]) -> Dict[int, Tuple[float, float, f
     return aggregates
 
 
+def _compute_histogram(values: List[float], bins: int = 10) -> List[Tuple[float, float, int]]:
+    filtered = [value for value in values if math.isfinite(value) and value >= 0.0]
+    if not filtered:
+        return []
+    minimum = min(filtered)
+    maximum = max(filtered)
+    if minimum == maximum:
+        return [(minimum, maximum, len(filtered))]
+    width = (maximum - minimum) / bins if bins > 0 else maximum - minimum
+    if width <= 0.0:
+        width = max(abs(maximum), 1.0)
+    edges = [minimum + idx * width for idx in range(bins)]
+    counts = [0 for _ in range(bins)]
+    for value in filtered:
+        if value == maximum:
+            counts[-1] += 1
+            continue
+        idx = int((value - minimum) / width)
+        if idx < 0:
+            idx = 0
+        elif idx >= bins:
+            idx = bins - 1
+        counts[idx] += 1
+    histogram: List[Tuple[float, float, int]] = []
+    for idx, count in enumerate(counts):
+        start = edges[idx]
+        end = start + width
+        histogram.append((start, end, count))
+    return histogram
+
+
+def _format_histogram(values: List[float]) -> List[str]:
+    histogram = _compute_histogram(values)
+    lines: List[str] = []
+    if not histogram:
+        lines.append("_No spectral gap data available for histogram._")
+        return lines
+    total = sum(count for _, _, count in histogram) or 1
+    lines.append("| Range (gap) | Count | Share |")
+    lines.append("|-------------|------:|------:|")
+    for start, end, count in histogram:
+        share = (count / total) * 100.0
+        lines.append(f"| [{start:.2e}, {end:.2e}) | {count} | {share:5.1f}% |")
+    return lines
+
+
 def render_markdown(rows: List[BenchRow], source: Path) -> str:
     timestamp = datetime.now(timezone.utc).isoformat()
     aggregates = aggregate_by_eq(rows)
@@ -104,14 +152,16 @@ def render_markdown(rows: List[BenchRow], source: Path) -> str:
 
     lines.append("## Per-case Overview")
     lines.append(
-        "| eq_count | epsilon | max κ (bound) | max κ (spectral) | gap | ratio (spectral/bound) |"
+        "| eq_count | epsilon | scenario | max κ (bound) | max κ (spectral) | gap | ratio (spectral/bound) |"
     )
-    lines.append("|---------:|--------:|--------------:|------------------:|----:|------------------------:|")
+    lines.append(
+        "|---------:|--------:|:---------|--------------:|------------------:|----:|------------------------:|"
+    )
     for row in sorted(rows, key=lambda r: (r.eq_count, r.epsilon)):
         ratio = row.ratio()
         ratio_text = f"{ratio:.3f}" if math.isfinite(ratio) else "inf"
         lines.append(
-            f"| {row.eq_count} | {row.epsilon:.1e} | {row.max_condition:.3e} | "
+            f"| {row.eq_count} | {row.epsilon:.1e} | {row.scenario} | {row.max_condition:.3e} | "
             f"{row.max_condition_spectral:.3e} | {row.max_condition_gap:.3e} | {ratio_text} |"
         )
 
@@ -124,6 +174,11 @@ def render_markdown(rows: List[BenchRow], source: Path) -> str:
         lines.append(
             f"| {eq} | {max_gap:.3e} | {mean_gap:.3e} | {max_ratio:.3f} | {mean_ratio:.3f} |"
         )
+
+    lines.append("")
+    lines.append("## Spectral Gap Histogram")
+    histogram_lines = _format_histogram([row.max_condition_gap for row in rows])
+    lines.extend(histogram_lines)
 
     return "\n".join(lines) + "\n"
 

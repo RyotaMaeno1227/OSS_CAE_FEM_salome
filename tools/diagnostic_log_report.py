@@ -18,6 +18,12 @@ from pathlib import Path
 from statistics import mean, median
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
+from extract_condition_anomalies import (
+    collect_anomalies,
+    format_anomaly,
+    highest_severity,
+)
+
 
 # Column name aliases frequently encountered in diagnostic dumps.
 RANK_COLUMNS = ["rank", "diagnostics_rank", "diagnostics.rank"]
@@ -68,6 +74,12 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         type=int,
         default=10,
         help="Maximum number of anomalous rows to list per file (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--anomaly-jsonl",
+        action="append",
+        default=[],
+        help="JSONL files to scan for condition anomalies (same rules as extract_condition_anomalies.py).",
     )
     return parser.parse_args(argv)
 
@@ -258,6 +270,25 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     report_sections: List[str] = []
 
+    if args.anomaly_jsonl:
+        anomaly_lines: List[str] = ["## Condition Anomalies", ""]
+        for jsonl_path in args.anomaly_jsonl:
+            path = Path(jsonl_path).expanduser()
+            anomalies = collect_anomalies(path)
+            if not anomalies:
+                anomaly_lines.append(f"- `{path}`: _no condition anomalies detected_")
+                continue
+            worst = highest_severity(anomalies)
+            anomaly_lines.append(f"- `{path}` (worst level: {worst})")
+            for entry in anomalies[: args.max_anomalies]:
+                anomaly_lines.append(f"  - {format_anomaly(entry)}")
+            hidden = len(anomalies) - args.max_anomalies
+            if hidden > 0:
+                anomaly_lines.append(f"  - _(+{hidden} more entries omitted)_")
+            anomaly_lines.append("")
+        anomaly_lines.append("")
+        report_sections.append("\n".join(anomaly_lines))
+
     for input_path in args.inputs:
         path = Path(input_path).expanduser()
         metrics = load_metrics(path)
@@ -284,4 +315,3 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

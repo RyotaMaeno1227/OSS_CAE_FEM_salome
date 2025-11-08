@@ -34,3 +34,29 @@
   ```
 
 - See `docs/coupled_benchmark_setup.md` for detailed instructions and dependency notes (PyYAML, etc.).
+
+## CI Log Triage (Coupled / Island)
+
+`tools/filter_ci_failures.py` helps isolate failing Coupled/Island tests from the full
+`test.log`.
+
+```bash
+# Annotate the raw log with [COUPLED]/[ISLAND] tags (in-place)
+python3 tools/filter_ci_failures.py test.log --tag-input
+
+# Emit only the relevant sections + keyword hits
+python3 tools/filter_ci_failures.py test.log --output test_coupled_island.log
+```
+
+- Use `--keywords gear contact` to extend the match set during local debugging.
+- `--tag-only` combined with `--tag-output` allows creating a separate tagged log without
+  running the filter stage.
+- Both files are uploaded as CI artifacts (`chrono-tests`) so you can download the
+  trimmed log when diagnosing failures remotely.
+
+## Coupled & Contact API Surface
+
+- The minimal C API required to drive Coupled constraints plus contact/island managers is documented in
+  [`docs/coupled_contact_api_minimal.md`](docs/coupled_contact_api_minimal.md) (Japanese) and
+  [`docs/coupled_contact_api_minimal_en.md`](docs/coupled_contact_api_minimal_en.md) (English).
+- Keep optional logging/visualisation helpers out of the minimal surface—those belong in `docs/appendix_optional_ops.md`.

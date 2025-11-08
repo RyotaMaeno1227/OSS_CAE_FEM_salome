@@ -106,3 +106,43 @@ use_cases:
         softness_angle: 0.036
     notes:
       - 接触解決と併用する場合は `velocity_iterations=24`, `position_iterations=6` を推奨。
+
+  - id: hydraulic_lift_sync
+    description: 油圧リフトのアクチュエータ同期（距離＋微小角補償）
+    base:
+      ratio_distance: 0.62
+      ratio_angle: 0.18
+      target_offset: 0.0
+      softness_distance: 0.017
+      softness_angle: 0.03
+      spring_distance:
+        stiffness: 34.0
+        damping: 2.8
+      spring_angle:
+        stiffness: 15.0
+        damping: 0.85
+      baumgarte: 0.36
+      slop: 0.0005
+      max_correction: 0.08
+    notes:
+      - 微小角度補償を優先する場合は `ratio_angle` を 0.2 まで引き上げると応答性が向上する。
+
+  - id: optic_alignment_trim
+    description: 光学装置の並進＋回転トリム調整
+    base:
+      ratio_distance: 0.35
+      ratio_angle: -0.48
+      target_offset: 0.003
+      softness_distance: 0.02
+      softness_angle: 0.034
+      spring_distance:
+        stiffness: 22.0
+        damping: 2.1
+      spring_angle:
+        stiffness: 11.0
+        damping: 0.75
+      baumgarte: 0.37
+      slop: 0.0005
+      max_correction: 0.07
+    notes:
+      - 並行稼働する Coupled 拘束が複数ある場合は `target_offset` を交互に ±0.003 で切り替えドリフトを防ぐ。

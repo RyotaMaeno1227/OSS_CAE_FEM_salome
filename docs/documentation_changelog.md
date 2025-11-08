@@ -20,16 +20,21 @@
 | `docs/chrono_3d_abstraction_note.md` | KPI/ガントを拘束・接触・並列タスクへ再編し、月次メモを数値指標基準に更新 | アーキ WG（Sato） | Section 10 のテンプレート強化 |
 | `docs/wiki_coupled_endurance_article.md` | 運用テンプレ／チェックリストを付録へ移動し、本文をサマリに集約 | DevOps（Suzuki） | Section 6/7 をリダイレクト |
 | `docs/wiki_samples/coupled_endurance_article_sample.md` | 付録を削除し、付録ファイル参照のみに整理 | DevOps（Suzuki） | Appendix 参照導線 |
-| `docs/coupled_island_migration_plan.md` | Coupled/Island 解法の差分と chrono-main への移行ステップを整理 | Cチーム（Mori） | 新規追加 |
+| `docs/coupled_island_migration_plan.md` | バックログ表をガント／進捗バー付きテンプレへ更新 | Cチーム（Mori） | Section 6 |
 | `docs/coupled_constraint_solver_math.md` | Coupled 拘束の行列導出・ピボット戦略を数式付きで解説 | Cチーム（Mori） | 新規追加 |
 | `docs/coupled_constraint_tutorial_draft.md` | Coupled 拘束の学習ドラフト（数式→実装→テスト）を新設 | Cチーム（Mori） | 新規追加 |
 | `docs/appendix_optional_ops.md` | オペレーション（メディア／Wiki／ログ／ベンチ）を集約した付録を作成 | ドキュメント班（Nakajima） | 新規追加 |
 | `docs/optional_features_appendix_plan.md` | 運用・通知系コンテンツを Appendix へ移す計画を更新 | ドキュメント班（Nakajima） | Appendix 実装に合わせ調整 |
 | `docs/chrono_2d_development_plan.md` | テスト一覧を計算コアに限定したカテゴリ表へ更新 | Cチーム（Mori） | Section 3.4 |
-| `docs/coupled_contact_api_minimal.md` | Init/Solve/Diagnostics のフェーズ別 API 表へ再構成 | Cチーム（Mori） | 構成変更 |
+| `docs/coupled_contact_api_minimal.md` | Init/Solve/Diagnostics のフェーズ別 API 表へ再構成（英語併記） | Cチーム（Mori） | 構成変更 |
 | `docs/chrono_logging_integration.md` | 運用ヒントを付録へ移動し、本編を API 解説に集中 | DevOps（Suzuki） | Section 5 |
 | `docs/coupled_benchmark_setup.md` | 付録への移行に伴い本編をリダイレクト化 | DevOps（Suzuki） | Appendix D 参照 |
 | `docs/chrono_3d_abstraction_note.md` | KPI/ガントを最新進捗値（拘束・接触・並列）へ更新 | アーキ WG（Sato） | Section 10 |
+| `docs/coupled_constraint_tutorial_draft.md` | 英語節＋図表＋サンプルコードを加え、完成版チュートリアルへ更新 | Cチーム（Mori） | Revamped |
+| `docs/coupled_constraint_hands_on.md` | FEM4C 形式のハンズオン手順を新規追加 | Cチーム（Mori） | 新規追加 |
+| `docs/coupled_contact_test_notes.md` | Coupled＋Contact 併用テストの意図と判定指標を整理 | Cチーム（Mori） | 新規追加 |
+| `docs/wiki_coupled_endurance_article.md` | KPI 定義節を追加し、計算コア指標を強調 | DevOps（Suzuki） | Section 4 |
+| `docs/wiki_samples/coupled_endurance_article_sample.md` | KPI テーブルと Appendix 参照を追加 | DevOps（Suzuki） | Template update |
 
 ## 運用メモ
 - 変更日・担当者・Pull Request を必ず記録する。表は最新が上に来るように追記。

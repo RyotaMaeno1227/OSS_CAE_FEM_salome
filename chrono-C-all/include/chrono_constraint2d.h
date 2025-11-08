@@ -9,6 +9,7 @@ extern "C" {
 
 #include "chrono_body2d.h"
 #include "chrono_logging.h"
+#include "chrono_constraint_common.h"
 
 typedef void (*ChronoConstraint2DPrepareFunc)(void *constraint, double dt);
 typedef void (*ChronoConstraint2DStepFunc)(void *constraint);
@@ -236,16 +237,7 @@ typedef struct ChronoDistanceAngleConstraint2D_C {
 
 struct ChronoCoupledConstraint2D_C;
 
-typedef struct ChronoCoupledConstraint2DDiagnostics_C {
-    unsigned int flags;
-    int rank;
-    double condition_number;
-    double min_pivot;
-    double max_pivot;
-    double condition_number_spectral;
-    double min_eigenvalue;
-    double max_eigenvalue;
-} ChronoCoupledConstraint2DDiagnostics_C;
+typedef ChronoCoupledConstraintDiagnostics_C ChronoCoupledConstraint2DDiagnostics_C;
 
 typedef struct ChronoCoupledConditionWarningEvent_C {
     double condition_number;

@@ -144,6 +144,7 @@ jobs:
           if [ "${{ github.event_name }}" = "issues" ]; then
             COMMENT_OPTS="--post-comment --comment-target issue/${{ github.event.issue.number }}"
           fi
+          COMMENT_OPTS="$COMMENT_OPTS --console-comment-only"
           python tools/fetch_endurance_artifact.py \
             ${{ github.run_id }} \
             --output-dir data/endurance_archive/repro \

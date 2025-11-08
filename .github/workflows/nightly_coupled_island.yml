@@ -16,6 +16,11 @@ jobs:
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y build-essential python3
 
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pyyaml
+
       - name: Build coupled/island regression tests
         working-directory: chrono-C-all
         run: |
@@ -27,12 +32,58 @@ jobs:
             tests/test_island_parallel_contacts \
             tests/test_island_polygon_longrun
 
+      - name: Run coupled benchmark
+        run: |
+          mkdir -p artifacts/nightly
+          python3 tools/run_coupled_benchmark.py \
+            --config config/coupled_benchmark_thresholds.yaml \
+            --csv-validation warn \
+            --csv-validation-jsonl artifacts/nightly/benchmark_validation.jsonl \
+            --output data/coupled_benchmark_metrics.csv
+
+      - name: Generate condition gap report
+        run: |
+          python3 tools/report_coupled_condition_gap.py \
+            --input data/coupled_benchmark_metrics.csv \
+            --output artifacts/nightly/condition_gap.md
+
+      - name: Generate diagnostic markdown
+        run: |
+          python3 tools/diagnostic_log_report.py \
+            data/coupled_constraint_endurance.csv \
+            --output artifacts/nightly/diagnostics.md \
+            --anomaly-jsonl artifacts/nightly/benchmark_validation.jsonl
+
+      - name: Compare against chrono-main baseline
+        env:
+          CHRONO_BASELINE_CSV: ${{ env.CHRONO_BASELINE_CSV }}
+        run: |
+          mkdir -p artifacts/nightly
+          BASELINE_PATH="${CHRONO_BASELINE_CSV:-third_party/chrono/chrono-main/data/coupled_benchmark_metrics.csv}"
+          if [ -f "$BASELINE_PATH" ]; then
+            python3 tools/compare_benchmark_results.py \
+              --baseline "$BASELINE_PATH" \
+              --current data/coupled_benchmark_metrics.csv \
+              --output artifacts/nightly/benchmark_diff.md \
+              --csv-output artifacts/nightly/benchmark_diff.csv
+          else
+            echo "Baseline CSV not found at $BASELINE_PATH; skipping comparison."
+          fi
+
       - name: Run nightly regression suite
         run: |
-          python tools/run_nightly_regressions.py \
+          python3 tools/run_nightly_regressions.py \
             --log-dir artifacts/nightly/logs \
             --output-csv artifacts/nightly/regression_results.csv \
-            --timeout 900
+            --timeout 900 \
+            --diff-summary artifacts/nightly/mode_mismatch_summary.csv
+
+      - name: Lint nightly regression CSV
+        run: |
+          python3 tools/lint_nightly_results.py \
+            artifacts/nightly/regression_results.csv \
+            --summary artifacts/nightly/mode_mismatch_summary.csv \
+            --fix | tee artifacts/nightly/lint_report.txt
 
       - name: Upload regression artifacts
         if: always()
@@ -42,3 +93,10 @@ jobs:
           path: |
             artifacts/nightly/regression_results.csv
             artifacts/nightly/logs
+            artifacts/nightly/mode_mismatch_summary.csv
+            artifacts/nightly/lint_report.txt
+            artifacts/nightly/benchmark_validation.jsonl
+            artifacts/nightly/condition_gap.md
+            artifacts/nightly/diagnostics.md
+            artifacts/nightly/benchmark_diff.md
+            artifacts/nightly/benchmark_diff.csv

@@ -20,10 +20,12 @@ TEST_TARGETS := \
 	$(TEST_DIR)/test_circle_collision_resting \
 	$(TEST_DIR)/test_circle_collision_friction \
 	$(TEST_DIR)/test_circle_collision_continuous \
-		$(TEST_DIR)/test_circle_collision_materials \
+	$(TEST_DIR)/test_circle_collision_materials \
 	$(TEST_DIR)/test_circle_collision_continuous \
 	$(TEST_DIR)/test_island_contact_constraint \
 	$(TEST_DIR)/test_island_parallel_contacts \
+	$(TEST_DIR)/test_island_parallel_manifold \
+	$(TEST_DIR)/test_coupled_contact_combo \
 	$(TEST_DIR)/test_polygon_collision \
 	$(TEST_DIR)/test_polygon_slope_friction \
 	$(TEST_DIR)/test_polygon_spin_collision \

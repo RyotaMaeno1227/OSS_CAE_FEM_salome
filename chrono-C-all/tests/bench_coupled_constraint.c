@@ -29,7 +29,10 @@ typedef struct {
     int max_recovery_steps;
     int unrecovered_drops;
     int max_pending_steps;
+    const char *scenario;
 } CoupledBenchResult;
+
+typedef void (*BenchSetupFunc)(ChronoCoupledConstraint2D_C *constraint, int equation_count, double epsilon);
 
 static double bench_now(void) {
 #ifdef _OPENMP
@@ -94,7 +97,64 @@ static void reset_bodies(ChronoBody2D_C *anchor, ChronoBody2D_C *body) {
     init_body(body);
 }
 
-static CoupledBenchResult bench_case(int equation_count, double epsilon) {
+static void setup_default_case(ChronoCoupledConstraint2D_C *constraint, int equation_count, double epsilon) {
+    configure_equations(constraint, equation_count, epsilon);
+    configure_warning_policy(constraint, equation_count);
+}
+
+static void setup_spectral_stress_case(ChronoCoupledConstraint2D_C *constraint, int equation_count, double epsilon) {
+    (void)equation_count;
+    (void)epsilon;
+
+    chrono_coupled_constraint2d_clear_equations(constraint);
+
+    chrono_coupled_constraint2d_set_softness_distance(constraint, 1e-6);
+    chrono_coupled_constraint2d_set_softness_angle(constraint, 1e-6);
+    chrono_coupled_constraint2d_set_distance_spring(constraint, 0.0, 0.0);
+    chrono_coupled_constraint2d_set_angle_spring(constraint, 0.0, 0.0);
+
+    ChronoCoupledConstraint2DEquationDesc_C desc;
+
+    memset(&desc, 0, sizeof(desc));
+    desc.ratio_distance = 1.0;
+    desc.ratio_angle = 0.0;
+    desc.softness_distance = 1e-12;
+    desc.softness_angle = 1e-12;
+    chrono_coupled_constraint2d_add_equation(constraint, &desc);
+
+    memset(&desc, 0, sizeof(desc));
+    desc.ratio_distance = 1.0e9;
+    desc.ratio_angle = 0.0;
+    desc.softness_distance = 1e-12;
+    desc.softness_angle = 1e-12;
+    chrono_coupled_constraint2d_add_equation(constraint, &desc);
+
+    memset(&desc, 0, sizeof(desc));
+    desc.ratio_distance = 0.0;
+    desc.ratio_angle = 1.0;
+    desc.softness_distance = 1e-12;
+    desc.softness_angle = 1e-12;
+    chrono_coupled_constraint2d_add_equation(constraint, &desc);
+
+    memset(&desc, 0, sizeof(desc));
+    desc.ratio_distance = 1.0e9;
+    desc.ratio_angle = -1.0e3;
+    desc.softness_distance = 1e-10;
+    desc.softness_angle = 1e-10;
+    chrono_coupled_constraint2d_add_equation(constraint, &desc);
+
+    ChronoCoupledConditionWarningPolicy_C policy;
+    chrono_coupled_constraint2d_get_condition_warning_policy(constraint, &policy);
+    policy.enable_logging = 0;
+    policy.enable_auto_recover = 0;
+    policy.max_drop = 0;
+    chrono_coupled_constraint2d_set_condition_warning_policy(constraint, &policy);
+}
+
+static CoupledBenchResult bench_case(int equation_count,
+                                     double epsilon,
+                                     const char *scenario,
+                                     BenchSetupFunc setup) {
     ChronoBody2D_C anchor;
     ChronoBody2D_C body;
     reset_bodies(&anchor, &body);
@@ -116,8 +176,11 @@ static CoupledBenchResult bench_case(int equation_count, double epsilon) {
                                      1.0,
                                      0.0,
                                      0.0);
-    configure_equations(&constraint, equation_count, epsilon);
-    configure_warning_policy(&constraint, equation_count);
+    if (setup) {
+        setup(&constraint, equation_count, epsilon);
+    } else {
+        setup_default_case(&constraint, equation_count, epsilon);
+    }
 
     ChronoConstraint2DBase_C *constraints[1] = {&constraint.base};
     ChronoConstraint2DBatchConfig_C cfg;
@@ -257,12 +320,13 @@ static CoupledBenchResult bench_case(int equation_count, double epsilon) {
     result.max_recovery_steps = max_recovery_steps;
     result.unrecovered_drops = unrecovered;
     result.max_pending_steps = max_pending_steps;
+    result.scenario = scenario ? scenario : "default";
     return result;
 }
 
 static void write_result(FILE *out, const CoupledBenchResult *result) {
     fprintf(out,
-            "%d,%.1e,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,%.3f,%d,%u,%d,%.3f,%d,%d,%d\n",
+            "%d,%.1e,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,%.3f,%d,%u,%d,%.3f,%d,%d,%d,%s\n",
             result->eq_count,
             result->epsilon,
             result->max_condition,
@@ -278,7 +342,8 @@ static void write_result(FILE *out, const CoupledBenchResult *result) {
             result->avg_recovery_steps,
             result->max_recovery_steps,
             result->unrecovered_drops,
-            result->max_pending_steps);
+            result->max_pending_steps,
+            result->scenario ? result->scenario : "default");
 }
 
 static void print_usage(const char *program) {
@@ -316,7 +381,7 @@ int main(int argc, char **argv) {
     fprintf(out,
             "eq_count,epsilon,max_condition,avg_condition,max_condition_spectral,avg_condition_spectral,"
             "max_condition_gap,avg_condition_gap,avg_solve_time_us,drop_events,drop_index_mask,"
-            "recovery_events,avg_recovery_steps,max_recovery_steps,unrecovered_drops,max_pending_steps\n");
+            "recovery_events,avg_recovery_steps,max_recovery_steps,unrecovered_drops,max_pending_steps,scenario\n");
 
     const int equation_counts[] = {1, 2, 3, 4};
     const size_t eq_count_total = sizeof(equation_counts) / sizeof(equation_counts[0]);
@@ -332,9 +397,15 @@ int main(int argc, char **argv) {
             if (eq_count == 1 && epsilon != 0.0) {
                 continue;
             }
-            CoupledBenchResult result = bench_case(eq_count, epsilon);
+            CoupledBenchResult result = bench_case(eq_count, epsilon, "default", NULL);
             write_result(out, &result);
         }
+    }
+
+    {
+        CoupledBenchResult stress =
+            bench_case(4, 0.0, "spectral_stress", setup_spectral_stress_case);
+        write_result(out, &stress);
     }
 
     if (out != stdout) {

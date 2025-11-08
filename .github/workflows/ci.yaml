@@ -20,6 +20,16 @@ jobs:
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y build-essential
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyyaml
+
       - name: Build test binaries
         working-directory: chrono-C-all
         run: |
@@ -39,17 +49,61 @@ jobs:
             exit 0
           else
             echo "Test run failed. Showing tail of test.log:"
-            tail -n 400 ../test.log
-            exit 1
+              tail -n 400 ../test.log
+              exit 1
           fi
+
+      - name: Tag coupled/island ranges
+        if: always()
+        run: |
+          python3 tools/filter_ci_failures.py test.log --tag-input
+
+      - name: Extract coupled/island failures
+        if: always()
+        run: |
+          python3 tools/filter_ci_failures.py test.log --output test_coupled_island.log
+
+      - name: Validate endurance CSV filter
+        if: always()
+        run: |
+          tmpfile=$(mktemp)
+          cp data/coupled_constraint_endurance.csv "$tmpfile"
+          python3 tools/filter_coupled_endurance_log.py "$tmpfile"
+          python3 tools/plot_coupled_constraint_endurance.py "$tmpfile" --skip-plot --summary-json /tmp/filtered_summary.json --no-show
+          rm -f "$tmpfile"
+
+      - name: Generate condition gap report
+        if: always()
+        run: |
+          mkdir -p artifacts/ci
+          python3 tools/report_coupled_condition_gap.py \
+            --input data/coupled_benchmark_metrics.csv \
+            --output artifacts/ci/condition_gap_report.md
 
       - name: Upload test log
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: chrono-tests
-          path: test.log
+          path: |
+            test.log
+            test_coupled_island.log
+            artifacts/ci/condition_gap_report.md
 
       - name: Fail if tests failed
         if: steps.run_tests.outcome == 'failure'
         run: exit 1
+
+      - name: Run coupled benchmark
+        run: |
+          python3 tools/run_coupled_benchmark.py \
+            --config config/coupled_benchmark_thresholds.yaml \
+            --output data/coupled_benchmark_metrics.csv \
+            --csv-validation warn
+
+      - name: Upload coupled benchmark CSV
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coupled-benchmark
+          path: data/coupled_benchmark_metrics.csv

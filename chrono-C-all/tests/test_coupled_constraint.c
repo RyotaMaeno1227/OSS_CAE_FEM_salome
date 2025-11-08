@@ -45,6 +45,67 @@ static void init_body(ChronoBody2D_C *body, double x, double y, double angle) {
     body->angular_velocity = 0.5;
 }
 
+typedef struct CoupledSweepCase {
+    const char *name;
+    double ratio_distance;
+    double ratio_angle;
+    double softness_distance;
+    double softness_angle;
+    int expect_warning;
+    double max_condition_limit;
+} CoupledSweepCase;
+
+static int run_sweep_case(const CoupledSweepCase *fixture);
+static int run_parameter_sweep(void);
+
+static const CoupledSweepCase kSweepCases[] = {
+    {
+        .name = "tele_yaw_control",
+        .ratio_distance = 1.0,
+        .ratio_angle = 0.4,
+        .softness_distance = 0.014,
+        .softness_angle = 0.028,
+        .expect_warning = 0,
+        .max_condition_limit = 5e8,
+    },
+    {
+        .name = "cam_follow_adjust",
+        .ratio_distance = 0.48,
+        .ratio_angle = -0.32,
+        .softness_distance = 0.018,
+        .softness_angle = 0.024,
+        .expect_warning = 0,
+        .max_condition_limit = 5e8,
+    },
+    {
+        .name = "counterbalance_beam",
+        .ratio_distance = 0.85,
+        .ratio_angle = -0.3,
+        .softness_distance = 0.013,
+        .softness_angle = 0.022,
+        .expect_warning = 0,
+        .max_condition_limit = 5e8,
+    },
+    {
+        .name = "hydraulic_lift_sync",
+        .ratio_distance = 0.62,
+        .ratio_angle = 0.18,
+        .softness_distance = 0.017,
+        .softness_angle = 0.03,
+        .expect_warning = 0,
+        .max_condition_limit = 5e8,
+    },
+    {
+        .name = "optic_alignment_trim",
+        .ratio_distance = 0.35,
+        .ratio_angle = -0.48,
+        .softness_distance = 0.02,
+        .softness_angle = 0.034,
+        .expect_warning = 0,
+        .max_condition_limit = 5e8,
+    },
+};
+
 int main(void) {
     ChronoBody2D_C anchor;
     ChronoBody2D_C body;
@@ -199,6 +260,26 @@ int main(void) {
         fprintf(stderr, "Coupled constraint failed: diagnostics reported rank deficiency.\n");
         return 1;
     }
+    if (!diag || diag->condition_number_spectral <= 0.0 || !isfinite(diag->condition_number_spectral)) {
+        fprintf(stderr, "Coupled constraint failed: spectral condition number invalid.\n");
+        return 1;
+    }
+    if (!isfinite(diag->min_eigenvalue) || !isfinite(diag->max_eigenvalue) || diag->min_eigenvalue <= 0.0) {
+        fprintf(stderr,
+                "Coupled constraint failed: eigenvalue diagnostics invalid (min=%.6e max=%.6e).\n",
+                diag ? diag->min_eigenvalue : 0.0,
+                diag ? diag->max_eigenvalue : 0.0);
+        return 1;
+    }
+    double condition_gap = fabs(diag->condition_number_spectral - diag->condition_number);
+    double gap_limit = fmax(5e-4, 0.2 * diag->condition_number_spectral);
+    if (condition_gap > gap_limit) {
+        fprintf(stderr,
+                "Coupled constraint failed: condition gap too large (gap=%.6e limit=%.6e).\n",
+                condition_gap,
+                gap_limit);
+        return 1;
+    }
 
     ChronoCoupledConditionWarningPolicy_C condition_policy;
     chrono_coupled_constraint2d_get_condition_warning_policy(&constraint, &condition_policy);
@@ -267,5 +348,99 @@ int main(void) {
     }
 
     printf("Coupled constraint test passed.\n");
+
+    if (run_parameter_sweep() != 0) {
+        return 1;
+    }
+    return 0;
+}
+
+static int run_sweep_case(const CoupledSweepCase *fixture) {
+    ChronoBody2D_C anchor;
+    ChronoBody2D_C body;
+    init_anchor(&anchor, -0.15, 0.05);
+    init_body(&body, 0.4, 0.25, 0.25);
+
+    double local_anchor[2] = {0.0, 0.0};
+    double axis_local[2] = {1.0, 0.0};
+
+    double rest_distance = compute_distance_raw(&anchor, &body);
+    double rest_angle = body.angle - anchor.angle;
+
+    ChronoCoupledConstraint2D_C constraint;
+    chrono_coupled_constraint2d_init(&constraint,
+                                     &anchor,
+                                     &body,
+                                     local_anchor,
+                                     local_anchor,
+                                     axis_local,
+                                     rest_distance,
+                                     rest_angle,
+                                     fixture->ratio_distance,
+                                     fixture->ratio_angle,
+                                     0.0);
+    chrono_coupled_constraint2d_set_softness_distance(&constraint, fixture->softness_distance);
+    chrono_coupled_constraint2d_set_softness_angle(&constraint, fixture->softness_angle);
+    chrono_coupled_constraint2d_set_distance_spring(&constraint, 32.0, 2.5);
+    chrono_coupled_constraint2d_set_angle_spring(&constraint, 14.0, 0.8);
+    chrono_coupled_constraint2d_set_baumgarte(&constraint, 0.35);
+    chrono_coupled_constraint2d_set_slop(&constraint, 5e-4);
+    chrono_coupled_constraint2d_set_max_correction(&constraint, 0.08);
+
+    ChronoConstraint2DBase_C *constraints[1] = {&constraint.base};
+    ChronoConstraint2DBatchConfig_C cfg;
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.velocity_iterations = 18;
+    cfg.position_iterations = 4;
+    cfg.enable_parallel = 0;
+
+    const double dt = 0.0035;
+    const int total_steps = 900;
+    for (int step = 0; step < total_steps; ++step) {
+        if (step == 300) {
+            chrono_coupled_constraint2d_set_target_offset(&constraint, 0.01);
+        } else if (step == 600) {
+            chrono_coupled_constraint2d_set_target_offset(&constraint, -0.01);
+        }
+        chrono_constraint2d_batch_solve(constraints, 1, dt, &cfg, NULL);
+        body.linear_velocity[0] *= 0.998;
+        body.linear_velocity[1] *= 0.998;
+        body.angular_velocity *= 0.998;
+        chrono_body2d_integrate_explicit(&body, dt);
+        chrono_body2d_reset_forces(&body);
+    }
+
+    const ChronoCoupledConstraint2DDiagnostics_C *diag =
+        chrono_coupled_constraint2d_get_diagnostics(&constraint);
+    double condition = diag ? diag->condition_number_spectral : 0.0;
+    int warning_flag = diag && (diag->flags & CHRONO_COUPLED_DIAG_CONDITION_WARNING);
+
+    if (condition <= 0.0 || condition > fixture->max_condition_limit) {
+        fprintf(stderr,
+                "Parameter sweep case '%s' failed: condition %.6e outside limit %.6e\n",
+                fixture->name,
+                condition,
+                fixture->max_condition_limit);
+        return 1;
+    }
+
+    if (warning_flag != fixture->expect_warning) {
+        fprintf(stderr,
+                "Parameter sweep case '%s' failed: warning flag %d expected %d\n",
+                fixture->name,
+                warning_flag,
+                fixture->expect_warning);
+        return 1;
+    }
+    return 0;
+}
+
+static int run_parameter_sweep(void) {
+    const size_t case_count = sizeof(kSweepCases) / sizeof(kSweepCases[0]);
+    for (size_t i = 0; i < case_count; ++i) {
+        if (run_sweep_case(&kSweepCases[i]) != 0) {
+            return 1;
+        }
+    }
     return 0;
 }

@@ -1,99 +1,112 @@
-# Coupled Constraint Tutorial (Draft)
+# Coupled Constraint Tutorial (JP/EN)
 
-Coupled 拘束（距離＋角度の線形結合）を理解し実装へ反映するためのドラフト教材です。  
-FEM4C チュートリアルの学習サイクルに倣い、次の 4 ステップを繰り返しながら読み進めてください。
+Coupled 拘束（距離＋角度の線形結合）を理解し実装へ反映するためのチュートリアルです。  
+FEM4C の学習サイクル（Understand → Implement → Inspect → Verify）に倣い、以下の 4 ステップで読み進めてください。
 
-1. **数式を整理する** – `docs/coupled_constraint_solver_math.md` をベースに、拘束方程式と行列構造を理解する。  
-2. **実装を読む** – `chrono-C-all/src/chrono_constraint2d.c` の該当関数を追い、データフローを確認する。  
-3. **自分で確かめる** – 小さなスニペットやパラメータ変更で挙動を体験する。  
-4. **テストで検証する** – 公式テストスイートを走らせ、数値特性が維持されていることを確認する。
-
----
-
-## 1. 数式フェーズ（Theory）
-
-### 1.1 連立式の骨子
-- Coupled 拘束の各式は  
-  ```math
-  \phi_i = r^{(i)}_d C_d + r^{(i)}_\theta C_\theta - b^{(i)}_{\text{target}}
-  ```  
-  で定義される（`docs/coupled_constraint_solver_math.md` 参照）。
-- 距離・角度の有効質量は `M_d^{-1}`・`M_θ^{-1}` へ分解でき、比率 `r_d`, `r_θ` を組み合わせることで式間の相互作用を表現する。
-- 対角成分にはソフトネス `γ_i` を加算し、正定性と安定性を確保する。
-
-### 1.2 行列分解と条件数
-- `coupled_constraint_invert_matrix` では最大 4×4 のガウス消去を行い、部分ピボットと Pivot ε によってランク欠損を検知する。
-- `coupled_constraint_condition_bound` の行和ノルムで簡易条件数 `κ̂` を求め、閾値超過時は式の自動ドロップ（最小対角）を試みる。
-
-#### 演習（Notebook / MATLAB）
-1. `docs/coupled_constraint_solver_math.md` の式 (1) を写経し、任意の比率・ソフトネスで行列 `K` を組み立てる。
-2. Python または MATLAB で `numpy.linalg.cond` を使い、`κ̂` と本来の条件数を比較する。
-3. `constraint->ratio_distance = 1.0`, `ratio_angle = 0.4` のケースで、`γ` を 0 と 0.02 に変えたときの `K` を計算し、ソフトネスの効果を可視化する。
+1. **Theory / 数式** – `docs/coupled_constraint_solver_math.md` で方程式と行列構造を確認。  
+2. **Implementation / 実装** – `chrono-C-all/src/chrono_constraint2d.c` を追ってデータフローを把握。  
+3. **Hands-on / 体験** – パラメータを変更したりミニスクリプトを動かして挙動を観察。  
+4. **Verification / 検証** – 公式テストスイートを実行し、数値特性が維持されていることを確認。
 
 ---
 
-## 2. 実装フェーズ（Implementation）
+## 1. Theory / 数式フェーズ
+
+### 1.1 Equation Skeleton（連立式の骨子）
+```math
+\phi_i = r^{(i)}_d C_d + r^{(i)}_\theta C_\theta - b^{(i)}_{\text{target}}
+```
+- 比率 `r_d`, `r_θ` が距離・角度残差をブレンドする。  
+- 有効質量 `M_d^{-1}`, `M_θ^{-1}` は `chrono_constraint2d.c:1410-1431` で計算される。  
+- 対角にはソフトネス `γ_i` を加算して正定性を確保（`docs/coupled_constraint_solver_math.md#1-連立式の構造`）。
+
+### 1.2 Decomposition & Condition Numbers
+- 4×4 行列を `coupled_constraint_invert_matrix`（`chrono_constraint2d.c:258-348`）で部分ピボット付きガウス消去。  
+- 行和ノルムによる `κ̂` とスペクトル推定 `κ_s` を診断に保存（`docs/coupled_constraint_solver_math.md#3-条件数評価と式ドロップ`）。  
+- WARN 発生時は最弱式を自動ドロップ（`chrono_constraint2d.c:1556-1605`）。
+
+#### Numerical sample
+```python
+import numpy as np
+ratio = np.array([[1.0, 0.40],
+                  [0.55, -0.25]])
+inv_mass = np.diag([0.018, 0.010])
+gamma = np.diag([0.014, 0.028])
+K = ratio @ inv_mass @ ratio.T + gamma
+print(np.linalg.cond(K))
+```
+
+> Hands-on: `docs/coupled_constraint_hands_on.md` Chapter 01 ではこの式を使って比率スイープを行う。
+
+---
+
+## 2. Implementation / 実装フェーズ
 
 | 観点 | 関数 / ファイル | 説明 |
 |------|----------------|------|
-| 初期化 | `chrono_C-all/src/chrono_constraint2d.c:968` `chrono_coupled_constraint2d_init` | アンカー、軸、初期比率、バネ・ダンパを登録し、Equation バッファを整える。 |
-| 行列構築 | `chrono_constraint2d.c:1410`-`1460` | 距離・角度の有効質量、距離誤差 `C_d`、角度誤差 `C_θ` を算出。 |
-| 逆行列計算 | `chrono_constraint2d.c:258`-`348` `coupled_constraint_invert_matrix` | ガウス消去で `system_matrix` を反転し、Pivot 情報をダイアグノスティクスへ記録。 |
-| 条件数判定 | `chrono_constraint2d.c:351`-`360` `coupled_constraint_condition_bound` | 行和ノルムで `κ̂` を推定。 |
-| 自動ドロップ | `chrono_constraint2d.c:1546`-`1605` | `condition_policy` に従い式を間引く処理。 |
-| ソルバ入口 | `chrono_constraint2d.c:1638`-`1921` | `solve_velocity` / `solve_position` が `inv_mass_matrix` を使って拘束インパルスを計算。 |
+| 初期化 | `chrono_coupled_constraint2d_init` (`chrono_constraint2d.c:968`) | アンカー、軸、比率、バネ・ダンパを登録。 |
+| 行列構築 | `chrono_constraint2d.c:1410-1460` | 有効質量と距離/角度残差を計算。 |
+| 逆行列計算 | `coupled_constraint_invert_matrix` (`chrono_constraint2d.c:258-348`) | ピボット情報を記録し `inv_mass_matrix` を更新。 |
+| 条件数判定 | `coupled_constraint_condition_bound` (`chrono_constraint2d.c:351-360`) | `κ̂` を算出。 |
+| ソルバ入口 | `chrono_constraint2d.c:1638-1921` | `solve_velocity` / `solve_position` が拘束インパルスを適用。 |
 
-### コードリーディング課題
-1. `chrono_coupled_constraint2d_prepare_impl` の最初と最後を読んで、どのフィールドが同期されるのかメモする。  
-2. `condition_policy` の初期化 (`chrono_constraint2d.c:1009`) とログ出力 (`chrono_constraint2d.c:1568`) をたどり、WARN が出る条件を整理する。  
-3. `chrono_constraint2d.c:1678` 以降の速度ソルバで、`lambda` 更新式が距離／角度の残差にどう寄与するかコメントを追加してみる（ローカル環境推奨）。
+### 2.1 Code Snippet
+```c
+ChronoCoupledConstraint2D_C coupled;
+chrono_coupled_constraint2d_init(&coupled, body_a, body_b,
+                                 anchor_a, anchor_b,
+                                 axis_local,
+                                 1.0, 0.0,   // rest distance / angle
+                                 1.0, 0.40); // ratios
+
+chrono_coupled_constraint2d_set_softness_distance(&coupled, 0.014);
+chrono_coupled_constraint2d_set_softness_angle(&coupled, 0.028);
+
+chrono_coupled_constraint2d_prepare(&coupled, dt);
+chrono_coupled_constraint2d_apply_warm_start(&coupled);
+chrono_coupled_constraint2d_solve_velocity(&coupled);
+chrono_coupled_constraint2d_solve_position(&coupled);
+```
+
+### 2.2 Reading checklist
+1. `chrono_coupled_constraint2d_prepare_impl` 冒頭と末尾で同期されるフィールドをメモ。  
+2. `condition_policy` 初期化 (`chrono_constraint2d.c:1009`) と WARN 出力 (`chrono_constraint2d.c:1568`) をトレース。  
+3. Hands-on Chapter 02 でソフトネス／バネの効果を CSV へ記録。
 
 ---
 
-## 3. テストフェーズ（Verification）
+## 3. Verification / テストフェーズ
 
 | テスト | 目的 | コマンド例 |
 |--------|------|------------|
-| `tests/test_coupled_constraint` | 基本比率・ターゲット切替えの回帰 | `./chrono-C-all/tests/test_coupled_constraint` |
-| `tests/test_coupled_constraint_endurance` | 7200 ステップ耐久と式ドロップ挙動 | `./chrono-C-all/tests/test_coupled_constraint_endurance` |
-| `tests/bench_coupled_constraint` | 条件数・反復回数のマイクロベンチ | `./chrono-C-all/tests/bench_coupled_constraint --output coupled_bench.csv` |
-| `tests/test_island_parallel_contacts` | アイランド分割と並列解決の一貫性 | `./chrono-C-all/tests/test_island_parallel_contacts` |
+| `tests/test_coupled_constraint` | 基本比率・ターゲット切替え | `./chrono-C-all/tests/test_coupled_constraint` |
+| `tests/test_coupled_constraint_endurance` | 7 200 ステップ耐久 & 自動ドロップ | `./chrono-C-all/tests/test_coupled_constraint_endurance` |
+| `tests/bench_coupled_constraint` | 条件数ベンチ & CSV 出力 | `./chrono-C-all/tests/bench_coupled_constraint --output data/bench.csv` |
+| `tests/test_island_parallel_contacts` | 島分割と並列解決の一致検証 | `./chrono-C-all/tests/test_island_parallel_contacts` |
 
-### テスト後チェック
-- CSV/ログを `tools/plot_coupled_constraint_endurance.py --summary-json` で解析し、`condition_warning` フラグと `rank` が期待通りか確かめる。
-- 自動ドロップが発生したときは `diagnostics.rank` とアクティブ式数が一致しているか確認。
-
----
-
-## 4. 実践ミニ課題
-
-1. **パラメータ探索**  
-   - `chrono_coupled_constraint2d_set_ratios` を呼び出すヘルパスクリプトを書き、比率 (1.0, 0.4) → (0.48, -0.32) へ 3 ステップで遷移させる。  
-   - 各ステップで `diagnostics.condition_number` を収集し、棒グラフ化する。
-
-2. **Pivot 観察**  
-   - `CHRONO_COUPLED_PIVOT_EPSILON` を 1e-9 → 1e-7 に変更し、`test_coupled_constraint_endurance` を実行。  
-   - WARN 発生回数・ドロップ数の差分を記録し、Pivot 閾値が挙動へ与える影響を考察。
-
-3. **島ソルバ連携**  
-   - `chrono_island2d_build` で生成された島のうち Coupled 拘束を含むものについて、`constraint_count` をログする。  
-   - 並列実行 (`CHRONO_ENABLE_OPENMP`) を ON/OFF して実行時間と結果差分を比較。
+### After running
+- `tools/plot_coupled_constraint_endurance.py --summary-json out.json --mark-stage 1200:"ratio swap"` で CSV を可視化。  
+- `diagnostics.rank` とアクティブ式数が一致するか確認。  
+- Contact との併用評価は `docs/coupled_contact_test_notes.md` を参照。
 
 ---
 
-## 5. クイックリンク（学習用マップ）
+## 4. Hands-on / 実践ミニ課題
 
-| トピック | リンク / ファイル | メモ |
-|----------|------------------|------|
-| 理論ノート | `docs/coupled_constraint_solver_math.md` | 行列式、Pivot 方針、条件数評価を整理。 |
-| 実装コード | `chrono-C-all/src/chrono_constraint2d.c` | `prepare_impl` / `solve_velocity` / `solve_position` / `condition_policy`。 |
-| 公開 API | `docs/coupled_contact_api_minimal.md` | Init / Solve / Diagnostics に分けて参照。 |
-| テストスイート | `chrono-C-all/tests/test_coupled_constraint*.c` | Endurance・ベンチ含む公式テスト。 |
-| 可視化ツール | `tools/plot_coupled_constraint_endurance.py` | CSV → Summary/Plot。 |
-| アイランド連携 | `chrono-C-all/src/chrono_island2d.c` | Coupled を含む島のスケジューリング確認。 |
-| 追加リーディング | `docs/coupled_island_migration_plan.md` | 3D 互換化へのロードマップ。 |
+1. **Preset sweep** – `data/coupled_constraint_presets.yaml` に `optic_alignment_trim` を追加し、`tests/test_coupled_constraint` のスイープへ組み込む。  
+2. **Pivot tuning** – `CHRONO_COUPLED_PIVOT_EPSILON` を `1e-7` に変更し、`test_coupled_constraint_endurance` の WARN/DROP を比較。  
+3. **Island integration** – Hands-on Chapter 03 (`docs/coupled_constraint_hands_on.md`) を進め、Contact + Coupled の同居を確認。
 
 ---
 
-> ここで扱った内容は、今後予定されている 3D 版 Coupled 拘束（`docs/chrono_3d_abstraction_note.md`）の基礎にもなるため、ログ・条件数・島ソルバの観点を押さえておくと移行作業の理解がスムーズになります。
+## 5. Quick links / クイックリンク
 
+| Topic | リンク | 備考 |
+|-------|--------|------|
+| Solver math | `docs/coupled_constraint_solver_math.md` | コード・テストへのリンクを節ごとに追加。 |
+| Hands-on guide | `docs/coupled_constraint_hands_on.md` | FEM4C 形式のステップバイステップ課題。 |
+| Minimal API (JP/EN) | `docs/coupled_contact_api_minimal.md`, `docs/coupled_contact_api_minimal_en.md` | Init / Solve / Diagnostics をフェーズ別に整理。 |
+| Coupled + Contact notes | `docs/coupled_contact_test_notes.md` | 島テストの判定基準。 |
+| 3D migration | `docs/coupled_island_migration_plan.md`, `docs/chrono_3d_abstraction_note.md` | KPI とガントを確認。 |
+
+> ここで扱った内容は 3D 版 Coupled 拡張の基礎でもあるため、診断・島ソルバ・条件数ログの観点を押さえておくと移行計画（`docs/coupled_island_migration_plan.md`）にもスムーズに参加できます。

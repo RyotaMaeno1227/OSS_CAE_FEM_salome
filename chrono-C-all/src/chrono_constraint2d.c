@@ -1,4 +1,5 @@
 #include "../include/chrono_constraint2d.h"
+#include "../include/chrono_constraint_kkt_backend.h"
 
 #include <math.h>
 #include <float.h>
@@ -267,113 +268,28 @@ static int coupled_constraint_invert_matrix(const double *src,
                                             double *min_pivot,
                                             double *max_pivot,
                                             int *rank) {
-    double a[CHRONO_COUPLED_MAX_EQ][CHRONO_COUPLED_MAX_EQ];
-    double inv[CHRONO_COUPLED_MAX_EQ][CHRONO_COUPLED_MAX_EQ];
-    for (int i = 0; i < n; ++i) {
-        for (int j = 0; j < n; ++j) {
-            a[i][j] = src[i * CHRONO_COUPLED_MAX_EQ + j];
-            inv[i][j] = (i == j) ? 1.0 : 0.0;
-        }
-    }
-    double scale[CHRONO_COUPLED_MAX_EQ];
-    for (int i = 0; i < n; ++i) {
-        double max_row = 0.0;
-        for (int j = 0; j < n; ++j) {
-            double val = fabs(a[i][j]);
-            if (val > max_row) {
-                max_row = val;
-            }
-        }
-        if (max_row < pivot_epsilon) {
-            max_row = 1.0;
-        }
-        scale[i] = max_row;
-    }
-    double local_min = 0.0;
-    double local_max = 0.0;
-    int local_rank = 0;
-    for (int col = 0; col < n; ++col) {
-        int pivot_row = col;
-        double pivot_metric = -1.0;
-        for (int row = col; row < n; ++row) {
-            double val = fabs(a[row][col]);
-            double row_scale = scale[row];
-            if (row_scale < pivot_epsilon) {
-                row_scale = pivot_epsilon;
-            }
-            double metric = val / row_scale;
-            if (metric > pivot_metric) {
-                pivot_metric = metric;
-                pivot_row = row;
-            }
-        }
-        double pivot_val = fabs(a[pivot_row][col]);
-        if (pivot_val < pivot_epsilon) {
-            continue;
-        }
-        if (pivot_row != col) {
-            for (int k = 0; k < n; ++k) {
-                double tmp = a[col][k];
-                a[col][k] = a[pivot_row][k];
-                a[pivot_row][k] = tmp;
-                tmp = inv[col][k];
-                inv[col][k] = inv[pivot_row][k];
-                inv[pivot_row][k] = tmp;
-            }
-            double tmp_scale = scale[col];
-            scale[col] = scale[pivot_row];
-            scale[pivot_row] = tmp_scale;
-        }
-        double pivot = a[col][col];
-        if (local_rank == 0) {
-            local_min = fabs(pivot);
-            local_max = fabs(pivot);
-        } else {
-            if (fabs(pivot) < local_min) {
-                local_min = fabs(pivot);
-            }
-            if (fabs(pivot) > local_max) {
-                local_max = fabs(pivot);
-            }
-        }
-        local_rank += 1;
-        double inv_pivot = 1.0 / pivot;
-        for (int k = 0; k < n; ++k) {
-            a[col][k] *= inv_pivot;
-            inv[col][k] *= inv_pivot;
-        }
-        for (int row = 0; row < n; ++row) {
-            if (row == col) {
-                continue;
-            }
-            double factor = a[row][col];
-            if (factor == 0.0) {
-                continue;
-            }
-            for (int k = 0; k < n; ++k) {
-                a[row][k] -= factor * a[col][k];
-                inv[row][k] -= factor * inv[col][k];
-            }
-        }
-    }
-    if (rank) {
-        *rank = local_rank;
-    }
-    if (min_pivot) {
-        *min_pivot = local_rank > 0 ? local_min : 0.0;
-    }
-    if (max_pivot) {
-        *max_pivot = local_rank > 0 ? local_max : 0.0;
-    }
-    if (local_rank < n) {
+    ChronoKKTBackendResult_C backend_result;
+    if (!chrono_kkt_backend_invert_small(src, n, pivot_epsilon, &backend_result)) {
         return 0;
     }
-    for (int i = 0; i < n; ++i) {
-        for (int j = 0; j < n; ++j) {
-            dst[i * CHRONO_COUPLED_MAX_EQ + j] = inv[i][j];
+    if (dst) {
+        for (int i = 0; i < n; ++i) {
+            for (int j = 0; j < n; ++j) {
+                dst[i * CHRONO_COUPLED_MAX_EQ + j] =
+                    backend_result.inverse[i * CHRONO_COUPLED_MAX_EQ + j];
+            }
         }
     }
-    return 1;
+    if (min_pivot) {
+        *min_pivot = backend_result.min_pivot;
+    }
+    if (max_pivot) {
+        *max_pivot = backend_result.max_pivot;
+    }
+    if (rank) {
+        *rank = backend_result.rank;
+    }
+    return backend_result.success;
 }
 
 static double coupled_constraint_condition_bound(const double *matrix, int n) {

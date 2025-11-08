@@ -32,6 +32,7 @@ class BenchRow:
     max_recovery_steps: int
     unrecovered_drops: int
     max_pending_steps: int
+    scenario: str = "default"
 
     @staticmethod
     def from_dict(row: Dict[str, str]) -> "BenchRow":
@@ -52,6 +53,7 @@ class BenchRow:
             max_recovery_steps=int(row["max_recovery_steps"]),
             unrecovered_drops=int(row["unrecovered_drops"]),
             max_pending_steps=int(row["max_pending_steps"]),
+            scenario=row.get("scenario", "default"),
         )
 
 
@@ -207,12 +209,12 @@ def render_markdown(
         lines.append("## Latest Run Snapshot")
         lines.append(f"Source: `{latest.path}`")
         lines.append("")
-        lines.append("| eq_count | epsilon | avg solve [µs] | max κ (bound) | max κ (spectral) | gap | drops | unrecovered |")
-        lines.append("|---------:|--------:|----------------:|--------------:|------------------:|----:|------:|------------:|")
+        lines.append("| eq_count | epsilon | scenario | avg solve [µs] | max κ (bound) | max κ (spectral) | gap | drops | unrecovered |")
+        lines.append("|---------:|--------:|:---------|----------------:|--------------:|------------------:|----:|------:|------------:|")
         for row in sorted(latest.rows, key=lambda r: (r.eq_count, r.epsilon)):
             lines.append(
-                f"| {row.eq_count} | {row.epsilon:.1e} | {row.avg_solve_time_us:.3f} | {row.max_condition:.3e} | "
-                f"{row.max_condition_spectral:.3e} | {row.max_condition_gap:.3e} | "
+                f"| {row.eq_count} | {row.epsilon:.1e} | {row.scenario or 'default'} | {row.avg_solve_time_us:.3f} | "
+                f"{row.max_condition:.3e} | {row.max_condition_spectral:.3e} | {row.max_condition_gap:.3e} | "
                 f"{row.drop_events} | {row.unrecovered_drops} |"
             )
 

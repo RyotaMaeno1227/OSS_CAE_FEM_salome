@@ -23,7 +23,6 @@ DEFAULT_BASE_COLUMNS = {
     "angle",
     "diagnostics_flags",
     "condition_number",
-    "active_equations",
 }
 
 EQ_SUFFIXES = ("_force_distance", "_force_angle", "_impulse")
@@ -47,10 +46,16 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         default=[],
         help="Additional columns to retain (can be specified multiple times).",
     )
-    parser.add_argument(
+    step_group = parser.add_mutually_exclusive_group()
+    step_group.add_argument(
+        "--keep-step",
+        action="store_true",
+        help="Retain the 'step' column (dropped by default).",
+    )
+    step_group.add_argument(
         "--drop-step",
         action="store_true",
-        help="Drop the 'step' column even if present.",
+        help="Explicitly drop the 'step' column (default).",
     )
     return parser.parse_args(argv)
 
@@ -95,12 +100,14 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     extra_keep = {item for value in args.keep for item in value.split(",") if item}
     keep_columns = set(DEFAULT_BASE_COLUMNS) | extra_keep
-
+    drop_step = not args.keep_step  # default: True
+    if args.drop_step:
+        drop_step = True
     if output_path == input_path:
         with tempfile.NamedTemporaryFile("w", delete=False, newline="", encoding="utf-8") as tmp:
             tmp_path = Path(tmp.name)
         try:
-            filter_csv(input_path, tmp_path, keep_columns, drop_step=args.drop_step)
+            filter_csv(input_path, tmp_path, keep_columns, drop_step=drop_step)
             shutil.move(str(tmp_path), str(output_path))
         finally:
             try:
@@ -112,7 +119,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     pass
     else:
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        filter_csv(input_path, output_path, keep_columns, drop_step=args.drop_step)
+        filter_csv(input_path, output_path, keep_columns, drop_step=drop_step)
 
     return 0
 

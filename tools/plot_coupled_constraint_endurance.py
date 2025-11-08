@@ -106,6 +106,17 @@ def parse_args() -> argparse.Namespace:
         type=float,
         help="Exit with code 7 if rank-deficient ratio falls below this threshold (0.0 - 1.0).",
     )
+    parser.add_argument(
+        "--mark-stage",
+        action="append",
+        metavar="TIME[:LABEL]",
+        dest="stage_markers",
+        help=(
+            "Annotate the plot with vertical lines at specific times. "
+            "Specify seconds optionally followed by a label, e.g. '--mark-stage 12.5:Phase+Switch'. "
+            "Repeat the option to add multiple markers."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -170,7 +181,38 @@ def _validate_summary_schema(payload: dict) -> None:
                     f"Value for '{eq_label}' in '{dict_key}' must be numeric, got {type(value).__name__}"
                 )
 
-def plot(data: dict):
+def _parse_stage_markers(raw_markers):
+    markers = []
+    if not raw_markers:
+        return markers
+    for raw in raw_markers:
+        if ":" in raw:
+            value_str, label = raw.split(":", 1)
+        else:
+            value_str, label = raw, ""
+        try:
+            time_value = float(value_str)
+        except ValueError as exc:
+            raise ValueError(f"Invalid stage marker '{raw}': time component must be numeric.") from exc
+        markers.append({"time": time_value, "label": label})
+    return markers
+
+
+def _apply_stage_markers(axes, stage_markers):
+    if not stage_markers:
+        return
+    colors = ["#7d3c98", "#c0392b", "#16a085", "#f39c12"]
+    for idx, marker in enumerate(stage_markers):
+        color = colors[idx % len(colors)]
+        label = marker["label"] if marker["label"] else f"stage@{marker['time']:.3f}s"
+        for ax_index, ax in enumerate(axes):
+            line_label = label if ax_index == 0 else None
+            ax.axvline(marker["time"], color=color, linestyle=":", linewidth=1.1, alpha=0.7, label=line_label)
+        if label:
+            axes[0].legend(loc="lower right")
+
+
+def plot(data: dict, stage_markers=None):
     plt = _import_pyplot()
     time = data["time"]
     distance = data["distance"]
@@ -230,6 +272,7 @@ def plot(data: dict):
     if warning_times or rank_times:
         ax_condition.legend(loc="upper right")
 
+    _apply_stage_markers(axes, stage_markers or [])
     fig.tight_layout()
     return fig, list(axes)
 
@@ -339,7 +382,13 @@ def main() -> int:
         return violation_exit_code
 
     try:
-        fig, _ = plot(data)
+        stage_markers = _parse_stage_markers(args.stage_markers)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
+    try:
+        fig, _ = plot(data, stage_markers=stage_markers)
     except RuntimeError as exc:
         print(str(exc), file=sys.stderr)
         return 1

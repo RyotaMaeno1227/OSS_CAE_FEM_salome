@@ -11,9 +11,10 @@ from __future__ import annotations
 
 import argparse
 import csv
-from collections import defaultdict
+import sys
+from collections import Counter, defaultdict
 from pathlib import Path
-from typing import Dict, Iterable, List, Sequence
+from typing import Dict, Iterable, List, Sequence, Tuple
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -34,6 +35,21 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         "--quiet",
         action="store_true",
         help="Suppress detailed output; only the exit status reflects findings.",
+    )
+    parser.add_argument(
+        "--max-delete",
+        type=int,
+        help="Fail when delete actions exceed the given count.",
+    )
+    parser.add_argument(
+        "--max-delete-max-age",
+        type=int,
+        help="Fail when delete actions triggered by max-age pruning exceed the limit.",
+    )
+    parser.add_argument(
+        "--max-delete-max-entries",
+        type=int,
+        help="Fail when delete actions triggered by max-entries pruning exceed the limit.",
     )
     return parser.parse_args(argv)
 
@@ -79,7 +95,23 @@ def describe_row(row: Dict[str, str]) -> str:
     return f"{action} (reason={reason or 'n/a'}, detail={detail or 'n/a'})"
 
 
-def lint_plan(path: Path, quiet: bool = False) -> bool:
+def _summarise_actions(rows: List[Dict[str, str]]) -> Dict[str, int]:
+    counts = Counter(row.get("action", "") for row in rows)
+    delete_rows = [row for row in rows if row.get("action") == "delete"]
+    return {
+        "delete": len(delete_rows),
+        "delete_max_age": sum(
+            1 for row in delete_rows if "max-age" in (row.get("reason") or "")
+        ),
+        "delete_max_entries": sum(
+            1 for row in delete_rows if "max-entries" in (row.get("reason") or "")
+        ),
+        "total": len(rows),
+        "archive": counts.get("archive", 0),
+    }
+
+
+def lint_plan(path: Path, quiet: bool = False) -> Tuple[bool, Dict[str, int]]:
     rows = read_plan(path)
     duplicate_hashes = {
         hash_value: entries
@@ -87,9 +119,10 @@ def lint_plan(path: Path, quiet: bool = False) -> bool:
         if len(entries) > 1
     }
     self_cancelling = find_self_cancelling(rows)
+    action_summary = _summarise_actions(rows)
 
     if quiet:
-        return bool(duplicate_hashes or self_cancelling)
+        return bool(duplicate_hashes or self_cancelling), action_summary
 
     print(f"=== {path} ===")
     if not rows:
@@ -109,20 +142,62 @@ def lint_plan(path: Path, quiet: bool = False) -> bool:
             print(f" - {target}: {actions}")
     else:
         print("No archive/delete overlaps detected.")
+    print(
+        f"Action summary: archive={action_summary['archive']} delete={action_summary['delete']} "
+        f"(max-age={action_summary['delete_max_age']} max-entries={action_summary['delete_max_entries']})"
+    )
 
-    return bool(duplicate_hashes or self_cancelling)
+    return bool(duplicate_hashes or self_cancelling), action_summary
+
+
+def _threshold_violations(
+    path: Path,
+    summary: Dict[str, int],
+    *,
+    max_delete: int | None,
+    max_delete_max_age: int | None,
+    max_delete_max_entries: int | None,
+) -> List[str]:
+    issues: List[str] = []
+    if max_delete is not None and summary["delete"] > max_delete:
+        issues.append(
+            f"{path}: delete actions {summary['delete']} exceed limit {max_delete}"
+        )
+    if max_delete_max_age is not None and summary["delete_max_age"] > max_delete_max_age:
+        issues.append(
+            f"{path}: max-age deletes {summary['delete_max_age']} exceed limit {max_delete_max_age}"
+        )
+    if max_delete_max_entries is not None and summary["delete_max_entries"] > max_delete_max_entries:
+        issues.append(
+            f"{path}: max-entries deletes {summary['delete_max_entries']} exceed limit {max_delete_max_entries}"
+        )
+    return issues
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     duplicates_found = False
+    threshold_violations: List[str] = []
 
     for plan_path in args.plans:
         path = Path(plan_path).expanduser()
-        has_duplicates = lint_plan(path, quiet=args.quiet)
+        has_duplicates, summary = lint_plan(path, quiet=args.quiet)
         duplicates_found = duplicates_found or has_duplicates
+        threshold_violations.extend(
+            _threshold_violations(
+                path,
+                summary,
+                max_delete=args.max_delete,
+                max_delete_max_age=args.max_delete_max_age,
+                max_delete_max_entries=args.max_delete_max_entries,
+            )
+        )
 
-    if args.fail_on_duplicates and duplicates_found:
+    for issue in threshold_violations:
+        print(f"Threshold violation: {issue}", file=sys.stderr)
+
+    exit_due_to_thresholds = bool(threshold_violations)
+    if (args.fail_on_duplicates and duplicates_found) or exit_due_to_thresholds:
         return 1
     return 0
 

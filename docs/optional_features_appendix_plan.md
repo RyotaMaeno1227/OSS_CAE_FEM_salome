@@ -17,6 +17,10 @@
 2. 元ドキュメントには章見出しを残し、「詳細は Appendix」を追記。コード／数値手順は従来通り残す。
 3. Appendix 側では更新履歴と担当ローテーションをまとめ、オペレーションの参照先を一元化。
 
+### 進行状況メモ
+- 2025-11-03: Appendix 本体 `docs/appendix_optional_ops.md` を作成し、Media / Wiki / Logging / Benchmark の 4 章を移設済み。  
+- 次フェーズでは Contact+Coupled テストの運用メモを Appendix C へ追加予定。
+
 ## 未決事項
 - Appendix の目次構成（媒体共有／Wiki／CI／通知など）。
 - Appendix を GitHub Pages へ公開するか、リポジトリ内部のみとするか。

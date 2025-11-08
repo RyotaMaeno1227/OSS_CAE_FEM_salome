@@ -167,6 +167,12 @@ Both templates should reference the same KPI values (工数 / リスク). Update
 - 想定工数と消化工数の差分が 30% を超えた項目は、翌月アクション欄に数値的リスク緩和策（例: 追加計測、ソルバ切替評価）を記入する。
 - リスクスコアは 1（低）～5（高）で統一し、変更があれば根拠（条件数悪化、性能退行など）をコメント欄へ明記する。
 
+### 10.4 Calculus-Core Outstanding Tasks
+- **KKT Descriptor Integration** – `docs/coupled_island_migration_plan.md` の KKT PoC を E2E テストに昇格させる（Owner: Mori）。  
+- **Iterative Solver Migration** – `ChIterativeSolverVI` パラメータの写経と Coupled ベンチ比較（Owner: Kobayashi）。  
+- **Contact Jacobian 3DOF** – Rolling/Torsional 成分を含む Manifold 拡張（Owner: Ito）。  
+- **Diagnostics Commonization** – 2D/3D 共通の condition gap / rank ログを `docs/coupled_constraint_solver_math.md` に揃える（Owner: Suzuki）。
+
 ## 11. 技術移行ステータス表（ドラフト）
 
 | コンポーネント | ステータス | 想定期間 | 主な依存関係 | 担当候補 | コメント |

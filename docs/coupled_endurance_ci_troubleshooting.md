@@ -57,7 +57,7 @@ Coupled 拘束の耐久スイートは `.github/workflows/coupled_endurance.yml`
 
 `tools/archive_coupled_constraint_endurance.py` で `--plan-csv` と `--plan-markdown` を指定すると、実行（またはドライランで予定）された操作を `plan.csv` と `plan.md` に記録します。CI では両ファイルがアーティファクトとして添付され、Webhook 通知にも `plan.md` の抜粋が流れるため、削除や整理の判断材料になります。
 
-素早く重複や自己相殺をチェックしたい場合は `python tools/lint_endurance_plan.py data/endurance_archive/plan.csv` を実行すると、同一ハッシュの多重登録や同一ターゲットに対する `archive`/`delete` の衝突を一覧できます。
+素早く重複や自己相殺をチェックしたい場合は `python tools/lint_endurance_plan.py data/endurance_archive/plan.csv` を実行すると、同一ハッシュの多重登録や同一ターゲットに対する `archive`/`delete` の衝突を一覧できます。`--max-delete 4 --max-delete-max-age 2` のような閾値を指定しておけば、削除予定件数が異常に多いプランを即座に弾けます。
 
 | 列 | 概要 | 判断のヒント |
 |----|------|--------------|
@@ -93,7 +93,9 @@ Coupled 拘束の耐久スイートは `.github/workflows/coupled_endurance.yml`
 - Coupled ベンチの JSONL から条件数異常を抽出:  
   `python tools/extract_condition_anomalies.py logs/csv_issues.jsonl`
 - 診断 CSV ログを Markdown レポート化:  
-  `python tools/diagnostic_log_report.py data/coupled_constraint_endurance.csv --output out/diagnostics.md`
+  `python tools/diagnostic_log_report.py data/coupled_constraint_endurance.csv --output out/diagnostics.md --anomaly-jsonl logs/csv_issues.jsonl`
+- CI テストログから Coupled/Island 向け失敗のみ抜粋:  
+  `python tools/filter_ci_failures.py test.log --output coupled_island_failures.log`
 - 重複判定や世代管理を確認:  
   `python tools/archive_coupled_constraint_endurance.py --dry-run --prune-duplicates --max-entries 10 --max-age-days 120 --plan-csv /tmp/endurance_plan.csv`
 - Webhook 通知のローカル確認:  

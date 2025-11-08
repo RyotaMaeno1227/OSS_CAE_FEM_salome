@@ -10,6 +10,7 @@
 ## 2. クイックリンク（Wiki では相対リンクに差し替え）
 - [CI トラブルシュート手順書](../docs/coupled_endurance_ci_troubleshooting.md)
 - [Coupled チュートリアル（実行ログ・メディア生成）](../docs/chrono_coupled_constraint_tutorial.md)
+- [Coupled Hands-on / 学習ガイド](../docs/coupled_constraint_hands_on.md)
 - [パラメータプリセット（YAML）](../data/coupled_constraint_presets.yaml)
 - [パラメータチートシート](../docs/coupled_constraint_presets_cheatsheet.md)
 - GitHub アーティファクト: `https://github.com/<org>/<repo>/actions?query=workflow%3A%22Coupled+Endurance%22`
@@ -26,12 +27,22 @@
 4. **報告**  
    - チーム Slack チャンネル `#chrono-constraints` で発生状況と暫定対処を共有。必要であれば週報に追記。
 
-## 4. メディア／資料更新
+## 4. 指標定義（計算コア視点）
+| KPI | 定義 | しきい値（例） | 取得先 |
+|-----|------|----------------|--------|
+| `max_condition` | `chrono_coupled_constraint2d_get_diagnostics().condition_number` の最大値 | `1.0e8` | `latest.summary.json` |
+| `warn_ratio` | `condition_warning` が立ったサンプル割合 | `0.05` | 同上 |
+| `rank_ratio` | ランク欠損フレーム割合 | `0.01` | 同上 |
+| `dropping_equations` | 自動ドロップ回数 | `<= 1 / run` | `tools/filter_coupled_endurance_log.py` |
+
+> これらの数値は `docs/coupled_constraint_solver_math.md` の条件数節および `docs/coupled_contact_test_notes.md` の判定基準に紐づいています。
+
+## 5. メディア／資料更新
 - `docs/chrono_coupled_constraint_tutorial.md` のセクション 8 を基準に、`docs/media/coupled/` に静止画・GIF・MP4 を保存。Wiki へ掲載する際は同パスのファイルを添付またはリンク。
 - 画像更新時は、`data/coupled_constraint_endurance.csv` の生成日時と `tests/test_coupled_constraint_endurance` の実行ログを記事内にメモする。
 - GIF/MP4 の容量目安は 10 MB 以下。必要があれば `fps` や間引きを調整。
 
-## 5. メンテナンス手順
+## 6. メンテナンス手順
 - **担当ローテーション**: Cチーム DevOps（Suzuki）→ Coupled 班（Mori）→ 数値解析班（Kobayashi）の順で月次ローテート。
 - **定期レビュー**: 四半期ごと（1月/4月/7月/10月）に以下を確認し、Wiki 記事を更新する。
   - YAML プリセットとチートシートに差異がないか
@@ -39,7 +50,7 @@
   - メディアファイルが半年以内に更新されているか
 - **変更フロー**: 変更が発生した場合は Pull Request に記事更新内容を含め、Merge 後 24 時間以内に社内 Wiki を同期。Wiki 側には「最終同期日」と PR リンクを記載する。
 
-## 6. Wiki 投稿テンプレート（概要）
+## 7. Wiki 投稿テンプレート（概要）
 
 - 詳細なテンプレート、スクリーンショット要件、チェックリストは `docs/appendix_optional_ops.md` の **B. Wiki Workflow Templates & Checklists** に移動しました。
 - 本編では以下のポイントのみ押さえてください:
@@ -47,11 +58,11 @@
   2. Slack `#chrono-constraints` への通知と次担当への引き継ぎを忘れない。  
   3. `docs/wiki_samples/coupled_endurance_article_sample.md` は Appendix 参照のうえ差し替える。
 
-## 7. 公開プロセス（社内 Wiki 同期）
+## 8. 公開プロセス（社内 Wiki 同期）
 - PR マージ後 24 時間以内に Wiki を更新し、`appendix_optional_ops.md` のチェックリストを活用する。  
 - `docs/media/coupled/` の最新メディアと KPI を同期し、Slack へ報告する。  
 - 次回担当とレビュー予定日は必ず記録しておく。
 
-## 8. 備考
+## 9. 備考
 - 具体的な URL・テンプレート・チェックリストは `docs/appendix_optional_ops.md` を参照。  
 - 本草案は引き続き数値検証観点で更新し、運用情報は付録へ切り出している。

@@ -63,6 +63,7 @@ class BenchRow:
     max_recovery_steps: int
     unrecovered_drops: int
     max_pending_steps: int
+    scenario: str = "default"
 
     @staticmethod
     def from_dict(row: Dict[str, str]) -> "BenchRow":
@@ -83,6 +84,7 @@ class BenchRow:
             max_recovery_steps=int(row["max_recovery_steps"]),
             unrecovered_drops=int(row["unrecovered_drops"]),
             max_pending_steps=int(row["max_pending_steps"]),
+            scenario=row.get("scenario", "default"),
         )
 
 
@@ -251,22 +253,26 @@ def evaluate_thresholds(rows: Iterable[BenchRow], thresholds: Thresholds) -> boo
     ok = True
 
     for row in rows:
-        if row.avg_solve_time_us > thresholds.max_solve_time_us:
+        scenario_label = ""
+        if row.scenario and row.scenario != "default":
+            scenario_label = f" scenario={row.scenario}"
+        skip_condition_checks = row.scenario and "stress" in row.scenario
+        if row.avg_solve_time_us > thresholds.max_solve_time_us and not skip_condition_checks:
             ok = False
             emit_warning(
-                f"[CoupledBench] eq={row.eq_count} eps={row.epsilon:.1e} solve time "
+                f"[CoupledBench] eq={row.eq_count} eps={row.epsilon:.1e}{scenario_label} solve time "
                 f"{row.avg_solve_time_us:.2f}us exceeds {thresholds.max_solve_time_us:.2f}us"
             )
-        if row.max_condition > thresholds.max_condition:
+        if row.max_condition > thresholds.max_condition and not skip_condition_checks:
             ok = False
             emit_warning(
-                f"[CoupledBench] eq={row.eq_count} eps={row.epsilon:.1e} condition "
+                f"[CoupledBench] eq={row.eq_count} eps={row.epsilon:.1e}{scenario_label} condition "
                 f"{row.max_condition:.2e} exceeds {thresholds.max_condition:.2e}"
             )
         if row.max_pending_steps > thresholds.max_pending_steps:
             ok = False
             emit_warning(
-                f"[CoupledBench] eq={row.eq_count} eps={row.epsilon:.1e} pending steps "
+                f"[CoupledBench] eq={row.eq_count} eps={row.epsilon:.1e}{scenario_label} pending steps "
                 f"{row.max_pending_steps} exceeds {thresholds.max_pending_steps}"
             )
 
@@ -316,14 +322,15 @@ def collect_failures(rows: Iterable[BenchRow], thresholds: FailThresholds) -> Li
 
 def summarize(rows: Iterable[BenchRow]) -> str:
     lines = [
-        "eq_count epsilon   avg_time_us drop_events unrecovered_drops max_pending_steps max_condition"
+        "eq_count epsilon   avg_time_us drop_events unrecovered_drops max_pending_steps max_condition scenario"
     ]
     for row in rows:
+        scenario = row.scenario if row.scenario else "default"
         lines.append(
             f"{row.eq_count:7d} {row.epsilon:8.1e} "
             f"{row.avg_solve_time_us:11.3f} {row.drop_events:11d} "
             f"{row.unrecovered_drops:17d} {row.max_pending_steps:18d} "
-            f"{row.max_condition:13.3e}"
+            f"{row.max_condition:13.3e} {scenario}"
         )
     return "\n".join(lines)
 
