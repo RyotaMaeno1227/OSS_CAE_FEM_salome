@@ -17,6 +17,7 @@ README_PATH = REPO_ROOT / "README.md"
 HANDSON_PATH = REPO_ROOT / "docs" / "coupled_constraint_hands_on.md"
 PRESET_PATH = REPO_ROOT / "data" / "coupled_constraint_presets.yaml"
 COMPARISON_SCRIPT = REPO_ROOT / "tools" / "compare_kkt_logs.py"
+COMMAND_BLOCK_PATHS = (README_PATH, HANDSON_PATH)
 
 
 def parse_args() -> argparse.Namespace:
@@ -101,12 +102,12 @@ def update_last_updated_line(path: Path, timestamp: str) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def update_command_block(path: Path, omegas: Iterable[float]) -> None:
-    lines = path.read_text(encoding="utf-8").splitlines()
+def rewrite_command_block(text: str, omegas: Iterable[float], source: str) -> str:
+    lines = text.splitlines()
     in_block = False
-    header_idx = None
-    omega_start = None
-    omega_indent = None
+    header_idx: int | None = None
+    omega_start: int | None = None
+    omega_indent: str | None = None
 
     for idx, line in enumerate(lines):
         stripped = line.strip()
@@ -129,8 +130,8 @@ def update_command_block(path: Path, omegas: Iterable[float]) -> None:
             omega_indent = line[: len(line) - len(line.lstrip())]
             break
 
-    if header_idx is None:
-        raise RuntimeError(f"Could not locate bench command block in {path}")
+    if header_idx is None or omega_start is None:
+        raise RuntimeError(f"Could not locate bench command block in {source}")
 
     if omega_indent is None:
         # Default to two spaces deeper than the command header (keeps code block indent tidy).
@@ -149,7 +150,13 @@ def update_command_block(path: Path, omegas: Iterable[float]) -> None:
     for offset, new_line in enumerate(insertion):
         lines.insert(omega_start + offset, new_line)
 
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return "\n".join(lines) + "\n"
+
+
+def update_command_block(path: Path, omegas: Iterable[float]) -> None:
+    content = path.read_text(encoding="utf-8")
+    updated = rewrite_command_block(content, omegas, str(path))
+    path.write_text(updated, encoding="utf-8")
 
 
 def update_preset_timestamp(path: Path, preset_id: str, timestamp: str) -> None:
@@ -189,7 +196,8 @@ def main() -> None:
     args = parse_args()
     timestamp = args.timestamp or dt.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
     run_bench(args)
-    update_command_block(README_PATH, args.omegas)
+    for command_block in COMMAND_BLOCK_PATHS:
+        update_command_block(command_block, args.omegas)
     update_last_updated_line(README_PATH, timestamp)
     update_last_updated_line(HANDSON_PATH, timestamp)
     update_preset_timestamp(PRESET_PATH, args.preset_id, timestamp)

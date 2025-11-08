@@ -17,7 +17,16 @@ FEM4C の `tutorial_manual.md` / `FEM_LEARNING_GUIDE.md` に倣い、Coupled 拘
 - **Theory**: ソフトネス・Baumgarte・スプリングの役割を `docs/coupled_constraint_tutorial_draft.md#1-数式フェーズ` で復習。  
 - **Implementation**: `practice/coupled/ch02_softness.c` にて `chrono_coupled_constraint2d_set_softness_distance/angle` と `chrono_coupled_constraint2d_set_*_spring` を段階的に変えながら、`diagnostics.min_pivot` と `max_pivot` を CSV に出力。  
 - **FEM4C Reference**: `FEM4C/docs/tutorial_manual.md` Chapter 05（剛性・境界条件）を読み、ソフトネスが連立方程式にどのように入り込むかをノートにまとめる。  
-- **Verification**: `./chrono-C-all/tests/bench_coupled_constraint --omega 0.9 --omega 1.0 --output data/softness_bench.csv` を実行し、`tools/plot_coupled_constraint_endurance.py --summary-json` で比較。
+- **Verification**: Multi-ω ベンチを実行してソフトネス掃引を比較。
+
+  ```bash
+  ./chrono-C-all/tests/bench_coupled_constraint \
+    --omega 0.85 \
+    --omega 1 \
+    --omega 1.15 \
+    --output data/diagnostics/bench_coupled_constraint_multi.csv
+  ```
+  `tools/plot_coupled_constraint_endurance.py --summary-json` で差分を可視化し、README の「Coupled Presets」と同じ条件で議論できるようにする。
 - Multi-ω preset last updated: 2025-11-08T18:18:55Z
 - **Sync note**: Multi-ω の再計測結果を `data/diagnostics/bench_coupled_constraint_multi.csv` と `data/coupled_constraint_presets.yaml`（`multi_omega_reference`）に反映し、README の「Coupled Presets」と同じ内容を保つ。PR では `docs/reports/kkt_spectral_weekly.md` の Multi-ω テーブルも再生成する。
 
