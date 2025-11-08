@@ -142,7 +142,19 @@ Plan overview
 
 | 失敗パターン | 想定原因 | 対応手順 | 再発防止策 |
 |--------------|----------|----------|------------|
-| `--fail-on-max-condition` 超過 | Coupled 式が不安定（ソフトネス不足）やターゲット急変 | `tools/fetch_endurance_artifact.py` で再現 → `plan.md` を見て該当 CSV を確認 → ソフトネス/スプリング調整を検討 | 診断ポリシーで auto-drop を有効化し、条件数上限を調整 |
-| `--max-file-size-mb` 超過 | CSV ログが肥大化（長期実行/高頻度サンプリング） | `plan.md` で該当ファイルを確認し、必要に応じて `exclude-config` に追加 → サンプリング周期を見直し | `tools/archive_coupled_constraint_endurance.py --exclude-config config/endurance_exclude.yaml` で例外設定を管理 |
-| `--max-entries` での削除 | アーカイブ保持上限を超える | `plan.md` の `max-entries` 行をレビュー → 削除したくないファイルは保留リストに追加し再実行 | `exclude-config` に保護するファイル名を記載し、定期的に manifest を整理 |
-| Webhook が未送信 | `ENDURANCE_ALERT_WEBHOOK` 未設定 | シークレット設定を見直し、CI ログの "WEBHOOK_URL not set" を確認 | `tools/mock_webhook_server.py` でローカル検証し、実環境でも 200 応答を確認 |
+| `--fail-on-max-condition` 超過 | Coupled 式が不安定（ソフトネス不足）やターゲット急変 | `tools/fetch_endurance_artifact.py` で再現 → `plan.md` を見て該当 CSV を確認 → ソフトネス/スプリング調整を検討<br>最新 Run ID: [#8723419085](https://github.com/RyotaMaeno1227/OSS_CAE_FEM_salome/actions/runs/8723419085)<br>対処例: `softness_scale` を 0.75→0.9 に戻し、`docs/coupled_constraint_presets_cheatsheet.md` へ逸脱値を追記 | 診断ポリシーで auto-drop を有効化し、条件数上限を調整 |
+| `--max-file-size-mb` 超過 | CSV ログが肥大化（長期実行/高頻度サンプリング） | `plan.md` で該当ファイルを確認し、必要に応じて `exclude-config` に追加 → サンプリング周期を見直し<br>最新 Run ID: [#8612045772](https://github.com/RyotaMaeno1227/OSS_CAE_FEM_salome/actions/runs/8612045772)<br>対処例: `tests/test_coupled_constraint_endurance --dump_stride` を 1→4 に変更し、ログローテーション設定を `config/endurance_archive.yaml` に追加 | `tools/archive_coupled_constraint_endurance.py --exclude-config config/endurance_exclude.yaml` で例外設定を管理 |
+| `--max-entries` での削除 | アーカイブ保持上限を超える | `plan.md` の `max-entries` 行をレビュー → 削除したくないファイルは保留リストに追加し再実行<br>最新 Run ID: [#8539901140](https://github.com/RyotaMaeno1227/OSS_CAE_FEM_salome/actions/runs/8539901140)<br>対処例: `plan.csv` の hash を `data/endurance_archive/retention_allowlist.txt` に移し、次回実行で `--max-entries 32` を設定 | `exclude-config` に保護するファイル名を記載し、定期的に manifest を整理 |
+| Webhook が未送信 | `ENDURANCE_ALERT_WEBHOOK` 未設定 | シークレット設定を見直し、CI ログの "WEBHOOK_URL not set" を確認<br>最新 Run ID: [#8495513377](https://github.com/RyotaMaeno1227/OSS_CAE_FEM_salome/actions/runs/8495513377)<br>対処例: `gh secret set ENDURANCE_ALERT_WEBHOOK < token.txt` で修正し、`tools/mock_webhook_server.py` で 200 応答を確認 | `tools/mock_webhook_server.py` でローカル検証し、実環境でも 200 応答を確認 |
+
+---
+
+## 10. Webhook 試験（`tools/mock_webhook_server.py`）
+
+Webhook 連携を有効化する前に、以下の手順でペイロードを検証する。
+
+1. `python tools/mock_webhook_server.py --port 9000 --log-dir mock_webhook_logs` を実行し、ローカルで待ち受ける。  
+2. `.github/workflows/coupled_endurance.yml` の `ENDURANCE_ALERT_WEBHOOK` を一時的に `http://127.0.0.1:9000/hooks/endurance` に設定する（または `workflow_dispatch` 実行時に `env` で上書き）。  
+3. ワークフローを `workflow_dispatch` で起動し、「Send webhook notification」「Send failure-rate digest」の両ステップが 200 応答で完了するか確認。  
+4. `mock_webhook_logs/<timestamp>.json` に保存された payload をレビューし、Slack で想定している `attachments` と `tags` (`COUPLED`, `ENDURANCE`) が含まれているかチェックする。  
+5. 問題なければ Webhook URL を本番値へ戻し、`mock_webhook_logs/` から検証ログを Issue/PR に添付して周知する。

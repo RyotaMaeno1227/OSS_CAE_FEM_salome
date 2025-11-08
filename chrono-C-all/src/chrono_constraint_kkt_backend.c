@@ -16,9 +16,13 @@ int chrono_kkt_backend_invert_small(const double *src,
         return 0;
     }
 
+    ChronoKKTBackendResult_C backend_result;
+    memset(&backend_result, 0, sizeof(backend_result));
+
     double a[CHRONO_COUPLED_KKT_MAX_EQ][CHRONO_COUPLED_KKT_MAX_EQ];
     double inv[CHRONO_COUPLED_KKT_MAX_EQ][CHRONO_COUPLED_KKT_MAX_EQ];
     double scale[CHRONO_COUPLED_KKT_MAX_EQ];
+    backend_result.pivot_count = 0;
 
     for (int i = 0; i < n; ++i) {
         double max_row = 0.0;
@@ -65,6 +69,9 @@ int chrono_kkt_backend_invert_small(const double *src,
             scale[pivot_row] = tmp_scale;
         }
         double pivot = a[col][col];
+        if (backend_result.pivot_count < CHRONO_COUPLED_KKT_MAX_EQ) {
+            backend_result.pivot_history[backend_result.pivot_count++] = fabs(pivot);
+        }
         double inv_pivot = 1.0 / pivot;
         for (int k = 0; k < n; ++k) {
             a[col][k] *= inv_pivot;
@@ -110,6 +117,10 @@ int chrono_kkt_backend_invert_small(const double *src,
     }
     result->min_pivot = min_pivot;
     result->max_pivot = max_pivot;
+    result->pivot_count = backend_result.pivot_count;
+    memcpy(result->pivot_history,
+           backend_result.pivot_history,
+           sizeof(result->pivot_history));
     result->rank = rank;
     result->success = 1;
     return 1;

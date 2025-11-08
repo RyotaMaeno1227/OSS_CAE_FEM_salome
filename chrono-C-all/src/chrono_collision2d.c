@@ -135,6 +135,54 @@ static void support_point_body(const ChronoBody2D_C *body, const double dir[2], 
     }
 }
 
+void chrono_contact2d_build_jacobian_3dof(const ChronoBody2D_C *body_a,
+                                          const ChronoBody2D_C *body_b,
+                                          const double contact_point[2],
+                                          const double normal[2],
+                                          ChronoContactJacobian3DOF_C *jacobian) {
+    if (!jacobian) {
+        return;
+    }
+    memset(jacobian, 0, sizeof(*jacobian));
+    if (!body_a || !body_b || !contact_point || !normal) {
+        return;
+    }
+
+    double n[2] = {normal[0], normal[1]};
+    double n_len = length2(n);
+    if (n_len <= 0.0) {
+        return;
+    }
+    n[0] /= n_len;
+    n[1] /= n_len;
+    double tangent[2] = {-n[1], n[0]};
+
+    double ra[2] = {contact_point[0] - body_a->position[0], contact_point[1] - body_a->position[1]};
+    double rb[2] = {contact_point[0] - body_b->position[0], contact_point[1] - body_b->position[1]};
+
+    // Normal row
+    jacobian->linear_a[CHRONO_CONTACT_JACOBIAN_ROW_NORMAL][0] = -n[0];
+    jacobian->linear_a[CHRONO_CONTACT_JACOBIAN_ROW_NORMAL][1] = -n[1];
+    jacobian->linear_b[CHRONO_CONTACT_JACOBIAN_ROW_NORMAL][0] = n[0];
+    jacobian->linear_b[CHRONO_CONTACT_JACOBIAN_ROW_NORMAL][1] = n[1];
+    jacobian->angular_a[CHRONO_CONTACT_JACOBIAN_ROW_NORMAL] = cross2(ra, n);
+    jacobian->angular_b[CHRONO_CONTACT_JACOBIAN_ROW_NORMAL] = cross2(rb, n);
+
+    // Rolling row (tangent along the manifold)
+    jacobian->linear_a[CHRONO_CONTACT_JACOBIAN_ROW_ROLLING][0] = -tangent[0];
+    jacobian->linear_a[CHRONO_CONTACT_JACOBIAN_ROW_ROLLING][1] = -tangent[1];
+    jacobian->linear_b[CHRONO_CONTACT_JACOBIAN_ROW_ROLLING][0] = tangent[0];
+    jacobian->linear_b[CHRONO_CONTACT_JACOBIAN_ROW_ROLLING][1] = tangent[1];
+    jacobian->angular_a[CHRONO_CONTACT_JACOBIAN_ROW_ROLLING] = cross2(ra, tangent);
+    jacobian->angular_b[CHRONO_CONTACT_JACOBIAN_ROW_ROLLING] = cross2(rb, tangent);
+
+    // Torsional row (pure spin around the normal axis)
+    jacobian->angular_a[CHRONO_CONTACT_JACOBIAN_ROW_TORSIONAL] = -1.0;
+    jacobian->angular_b[CHRONO_CONTACT_JACOBIAN_ROW_TORSIONAL] = 1.0;
+
+    jacobian->active_rows = CHRONO_CONTACT_JACOBIAN_MAX_ROWS;
+}
+
 typedef struct {
     double point[2];
     double support_a[2];

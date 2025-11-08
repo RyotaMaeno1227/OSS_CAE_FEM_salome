@@ -21,6 +21,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "run_id",
+        nargs="?",
         help="GitHub Actions run ID (numeric) or run URL.",
     )
     parser.add_argument(
@@ -59,6 +60,26 @@ def parse_args() -> argparse.Namespace:
         "--interactive",
         action="store_true",
         help="Interactively select a run via `gh run list` if run_id is omitted.",
+    )
+    parser.add_argument(
+        "--auto-latest",
+        action="store_true",
+        help="Automatically select the newest run (prefers failures).",
+    )
+    parser.add_argument(
+        "--workflow",
+        help="Workflow file or ID to filter when auto-selecting runs.",
+    )
+    parser.add_argument(
+        "--run-status",
+        choices=["failure", "success", "completed"],
+        default="failure",
+        help="Preferred conclusion when --auto-latest is used (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--job-name",
+        default="archive-and-summarize",
+        help="Job name used when linking logs (default: %(default)s).",
     )
     parser.add_argument(
         "--max-retries",
@@ -180,6 +201,8 @@ def build_comment_body(
     repro_cmd: Sequence[str],
     plan_csv: Optional[Path],
     plan_md: Optional[Path],
+    job_name: Optional[str],
+    job_url: Optional[str],
 ) -> str:
     run_url = f"https://github.com/{repo}/actions/runs/{run_id}" if repo else None
 
@@ -189,6 +212,8 @@ def build_comment_body(
         f"- Artifact: `{artifact_name}`",
         f"- Download directory: `{download_dir}`",
     ]
+    if job_name and job_url:
+        lines.append(f"- Job log: [{job_name}]({job_url})")
 
     if summary:
         version = summary.get("version")
@@ -257,13 +282,99 @@ def build_comment_body(
     return "\n".join(lines)
 
 
+def auto_select_latest_run(
+    gh_path: str,
+    *,
+    workflow: Optional[str],
+    prefer_status: str,
+) -> str:
+    cmd = [
+        gh_path,
+        "run",
+        "list",
+        "--limit",
+        "50",
+        "--json",
+        "databaseId,conclusion,displayTitle,createdAt",
+    ]
+    if workflow:
+        cmd.extend(["--workflow", workflow])
+    try:
+        output = subprocess.check_output(cmd, text=True)
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError(f"`{' '.join(cmd)}` failed with exit code {exc.returncode}") from exc
+
+    try:
+        runs = json.loads(output)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("Failed to parse gh run list output.") from exc
+
+    if not runs:
+        raise RuntimeError("No workflow runs available for auto selection.")
+
+    prefer = prefer_status.lower()
+    for run in runs:
+        conclusion = (run.get("conclusion") or "").lower()
+        if prefer == "completed" and conclusion in {"success", "failure", "cancelled"}:
+            return str(run.get("databaseId"))
+        if conclusion == prefer:
+            return str(run.get("databaseId"))
+    return str(runs[0].get("databaseId"))
+
+
+def resolve_job_log_link(
+    gh_path: str,
+    *,
+    run_id: str,
+    job_name: Optional[str],
+) -> tuple[Optional[str], Optional[str]]:
+    cmd = [gh_path, "run", "view", run_id, "--json", "jobs"]
+    try:
+        output = subprocess.check_output(cmd, text=True)
+    except subprocess.CalledProcessError as exc:
+        print(f"Warning: failed to inspect job metadata ({exc}).", file=sys.stderr)
+        return None, None
+
+    try:
+        payload = json.loads(output)
+    except json.JSONDecodeError:
+        return None, None
+
+    jobs = payload.get("jobs") or []
+    target = (job_name or "").strip().lower()
+    if target:
+        for job in jobs:
+            if job.get("name", "").strip().lower() == target:
+                return job.get("name"), job.get("html_url")
+    for job in jobs:
+        conclusion = (job.get("conclusion") or "").lower()
+        if conclusion not in {"", "success"}:
+            return job.get("name"), job.get("html_url")
+    if jobs:
+        job = jobs[0]
+        return job.get("name"), job.get("html_url")
+    return None, None
+
+
 def main() -> int:
     args = parse_args()
 
+    run_id: Optional[str] = None
     if args.run_id:
         try:
             run_id = derive_run_id(args.run_id)
         except ValueError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+    elif args.auto_latest:
+        try:
+            run_id = auto_select_latest_run(
+                args.gh_path,
+                workflow=args.workflow,
+                prefer_status=args.run_status,
+            )
+            print(f"Auto-selected workflow run {run_id}")
+        except RuntimeError as exc:
             print(f"Error: {exc}", file=sys.stderr)
             return 1
     elif args.interactive:
@@ -273,7 +384,7 @@ def main() -> int:
             print(f"Error: {exc}", file=sys.stderr)
             return 1
     else:
-        print("Error: run_id is required unless --interactive is used.", file=sys.stderr)
+        print("Error: run_id is required unless --interactive or --auto-latest is used.", file=sys.stderr)
         return 1
 
     output_dir = Path(args.output_dir).expanduser().resolve()
@@ -341,6 +452,12 @@ def main() -> int:
         "--no-show",
     ]
 
+    job_display, job_log_url = resolve_job_log_link(
+        args.gh_path,
+        run_id=run_id,
+        job_name=args.job_name,
+    )
+
     repo_slug = args.repo or os.getenv("GITHUB_REPOSITORY")
     comment_body = build_comment_body(
         run_id=run_id,
@@ -351,6 +468,8 @@ def main() -> int:
         repro_cmd=repro_cmd,
         plan_csv=plan_csv_path,
         plan_md=plan_md_path,
+        job_name=job_display,
+        job_url=job_log_url,
     )
 
     if args.comment_file:

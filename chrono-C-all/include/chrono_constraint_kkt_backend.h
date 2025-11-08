@@ -11,6 +11,8 @@ typedef struct ChronoKKTBackendResult_C {
     double inverse[CHRONO_COUPLED_KKT_MAX_EQ * CHRONO_COUPLED_KKT_MAX_EQ];
     double min_pivot;
     double max_pivot;
+    double pivot_history[CHRONO_COUPLED_KKT_MAX_EQ];
+    int pivot_count;
     int rank;
     int success;
 } ChronoKKTBackendResult_C;

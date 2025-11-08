@@ -40,11 +40,17 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         "--output",
         help="Destination CSV path. Defaults to overwriting the input file.",
     )
+    parser.add_argument("--keep", action="append", default=[], help="Additional columns to retain (can be specified multiple times).")
     parser.add_argument(
-        "--keep",
+        "--require",
         action="append",
         default=[],
-        help="Additional columns to retain (can be specified multiple times).",
+        help="Additional required columns (comma-separated) that must be present.",
+    )
+    parser.add_argument(
+        "--lint-only",
+        action="store_true",
+        help="Only verify required columns are present without rewriting the CSV.",
     )
     step_group = parser.add_mutually_exclusive_group()
     step_group.add_argument(
@@ -70,12 +76,25 @@ def _collect_equation_columns(fieldnames: Iterable[str]) -> Set[str]:
     return eq_columns
 
 
-def filter_csv(input_path: Path, output_path: Path, keep: Set[str], drop_step: bool) -> None:
+def filter_csv(
+    input_path: Path,
+    output_path: Path,
+    keep: Set[str],
+    drop_step: bool,
+    *,
+    required: Set[str],
+    lint_only: bool,
+) -> None:
     with input_path.open("r", newline="", encoding="utf-8") as src_handle:
         reader = csv.DictReader(src_handle)
         if not reader.fieldnames:
             raise RuntimeError(f"{input_path}: missing header row.")
         fieldnames = reader.fieldnames
+
+        missing_required = sorted(required - set(fieldnames))
+        if missing_required:
+            missing_csv = ", ".join(missing_required)
+            raise RuntimeError(f"{input_path}: missing required columns: {missing_csv}")
 
         eq_columns = _collect_equation_columns(fieldnames)
         keep_columns = [name for name in fieldnames if name in keep or name in eq_columns]
@@ -85,6 +104,9 @@ def filter_csv(input_path: Path, output_path: Path, keep: Set[str], drop_step: b
             keep_columns.insert(0, "step")
         if drop_step and "step" in keep_columns:
             keep_columns.remove("step")
+
+        if lint_only:
+            return
 
         with output_path.open("w", newline="", encoding="utf-8") as dst_handle:
             writer = csv.DictWriter(dst_handle, fieldnames=keep_columns)
@@ -99,15 +121,41 @@ def main(argv: Sequence[str] | None = None) -> int:
     output_path = Path(args.output).expanduser() if args.output else input_path
 
     extra_keep = {item for value in args.keep for item in value.split(",") if item}
+    required_columns = set(DEFAULT_BASE_COLUMNS)
+    for raw_required in args.require:
+        for name in raw_required.split(","):
+            cleaned = name.strip()
+            if cleaned:
+                required_columns.add(cleaned)
+
     keep_columns = set(DEFAULT_BASE_COLUMNS) | extra_keep
     drop_step = not args.keep_step  # default: True
     if args.drop_step:
         drop_step = True
+
+    if args.lint_only:
+        filter_csv(
+            input_path,
+            input_path,
+            keep_columns,
+            drop_step=drop_step,
+            required=required_columns,
+            lint_only=True,
+        )
+        return 0
+
     if output_path == input_path:
         with tempfile.NamedTemporaryFile("w", delete=False, newline="", encoding="utf-8") as tmp:
             tmp_path = Path(tmp.name)
         try:
-            filter_csv(input_path, tmp_path, keep_columns, drop_step=drop_step)
+            filter_csv(
+                input_path,
+                tmp_path,
+                keep_columns,
+                drop_step=drop_step,
+                required=required_columns,
+                lint_only=args.lint_only,
+            )
             shutil.move(str(tmp_path), str(output_path))
         finally:
             try:
@@ -119,7 +167,14 @@ def main(argv: Sequence[str] | None = None) -> int:
                     pass
     else:
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        filter_csv(input_path, output_path, keep_columns, drop_step=drop_step)
+        filter_csv(
+            input_path,
+            output_path,
+            keep_columns,
+            drop_step=drop_step,
+            required=required_columns,
+            lint_only=args.lint_only,
+        )
 
     return 0
 

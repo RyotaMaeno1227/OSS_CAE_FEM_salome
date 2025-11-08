@@ -49,10 +49,12 @@ jobs:
 
       - name: Generate diagnostic markdown
         run: |
+          mkdir -p artifacts/nightly
           python3 tools/diagnostic_log_report.py \
             data/coupled_constraint_endurance.csv \
             --output artifacts/nightly/diagnostics.md \
-            --anomaly-jsonl artifacts/nightly/benchmark_validation.jsonl
+            --anomaly-jsonl artifacts/nightly/benchmark_validation.jsonl \
+            | tee artifacts/nightly/diagnostics_console.log
 
       - name: Compare against chrono-main baseline
         env:
@@ -70,6 +72,27 @@ jobs:
             echo "Baseline CSV not found at $BASELINE_PATH; skipping comparison."
           fi
 
+      - name: Validate endurance summary schema
+        run: |
+          mkdir -p artifacts/nightly
+          SUMMARY=data/endurance_archive/latest.summary.json
+          if [ -f "$SUMMARY" ]; then
+            python3 tools/validate_latest_summary_schema.py \
+              --summary-json "$SUMMARY" \
+              --output-markdown artifacts/nightly/latest_summary_validation.md \
+              --output-json artifacts/nightly/latest_summary_validation.json \
+              --fail-on-error
+          else
+            echo "latest.summary.json not found at $SUMMARY; skipping validation." \
+              | tee artifacts/nightly/latest_summary_validation.md
+            cat <<'EOF' > artifacts/nightly/latest_summary_validation.json
+{
+  "status": "SKIPPED",
+  "message": "latest.summary.json not available on nightly runner"
+}
+EOF
+          fi
+
       - name: Run nightly regression suite
         run: |
           python3 tools/run_nightly_regressions.py \
@@ -85,6 +108,22 @@ jobs:
             --summary artifacts/nightly/mode_mismatch_summary.csv \
             --fix | tee artifacts/nightly/lint_report.txt
 
+      - name: Lint endurance plan
+        run: |
+          mkdir -p artifacts/nightly
+          PLAN=data/endurance_archive/plan.csv
+          if [ -f "$PLAN" ]; then
+            python3 tools/lint_endurance_plan.py \
+              "$PLAN" \
+              --max-delete 10 \
+              --max-delete-max-age 6 \
+              --max-delete-max-entries 6 \
+              --fail-on-duplicates \
+              | tee artifacts/nightly/endurance_plan_lint.txt
+          else
+            echo "Plan CSV not found at $PLAN; skipping lint." | tee artifacts/nightly/endurance_plan_lint.txt
+          fi
+
       - name: Upload regression artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -98,5 +137,9 @@ jobs:
             artifacts/nightly/benchmark_validation.jsonl
             artifacts/nightly/condition_gap.md
             artifacts/nightly/diagnostics.md
+            artifacts/nightly/diagnostics_console.log
             artifacts/nightly/benchmark_diff.md
             artifacts/nightly/benchmark_diff.csv
+            artifacts/nightly/endurance_plan_lint.txt
+            artifacts/nightly/latest_summary_validation.md
+            artifacts/nightly/latest_summary_validation.json

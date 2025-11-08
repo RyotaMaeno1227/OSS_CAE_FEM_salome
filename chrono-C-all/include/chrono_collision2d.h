@@ -9,6 +9,14 @@ extern "C" {
 
 #define CHRONO_CONTACT2D_MAX_POINTS 2
 
+#define CHRONO_CONTACT_JACOBIAN_MAX_ROWS 3
+
+typedef enum ChronoContactJacobianRow_C {
+    CHRONO_CONTACT_JACOBIAN_ROW_NORMAL = 0,
+    CHRONO_CONTACT_JACOBIAN_ROW_ROLLING = 1,
+    CHRONO_CONTACT_JACOBIAN_ROW_TORSIONAL = 2
+} ChronoContactJacobianRow_C;
+
 typedef struct ChronoContact2D_C {
     double normal[2];
     double contact_point[2];
@@ -35,6 +43,14 @@ typedef struct ChronoContactManifold2D_C {
     double combined_friction_static;
     double combined_friction_dynamic;
 } ChronoContactManifold2D_C;
+
+typedef struct ChronoContactJacobian3DOF_C {
+    double linear_a[CHRONO_CONTACT_JACOBIAN_MAX_ROWS][2];
+    double linear_b[CHRONO_CONTACT_JACOBIAN_MAX_ROWS][2];
+    double angular_a[CHRONO_CONTACT_JACOBIAN_MAX_ROWS];
+    double angular_b[CHRONO_CONTACT_JACOBIAN_MAX_ROWS];
+    int active_rows;
+} ChronoContactJacobian3DOF_C;
 
 void chrono_contact_manifold2d_init(ChronoContactManifold2D_C *manifold);
 void chrono_contact_manifold2d_reset(ChronoContactManifold2D_C *manifold);
@@ -157,6 +173,12 @@ int chrono_collision2d_resolve_circle_polygon(ChronoBody2D_C *circle_body,
                                               double friction_static,
                                               double friction_dynamic,
                                               ChronoContactManifold2D_C *manifold);
+
+void chrono_contact2d_build_jacobian_3dof(const ChronoBody2D_C *body_a,
+                                          const ChronoBody2D_C *body_b,
+                                          const double contact_point[2],
+                                          const double normal[2],
+                                          ChronoContactJacobian3DOF_C *jacobian);
 
 #ifdef __cplusplus
 }

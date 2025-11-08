@@ -66,11 +66,13 @@ To surface progress in status reports, embed either Markdown-style progress bars
 ```markdown
 | Component | Progress |
 |-----------|----------|
-| Common Constraint Base | ![70%](https://progress-bar.dev/70/?title=70%25) |
-| Batch Solver | ![35%](https://progress-bar.dev/35/?title=35%25) |
-| Coupled 3D Extension | ![10%](https://progress-bar.dev/10/?title=10%25) |
+| Coupled Constraint Migration | ![80%](https://progress-bar.dev/80/?title=80%25) |
+| Island Solver Integration | ![70%](https://progress-bar.dev/70/?title=70%25) |
+| 3D Abstraction Readiness | ![45%](https://progress-bar.dev/45/?title=45%25) |
 ```
 - The `progress-bar.dev` badge renders in GitHub issues/PRs. For offline docs, replace with inline SVG hosted under `docs/media/badges/`.
+
+These values mirror `docs/coupled_island_migration_plan.md` §5.1 and `docs/pm_status_2024-11-08.md` の KPI Snapshots. Update all three locations together per Appendix B.5.1.
 
 **ASCII Gantt snippet (monthly granularity)**
 ```markdown

@@ -15,6 +15,9 @@
 typedef struct {
     int eq_count;
     double epsilon;
+    double solver_omega;
+    double solver_sharpness;
+    double solver_tolerance;
     double max_condition;
     double avg_condition;
     double max_condition_spectral;
@@ -154,7 +157,8 @@ static void setup_spectral_stress_case(ChronoCoupledConstraint2D_C *constraint, 
 static CoupledBenchResult bench_case(int equation_count,
                                      double epsilon,
                                      const char *scenario,
-                                     BenchSetupFunc setup) {
+                                     BenchSetupFunc setup,
+                                     double solver_omega) {
     ChronoBody2D_C anchor;
     ChronoBody2D_C body;
     reset_bodies(&anchor, &body);
@@ -188,6 +192,12 @@ static CoupledBenchResult bench_case(int equation_count,
     cfg.velocity_iterations = 24;
     cfg.position_iterations = 6;
     cfg.enable_parallel = 0;
+    cfg.iterative.omega = solver_omega;
+    cfg.iterative.sharpness = 1.0;
+    cfg.iterative.tolerance = 1e-6;
+    cfg.iterative.enable_warm_start = 1;
+    cfg.iterative.record_violation_history = 0;
+    cfg.iterative.max_iterations_override = 0;
 
     const double dt = 0.0025;
     const int warmup_steps = 40;
@@ -305,6 +315,9 @@ static CoupledBenchResult bench_case(int equation_count,
     CoupledBenchResult result;
     result.eq_count = equation_count;
     result.epsilon = epsilon;
+    result.solver_omega = solver_omega;
+    result.solver_sharpness = cfg.iterative.sharpness;
+    result.solver_tolerance = cfg.iterative.tolerance;
     result.max_condition = max_condition;
     result.avg_condition = avg_condition;
     result.max_condition_spectral = max_condition_spectral;
@@ -326,9 +339,12 @@ static CoupledBenchResult bench_case(int equation_count,
 
 static void write_result(FILE *out, const CoupledBenchResult *result) {
     fprintf(out,
-            "%d,%.1e,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,%.3f,%d,%u,%d,%.3f,%d,%d,%d,%s\n",
+            "%d,%.1e,%.3f,%.3f,%.3e,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,%.3f,%d,%u,%d,%.3f,%d,%d,%d,%s\n",
             result->eq_count,
             result->epsilon,
+            result->solver_omega,
+            result->solver_sharpness,
+            result->solver_tolerance,
             result->max_condition,
             result->avg_condition,
             result->max_condition_spectral,
@@ -347,11 +363,14 @@ static void write_result(FILE *out, const CoupledBenchResult *result) {
 }
 
 static void print_usage(const char *program) {
-    fprintf(stderr, "Usage: %s [--output path]\n", program);
+    fprintf(stderr, "Usage: %s [--output path] [--omega value]\n", program);
+    fprintf(stderr, "  --omega value   Append a solver over-relaxation factor (can be repeated).\n");
 }
 
 int main(int argc, char **argv) {
     const char *output_path = NULL;
+    double omega_values[8];
+    size_t omega_count = 0;
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "--output") == 0) {
             if (i + 1 >= argc) {
@@ -359,6 +378,42 @@ int main(int argc, char **argv) {
                 return 1;
             }
             output_path = argv[++i];
+        } else if (strncmp(argv[i], "--omega=", 8) == 0) {
+            const char *value = argv[i] + 8;
+            if (!*value) {
+                fprintf(stderr, "Missing value for --omega\n");
+                return 1;
+            }
+            if (omega_count >= sizeof(omega_values) / sizeof(omega_values[0])) {
+                fprintf(stderr, "Too many --omega values (max %zu)\n",
+                        sizeof(omega_values) / sizeof(omega_values[0]));
+                return 1;
+            }
+            char *end_ptr = NULL;
+            double parsed = strtod(value, &end_ptr);
+            if (!end_ptr || *end_ptr != '\0' || parsed <= 0.0) {
+                fprintf(stderr, "Invalid omega value: %s\n", value);
+                return 1;
+            }
+            omega_values[omega_count++] = parsed;
+        } else if (strcmp(argv[i], "--omega") == 0) {
+            if (i + 1 >= argc) {
+                print_usage(argv[0]);
+                return 1;
+            }
+            const char *value = argv[++i];
+            if (omega_count >= sizeof(omega_values) / sizeof(omega_values[0])) {
+                fprintf(stderr, "Too many --omega values (max %zu)\n",
+                        sizeof(omega_values) / sizeof(omega_values[0]));
+                return 1;
+            }
+            char *end_ptr = NULL;
+            double parsed = strtod(value, &end_ptr);
+            if (!end_ptr || *end_ptr != '\0' || parsed <= 0.0) {
+                fprintf(stderr, "Invalid omega value: %s\n", value);
+                return 1;
+            }
+            omega_values[omega_count++] = parsed;
         } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
             print_usage(argv[0]);
             return 0;
@@ -367,6 +422,11 @@ int main(int argc, char **argv) {
             print_usage(argv[0]);
             return 1;
         }
+    }
+
+    if (omega_count == 0) {
+        omega_values[0] = 1.0;
+        omega_count = 1;
     }
 
     FILE *out = stdout;
@@ -379,9 +439,10 @@ int main(int argc, char **argv) {
     }
 
     fprintf(out,
-            "eq_count,epsilon,max_condition,avg_condition,max_condition_spectral,avg_condition_spectral,"
-            "max_condition_gap,avg_condition_gap,avg_solve_time_us,drop_events,drop_index_mask,"
-            "recovery_events,avg_recovery_steps,max_recovery_steps,unrecovered_drops,max_pending_steps,scenario\n");
+            "eq_count,epsilon,omega,sharpness,tolerance,max_condition,avg_condition,max_condition_spectral,"
+            "avg_condition_spectral,max_condition_gap,avg_condition_gap,avg_solve_time_us,drop_events,"
+            "drop_index_mask,recovery_events,avg_recovery_steps,max_recovery_steps,unrecovered_drops,"
+            "max_pending_steps,scenario\n");
 
     const int equation_counts[] = {1, 2, 3, 4};
     const size_t eq_count_total = sizeof(equation_counts) / sizeof(equation_counts[0]);
@@ -390,21 +451,22 @@ int main(int argc, char **argv) {
 
     chrono_log_set_level(CHRONO_LOG_LEVEL_ERROR);
 
-    for (size_t i = 0; i < eq_count_total; ++i) {
-        int eq_count = equation_counts[i];
-        for (size_t j = 0; j < epsilon_total; ++j) {
-            double epsilon = epsilons[j];
-            if (eq_count == 1 && epsilon != 0.0) {
-                continue;
+    for (size_t omega_idx = 0; omega_idx < omega_count; ++omega_idx) {
+        double omega = omega_values[omega_idx];
+        for (size_t i = 0; i < eq_count_total; ++i) {
+            int eq_count = equation_counts[i];
+            for (size_t j = 0; j < epsilon_total; ++j) {
+                double epsilon = epsilons[j];
+                if (eq_count == 1 && epsilon != 0.0) {
+                    continue;
+                }
+                CoupledBenchResult result = bench_case(eq_count, epsilon, "default", NULL, omega);
+                write_result(out, &result);
             }
-            CoupledBenchResult result = bench_case(eq_count, epsilon, "default", NULL);
-            write_result(out, &result);
         }
-    }
 
-    {
         CoupledBenchResult stress =
-            bench_case(4, 0.0, "spectral_stress", setup_spectral_stress_case);
+            bench_case(4, 0.0, "spectral_stress", setup_spectral_stress_case, omega);
         write_result(out, &stress);
     }
 

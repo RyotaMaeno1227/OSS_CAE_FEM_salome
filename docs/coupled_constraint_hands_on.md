@@ -3,6 +3,8 @@
 FEM4C の `tutorial_manual.md` / `FEM_LEARNING_GUIDE.md` に倣い、Coupled 拘束を段階的に実装・検証するための演習メモです。  
 各チャプターは「理論メモ → 実装タスク → FEM4C で確認 → 検証課題」の構成になっています。
 
+> Tutorial 本編との重複を解消する統合計画は `docs/appendix_optional_ops.md` **E. Learning Path Integration Plan** を参照してください。演習内容を更新した場合は Appendix のチェックリスト経由でチュートリアルへ反映します。
+
 ---
 
 ## Chapter 01. Warm-up – Ratio Sweep
@@ -15,7 +17,7 @@ FEM4C の `tutorial_manual.md` / `FEM_LEARNING_GUIDE.md` に倣い、Coupled 拘
 - **Theory**: ソフトネス・Baumgarte・スプリングの役割を `docs/coupled_constraint_tutorial_draft.md#1-数式フェーズ` で復習。  
 - **Implementation**: `practice/coupled/ch02_softness.c` にて `chrono_coupled_constraint2d_set_softness_distance/angle` と `chrono_coupled_constraint2d_set_*_spring` を段階的に変えながら、`diagnostics.min_pivot` と `max_pivot` を CSV に出力。  
 - **FEM4C Reference**: `FEM4C/docs/tutorial_manual.md` Chapter 05（剛性・境界条件）を読み、ソフトネスが連立方程式にどのように入り込むかをノートにまとめる。  
-- **Verification**: `./chrono-C-all/tests/bench_coupled_constraint --output data/softness_bench.csv` を実行し、`tools/plot_coupled_constraint_endurance.py --summary-json` で比較。
+- **Verification**: `./chrono-C-all/tests/bench_coupled_constraint --omega 0.9 --omega 1.0 --output data/softness_bench.csv` を実行し、`tools/plot_coupled_constraint_endurance.py --summary-json` で比較。
 
 ## Chapter 03. Contact + Coupled Integration
 - **Theory**: `docs/coupled_contact_test_notes.md` を読み、Contact 併用テストの意図と判定指標を把握。  

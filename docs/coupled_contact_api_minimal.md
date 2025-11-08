@@ -27,6 +27,7 @@
 | 接触管理 | `chrono_collision2d_detect_*` | 幾何ペアごとの衝突検出（円/ポリゴン/カプセル/エッジ） | `chrono-C-all/include/chrono_collision2d.h:83`-`130` |
 | 接触管理 | `chrono_collision2d_resolve_*` | 検出結果から Manifold を構築し拘束量を計算 | `chrono-C-all/include/chrono_collision2d.h:132`-`159` |
 | 接触管理 | `chrono_contact_manager2d_update_contact` | 検出結果をマニフォールドへ反映 | `chrono-C-all/include/chrono_collision2d.h:78`-`81` |
+| 接触ヤコビアン | `chrono_contact2d_build_jacobian_3dof` | 正規・Rolling・Torsional の 3 DOF 行を生成し、Coupled／Contact 混在ケースで再利用 | `chrono-C-all/include/chrono_collision2d.h:41`-`64` |
 | 島ソルバ | `chrono_island2d_build` | 拘束・接触から連結成分（島）を生成 | `chrono-C-all/include/chrono_island2d.h:73`-`77` |
 | 島ソルバ | `chrono_island2d_solve` | 島単位で `constraint_config` を使い解法を実行 | `chrono-C-all/include/chrono_island2d.h:79`-`81` |
 | 島ソルバ | `chrono_island2d_workspace_free` | ワークスペースの解放（シャットダウン時） | `chrono-C-all/include/chrono_island2d.h:70` |

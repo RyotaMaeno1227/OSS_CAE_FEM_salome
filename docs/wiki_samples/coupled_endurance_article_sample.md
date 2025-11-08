@@ -17,22 +17,10 @@
 - [チートシート PDF](../coupled_constraint_presets_cheatsheet.md)
 - [アーティファクト一覧](https://github.com/example/highperformanceFEM/actions?query=workflow%3A%22Coupled+Endurance%22)
 
-## 運用フロー
-1. **失敗検知** – Actions の *archive-and-summarize* ステップが失敗 (赤) していないかを確認する。
-2. **ログ確認** – `latest.summary.json` の `max_condition`, `warn_ratio`, `rank_ratio` を記録し、閾値との乖離を把握する。
-3. **再現 & 対処** – ローカルで  
-   ```bash
-   python tools/plot_coupled_constraint_endurance.py \
-     data/endurance_archive/latest.csv \
-     --skip-plot \
-     --summary-json out/summary.json \
-     --fail-on-max-condition 1.0e8 \
-     --fail-on-warning-ratio 0.05 \
-     --fail-on-rank-ratio 0.01 \
-     --no-show
-   ```  
-   を実行。超過要因を特定し、`data/coupled_constraint_presets.yaml` を見直す。
-4. **報告** – Slack `#chrono-constraints` に検知状況・対処案・次アクションを共有。
+## 運用フロー（サマリ）
+- 失敗検知 → ログ確認 → ローカル再現 → 報告の 4 ステップを守る。  
+- 詳細な手順・Slack テンプレ・画面キャプチャ例は `docs/appendix_optional_ops.md` **B.5 Coupled Endurance Operations** を参照。  
+- Wiki 記事では最新 KPI と参照リンクのみ記載し、付録を常に更新する。
 
 ## KPI の見方
 | KPI | 説明 | 閾値（例） |
@@ -42,36 +30,15 @@
 | `rank_ratio` | ランク欠損フレーム割合 | `<= 0.01` |
 | `dropping_equations` | 自動ドロップ回数 | `<= 1` |
 
-> 判定ロジックは `docs/coupled_constraint_solver_math.md` と `docs/coupled_contact_test_notes.md` を参照。
+- 判定ロジックは `docs/coupled_constraint_solver_math.md` と `docs/coupled_contact_test_notes.md` を参照。  
+- `tools/filter_coupled_endurance_log.py` で force/impulse/diagnostics カラムを抽出し、`tools/plot_coupled_constraint_endurance.py --summary-json` から上記 KPI を取得する。
 
-## メディア更新
-- コマンド例:
-  ```bash
-  python tools/plot_coupled_constraint_endurance.py \
-    data/coupled_constraint_endurance.csv \
-    --output docs/media/coupled/endurance_overview.png \
-    --no-show
-  python tools/make_coupled_animation.py \
-    --csv data/coupled_constraint_endurance.csv \
-    --gif docs/media/coupled/endurance_overview.gif \
-    --mp4 docs/media/coupled/endurance_overview.mp4 \
-    --fps 24 --stride 4
-  ```
-- 生成物は `docs/media/coupled/` に配置し、更新日時と元 CSV のコミット SHA を `docs/media/coupled/README.md` へ追記する。
-- 旧ファイルは `cloud://chrono/shared/coupled/endurance/archive/<YYYY-MM>/` に退避。
-
-## メンテナンス
-- **担当ローテーション**: DevOps（Suzuki）→ Coupled 班（Mori）→ 数値解析班（Kobayashi）を月単位で交代。
-- **四半期レビュー** (1/4/7/10 月):  
-  - YAML とチートシートの差分確認  
-  - CI しきい値の妥当性評価  
-  - メディアが 6 か月以内に更新されているかをチェック
-- **Wiki 同期フロー**
-  1. Git 更新内容を確認し、本ファイルをテンプレとして流用。
-  2. 最終更新日・担当・PR リンクを差し替え。
-  3. スクリーンショットを貼り替え（詳細は `docs/appendix_optional_ops.md` を参照）、キャプションを付ける。
-  4. 公開後、Slack で通知し次担当へタスクを引き継ぐ。
+## Appendix 連携
+- メディア生成・スクリーンショット・Wiki テンプレは `docs/appendix_optional_ops.md` **A / B.2 / B.3** を参照。  
+- 担当ローテーションと通知テンプレは同ファイル **B.5** に記載。  
+- Contact + Coupled 併用テストやログ通知の分岐は **B.6** を参照。  
+- 記事の軽量化後は本サンプルをコピーし、必要最低限の KPI とリンクのみ差し替える。
 
 ---
 
-> 付録（テンプレート全文・スクリーンショット一覧・公開チェックリスト）は `docs/appendix_optional_ops.md` の **B. Wiki Workflow Templates & Checklists** に移動しました。本サンプルでは記事本文のみを管理し、運用手順は付録を参照してください。
+> 詳細手順・テンプレート・チェックリストは `docs/appendix_optional_ops.md` の **B. Wiki Workflow Templates & Checklists** に統合済みです。本サンプルは本文構成のみを管理し、運用作業は付録のチェックリストに沿って実施してください。

@@ -146,7 +146,8 @@ static int run_benchmark_iteration(int num_islands,
                                    double dt,
                                    double *pos_out,
                                    double *vel_out,
-                                   double *elapsed_out) {
+                                   double *elapsed_out,
+                                   ChronoIslandSchedulerBackend_C scheduler) {
     BenchWorld world = {0};
     ChronoIsland2DWorkspace_C workspace;
     ChronoContactManager2D_C manager;
@@ -178,6 +179,7 @@ static int run_benchmark_iteration(int num_islands,
     (void)thread_count;
     config.enable_parallel = 0;
 #endif
+    config.scheduler = scheduler;
 
     start_time = wall_time();
 
@@ -297,6 +299,7 @@ int main(int argc, char **argv) {
     int steps = 200;
     int max_threads = 4;
     double dt = 0.01;
+    ChronoIslandSchedulerBackend_C scheduler = CHRONO_ISLAND_SCHED_AUTO;
 
     if (argc > 1) {
         num_islands = atoi(argv[1]);
@@ -310,9 +313,24 @@ int main(int argc, char **argv) {
     if (argc > 4) {
         dt = atof(argv[4]);
     }
+    if (argc > 5) {
+        const char *backend = argv[5];
+        if (strcmp(backend, "tbb") == 0) {
+            scheduler = CHRONO_ISLAND_SCHED_TBB;
+        } else if (strcmp(backend, "openmp") == 0) {
+            scheduler = CHRONO_ISLAND_SCHED_OPENMP;
+        } else if (strcmp(backend, "auto") == 0) {
+            scheduler = CHRONO_ISLAND_SCHED_AUTO;
+        } else {
+            fprintf(stderr, "Unknown scheduler '%s' (expected auto|openmp|tbb)\n", backend);
+            return 1;
+        }
+    }
 
     if (num_islands <= 0 || steps <= 0) {
-        fprintf(stderr, "Usage: %s [islands] [steps] [max_threads] [dt]\n", argv[0]);
+        fprintf(stderr,
+                "Usage: %s [islands] [steps] [max_threads] [dt] [scheduler(auto|openmp|tbb)]\n",
+                argv[0]);
         return 1;
     }
 
@@ -343,11 +361,12 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    printf("Island solver benchmark: islands=%d steps=%d dt=%.4f max_threads=%d\n",
+    printf("Island solver benchmark: islands=%d steps=%d dt=%.4f max_threads=%d scheduler=%d\n",
            num_islands,
            steps,
            dt,
-           max_threads);
+           max_threads,
+           (int)scheduler);
 
     double baseline_time = 0.0;
     if (!run_benchmark_iteration(num_islands,
@@ -356,7 +375,8 @@ int main(int argc, char **argv) {
                                  dt,
                                  baseline_positions,
                                  baseline_velocities,
-                                 &baseline_time)) {
+                                 &baseline_time,
+                                 scheduler)) {
         free(baseline_positions);
         free(baseline_velocities);
         free(trial_positions);
@@ -373,7 +393,8 @@ int main(int argc, char **argv) {
                                      dt,
                                      trial_positions,
                                      trial_velocities,
-                                     &elapsed)) {
+                                     &elapsed,
+                                     scheduler)) {
             free(baseline_positions);
             free(baseline_velocities);
             free(trial_positions);

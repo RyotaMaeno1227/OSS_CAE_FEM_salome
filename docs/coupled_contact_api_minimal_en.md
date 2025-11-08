@@ -24,6 +24,7 @@ This note mirrors `docs/coupled_contact_api_minimal.md` but is written in Englis
 | Contact | `chrono_collision2d_detect_*` | Narrow-phase detection for circle/polygon/capsule/edge pairs | `chrono-C-all/include/chrono_collision2d.h:83-159` |
 | Contact | `chrono_collision2d_resolve_*` | Build contact manifolds and compute constraint terms | same |
 | Contact | `chrono_contact_manager2d_update_contact` | Persist detection results inside the manager | `chrono-C-all/include/chrono_collision2d.h:78-81` |
+| Contact Jacobian | `chrono_contact2d_build_jacobian_3dof` | Emit normal/rolling/torsional rows for Coupled + Contact mixing | `chrono-C-all/include/chrono_collision2d.h:41-64` |
 | Island solver | `chrono_island2d_build` | Build connected components (islands) from constraints and contacts | `chrono-C-all/include/chrono_island2d.h:73-77` |
 | Island solver | `chrono_island2d_solve` | Execute per-island solves using `constraint_config` | `...:79-81` |
 | Island solver | `chrono_island2d_workspace_free` | Release the workspace during shutdown | `...:70` |

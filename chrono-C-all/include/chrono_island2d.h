@@ -19,6 +19,18 @@ typedef struct ChronoIsland2D_C {
 
 struct ChronoIsland2DBodyMapEntry;
 
+typedef struct ChronoIslandVectorBuffer_C {
+    double *data;
+    size_t capacity;
+    size_t vector_length;
+} ChronoIslandVectorBuffer_C;
+
+typedef enum ChronoIslandSchedulerBackend_C {
+    CHRONO_ISLAND_SCHED_AUTO = 0,
+    CHRONO_ISLAND_SCHED_OPENMP = 1,
+    CHRONO_ISLAND_SCHED_TBB = 2
+} ChronoIslandSchedulerBackend_C;
+
 typedef struct ChronoIsland2DWorkspace_C {
     ChronoIsland2D_C *islands;
     size_t island_count;
@@ -59,16 +71,26 @@ typedef struct ChronoIsland2DWorkspace_C {
 
     struct ChronoIsland2DBodyMapEntry *body_map;
     size_t body_map_capacity;
+
+    ChronoIslandVectorBuffer_C constraint_vectors;
+    ChronoIslandVectorBuffer_C contact_vectors;
 } ChronoIsland2DWorkspace_C;
 
 typedef struct ChronoIsland2DSolveConfig_C {
     ChronoConstraint2DBatchConfig_C constraint_config;
     int enable_parallel;
+    ChronoIslandSchedulerBackend_C scheduler;
 } ChronoIsland2DSolveConfig_C;
 
 void chrono_island2d_workspace_init(ChronoIsland2DWorkspace_C *workspace);
 void chrono_island2d_workspace_reset(ChronoIsland2DWorkspace_C *workspace);
 void chrono_island2d_workspace_free(ChronoIsland2DWorkspace_C *workspace);
+double *chrono_island2d_workspace_get_constraint_vectors(ChronoIsland2DWorkspace_C *workspace,
+                                                         size_t count,
+                                                         size_t vector_length);
+double *chrono_island2d_workspace_get_contact_vectors(ChronoIsland2DWorkspace_C *workspace,
+                                                      size_t count,
+                                                      size_t vector_length);
 
 size_t chrono_island2d_build(ChronoConstraint2DBase_C **constraints,
                              size_t constraint_count,

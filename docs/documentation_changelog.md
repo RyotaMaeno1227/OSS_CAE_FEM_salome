@@ -36,6 +36,19 @@
 | `docs/wiki_coupled_endurance_article.md` | KPI 定義節を追加し、計算コア指標を強調 | DevOps（Suzuki） | Section 4 |
 | `docs/wiki_samples/coupled_endurance_article_sample.md` | KPI テーブルと Appendix 参照を追加 | DevOps（Suzuki） | Template update |
 
+## 2025-11-08 更新
+
+| ドキュメント | 主な変更内容 | 担当 | 備考 |
+|--------------|--------------|------|------|
+| `docs/wiki_coupled_endurance_article.md` | KPI 以外の運用情報を Appendix 経由に集約し、メイン本文をサマリ化 | Cチーム | Appendix B.5 を参照する運用に更新 |
+| `docs/wiki_samples/coupled_endurance_article_sample.md` | サンプル記事を軽量化し、Appendix B.5/B.6/B.7 への導線のみ残す構成に刷新 | Cチーム | Wiki 反映時は本文だけ差し替える |
+| `docs/appendix_optional_ops.md` | B.5 に KPI ローテ／連絡票を追加し、B.6 (Contact+Coupled), B.7 (リンク検証), A.3 (PDF), D (CLI), E (学習統合案) を追記 | Cチーム | Wiki / Slack / Benchmark / 学習パスの運用窓口 |
+| `docs/chrono_coupled_constraint_tutorial.md` | メディア／通知手順を撤去し、Appendix A/C 参照のみを残す | Cチーム | 計算コア節へ集中 |
+| `docs/coupled_constraint_tutorial_draft.md` | 日英リンクを検証し、Appendix B.7 チェックリストへの誘導を追加 | Cチーム | Hands-on / Solver Math / Contact Notes 参照済み |
+| `docs/pm_status_2024-11-08.md` | `docs/coupled_island_migration_plan.md` と同期する KPI 表を追加 | Cチーム | Appendix B.5.1 の担当ローテ管理下 |
+| `docs/chrono_3d_abstraction_note.md` | KPI バッジを 80/70/45 に更新し、pm_status / Migration plan と同期する旨を明記 | Cチーム | Section 10 |
+| `docs/coupled_island_migration_plan.md` | KPI スナップショット表に最新進捗（80%/70%/45%）を追記し、pm_status との同期手順を追記 | Cチーム | KKT ディスクリプタ PoC 連動 |
+
 ## 運用メモ
 - 変更日・担当者・Pull Request を必ず記録する。表は最新が上に来るように追記。
 - 大きな構成変更（章追加、テンプレート刷新）は別途詳細セクションを作成し、影響範囲を記載する。

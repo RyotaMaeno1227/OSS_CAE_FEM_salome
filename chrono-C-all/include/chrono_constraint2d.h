@@ -29,6 +29,21 @@ typedef struct ChronoConstraint2DBase_C {
     double effective_mass;
 } ChronoConstraint2DBase_C;
 
+_Static_assert(sizeof(ChronoConstraint2DBase_C) == sizeof(ChronoConstraintCommon_C),
+               "ChronoConstraint2DBase_C must match ChronoConstraintCommon_C size.");
+_Static_assert(offsetof(ChronoConstraint2DBase_C, ops) == offsetof(ChronoConstraintCommon_C, ops),
+               "ops offset mismatch");
+_Static_assert(offsetof(ChronoConstraint2DBase_C, body_a) == offsetof(ChronoConstraintCommon_C, body_a),
+               "body_a offset mismatch");
+_Static_assert(offsetof(ChronoConstraint2DBase_C, body_b) == offsetof(ChronoConstraintCommon_C, body_b),
+               "body_b offset mismatch");
+_Static_assert(offsetof(ChronoConstraint2DBase_C, accumulated_impulse) ==
+                   offsetof(ChronoConstraintCommon_C, accumulated_impulse),
+               "accumulated_impulse offset mismatch");
+_Static_assert(offsetof(ChronoConstraint2DBase_C, effective_mass) ==
+                   offsetof(ChronoConstraintCommon_C, effective_mass),
+               "effective_mass offset mismatch");
+
 #define CHRONO_COUPLED_MAX_EQ 4
 #define CHRONO_COUPLED_DIAG_RANK_DEFICIENT 0x1u
 #define CHRONO_COUPLED_DIAG_CONDITION_WARNING 0x2u
@@ -337,10 +352,20 @@ typedef struct ChronoCoupledConstraint2D_C {
     double condition_warning_log_timer;
 } ChronoCoupledConstraint2D_C;
 
+typedef struct ChronoConstraintIterativeParams_C {
+    double omega;
+    double sharpness;
+    double tolerance;
+    int enable_warm_start;
+    int max_iterations_override;
+    int record_violation_history;
+} ChronoConstraintIterativeParams_C;
+
 typedef struct ChronoConstraint2DBatchConfig_C {
     int velocity_iterations;
     int position_iterations;
     int enable_parallel;
+    ChronoConstraintIterativeParams_C iterative;
 } ChronoConstraint2DBatchConfig_C;
 
 typedef struct ChronoConstraint2DBatchWorkspace_C {

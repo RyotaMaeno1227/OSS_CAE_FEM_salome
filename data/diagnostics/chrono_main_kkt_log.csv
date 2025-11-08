@@ -1,0 +1,5 @@
+scenario,eq_count,kappa_bound,kappa_spectral,min_pivot,max_pivot
+default,2,1.0015e+00,1.0015e+00,1.05e+00,3.98e+00
+default,3,1.0002e+00,1.0002e+00,9.91e-01,4.12e+00
+default,4,1.0001e+00,1.0001e+00,9.74e-01,4.35e+00
+spectral_stress,4,9.9900e+25,9.9810e+25,3.10e-03,8.25e+02

@@ -72,6 +72,26 @@ static int invert2x2(const double *m, double *out) {
 #define CHRONO_COUPLED_CONDITION_LOG_COOLDOWN_DEFAULT 0.25
 #define CHRONO_COUPLED_CONDITION_MAX_DROP_DEFAULT 1
 
+typedef struct ChronoConstraintSolverParamsState_C {
+    double omega;
+    double sharpness;
+    double tolerance;
+    int enable_warm_start;
+    int record_violation_history;
+    double violation_peak;
+    double delta_lambda_peak;
+} ChronoConstraintSolverParamsState_C;
+
+static ChronoConstraintSolverParamsState_C g_constraint_solver_params = {
+    1.0,
+    1.0,
+    1e-6,
+    1,
+    0,
+    0.0,
+    0.0,
+};
+
 static void coupled_constraint_condition_policy_set_default(ChronoCoupledConditionWarningPolicy_C *policy) {
     if (!policy) {
         return;
@@ -152,6 +172,9 @@ static int coupled_constraint_try_log_condition_warning(ChronoCoupledConstraint2
     event.recovery_applied = recovery_applied ? 1 : 0;
     event.level = policy->log_level;
     event.category = policy->log_category;
+    constraint->diagnostics.log_level_request = policy->log_level;
+    constraint->diagnostics.log_category = policy->log_category;
+    constraint->diagnostics.log_level_actual = event.level;
     if (policy->log_callback) {
         policy->log_callback(constraint, &event, policy->log_user_data);
     } else {
@@ -249,14 +272,7 @@ static void coupled_constraint_clear_equation_buffers(ChronoCoupledConstraint2D_
             constraint->system_matrix[i][j] = 0.0;
         }
     }
-    constraint->diagnostics.flags = 0;
-    constraint->diagnostics.rank = 0;
-    constraint->diagnostics.condition_number = 0.0;
-    constraint->diagnostics.min_pivot = 0.0;
-    constraint->diagnostics.max_pivot = 0.0;
-    constraint->diagnostics.condition_number_spectral = 0.0;
-    constraint->diagnostics.min_eigenvalue = 0.0;
-    constraint->diagnostics.max_eigenvalue = 0.0;
+    memset(&constraint->diagnostics, 0, sizeof(constraint->diagnostics));
 }
 
 /* Derivation of the matrix build and pivot policy is documented in
@@ -267,10 +283,14 @@ static int coupled_constraint_invert_matrix(const double *src,
                                             double pivot_epsilon,
                                             double *min_pivot,
                                             double *max_pivot,
-                                            int *rank) {
+                                            int *rank,
+                                            ChronoKKTBackendResult_C *details) {
     ChronoKKTBackendResult_C backend_result;
     if (!chrono_kkt_backend_invert_small(src, n, pivot_epsilon, &backend_result)) {
         return 0;
+    }
+    if (details) {
+        *details = backend_result;
     }
     if (dst) {
         for (int i = 0; i < n; ++i) {
@@ -1502,14 +1522,7 @@ static void chrono_coupled_constraint2d_prepare_impl(void *constraint_ptr, doubl
 
     coupled_constraint_ensure_equation(constraint);
 
-    constraint->diagnostics.flags = 0;
-    constraint->diagnostics.rank = 0;
-    constraint->diagnostics.condition_number = 0.0;
-    constraint->diagnostics.min_pivot = 0.0;
-    constraint->diagnostics.max_pivot = 0.0;
-    constraint->diagnostics.condition_number_spectral = 0.0;
-    constraint->diagnostics.min_eigenvalue = 0.0;
-    constraint->diagnostics.max_eigenvalue = 0.0;
+    memset(&constraint->diagnostics, 0, sizeof(constraint->diagnostics));
 
     for (int i = 0; i < CHRONO_COUPLED_MAX_EQ; ++i) {
         constraint->gamma_eq[i] = 0.0;
@@ -1599,6 +1612,8 @@ static void chrono_coupled_constraint2d_prepare_impl(void *constraint_ptr, doubl
     int success = 0;
     int condition_recovery_applied = 0;
     int drops_applied = 0;
+    ChronoKKTBackendResult_C final_backend_details;
+    memset(&final_backend_details, 0, sizeof(final_backend_details));
 
     while (active_count > 0) {
         double sys_local[CHRONO_COUPLED_MAX_EQ * CHRONO_COUPLED_MAX_EQ] = {0.0};
@@ -1612,13 +1627,15 @@ static void chrono_coupled_constraint2d_prepare_impl(void *constraint_ptr, doubl
                 base_local[row * CHRONO_COUPLED_MAX_EQ + col] = base_matrix_full[idx_row][idx_col];
             }
         }
+        ChronoKKTBackendResult_C backend_details;
         if (coupled_constraint_invert_matrix(sys_local,
                                              inv_local,
                                              active_count,
                                              CHRONO_COUPLED_PIVOT_EPSILON,
                                              &min_pivot,
                                              &max_pivot,
-                                             &rank)) {
+                                             &rank,
+                                             &backend_details)) {
             condition_bound = coupled_constraint_condition_bound(base_local, active_count);
             spectral_condition = coupled_constraint_spectral_condition(base_local,
                                                                        active_count,
@@ -1655,6 +1672,7 @@ static void chrono_coupled_constraint2d_prepare_impl(void *constraint_ptr, doubl
                                                              condition_recovery_applied);
             }
             success = 1;
+            final_backend_details = backend_details;
             for (int i = 0; i < total_eq; ++i) {
                 constraint->equation_active[i] = 0;
                 for (int j = 0; j < total_eq; ++j) {
@@ -1696,13 +1714,6 @@ static void chrono_coupled_constraint2d_prepare_impl(void *constraint_ptr, doubl
             constraint->equation_active[i] = 0;
             constraint->accumulated_impulse_eq[i] = 0.0;
         }
-        constraint->diagnostics.rank = 0;
-        constraint->diagnostics.min_pivot = 0.0;
-        constraint->diagnostics.max_pivot = 0.0;
-        constraint->diagnostics.condition_number = 0.0;
-        constraint->diagnostics.condition_number_spectral = 0.0;
-        constraint->diagnostics.min_eigenvalue = 0.0;
-        constraint->diagnostics.max_eigenvalue = 0.0;
     } else {
         constraint->diagnostics.rank = rank;
         constraint->diagnostics.min_pivot = min_pivot;
@@ -1711,6 +1722,16 @@ static void chrono_coupled_constraint2d_prepare_impl(void *constraint_ptr, doubl
         constraint->diagnostics.condition_number_spectral = spectral_condition;
         constraint->diagnostics.min_eigenvalue = eigen_min;
         constraint->diagnostics.max_eigenvalue = eigen_max;
+        constraint->diagnostics.log_level_request = constraint->condition_policy.log_level;
+        constraint->diagnostics.log_level_actual = constraint->condition_policy.log_level;
+        constraint->diagnostics.log_category = constraint->condition_policy.log_category;
+        constraint->diagnostics.pivot_log_count = final_backend_details.pivot_count;
+        if (constraint->diagnostics.pivot_log_count > CHRONO_CONSTRAINT_DIAG_MAX_PIVOTS) {
+            constraint->diagnostics.pivot_log_count = CHRONO_CONSTRAINT_DIAG_MAX_PIVOTS;
+        }
+        for (int i = 0; i < constraint->diagnostics.pivot_log_count; ++i) {
+            constraint->diagnostics.pivot_log[i] = final_backend_details.pivot_history[i];
+        }
         if (condition_metric > CHRONO_COUPLED_CONDITION_THRESHOLD) {
             constraint->diagnostics.flags |= CHRONO_COUPLED_DIAG_CONDITION_WARNING;
         }
@@ -1797,6 +1818,8 @@ static void chrono_coupled_constraint2d_solve_velocity_impl(void *constraint_ptr
 
     double rhs[CHRONO_COUPLED_MAX_EQ] = {0.0};
     double lambda[CHRONO_COUPLED_MAX_EQ] = {0.0};
+    double max_rhs_abs = 0.0;
+    double max_delta_abs = 0.0;
 
     for (int i = 0; i < constraint->equation_count; ++i) {
         if (!constraint->equation_active[i]) {
@@ -1808,6 +1831,10 @@ static void chrono_coupled_constraint2d_solve_velocity_impl(void *constraint_ptr
         double Cdot = constraint->ratio_distance_eq[i] * Cdot_distance +
                       constraint->ratio_angle_eq[i] * Cdot_angle;
         rhs[i] = -(Cdot + constraint->bias_eq[i] + constraint->gamma_eq[i] * constraint->accumulated_impulse_eq[i]);
+        double abs_rhs = fabs(rhs[i]);
+        if (abs_rhs > max_rhs_abs) {
+            max_rhs_abs = abs_rhs;
+        }
     }
 
     for (int i = 0; i < constraint->equation_count; ++i) {
@@ -1831,12 +1858,17 @@ static void chrono_coupled_constraint2d_solve_velocity_impl(void *constraint_ptr
         if (!constraint->equation_active[i]) {
             continue;
         }
-        constraint->accumulated_impulse_eq[i] += lambda[i];
-        double linear_impulse = constraint->ratio_distance_eq[i] * lambda[i];
-        double torque_impulse = constraint->ratio_angle_eq[i] * lambda[i];
+        double delta = lambda[i] * g_constraint_solver_params.omega;
+        constraint->accumulated_impulse_eq[i] += delta;
+        double abs_delta = fabs(delta);
+        if (abs_delta > max_delta_abs) {
+            max_delta_abs = abs_delta;
+        }
+        double linear_impulse = constraint->ratio_distance_eq[i] * delta;
+        double torque_impulse = constraint->ratio_angle_eq[i] * delta;
         total_linear_scalar += linear_impulse;
         total_torque += torque_impulse;
-        constraint->last_impulse_eq[i] = lambda[i];
+        constraint->last_impulse_eq[i] = delta;
         constraint->last_distance_impulse_eq[i] = linear_impulse;
         constraint->last_angle_impulse_eq[i] = torque_impulse;
         if (constraint->cached_dt > 0.0) {
@@ -1886,6 +1918,20 @@ static void chrono_coupled_constraint2d_solve_velocity_impl(void *constraint_ptr
     }
 
     coupled_constraint_sync_primary_fields(constraint);
+
+    if (g_constraint_solver_params.record_violation_history) {
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+        {
+            if (max_rhs_abs > g_constraint_solver_params.violation_peak) {
+                g_constraint_solver_params.violation_peak = max_rhs_abs;
+            }
+            if (max_delta_abs > g_constraint_solver_params.delta_lambda_peak) {
+                g_constraint_solver_params.delta_lambda_peak = max_delta_abs;
+            }
+        }
+    }
 }
 
 static void chrono_coupled_constraint2d_solve_position_impl(void *constraint_ptr) {
@@ -4124,6 +4170,32 @@ void chrono_constraint2d_batch_solve(ChronoConstraint2DBase_C **constraints,
         cfg.position_iterations = 3;
     }
 
+    ChronoConstraintIterativeParams_C iter = cfg.iterative;
+    if (iter.omega <= 0.0) {
+        iter.omega = 1.0;
+    }
+    if (iter.sharpness <= 0.0) {
+        iter.sharpness = 1.0;
+    }
+    if (iter.tolerance <= 0.0) {
+        iter.tolerance = 1e-6;
+    }
+    ChronoConstraintSolverParamsState_C solver_state = {
+        iter.omega,
+        iter.sharpness,
+        iter.tolerance,
+        iter.enable_warm_start ? 1 : 0,
+        iter.record_violation_history ? 1 : 0,
+        0.0,
+        0.0,
+    };
+    g_constraint_solver_params = solver_state;
+
+    int velocity_iterations = cfg.velocity_iterations;
+    if (iter.max_iterations_override > 0) {
+        velocity_iterations = iter.max_iterations_override;
+    }
+
     int use_parallel =
 #ifdef _OPENMP
         (cfg.enable_parallel && count > 1);
@@ -4286,11 +4358,13 @@ void chrono_constraint2d_batch_solve(ChronoConstraint2DBase_C **constraints,
             }
         }
 
-        for (size_t i = 0; i < count; ++i) {
-            chrono_constraint2d_apply_warm_start(constraints[i]);
+        if (g_constraint_solver_params.enable_warm_start) {
+            for (size_t i = 0; i < count; ++i) {
+                chrono_constraint2d_apply_warm_start(constraints[i]);
+            }
         }
 
-        for (int iter = 0; iter < cfg.velocity_iterations; ++iter) {
+        for (int iter_idx = 0; iter_idx < velocity_iterations; ++iter_idx) {
             for (size_t i = 0; i < count; ++i) {
                 chrono_constraint2d_solve_velocity(constraints[i]);
             }
@@ -4318,19 +4392,21 @@ void chrono_constraint2d_batch_solve(ChronoConstraint2DBase_C **constraints,
         }
     }
 
+    if (g_constraint_solver_params.enable_warm_start) {
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static)
 #endif
-    for (size_t island = 0; island < island_count; ++island) {
-        size_t start = island_offsets[island];
-        size_t items = island_sizes[island];
-        for (size_t k = 0; k < items; ++k) {
-            size_t idx = ordered_indices[start + k];
-            chrono_constraint2d_apply_warm_start(constraints[idx]);
+        for (size_t island = 0; island < island_count; ++island) {
+            size_t start = island_offsets[island];
+            size_t items = island_sizes[island];
+            for (size_t k = 0; k < items; ++k) {
+                size_t idx = ordered_indices[start + k];
+                chrono_constraint2d_apply_warm_start(constraints[idx]);
+            }
         }
     }
 
-    for (int iter = 0; iter < cfg.velocity_iterations; ++iter) {
+    for (int iter_idx = 0; iter_idx < velocity_iterations; ++iter_idx) {
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static)
 #endif

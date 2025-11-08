@@ -72,6 +72,16 @@ jobs:
           python3 tools/plot_coupled_constraint_endurance.py "$tmpfile" --skip-plot --summary-json /tmp/filtered_summary.json --no-show
           rm -f "$tmpfile"
 
+      - name: Validate sample latest.summary schema
+        if: always()
+        run: |
+          mkdir -p artifacts/ci
+          python3 tools/validate_latest_summary_schema.py \
+            --summary-json /tmp/filtered_summary.json \
+            --output-markdown artifacts/ci/sample_latest_summary.md \
+            --output-json artifacts/ci/sample_latest_summary.json \
+            --fail-on-error
+
       - name: Generate condition gap report
         if: always()
         run: |
@@ -89,6 +99,8 @@ jobs:
             test.log
             test_coupled_island.log
             artifacts/ci/condition_gap_report.md
+            artifacts/ci/sample_latest_summary.md
+            artifacts/ci/sample_latest_summary.json
 
       - name: Fail if tests failed
         if: steps.run_tests.outcome == 'failure'

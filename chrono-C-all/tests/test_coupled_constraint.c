@@ -1,6 +1,11 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#if defined(_WIN32)
+#include <direct.h>
+#else
+#include <sys/stat.h>
+#endif
 
 #include "../include/chrono_body2d.h"
 #include "../include/chrono_constraint2d.h"
@@ -57,6 +62,14 @@ typedef struct CoupledSweepCase {
 
 static int run_sweep_case(const CoupledSweepCase *fixture);
 static int run_parameter_sweep(void);
+static int run_auto_drop_recovery_test(void);
+static void descriptor_log_write(const char *case_id,
+                                 double time,
+                                 const ChronoCoupledConstraint2DDiagnostics_C *diag);
+static void ensure_parent_directory(const char *path);
+
+static FILE *g_descriptor_log_fp = NULL;
+static const char *g_descriptor_method = "batch";
 
 static const CoupledSweepCase kSweepCases[] = {
     {
@@ -106,7 +119,43 @@ static const CoupledSweepCase kSweepCases[] = {
     },
 };
 
-int main(void) {
+int main(int argc, char **argv) {
+    int descriptor_enabled = 0;
+    const char *descriptor_path = "logs/kkt_descriptor_log.csv";
+    for (int i = 1; i < argc; ++i) {
+        if (strcmp(argv[i], "--use-kkt-descriptor") == 0) {
+            descriptor_enabled = 1;
+        } else if (strcmp(argv[i], "--descriptor-log") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr, "--descriptor-log requires a path\n");
+                return 1;
+            }
+            descriptor_path = argv[++i];
+            descriptor_enabled = 1;
+        } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
+            printf("Usage: %s [--use-kkt-descriptor] [--descriptor-log path]\n", argv[0]);
+            return 0;
+        } else {
+            fprintf(stderr, "Unknown argument: %s\n", argv[i]);
+            printf("Usage: %s [--use-kkt-descriptor] [--descriptor-log path]\n", argv[0]);
+            return 1;
+        }
+    }
+
+    if (descriptor_enabled) {
+        ensure_parent_directory(descriptor_path);
+        g_descriptor_log_fp = fopen(descriptor_path, "w");
+        if (!g_descriptor_log_fp) {
+            fprintf(stderr, "Failed to open descriptor log at %s\n", descriptor_path);
+            return 1;
+        }
+        fprintf(g_descriptor_log_fp,
+                "time,case,method,condition_bound,condition_spectral,min_pivot,max_pivot\n");
+        g_descriptor_method = "descriptor";
+    } else {
+        g_descriptor_method = "batch";
+    }
+
     ChronoBody2D_C anchor;
     ChronoBody2D_C body;
     init_anchor(&anchor, -0.2, 0.1);
@@ -180,6 +229,12 @@ int main(void) {
             chrono_coupled_constraint2d_set_target_offset(&constraint, 0.02);
         }
         chrono_constraint2d_batch_solve(constraints, 1, dt, &cfg, NULL);
+        const ChronoCoupledConstraint2DDiagnostics_C *loop_diag =
+            chrono_coupled_constraint2d_get_diagnostics(&constraint);
+        if (g_descriptor_log_fp &&
+            (step == 0 || step == 900 || step == 1600 || step == total_steps - 1)) {
+            descriptor_log_write("tele_yaw_control", step * dt, loop_diag);
+        }
         body.linear_velocity[0] *= 0.997;
         body.linear_velocity[1] *= 0.997;
         body.angular_velocity *= 0.997;
@@ -352,6 +407,14 @@ int main(void) {
     if (run_parameter_sweep() != 0) {
         return 1;
     }
+    if (run_auto_drop_recovery_test() != 0) {
+        return 1;
+    }
+
+    if (g_descriptor_log_fp) {
+        fclose(g_descriptor_log_fp);
+        g_descriptor_log_fp = NULL;
+    }
     return 0;
 }
 
@@ -432,6 +495,9 @@ static int run_sweep_case(const CoupledSweepCase *fixture) {
                 fixture->expect_warning);
         return 1;
     }
+    if (g_descriptor_log_fp) {
+        descriptor_log_write(fixture->name, total_steps * dt, diag);
+    }
     return 0;
 }
 
@@ -441,6 +507,175 @@ static int run_parameter_sweep(void) {
         if (run_sweep_case(&kSweepCases[i]) != 0) {
             return 1;
         }
+    }
+    return 0;
+}
+
+static void descriptor_log_write(const char *case_id,
+                                 double time,
+                                 const ChronoCoupledConstraint2DDiagnostics_C *diag) {
+    if (!g_descriptor_log_fp || !diag || !case_id) {
+        return;
+    }
+    fprintf(g_descriptor_log_fp,
+            "%.6f,%s,%s,%.6e,%.6e,%.6e,%.6e\n",
+            time,
+            case_id,
+            g_descriptor_method,
+            diag->condition_number,
+            diag->condition_number_spectral,
+            diag->min_pivot,
+            diag->max_pivot);
+    fflush(g_descriptor_log_fp);
+}
+
+static void ensure_parent_directory(const char *path) {
+    if (!path) {
+        return;
+    }
+    const char *slash = strrchr(path, '/');
+#if defined(_WIN32)
+    const char *bslash = strrchr(path, '\\');
+    if (!slash || (bslash && bslash > slash)) {
+        slash = bslash;
+    }
+#endif
+    if (!slash) {
+        return;
+    }
+    size_t len = (size_t)(slash - path);
+    if (len == 0 || len >= 512) {
+        return;
+    }
+    char buffer[512];
+    memcpy(buffer, path, len);
+    buffer[len] = '\0';
+#if defined(_WIN32)
+    _mkdir(buffer);
+#else
+    mkdir(buffer, 0775);
+#endif
+}
+
+
+static int run_auto_drop_recovery_test(void) {
+    ChronoBody2D_C anchor;
+    ChronoBody2D_C body;
+    init_anchor(&anchor, 0.0, 0.0);
+    init_body(&body, 0.25, 0.25, 0.0);
+
+    double local_anchor[2] = {0.0, 0.0};
+    double axis_local[2] = {1.0, 0.0};
+
+    double rest_distance = compute_distance_raw(&anchor, &body);
+    double rest_angle = body.angle - anchor.angle;
+
+    ChronoCoupledConstraint2D_C constraint;
+    chrono_coupled_constraint2d_init(&constraint,
+                                     &anchor,
+                                     &body,
+                                     local_anchor,
+                                     local_anchor,
+                                     axis_local,
+                                     rest_distance,
+                                     rest_angle,
+                                     1.0,
+                                     -0.3,
+                                     0.0);
+    chrono_coupled_constraint2d_set_softness_distance(&constraint, 0.012);
+    chrono_coupled_constraint2d_set_softness_angle(&constraint, 0.026);
+    chrono_coupled_constraint2d_set_distance_spring(&constraint, 32.0, 2.4);
+    chrono_coupled_constraint2d_set_angle_spring(&constraint, 14.0, 0.7);
+    chrono_coupled_constraint2d_set_baumgarte(&constraint, 0.35);
+    chrono_coupled_constraint2d_set_slop(&constraint, 5e-4);
+    chrono_coupled_constraint2d_set_max_correction(&constraint, 0.08);
+
+    ChronoCoupledConstraint2DEquationDesc_C stiff;
+    memset(&stiff, 0, sizeof(stiff));
+    stiff.ratio_distance = 1.0;
+    stiff.ratio_angle = 0.0;
+    stiff.softness_distance = 1e-9;
+    stiff.softness_angle = 1e-9;
+    chrono_coupled_constraint2d_add_equation(&constraint, &stiff);
+
+    memset(&stiff, 0, sizeof(stiff));
+    stiff.ratio_distance = 1.0 + 1e-9;
+    stiff.ratio_angle = -1e-4;
+    stiff.softness_distance = 1e-10;
+    stiff.softness_angle = 1e-10;
+    chrono_coupled_constraint2d_add_equation(&constraint, &stiff);
+
+    ChronoCoupledConditionWarningPolicy_C policy;
+    chrono_coupled_constraint2d_get_condition_warning_policy(&constraint, &policy);
+    policy.enable_logging = 1;
+    policy.enable_auto_recover = 1;
+    policy.max_drop = 1;
+    policy.log_level = CHRONO_LOG_LEVEL_INFO;
+    policy.log_category = CHRONO_LOG_CATEGORY_SOLVER;
+    chrono_coupled_constraint2d_set_condition_warning_policy(&constraint, &policy);
+    chrono_coupled_constraint2d_set_condition_warning_log_level(
+        &constraint, policy.log_level, policy.log_category);
+
+    ChronoConstraint2DBase_C *constraints[1] = {&constraint.base};
+    ChronoConstraint2DBatchConfig_C cfg;
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.velocity_iterations = 16;
+    cfg.position_iterations = 4;
+    cfg.enable_parallel = 0;
+
+    const double dt = 0.0025;
+    int drop_detected = 0;
+    for (int step = 0; step < 600; ++step) {
+        chrono_constraint2d_batch_solve(constraints, 1, dt, &cfg, NULL);
+        chrono_body2d_integrate_explicit(&body, dt);
+        chrono_body2d_reset_forces(&body);
+
+        const ChronoCoupledConstraint2DDiagnostics_C *diag =
+            chrono_coupled_constraint2d_get_diagnostics(&constraint);
+        if (diag && (diag->flags & CHRONO_COUPLED_DIAG_CONDITION_WARNING)) {
+            drop_detected = 1;
+            if (diag->pivot_log_count <= 0) {
+                fprintf(stderr, "Auto-drop test: missing pivot log entries.\n");
+                return 1;
+            }
+            if (constraint.diagnostics.log_level_actual != CHRONO_LOG_LEVEL_INFO ||
+                constraint.diagnostics.log_category != CHRONO_LOG_CATEGORY_SOLVER) {
+                fprintf(stderr, "Auto-drop test: log level/category mismatch.\n");
+                return 1;
+            }
+            break;
+        }
+    }
+
+    if (!drop_detected) {
+        fprintf(stderr, "Auto-drop test: condition warning never triggered.\n");
+        return 1;
+    }
+
+    int active_eq = 0;
+    for (int i = 0; i < constraint.equation_count; ++i) {
+        if (constraint.equation_active[i]) {
+            active_eq += 1;
+        }
+    }
+    if (active_eq >= constraint.equation_count) {
+        fprintf(stderr, "Auto-drop test: no equation was deactivated.\n");
+        return 1;
+    }
+
+    const ChronoCoupledConstraint2DDiagnostics_C *diag =
+        chrono_coupled_constraint2d_get_diagnostics(&constraint);
+    if (!diag || diag->rank != active_eq) {
+        fprintf(stderr,
+                "Auto-drop test: rank (%d) does not match active equations (%d).\n",
+                diag ? diag->rank : -1,
+                active_eq);
+        return 1;
+    }
+    if (diag->pivot_log_count <= 0 ||
+        diag->pivot_log[diag->pivot_log_count - 1] > diag->pivot_log[0]) {
+        fprintf(stderr, "Auto-drop test: pivot log ordering invalid.\n");
+        return 1;
     }
     return 0;
 }

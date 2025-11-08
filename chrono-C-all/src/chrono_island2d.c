@@ -1,4 +1,5 @@
 #include "../include/chrono_island2d.h"
+#include "../include/chrono_logging.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -6,6 +7,10 @@
 
 #ifdef _OPENMP
 #include <omp.h>
+#endif
+
+#ifndef _OPENMP
+static int g_tbb_stub_warned = 0;
 #endif
 
 typedef struct ChronoIsland2DBodyMapEntry {
@@ -76,6 +81,37 @@ static int chrono_island2d_body_lookup_or_add(ChronoIsland2DBodyMapEntry *map,
     }
 }
 
+static double *chrono_island2d_workspace_acquire_vectors(ChronoIslandVectorBuffer_C *buffer,
+                                                         size_t count,
+                                                         size_t vector_length) {
+    if (!buffer || vector_length == 0) {
+        return NULL;
+    }
+    if (buffer->vector_length != vector_length) {
+        free(buffer->data);
+        buffer->data = NULL;
+        buffer->capacity = 0;
+        buffer->vector_length = vector_length;
+    }
+    size_t required = count * vector_length;
+    if (required == 0) {
+        return buffer->data;
+    }
+    if (buffer->capacity < required) {
+        double *new_data = (double *)realloc(buffer->data, required * sizeof(double));
+        if (!new_data) {
+            return NULL;
+        }
+        size_t previous = buffer->capacity;
+        if (required > previous) {
+            memset(new_data + previous, 0, (required - previous) * sizeof(double));
+        }
+        buffer->data = new_data;
+        buffer->capacity = required;
+    }
+    return buffer->data;
+}
+
 void chrono_island2d_workspace_init(ChronoIsland2DWorkspace_C *workspace) {
     if (!workspace) {
         return;
@@ -132,6 +168,16 @@ void chrono_island2d_workspace_reset(ChronoIsland2DWorkspace_C *workspace) {
     if (workspace->body_map) {
         memset(workspace->body_map, 0, workspace->body_map_capacity * sizeof(*workspace->body_map));
     }
+    if (workspace->constraint_vectors.data && workspace->constraint_vectors.capacity > 0) {
+        memset(workspace->constraint_vectors.data,
+               0,
+               workspace->constraint_vectors.capacity * sizeof(double));
+    }
+    if (workspace->contact_vectors.data && workspace->contact_vectors.capacity > 0) {
+        memset(workspace->contact_vectors.data,
+               0,
+               workspace->contact_vectors.capacity * sizeof(double));
+    }
 }
 
 void chrono_island2d_workspace_free(ChronoIsland2DWorkspace_C *workspace) {
@@ -151,7 +197,27 @@ void chrono_island2d_workspace_free(ChronoIsland2DWorkspace_C *workspace) {
     free(workspace->parent);
     free(workspace->rank);
     free(workspace->body_map);
+    free(workspace->constraint_vectors.data);
+    free(workspace->contact_vectors.data);
     chrono_island2d_workspace_init(workspace);
+}
+
+double *chrono_island2d_workspace_get_constraint_vectors(ChronoIsland2DWorkspace_C *workspace,
+                                                         size_t count,
+                                                         size_t vector_length) {
+    if (!workspace) {
+        return NULL;
+    }
+    return chrono_island2d_workspace_acquire_vectors(&workspace->constraint_vectors, count, vector_length);
+}
+
+double *chrono_island2d_workspace_get_contact_vectors(ChronoIsland2DWorkspace_C *workspace,
+                                                      size_t count,
+                                                      size_t vector_length) {
+    if (!workspace) {
+        return NULL;
+    }
+    return chrono_island2d_workspace_acquire_vectors(&workspace->contact_vectors, count, vector_length);
 }
 
 static int chrono_island2d_ensure_capacity(void **ptr,
@@ -559,10 +625,12 @@ void chrono_island2d_solve(const ChronoIsland2DWorkspace_C *workspace,
 
     ChronoConstraint2DBatchConfig_C constraint_cfg = {0};
     int enable_parallel = 0;
+    ChronoIslandSchedulerBackend_C scheduler = CHRONO_ISLAND_SCHED_AUTO;
 
     if (config) {
         constraint_cfg = config->constraint_config;
         enable_parallel = config->enable_parallel;
+        scheduler = config->scheduler;
     }
 
     if (constraint_cfg.velocity_iterations <= 0) {
@@ -573,12 +641,47 @@ void chrono_island2d_solve(const ChronoIsland2DWorkspace_C *workspace,
     }
     constraint_cfg.enable_parallel = 0;
 
+    int prefer_tbb = (scheduler == CHRONO_ISLAND_SCHED_TBB);
     int use_parallel =
 #ifdef _OPENMP
-        (enable_parallel && workspace->island_count > 1);
+        (!prefer_tbb && enable_parallel && workspace->island_count > 1);
 #else
         (void)enable_parallel, 0;
 #endif
+    int use_tbb_backend = (prefer_tbb && enable_parallel && workspace->island_count > 1);
+
+    if (use_tbb_backend) {
+#ifdef _OPENMP
+#pragma omp parallel for schedule(dynamic)
+#endif
+        for (size_t island_idx = 0; island_idx < workspace->island_count; ++island_idx) {
+            ChronoIsland2D_C *island = &workspace->islands[island_idx];
+            if (island->constraint_count > 0) {
+                chrono_constraint2d_batch_solve(island->constraints,
+                                                island->constraint_count,
+                                                dt,
+                                                &constraint_cfg,
+                                                NULL);
+            }
+            if (island->contact_count > 0) {
+                for (size_t i = 0; i < island->contact_count; ++i) {
+                    ChronoContactPair2D_C *pair = island->contacts[i];
+                    if (pair) {
+                        chrono_contact_manager2d_end_step((ChronoContactManager2D_C *)pair);
+                    }
+                }
+            }
+        }
+#ifndef _OPENMP
+        if (!g_tbb_stub_warned) {
+            chrono_log_write(CHRONO_LOG_LEVEL_INFO,
+                             CHRONO_LOG_CATEGORY_SOLVER,
+                             "TBB backend requested but OpenMP is unavailable; ran islands serially.");
+            g_tbb_stub_warned = 1;
+        }
+#endif
+        return;
+    }
 
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static) if (use_parallel)
