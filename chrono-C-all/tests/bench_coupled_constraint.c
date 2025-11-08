@@ -10,6 +10,7 @@
 
 #include "../include/chrono_body2d.h"
 #include "../include/chrono_constraint2d.h"
+#include "../include/chrono_constraint_kkt_backend.h"
 #include "../include/chrono_logging.h"
 
 typedef struct {
@@ -24,6 +25,8 @@ typedef struct {
     double avg_condition_spectral;
     double max_condition_gap;
     double avg_condition_gap;
+    double min_pivot;
+    double max_pivot;
     double avg_solve_time_us;
     int drop_events;
     unsigned int drop_index_mask;
@@ -36,6 +39,8 @@ typedef struct {
 } CoupledBenchResult;
 
 typedef void (*BenchSetupFunc)(ChronoCoupledConstraint2D_C *constraint, int equation_count, double epsilon);
+
+static int write_stats_json(const char *path);
 
 static double bench_now(void) {
 #ifdef _OPENMP
@@ -229,6 +234,8 @@ static CoupledBenchResult bench_case(int equation_count,
     double sum_condition_spectral = 0.0;
     double max_condition_gap = 0.0;
     double sum_condition_gap = 0.0;
+    double min_pivot = 0.0;
+    double max_pivot = 0.0;
     int condition_samples = 0;
 
     double start_time = 0.0;
@@ -261,6 +268,14 @@ static CoupledBenchResult bench_case(int equation_count,
             sum_condition_spectral += condition_spectral;
             sum_condition_gap += condition_gap;
             condition_samples += 1;
+            if (diag->min_pivot > 0.0) {
+                if (min_pivot == 0.0 || diag->min_pivot < min_pivot) {
+                    min_pivot = diag->min_pivot;
+                }
+            }
+            if (diag->max_pivot > 0.0) {
+                max_pivot = fmax(max_pivot, diag->max_pivot);
+            }
         }
 
         for (int eq = 0; eq < total_eq; ++eq) {
@@ -324,6 +339,8 @@ static CoupledBenchResult bench_case(int equation_count,
     result.avg_condition_spectral = avg_condition_spectral;
     result.max_condition_gap = max_condition_gap;
     result.avg_condition_gap = avg_condition_gap;
+    result.min_pivot = min_pivot;
+    result.max_pivot = max_pivot;
     result.avg_solve_time_us = avg_time_us;
     result.drop_events = drop_events;
     result.drop_index_mask = drop_index_mask;
@@ -339,7 +356,7 @@ static CoupledBenchResult bench_case(int equation_count,
 
 static void write_result(FILE *out, const CoupledBenchResult *result) {
     fprintf(out,
-            "%d,%.1e,%.3f,%.3f,%.3e,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,%.3f,%d,%u,%d,%.3f,%d,%d,%d,%s\n",
+            "%d,%.1e,%.3f,%.3f,%.3e,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,%.3f,%d,%u,%d,%.3f,%d,%d,%d,%s\n",
             result->eq_count,
             result->epsilon,
             result->solver_omega,
@@ -351,6 +368,8 @@ static void write_result(FILE *out, const CoupledBenchResult *result) {
             result->avg_condition_spectral,
             result->max_condition_gap,
             result->avg_condition_gap,
+            result->min_pivot,
+            result->max_pivot,
             result->avg_solve_time_us,
             result->drop_events,
             result->drop_index_mask,
@@ -362,13 +381,44 @@ static void write_result(FILE *out, const CoupledBenchResult *result) {
             result->scenario ? result->scenario : "default");
 }
 
+static int write_stats_json(const char *path) {
+    if (!path) {
+        return 1;
+    }
+    FILE *fp = fopen(path, "w");
+    if (!fp) {
+        return 0;
+    }
+    const ChronoKKTBackendStats_C *stats = chrono_kkt_backend_get_stats();
+    double hit_rate = 0.0;
+    if (stats->cache_checks > 0) {
+        hit_rate = (double)stats->cache_hits / (double)stats->cache_checks;
+    }
+    fprintf(fp, "{\n");
+    fprintf(fp, "  \"calls\": %lu,\n", stats->calls);
+    fprintf(fp, "  \"fallback_calls\": %lu,\n", stats->fallback_calls);
+    fprintf(fp, "  \"cache_hits\": %lu,\n", stats->cache_hits);
+    fprintf(fp, "  \"cache_misses\": %lu,\n", stats->cache_misses);
+    fprintf(fp, "  \"cache_checks\": %lu,\n", stats->cache_checks);
+    fprintf(fp, "  \"cache_hit_rate\": %.6f,\n", hit_rate);
+    fprintf(fp, "  \"size_histogram\": [");
+    for (int i = 0; i <= CHRONO_COUPLED_KKT_MAX_EQ; ++i) {
+        fprintf(fp, "%s%lu", (i == 0 ? "" : ", "), stats->size_histogram[i]);
+    }
+    fprintf(fp, "]\n}\n");
+    fclose(fp);
+    return 1;
+}
+
 static void print_usage(const char *program) {
-    fprintf(stderr, "Usage: %s [--output path] [--omega value]\n", program);
+    fprintf(stderr, "Usage: %s [--output path] [--omega value] [--stats-json path]\n", program);
     fprintf(stderr, "  --omega value   Append a solver over-relaxation factor (can be repeated).\n");
+    fprintf(stderr, "  --stats-json    Dump Chrono KKT backend stats to the given JSON file.\n");
 }
 
 int main(int argc, char **argv) {
     const char *output_path = NULL;
+    const char *stats_json_path = NULL;
     double omega_values[8];
     size_t omega_count = 0;
     for (int i = 1; i < argc; ++i) {
@@ -414,6 +464,12 @@ int main(int argc, char **argv) {
                 return 1;
             }
             omega_values[omega_count++] = parsed;
+        } else if (strcmp(argv[i], "--stats-json") == 0) {
+            if (i + 1 >= argc) {
+                print_usage(argv[0]);
+                return 1;
+            }
+            stats_json_path = argv[++i];
         } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
             print_usage(argv[0]);
             return 0;
@@ -440,7 +496,7 @@ int main(int argc, char **argv) {
 
     fprintf(out,
             "eq_count,epsilon,omega,sharpness,tolerance,max_condition,avg_condition,max_condition_spectral,"
-            "avg_condition_spectral,max_condition_gap,avg_condition_gap,avg_solve_time_us,drop_events,"
+            "avg_condition_spectral,max_condition_gap,avg_condition_gap,min_pivot,max_pivot,avg_solve_time_us,drop_events,"
             "drop_index_mask,recovery_events,avg_recovery_steps,max_recovery_steps,unrecovered_drops,"
             "max_pending_steps,scenario\n");
 
@@ -450,6 +506,7 @@ int main(int argc, char **argv) {
     const size_t epsilon_total = sizeof(epsilons) / sizeof(epsilons[0]);
 
     chrono_log_set_level(CHRONO_LOG_LEVEL_ERROR);
+    chrono_kkt_backend_reset_stats();
 
     for (size_t omega_idx = 0; omega_idx < omega_count; ++omega_idx) {
         double omega = omega_values[omega_idx];
@@ -468,6 +525,14 @@ int main(int argc, char **argv) {
         CoupledBenchResult stress =
             bench_case(4, 0.0, "spectral_stress", setup_spectral_stress_case, omega);
         write_result(out, &stress);
+    }
+
+    if (stats_json_path && !write_stats_json(stats_json_path)) {
+        fprintf(stderr, "Failed to write KKT stats JSON to %s\n", stats_json_path);
+        if (out != stdout) {
+            fclose(out);
+        }
+        return 1;
     }
 
     if (out != stdout) {

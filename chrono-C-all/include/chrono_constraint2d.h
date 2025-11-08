@@ -11,6 +11,12 @@ extern "C" {
 #include "chrono_logging.h"
 #include "chrono_constraint_common.h"
 
+#ifdef __cplusplus
+#ifndef _Static_assert
+#define _Static_assert static_assert
+#endif
+#endif
+
 typedef void (*ChronoConstraint2DPrepareFunc)(void *constraint, double dt);
 typedef void (*ChronoConstraint2DStepFunc)(void *constraint);
 

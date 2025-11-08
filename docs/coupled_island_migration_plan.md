@@ -42,13 +42,13 @@ Chrono-C の Coupled 拘束と島ソルバを Chrono C++ (`chrono-main`) と同�
 ### 5.1 KPI スナップショット（2025-11 更新）
 | イニシアチブ | 進捗 | 残タスク | 備考 |
 |--------------|------|----------|------|
-| Coupled 拘束移行 | 80 % | KKT 共有化、3D ダイアグノスティクス研磨 | ディスクリプタ PoC の結果待ち。 |
-| Island ソルバ統合 | 70 % | Contact 併用テスト、OpenMP 最適化 | 並列タスクを PoC と同じ KPI メトリクスで監視。 |
-| 3D 抽象化 | 45 % | 共通構造体導入、KKT アダプタ検証 | `docs/chrono_3d_abstraction_note.md` とリンク。 |
+| Coupled 拘束移行 | 83 % | KKT 共有化の仕上げ、3D ダイアグノスティクス研磨 | ディスクリプタ PoC の結果待ち。 |
+| Island ソルバ統合 | 73 % | Contact 併用テスト、OpenMP 最適化 | 並列タスクを PoC と同じ KPI メトリクスで監視。 |
+| 3D 抽象化 | 50 % | 共通構造体導入、KKT アダプタ検証 | `docs/chrono_3d_abstraction_note.md` とリンク。 |
 
 > PoC の結果や KPI 変動が出たらこの表を最優先で更新する。Slack 共有時も同じ指標を引用し、`docs/chrono_3d_abstraction_note.md` のガントと整合させる。
 
-このスナップショットは `docs/pm_status_2024-11-08.md` の KPI 表と共通であり、Appendix B.5.1 のローテーションに従って週次で同時更新する。
+このスナップショットは `docs/pm_status_2024-11-08.md` の KPI 表と共通であり、Appendix B.5.1 のローテーションに従って週次で同時更新する（2025-11-10 更新: Mori）。
 
 ## 6. 進捗テンプレート & ガント
 
@@ -56,15 +56,20 @@ Chrono-C の Coupled 拘束と島ソルバを Chrono C++ (`chrono-main`) と同�
 
 | タスク | 現状 | 今週の作業 | 次週アクション | Owner | 依存関係 |
 |--------|------|------------|----------------|-------|----------|
-| KKT ディスクリプタ層 PoC | E2E 検証済み | 共通 API ラッパ経由で `chrono_constraint2d_batch_solve` と並走させ、`docs/logs/kkt_descriptor_poc_e2e.md` に整合ログを保存 | chrono-main 側の KKT ログと週次比較し、差分監視を shared diagnostics へ移植 | Cチーム（Mori） | `chrono_constraint2d_batch_solve` |
-| Iterative Solver 移植 | パラメータ写経済 | `ChIterativeSolverVI` の `omega/sharpness/tolerance` を `ChronoConstraint2DBatchConfig_C.iterative` へ移植し、`bench_coupled_constraint --omega` で調整ログを CSV 化 | Coupled ベンチの Δκ 推移と violation history を shared diagnostics へ転送 | 数値解析班（Kobayashi） | ディスクリプタ PoC |
-| 接触ヤコビアン 3DOF 化 | API 草稿済み | `chrono_contact2d_build_jacobian_3dof` を公開し、Rolling/Torsional 行を `tests/test_contact_jacobian_3dof` で検証 | Contact + Coupled 組み合わせベンチを `tests/test_coupled_contact_combo` へ拡張 | 物理チーム（Ito） | Math/Geometry ヘルパ |
-| 島ワークスペース 3D 拡張 | メモリ設計完了 | `chrono_island2d_workspace_get_{constraint,contact}_vectors` を追加し、任意ベクトル長のワークスペースを確保できるようにした | OpenMP → TBB タスク実験 | 並列班（Tanaka） | KKT ディスクリプタ |
-| ダイアグノスティクス共通化 | WARN/INFO & Pivot 対応済み | `chrono_constraint_common.h` に共通 `ChronoConstraintDiagnostics_C` を追加し、pivot ログと WARN/INFO レベルを 2D/3D 共有化 | Coupled 3D プロトタイプで検証 | ログ担当（Suzuki） | Solver 移植 |
+| KKT ディスクリプタ層 PoC | E2E 検証済み（Run ID: pending） | 共通 API ラッパ経由で `chrono_constraint2d_batch_solve` と並走させ、`docs/logs/kkt_descriptor_poc_e2e.md` に整合ログを保存。CI の `descriptor-e2e` ジョブが `--descriptor-mode actions` を常時実行 | chrono-main 側の KKT ログと週次比較し、差分監視を shared diagnostics へ移植 | Cチーム（Mori） | `chrono_constraint2d_batch_solve` |
+| Iterative Solver 移植 | パラメータ写経済 | `ChIterativeSolverVI` の `omega/sharpness/tolerance` を `ChronoConstraint2DBatchConfig_C.iterative` へ移植し、`tools/update_multi_omega_assets.py` で `bench_coupled_constraint --omega` の結果と README/Hands-on を同時更新 | Coupled ベンチの Δκ 推移と violation history を shared diagnostics へ転送 | 数値解析班（Kobayashi） | ディスクリプタ PoC |
+| 接触ヤコビアン 3DOF 化 | API 草稿済み | `chrono_contact2d_build_jacobian_3dof` を公開し、Rolling/Torsional 行を `tests/test_contact_jacobian_3dof` で検証 | Contact + Coupled 組み合わせベンチを `tests/test_coupled_contact_combo` へ拡張。`test_island_parallel_contacts --jacobian-report docs/coupled_contact_test_notes.md` でドキュメントを自動更新 | 物理チーム（Ito） | Math/Geometry ヘルパ |
+| 島ワークスペース 3D 拡張 | メモリ設計完了 | `chrono_island2d_workspace_get_{constraint,contact}_vectors` を追加し、任意ベクトル長のワークスペースを確保できるようにした | OpenMP → TBB タスク実験。`TBB_INCLUDE_DIR=/opt/... TBB_LIBS=-ltbb make bench` の手順を `docs/a_team_handoff.md` / `docs/island_scheduler_poc.md` に反映 | 並列班（Tanaka） | KKT ディスクリプタ |
+| ダイアグノスティクス共通化 | WARN/INFO & Pivot 対応済み | `chrono_constraint_common.h` に共通 `ChronoConstraintDiagnostics_C` を追加し、pivot ログと WARN/INFO レベルを 2D/3D 共有化 | Coupled 3D プロトタイプで検証。`tests/test_constraint_common_abi` を CI に追加し、構造体変更を自動検知 | ログ担当（Suzuki） | Solver 移植 |
 
 - KKT PoC のエビデンス: `docs/logs/kkt_descriptor_poc_e2e.md` にバッチソルバとの整合ログ、pivot 列、Δκ_s を記録済み。Slack 週次共有時はこのログへのリンクを貼る。 
 - Chrono-C vs chrono-main の条件数差分は `tools/compare_kkt_logs.py` で自動集計し、`docs/reports/kkt_spectral_weekly.md` として毎週更新する。
-- TBB スケジューラはまだスタブ（serial fallback）のため、`bench_island_solver --scheduler tbb` は 1 スレッド測定のみ。`docs/island_scheduler_poc.md` に PoC 呼び出し例とログ出力を追記済み。
+- TBB スケジューラは oneTBB 用の C++ shim を追加済み。CI サンドボックスでは `TBB_LIBS` を渡していないため OpenMP にフォールバックするが、`docs/island_scheduler_poc.md` と `data/diagnostics/bench_island_scheduler.csv` に fallback 測定と enable 手順をまとめた。
+- GitHub Actions では `tests/test_coupled_constraint --descriptor-mode actions --pivot-artifact-dir artifacts/descriptor` を追加し、`kkt_descriptor_ci.csv` が `docs/logs/kkt_descriptor_poc_e2e.md` の表と 1:1 で突き合わせられるようになった。失敗時は pivot 履歴が同一ディレクトリに残る。
+- `tools/compare_kkt_logs.py` は `data/diagnostics/bench_coupled_constraint_multi.csv` と `data/diagnostics/archive_failure_rate_summary.json` を取り込み、Multi-ω 指標と耐久失敗率を週次レポートに併載するテンプレになった。
+- oneTBB backend は `chrono_island2d_tbb.cpp` で `tbb::parallel_for` を呼び出す実装が追加済み。ライブラリが無い環境では自動で OpenMP fallback し、`data/diagnostics/bench_island_scheduler.csv` の `tbb_fallback` 行に測定値を残す。実環境でハードウェア TBB を使う場合は `make TBB_LIBS=-ltbb` などでリンクを有効にする。
+- `tests/test_island_parallel_contacts` に 3DOF Jacobian 照合を統合し、`ChronoContactJacobian3DOF_C` の Rolling/Torsional 行が島回帰に含まれるようになった。`docs/coupled_contact_test_notes.md` のチェックリストも Jacobian 判定付きに更新済み。
+- `python3 tools/update_multi_omega_assets.py --refresh-report` で `bench_coupled_constraint` の結果と README／Hands-on／`data/coupled_constraint_presets.yaml`／`data/diagnostics/kkt_backend_stats.json` を一括更新できるようになった。
 - 残りの 20–25% は以下のサブタスクに分解して追う:
   1. KKT descriptor backend の E2E フェーズ（`--use-kkt-descriptor` CI での log diff、ログアーカイブの自動比較）。
   2. 実 TBB 実装（oneTBB のビルド／リンク、CI matrix 追加、`chrono_island2d_solve` の backend 選択）。

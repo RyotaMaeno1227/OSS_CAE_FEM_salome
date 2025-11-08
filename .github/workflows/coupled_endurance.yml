@@ -113,7 +113,9 @@ jobs:
             --summary-json data/endurance_archive/latest.summary.json \
             --plan-markdown data/endurance_archive/plan.md \
             --summary-validation-report data/endurance_archive/latest.summary.validation.md \
+            --summary-validation-json data/endurance_archive/latest.summary.validation.json \
             --diagnostics-report data/endurance_archive/latest.diagnostics_console.log \
+            --diagnostics-log data/endurance_archive/latest.diagnostics.md \
             --run-id ${{ github.run_id }} \
             --run-url "$RUN_URL" \
             --status "$JOB_STATUS" \

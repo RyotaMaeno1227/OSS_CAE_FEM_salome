@@ -80,9 +80,10 @@ python3 tools/filter_ci_failures.py test.log --output test_coupled_island.log
   ```bash
   ./chrono-C-all/tests/bench_coupled_constraint \
     --omega 0.85 \
-    --omega 1.0 \
+    --omega 1 \
     --omega 1.15 \
     --output data/diagnostics/bench_coupled_constraint_multi.csv
   ```
-
-- The resulting CSV can be dropped into design docs or pasted directly into PRs (`tools/plot_coupled_constraint_endurance.py --summary-json` for quick stats). Hands-on Chapter 02 links back here so tutorials, presets, and benchmarks stay in sync.
+- Multi-ω preset last updated: 2025-11-08T18:18:55Z
+- The resulting CSV feeds `tools/compare_kkt_logs.py` so the Multi-ω table in `docs/reports/kkt_spectral_weekly.md` stays up to date. Keep the new `multi_omega_reference` preset in `data/coupled_constraint_presets.yaml` in sync with the Hands-on Chapter 02 exercises.
+- The CSV can still be dropped into design docs or pasted directly into PRs (`tools/plot_coupled_constraint_endurance.py --summary-json` for quick stats). Note: Chapter 02 of `docs/coupled_constraint_hands_on.md` references the same presets, so update both locations in the same commit.

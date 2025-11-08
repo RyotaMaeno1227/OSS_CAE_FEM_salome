@@ -80,6 +80,7 @@ typedef struct ChronoIsland2DSolveConfig_C {
     ChronoConstraint2DBatchConfig_C constraint_config;
     int enable_parallel;
     ChronoIslandSchedulerBackend_C scheduler;
+    int max_threads;
 } ChronoIsland2DSolveConfig_C;
 
 void chrono_island2d_workspace_init(ChronoIsland2DWorkspace_C *workspace);

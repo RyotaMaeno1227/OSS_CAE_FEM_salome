@@ -29,3 +29,4 @@ Small-matrix inversion throughput (successes/s)
 
 - `src/chrono_constraint_kkt_backend.c` now delegates to `chrono_smallmat_invert_with_history(...)`, so the KKT backend and descriptor layer share the same pivot history/min/max logic.
 - Future 3D descriptors only need to extend `CHRONO_SMALL_MAT_MAX_N`; the backend automatically mirrors `pivot_history[]` into `ChronoConstraintDiagnostics_C`.
+- `ChronoKKTBackendStats_C` exposes `cache_hits`/`cache_misses`/`cache_checks` に加えてサイズごとのヒストグラムを保持するようになった。`chrono-C-all/tests/bench_coupled_constraint --stats-json data/diagnostics/kkt_backend_stats.json` を実行すると値が JSON に落ち、`tools/compare_kkt_logs.py --kkt-stats …` が週次レポートへヒット率を追記する。

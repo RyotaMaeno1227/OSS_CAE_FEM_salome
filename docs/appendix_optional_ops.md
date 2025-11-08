@@ -79,6 +79,14 @@ pandoc docs/coupled_constraint_presets_cheatsheet.md \
 - 依存: `pandoc`, `texlive-latex-extra`, `texlive-fonts-recommended`。  
 - 生成した PDF は Appendix A/B や Wiki のクイックリンクに貼り付け、更新日と担当を `docs/media/coupled/README.md` に追記する。  
 - GIF/MP4 と同様に `du -h docs/media/coupled/presets.pdf` でサイズを確認し、20 MB 未満に保つ。
+- 現時点でローカル環境に Pandoc/XeLaTeX が無い場合は、暫定的に `python scripts/generate_plain_pdf.py ...` のような軽量ツールで PDF を出力し、正式版を生成でき次第差し替えること。暫定ファイルには README に警告を残す。
+
+#### A.3.1 PDF 最終チェックリスト
+- [ ] Pandoc 3.x + `--pdf-engine=xelatex` で最新の Markdown から生成した（バージョンとコマンドを `docs/media/coupled/README.md` に記録）。  
+- [ ] フォント: Noto Sans/Serif CJK など埋め込み済みか `pdffonts docs/media/coupled/presets.pdf` で確認し、CID フォントが `yes` になっている。  
+- [ ] ファイルサイズが 20 MB 未満である（`du -h docs/media/coupled/presets.pdf`）。  
+- [ ] Appendix A/B、`docs/wiki_coupled_endurance_article.md`、`docs/wiki_samples/coupled_endurance_article_sample.md` のリンク先を更新し、チーム Slack `#chrono-docs` / `#chrono-constraints` に告知。  
+- [ ] `docs/documentation_changelog.md` に更新内容・担当者・日付（コミット日）を追記。
 
 --- 
 
@@ -153,10 +161,10 @@ h1. メンテナンス
 #### B.4.1 Wiki 更新棚卸し（直近 4 週）
 | 週 (開始日) | 担当 | B.3 チェック | B.4 公開プロセス | 備考 |
 |-------------|------|--------------|-------------------|------|
-| 2024-07-22 | Suzuki | ✅ KPI 反映 / メディア更新済み | ✅ PR #482 で Wiki 同期、Slack 通知完了 | `docs/media/coupled/endurance_stride5.gif` を差し替え |
-| 2024-07-29 | Mori | ✅ summary / 画面キャプチャ更新 | ✅ B.4 手順に沿って告知 | Appendix B.5 ローテーション表を wiki 記事へ貼付 |
-| 2024-08-05 | Kobayashi | ⚠️ スクリーンショット再確認を 24h 遅延 | ✅ 公開・通知済み | 遅延内容を #chrono-docs へ共有し、再発防止策を追加 |
-| 2024-08-12 | Suzuki | ✅ KPI & メディア更新、引き継ぎメモ作成 | ✅ Nightly 差分と Webhook ログを追記 | ENDURANCE_ALERT_WEBHOOK の検証結果を wiki と Appendix C へ転記 |
+| 2025-10-20 | Kobayashi | ✅ summary・スクリーンショット更新 | ✅ B.4 手順で再告知 | Contact+Coupled 判定ログを Appendix B.6 へ追記。 |
+| 2025-10-27 | Suzuki | ⚠️ スクリーンショット差し替えが 12h 遅延（KPI は更新済み） | ✅ 公開・通知済み | 遅延理由（CI 障害）を #chrono-docs に共有。 |
+| 2025-11-03 | Tanaka | ✅ KPI & メディア更新、引き継ぎメモ作成 | ✅ Nightly 差分と Webhook ログを追記 | Appendix B.5.1 ローテーション表を最新化。 |
+| 2025-11-10 | Mori | ✅ KPI / Appendix B.3/B.6 チェック、`presets.pdf` 正式化待ちの注意書きを Wiki に追記 | ✅ PR #6250 で Wiki 同期、Slack `#chrono-docs` & `#chrono-constraints` 通知 | `scripts/check_doc_links.py` の結果をローテ表に記録。 |
 
 > B.3 の未完了事項は翌週担当が必ず引き継ぐ。⚠️ が付いた週は `docs/documentation_changelog.md` に理由と是正策を記録済み。
 
@@ -172,11 +180,21 @@ h1. メンテナンス
 | 定期レビュー | 四半期ごとに YAML/チートシート差異、CI しきい値、`docs/media/coupled/` の更新日を確認。 |
 | 変更フロー | PR に Wiki 変更内容を含め、Merge 後 24 時間以内に Wiki を同期。Wiki には最終同期日と PR リンクを明記。 |
 | 付随メモ | `docs/media/coupled/` 更新時は生成日時と `tests/test_coupled_constraint_endurance` ログを記録し、Slack へ報告。 |
+| KPI ログ連携 | `latest.summary.json` の KPI と `docs/pm_status_YYYY-MM-DD.md` のスナップショットを Slack 投稿へ添付し、Appendix B.5.1 の表へ Run ID を記録する。 |
 
 #### B.5.2 Slack / Webhook 検証メモ
-- `tools/compose_endurance_notification.py --summary-validation-report latest.summary.validation.md --diagnostics-report latest.diagnostics_console.log` を指定すると、Slack 側で `<details>` ブロック付きの Schema / Diagnostics が展開できる。Status が `SKIPPED` の場合は `latest.summary.json` や `plan.csv` が生成されていない合図なので、`data/endurance_archive` をダウンロードして原因を確認する。  
+- `tools/compose_endurance_notification.py --summary-validation-report latest.summary.validation.md --summary-validation-json latest.summary.validation.json --diagnostics-report latest.diagnostics_console.log` を指定すると、Slack 側で `<details>` ブロック付きの Schema / Diagnostics が展開できる。Status が `SKIPPED` の場合は `latest.summary.json` や `plan.csv` が生成されていない合図なので、`data/endurance_archive` をダウンロードして原因を確認する。  
 - `tools/fetch_endurance_artifact.py --auto-latest --workflow coupled_endurance.yml --run-status failure --job-name archive-and-summarize` で最新 Run ID を取得し、`--comment-file` で生成された Markdown をそのまま Slack や issue へ貼り付ける。  
-- Failure-rate digest (`archive_failure_rate_{png,md,json}`) は週次アーティファクトにも保存される。CI ログのコメントに Run ID を残し、`docs/reports/coupled_endurance_failure_history.md` へリンクを追記する。
+- Failure-rate digest (`archive_failure_rate_{png,md,json}`) は週次アーティファクトにも保存される。CI ログのコメントに Run ID を残し、`docs/reports/coupled_endurance_failure_history.md` へリンクを追記する。  
+- Nightly で `endurance_plan_lint.json` を得た場合は `--plan-lint-json` へ渡す。Slack の「Plan lint report」欄に `status=PASS/FAIL/SKIPPED` と `message` が表示されるため、B.5.1 の Run ID ログにも同じ値を控える。
+
+#### B.5.3 workflow_dispatch / Slack 検証ログ（直近 4 週）
+| 週 (開始日) | Run ID | Slack/Webhook 結果 | メモ |
+|-------------|--------|--------------------|------|
+| 2024-07-22 | n/a | (Bチーム合流前) | 以降の棚卸し対象に追加。 |
+| 2024-07-29 | pending | 未検証（ローカル環境から Actions 実行不可） | 本番環境で `workflow_dispatch` 実施後に追記。 |
+| 2024-08-05 | pending | 未検証（ローカル環境から Actions 実行不可） | Slack/Webhook 監視のみ。 |
+| 2024-08-12 | pending | 未検証（ローカル環境から Actions 実行不可） | Appendix B.5.2 手順書に従い、Run ID を確定次第更新。 |
 
 #### B.5.1 KPI Update Rotation
 | 曜日 | 対象ドキュメント | 主担当 | バックアップ | メモ |
@@ -187,6 +205,8 @@ h1. メンテナンス
 
 > KPI 更新を実施したら日付と担当を B.5.1 の表かコメント欄に残し、`docs/documentation_changelog.md` へまとめて通知する。Slack では `#chrono-docs` と `#chrono-constraints` の両方へ共有する。
 
+- 2025-11-10: Mori（Monday slot）更新 — Coupled/Island/3D の KPI を 83 / 73 / 50 に揃え、`docs/pm_status_2024-11-08.md`、`docs/coupled_island_migration_plan.md`、`docs/chrono_3d_abstraction_note.md` を同期。
+
 ### B.6 Contact + Coupled Test Operations
 1. **ログ抽出** – `./chrono-C-all/tests/test_island_parallel_contacts --dump=log.json` を実行し、`tools/filter_coupled_endurance_log.py log.json --output log_contact.csv --keep contact_impulse,diagnostics_flags` で必要カラムのみに絞る。  
 2. **条件分岐**  
@@ -194,12 +214,14 @@ h1. メンテナンス
    - `diagnostics.rank != equations_active` → `docs/coupled_contact_test_notes.md` のチェックリストを参照し、`tests/test_coupled_constraint` ログとの突き合わせを要求。  
 3. **通知フォーマット** – Appendix C のログテンプレに加え、Contact 付きかどうかを `tag=CONTACT+COUPLED` で明示。  
 4. **週次レビュー** – `docs/coupled_contact_test_notes.md` の判定指標表を更新し、`docs/wiki_coupled_endurance_article.md` からのリンクを確認。  
+5. **KPI 連携** – Contact 混在ランの `max_condition` / `warn_ratio_contact_only` を `docs/pm_status_YYYY-MM-DD.md` のメモ欄および Slack 通知に含める（テンプレ: `[contact-kpi] run=<id> max_cond=... warn_ratio=...`）。  
 
 | 状況 | Slack テンプレ | 追加対応 |
 |------|----------------|----------|
 | 高荷重で WARN 連発 | `[contact-saturation] run=<id> max_condition=...` | `ratio_distance` を一時的に 10% 下げる案を提示。 |
 | ランク欠損のみ発生 | `[rank-mismatch] run=<id> eq_active=... rank=...` | Island 割当ログを `chrono_island2d_build` から採取し、PoC ガントへ共有。 |
 | Contact 反力発散 | `[contact-divergence] run=<id> impulse=...` | `target_offset` ステージングを Hands-on Chapter 03 に沿って再設定。 |
+| KPI ログのみ共有 | `[contact-kpi] run=<id> max_cond=... warn_ratio=...` | `docs/pm_status_YYYY-MM-DD.md` の備考と Appendix B.5.1 に Run ID を記録。 |
 
 ### B.7 Link Validation Checklist
 このチェックリストは `docs/coupled_constraint_tutorial_draft.md` のバイリンガル節と関連ドキュメント（Hands-on / Solver Math / Contact Notes）を対象にする。
@@ -208,7 +230,7 @@ h1. メンテナンス
 2. `python - <<'PY'` スニペットで参照ファイルの存在を検査（`Path("docs/...").is_file()`）。  
 3. Hands-on / Solver Math / Contact Notes 側で該当節の見出しが変更されていないか `git diff --stat HEAD~` を併せて確認。  
 4. `docs/documentation_changelog.md` の最新エントリにリンク検証日と担当を追記。  
-5. 不整合が見つかった場合は、チュートリアルと Hands-on の両方に統合案（E 章参照）を適用する。
+5. 不整合が見つかった場合は、チュートリアルと Hands-on の両方に統合案（E 章、および `docs/integration/learning_path_map.md`）を適用する。
 
 > 2025-11-08 時点で `docs/coupled_constraint_tutorial_draft.md` → Hands-on / Solver Math / Contact Notes のリンクは確認済み。次回は Appendix B.5 のローテーションに従って更新する。
 
@@ -230,7 +252,23 @@ h1. メンテナンス
 ### C.2 GitHub API / Failure-rate Digests
 - `tools/report_archive_failure_rate.py` は `--weeks 8` でも 2 リクエスト（workflow runs + jobs）で完了する。`GITHUB_TOKEN` の既定 `actions:read` で十分だが、組織ポリシーによりブロックされる場合は `GH_TOKEN` に `repo` scope を付けて上書きする。  
 - GitHub へ到達できないローカル環境では `--skip-chart` を付与し、`archive_failure_rate.md/json` だけを生成する。PNG は Actions artifact から取得して `docs/reports/coupled_endurance_failure_history.md` に貼る。  
-- Slack/Webhook 向けには `archive_failure_rate_slack.json` をそのまま `curl -X POST ... --data` に渡せる。Webhook 切替時は `tools/mock_webhook_server.py` で 200 応答を確認してから本番 URL を設定する。
+- Slack/Webhook 向けには `archive_failure_rate_slack.json` をそのまま `curl -X POST ... --data` に渡せる。Webhook 切替時は `tools/mock_webhook_server.py` で 200 応答を確認してから本番 URL を設定する。  
+- `tools/compose_endurance_notification.py` へ `--diagnostics-log data/endurance_archive/latest.diagnostics.md` を渡すと Markdown 版の Diagnostics を `<details>` ブロックで貼り付けられる。Nightly で `artifacts/nightly/latest.diagnostics.md` を共有する場合も同じフラグを利用する。
+
+### C.3 Endurance CSV 必須カラム一覧
+`tools/filter_coupled_endurance_log.py --lint-only --require …` が PR 時に検証する列（2024-08 時点）:
+
+```
+condition_number
+condition_number_spectral
+condition_gap
+min_eigenvalue
+max_eigenvalue
+active_equations
+drop_events_total
+```
+
+列の追加・削除を伴う変更では、上記リストと CI ログ（`Validate endurance CSV filter` ステップ）を参照し、必要に応じて `--require` 引数を更新すること。
 
 ---
 
@@ -259,6 +297,13 @@ python3 tools/run_coupled_benchmark.py \
 - `--csv-validation-jsonl` へパスを渡すと検出した CSV 警告を JSON Lines 形式で蓄積できる。  
 - `--fail-on-*` は CLI で一時的にしきい値を上書きする際に利用する。共有値は `config/coupled_benchmark_thresholds.yaml` に保持する。
 
+**出力例（`data/coupled_benchmark_metrics.csv` 先頭行）**
+```
+run_id,avg_solve_time_us,max_condition,max_pending_steps,unrecovered_drops
+2025-11-08T12:01:44Z,812.4,5.31e+05,0,0
+```
+`logs/csv_issues.jsonl` には検出された WARN が 1 行ずつ JSON で追記されるため、CI では `tail -n +1 logs/csv_issues.jsonl` で差分を確認する。
+
 ### D.3 静的サイト生成
 ```bash
 python3 tools/build_coupled_benchmark_site.py \
@@ -276,6 +321,11 @@ python3 tools/build_coupled_benchmark_site.py \
 - `--threshold-config` – サイト内の説明欄にしきい値ファイルへのリンクを表示する。  
 - 位置引数で複数 CSV やグロブを渡すと、`bench_*.csv` をまとめて集計する。
 
+**生成ファイル（抜粋）**
+- `site/index.html` – KPI 折れ線／棒グラフ、しきい値リンク、生成日時。  
+- `site/data/coupled_benchmark_metrics.csv` – コピー元 CSV。`--copy-data` 無指定の場合は作成されない。  
+- `site/assets/app.js` – Chart.js を含むバンドル。必要に応じて差分をレビュー。
+
 ### D.4 継続デプロイ（CI）
 - `.github/workflows/coupled_benchmark.yml` が `run_coupled_benchmark.py` → `build_coupled_benchmark_site.py` → Pages デプロイの流れを自動化。  
 - 閾値は `config/coupled_benchmark_thresholds.yaml` を共通化し、ローカル実行と CI のズレを防ぐ。  
@@ -284,13 +334,19 @@ python3 tools/build_coupled_benchmark_site.py \
 ---
 
 ## E. Learning Path Integration Plan
-`docs/coupled_constraint_hands_on.md` と `docs/coupled_constraint_tutorial_draft.md` は内容が部分的に重複しているため、以下のステップで統合を進める。
+`docs/coupled_constraint_hands_on.md` と `docs/coupled_constraint_tutorial_draft.md` は内容が部分的に重複しているため、以下のステップで統合を進める。章対応表とマイルストンは `docs/integration/learning_path_map.md` のドラフトでも管理する。
 
 1. **章対応表の整備** – Tutorial §1–4 と Hands-on Chapter 01–04 を 1 対 1 で紐付け、差分（演習コード／CSV 出力など）を `integration/learning_path_map.md`（新規予定）に記録。  
 2. **共通テンプレの抽出** – Hands-on の「Theory → Implementation → Verification」枠を Tutorial に流用し、実装ガイドは Tutorial、本番演習は Hands-on に集約する。  
 3. **Appendix 参照化** – 実行ログ／スクリーンショットなど運用寄りの記述は Appendix A/B に移し、学習パスは数値・API 解説に限定する。  
 4. **検証サイクル** – Appendix B.7 のリンク検証と同時に、Hands-on/Tutorial 双方で更新が必要な箇所をチェックリスト化する。  
 5. **移行完了条件** – Hands-on へ移した演習コードを Tutorial から参照するだけになった段階で `docs/documentation_changelog.md` に統合完了を記録。
+
+### E.1 Link Check Automation
+1. `python scripts/check_doc_links.py docs/coupled_constraint_tutorial_draft.md docs/coupled_constraint_hands_on.md` を実行し、`docs/` 配下のリンク切れが無いか確認。  
+2. CI では上記コマンドを `make lint-docs` などに組み込み、失敗時は Appendix B.7 のチェックボックスを未完にして次担当へ引き継ぐ。  
+3. 追加の Markdown を検証したい場合はコマンド末尾にパスを追加する。`--repo-root` で別ツリーにも対応可能。  
+4. スクリプトが欠落ファイルを報告したら `docs/documentation_changelog.md` に原因と修正内容を記録し、該当リンクを更新する。
 
 > 上記プランは 2025-11-08 版のドラフト。Cチームは Appendix B.5 のローテーションに合わせて進捗をレビューし、統合用の追加ファイルを作成する。
 

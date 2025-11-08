@@ -13,6 +13,7 @@
 - [Coupled Hands-on / 学習ガイド](../docs/coupled_constraint_hands_on.md)
 - [パラメータプリセット（YAML）](../data/coupled_constraint_presets.yaml)
 - [パラメータチートシート](../docs/coupled_constraint_presets_cheatsheet.md)
+- [プリセット PDF（配布用）](../docs/media/coupled/presets.pdf)
 - GitHub アーティファクト: `https://github.com/<org>/<repo>/actions?query=workflow%3A%22Coupled+Endurance%22`
 
 ## 3. 運用フロー（要約）
@@ -47,11 +48,11 @@
 ## 7. 担当ローテーション / 同期ログ
 | 週 (開始日) | 主担当 | バックアップ | 主タスク | 備考 |
 |-------------|--------|--------------|----------|------|
-| 2024-07-22 | Suzuki | Mori | Coupled Endurance アーティファクトの棚卸し、B.3 チェックリスト更新 | `docs/media/coupled/` の GIF を差し替え済み |
-| 2024-07-29 | Mori | Kobayashi | `latest.summary.*` KPI の Wiki 反映、Slack 報告 | `lint_endurance_plan.py` 改定案を Appendix B.5 へ共有 |
-| 2024-08-05 | Kobayashi | Suzuki | Nightly ベンチ結果レビュー、Appendix B.4 公開プロセス点検 | `compare_benchmark_results.py` の diff を wiki へ添付 |
-| 2024-08-12 | Suzuki | Tanaka | `docs/coupled_endurance_ci_troubleshooting.md` リンク更新、Webhook 試験ログの共有 | ENDURANCE_ALERT_WEBHOOK 検証ログを #chrono-constraints に投稿 |
-| 2024-08-19 | Tanaka | Mori | B.3/B.4 チェックリスト棚卸し、workflow_dispatch 監視 | Slack/Webhook で schema/failure-rate digest を要確認（GH token 未設定のため保留） |
+| 2025-10-20 | Kobayashi | Tanaka | summary・スクリーンショット更新、Contact+Coupled 判定ログを Appendix B.6 へ反映 | `tools/filter_coupled_endurance_log.py` contact モードを検証。 |
+| 2025-10-27 | Suzuki | Mori | KPI 更新、スクリーンショット差し替え（12h 遅延を報告） | 遅延理由（CI 障害）を備忘録に追記。 |
+| 2025-11-03 | Tanaka | Kobayashi | Nightly 差分レビュー、Webhook ログ追記、Appendix B.5.1 ローテーション更新 | `docs/integration/learning_path_map.md` を Wiki リンク集へ追加。 |
+| 2025-11-10 | Mori | Suzuki | KPI / Appendix B.3 & B.6 棚卸し、`presets.pdf` が暫定版である旨を Wiki と README に追記 | Slack `#chrono-docs` / `#chrono-constraints` へ通知、`scripts/check_doc_links.py` の結果を共有。 |
 
-最終同期日: **2024-08-19** （更新担当: Tanaka / レビュー: Mori）  
-次回レビュー予定: 2024-08-26 週（Appendix B.5 ローテーション表に従う）
+最終同期日: **2025-11-10** （更新担当: Mori / レビュー: Kobayashi）  
+次回レビュー予定: 2025-11-17 週（Appendix B.5 ローテーション表に従う）
+補足: 2024-08-26 週（担当: Tanaka）で `workflow_dispatch` + schema validation gist 共有（Appendix B.5.2）を実施予定。Run ID が確定次第、当表および Appendix B.5.3 のログを更新する。

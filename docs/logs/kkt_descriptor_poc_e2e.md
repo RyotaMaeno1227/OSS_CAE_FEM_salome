@@ -64,6 +64,23 @@ time,case,method,kappa_bound,kappa_spectral,min_pivot,max_pivot
 - Both solvers share the same Jacobi eigen estimator; the only differences in Δκ_s came from floating-point accumulate order.
 - `tests/test_coupled_constraint --use-kkt-descriptor --mark-stage 1.2:stage_capture --mark-stage 2.4:stage_final` was used to stamp the CSV for tutorial screenshots.
 
+## 6. GitHub Actions Integration (2025-11)
+
+- CI now exercises the descriptor path via `tests/test_coupled_constraint --use-kkt-descriptor --descriptor-mode actions --descriptor-log artifacts/descriptor/kkt_descriptor_ci.csv --pivot-artifact-dir artifacts/descriptor`.
+- When the auto-drop guard fails in CI, the pivot history is dumped next to the descriptor CSV, which keeps the regression artifacts self-contained.
+- The CI log mirrors the entries below (excerpt from `method=actions` rows in the descriptor CSV):
+- 最新 Run ID: _pending_。Artifacts は `kkt_descriptor_ci_<RUN_ID>.csv` と `run-<RUN_ID>/pivot_*.csv` として `descriptor-e2e` ジョブに添付される。
+
+| Case | condition_bound | condition_spectral | min_pivot | max_pivot |
+|------|----------------:|-------------------:|----------:|----------:|
+| tele_yaw_control | 3.79e+00 | 3.64e+00 | 5.94e-01 | 2.16e+00 |
+| cam_follow_adjust | 1.00e+00 | 1.00e+00 | 7.02e-01 | 7.02e-01 |
+| counterbalance_beam | 1.00e+00 | 1.00e+00 | 1.14e+00 | 1.14e+00 |
+| hydraulic_lift_sync | 1.00e+00 | 1.00e+00 | 5.39e-01 | 5.39e-01 |
+| optic_alignment_trim | 1.00e+00 | 1.00e+00 | 1.18e+00 | 1.18e+00 |
+
+`tools/compare_kkt_logs.py` ingests this CSV (plus the chrono-main dump) and renders the weekly table in `docs/reports/kkt_spectral_weekly.md`, so reviewers can diff the CI artifacts instead of hand-comparing raw logs.
+
 ### ABI policy for constraint diagnostics
 
 - `chrono_constraint_common.h` carries `ChronoConstraintCommon_C` and `ChronoConstraintDiagnostics_C`. Any field addition must:

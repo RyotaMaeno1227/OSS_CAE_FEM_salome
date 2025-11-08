@@ -29,6 +29,18 @@ def parse_args() -> argparse.Namespace:
         "--diagnostics-report",
         help="Optional diagnostics_log_report console capture to include.",
     )
+    parser.add_argument(
+        "--diagnostics-log",
+        help="Optional diagnostics Markdown (e.g. latest.diagnostics.md) to embed.",
+    )
+    parser.add_argument(
+        "--summary-validation-json",
+        help="Optional JSON file describing schema validation status.",
+    )
+    parser.add_argument(
+        "--plan-lint-json",
+        help="Optional JSON file describing lint_endurance_plan results.",
+    )
     return parser.parse_args()
 
 
@@ -66,6 +78,11 @@ def _collapsible_block(title: str, body: str) -> str:
     return f"<details><summary>{title}</summary>\n\n{body.strip()}\n\n</details>"
 
 
+def _format_json_block(title: str, payload: Dict[str, Any]) -> str:
+    snippet = json.dumps(payload, indent=2)
+    return _collapsible_block(title, snippet[:4000])
+
+
 def _extract_validation_status(markdown: Optional[str]) -> Optional[str]:
     if not markdown:
         return None
@@ -73,6 +90,27 @@ def _extract_validation_status(markdown: Optional[str]) -> Optional[str]:
         if line.strip().lower().startswith("- status"):
             return line.split(":", 1)[-1].strip().strip("*")
     return None
+
+
+def _extract_status_from_json(payload: Optional[Dict[str, Any]]) -> Optional[str]:
+    if not payload:
+        return None
+    status = payload.get("status")
+    if isinstance(status, str):
+        return status
+    return None
+
+
+def _format_status_line(payload: Optional[Dict[str, Any]]) -> Optional[str]:
+    if not payload:
+        return None
+    status = payload.get("status")
+    if not isinstance(status, str):
+        return None
+    message = payload.get("message") or payload.get("skip_reason")
+    if isinstance(message, str) and message:
+        return f"{status} ({message})"
+    return status
 
 
 def _format_metric(name: str, value: Any) -> str:
@@ -113,14 +151,22 @@ def build_slack_payload(
     summary: Optional[Dict[str, Any]],
     plan_markdown: Optional[str],
     summary_validation: Optional[str],
+    summary_validation_json: Optional[Dict[str, Any]],
+    plan_lint_json: Optional[Dict[str, Any]],
     diagnostics_report: Optional[str],
+    diagnostics_markdown: Optional[str],
     run_id: str,
     run_url: str,
     status: str,
     artifact_name: str,
 ) -> Dict[str, Any]:
     icon, status_label = _status_tokens(status)
-    validation_status = _extract_validation_status(summary_validation)
+    validation_status = (
+        _format_status_line(summary_validation_json)
+        or _extract_validation_status(summary_validation)
+        or _extract_status_from_json(summary_validation_json)
+    )
+    plan_lint_status = _format_status_line(plan_lint_json) or _extract_status_from_json(plan_lint_json)
 
     key_fields = []
     if summary:
@@ -150,6 +196,8 @@ def build_slack_payload(
     ]
     if validation_status:
         caption_lines.append(f"*Schema validation:* {validation_status}")
+    if plan_lint_status:
+        caption_lines.append(f"*Plan lint:* {plan_lint_status}")
 
     plan_excerpt = _plan_excerpt(plan_markdown)
     attachments = [
@@ -188,6 +236,22 @@ def build_slack_payload(
                 "mrkdwn_in": ["text"],
             }
         )
+    if summary_validation_json:
+        attachments.append(
+            {
+                "title": "Schema validation (JSON)",
+                "text": _format_json_block("validation.json", summary_validation_json),
+                "mrkdwn_in": ["text"],
+            }
+        )
+    if plan_lint_json:
+        attachments.append(
+            {
+                "title": "Plan lint report",
+                "text": _format_json_block("plan_lint.json", plan_lint_json),
+                "mrkdwn_in": ["text"],
+            }
+        )
     if diagnostics_report:
         attachments.append(
             {
@@ -195,6 +259,14 @@ def build_slack_payload(
                 "text": _collapsible_block(
                     "diagnostic_log_report output", diagnostics_report[:3500]
                 ),
+                "mrkdwn_in": ["text"],
+            }
+        )
+    if diagnostics_markdown:
+        attachments.append(
+            {
+                "title": "Diagnostics markdown",
+                "text": _collapsible_block("latest.diagnostics.md", diagnostics_markdown[:3500]),
                 "mrkdwn_in": ["text"],
             }
         )
@@ -224,7 +296,10 @@ def build_email_body(
     summary: Optional[Dict[str, Any]],
     plan_markdown: Optional[str],
     summary_validation: Optional[str],
+    summary_validation_json: Optional[Dict[str, Any]],
+    plan_lint_json: Optional[Dict[str, Any]],
     diagnostics_report: Optional[str],
+    diagnostics_markdown: Optional[str],
     run_id: str,
     run_url: str,
     status: str,
@@ -266,10 +341,23 @@ def build_email_body(
         lines.append("Schema validation:")
         lines.append(summary_validation)
         lines.append("")
+    if summary_validation_json:
+        lines.append("Schema validation (JSON):")
+        lines.append(json.dumps(summary_validation_json, indent=2))
+        lines.append("")
+
+    if plan_lint_json:
+        lines.append("Plan lint report:")
+        lines.append(json.dumps(plan_lint_json, indent=2))
+        lines.append("")
 
     if diagnostics_report:
         lines.append("Diagnostics console excerpt:")
         lines.append(diagnostics_report)
+        lines.append("")
+    if diagnostics_markdown:
+        lines.append("Diagnostics markdown excerpt:")
+        lines.append(diagnostics_markdown)
         lines.append("")
 
     lines.append("--\nAutomated notification generated by compose_endurance_notification.py")
@@ -281,13 +369,19 @@ def main() -> int:
     summary = _load_json(args.summary_json)
     plan_md = _load_plan_markdown(args.plan_markdown)
     summary_validation = _load_text(args.summary_validation_report)
+    summary_validation_json = _load_json(args.summary_validation_json)
+    plan_lint_json = _load_json(args.plan_lint_json)
     diagnostics_report = _load_text(args.diagnostics_report)
+    diagnostics_markdown = _load_text(args.diagnostics_log)
 
     slack_payload = build_slack_payload(
         summary=summary,
         plan_markdown=plan_md,
         summary_validation=summary_validation,
+        summary_validation_json=summary_validation_json,
+        plan_lint_json=plan_lint_json,
         diagnostics_report=diagnostics_report,
+        diagnostics_markdown=diagnostics_markdown,
         run_id=args.run_id,
         run_url=args.run_url,
         status=args.status,
@@ -297,7 +391,10 @@ def main() -> int:
         summary=summary,
         plan_markdown=plan_md,
         summary_validation=summary_validation,
+        summary_validation_json=summary_validation_json,
+        plan_lint_json=plan_lint_json,
         diagnostics_report=diagnostics_report,
+        diagnostics_markdown=diagnostics_markdown,
         run_id=args.run_id,
         run_url=args.run_url,
         status=args.status,

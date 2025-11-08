@@ -3,6 +3,8 @@
 Coupled 拘束（距離＋角度の線形結合）を理解し実装へ反映するためのチュートリアルです。  
 FEM4C の学習サイクル（Understand → Implement → Inspect → Verify）に倣い、以下の 4 ステップで読み進めてください。
 
+> 学習パス統合（Appendix E）の進捗: W2（Hands-on 側 TODO 整理）は進行中、W3（リンク検証自動化）は本バージョンで着手しました。詳細は `docs/integration/learning_path_map.md` を参照してください。
+
 1. **Theory / 数式** – `docs/coupled_constraint_solver_math.md` で方程式と行列構造を確認。  
 2. **Implementation / 実装** – `chrono-C-all/src/chrono_constraint2d.c` を追ってデータフローを把握。  
 3. **Hands-on / 体験** – パラメータを変更したりミニスクリプトを動かして挙動を観察。  
@@ -110,6 +112,7 @@ chrono_coupled_constraint2d_solve_position(&coupled);
 | Minimal API (JP/EN) | `docs/coupled_contact_api_minimal.md`, `docs/coupled_contact_api_minimal_en.md` | Init / Solve / Diagnostics をフェーズ別に整理。 |
 | Coupled + Contact notes | `docs/coupled_contact_test_notes.md` | 島テストの判定基準。 |
 | 3D migration | `docs/coupled_island_migration_plan.md`, `docs/chrono_3d_abstraction_note.md` | KPI とガントを確認。 |
+| Learning path map | `docs/integration/learning_path_map.md` | Hands-on ↔ Tutorial の統合ロードマップ。 |
 
 > ここで扱った内容は 3D 版 Coupled 拡張の基礎でもあるため、診断・島ソルバ・条件数ログの観点を押さえておくと移行計画（`docs/coupled_island_migration_plan.md`）にもスムーズに参加できます。  
 > 2025-11-08 時点で Hands-on / Solver Math / Contact Notes へのリンクを Appendix B.7 のチェックリストで検証済み。次回は同チェックリストに沿って更新してください。

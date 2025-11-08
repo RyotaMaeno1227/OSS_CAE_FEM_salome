@@ -146,3 +146,24 @@ use_cases:
       max_correction: 0.07
     notes:
       - 並行稼働する Coupled 拘束が複数ある場合は `target_offset` を交互に ±0.003 で切り替えドリフトを防ぐ。
+
+  - id: multi_omega_reference
+    description: Multi-ω ベンチおよび Hands-on 参照用プリセット
+    base:
+      ratio_distance: 0.78
+      ratio_angle: -0.22
+      target_offset: 0.0
+      softness_distance: 0.015
+      softness_angle: 0.028
+      spring_distance:
+        stiffness: 28.0
+        damping: 2.4
+      spring_angle:
+        stiffness: 12.0
+        damping: 0.75
+      baumgarte: 0.37
+      slop: 0.0005
+      max_correction: 0.08
+    last_updated: 2025-11-08T18:18:55Z
+    notes:
+      - `bench_coupled_constraint --omega 0.85/1.0/1.15` の CSV とセットで更新し、README および Hands-on Chapter 02 と同期させる。

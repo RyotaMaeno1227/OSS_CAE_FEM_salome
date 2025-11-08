@@ -20,6 +20,10 @@ typedef struct ChronoKKTBackendResult_C {
 typedef struct ChronoKKTBackendStats_C {
     unsigned long calls;
     unsigned long fallback_calls;
+    unsigned long cache_hits;
+    unsigned long cache_misses;
+    unsigned long cache_checks;
+    unsigned long size_histogram[CHRONO_COUPLED_KKT_MAX_EQ + 1];
 } ChronoKKTBackendStats_C;
 
 int chrono_kkt_backend_invert_small(const double *src,
@@ -28,6 +32,7 @@ int chrono_kkt_backend_invert_small(const double *src,
                                     ChronoKKTBackendResult_C *result);
 
 const ChronoKKTBackendStats_C *chrono_kkt_backend_get_stats(void);
+void chrono_kkt_backend_reset_stats(void);
 
 #ifdef __cplusplus
 }

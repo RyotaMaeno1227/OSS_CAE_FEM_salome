@@ -1,0 +1,30 @@
+{
+  "generated_at": "2025-11-08T12:00:00Z",
+  "repo": "chrono/highperformanceFEM",
+  "workflow": "coupled_endurance.yml",
+  "job_name": "archive-and-summarize",
+  "weeks": 3,
+  "buckets": [
+    {
+      "week_start": "2025-10-20",
+      "total_runs": 5,
+      "failures": 0,
+      "failure_rate": 0.0,
+      "run_ids": [12345, 12346, 12347, 12348, 12349]
+    },
+    {
+      "week_start": "2025-10-27",
+      "total_runs": 6,
+      "failures": 1,
+      "failure_rate": 0.1666666667,
+      "run_ids": [12360, 12361, 12362, 12363, 12364, 12365]
+    },
+    {
+      "week_start": "2025-11-03",
+      "total_runs": 4,
+      "failures": 1,
+      "failure_rate": 0.25,
+      "run_ids": [12380, 12381, 12382, 12383]
+    }
+  ]
+}

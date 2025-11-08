@@ -1,12 +1,23 @@
+TBB_INCLUDE_DIR ?=
+TBB_LIBS ?=
+
 CC := gcc
-CFLAGS := -std=c99 -Wall -Wextra -pedantic -Iinclude -fopenmp
-LDFLAGS := -lm
+CXX := g++
+BASE_INCLUDES := -Iinclude
+TBB_INCLUDE_FLAGS := $(if $(strip $(TBB_INCLUDE_DIR)),-I$(TBB_INCLUDE_DIR),)
+CFLAGS := -std=c99 -Wall -Wextra -pedantic -fopenmp $(BASE_INCLUDES) $(TBB_INCLUDE_FLAGS)
+CXXFLAGS := -std=c++17 -Wall -Wextra -pedantic $(BASE_INCLUDES) $(TBB_INCLUDE_FLAGS)
+LDFLAGS := -lm -fopenmp $(TBB_LIBS) -lstdc++
 
 SRC_DIR := src
 TEST_DIR := tests
 EXAMPLE_DIR := examples
+OBJ_DIR := build/obj
 
-CORE_SRCS := $(wildcard $(SRC_DIR)/*.c)
+CORE_C_SRCS := $(wildcard $(SRC_DIR)/*.c)
+CORE_CPP_SRCS := $(wildcard $(SRC_DIR)/*.cpp)
+CORE_OBJS := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.c.o,$(CORE_C_SRCS)) \
+	$(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.cpp.o,$(CORE_CPP_SRCS))
 TEST_TARGETS := \
 	$(TEST_DIR)/test_distance_constraint_stabilization \
 	$(TEST_DIR)/test_distance_constraint_soft \
@@ -57,16 +68,25 @@ EXAMPLE_TARGETS := \
 
 .PHONY: all clean test tests examples
 
-all: $(TEST_TARGETS) $(EXAMPLE_TARGETS)
+all: $(CORE_OBJS) $(TEST_TARGETS) $(EXAMPLE_TARGETS)
 
-$(TEST_DIR)/test_%: $(TEST_DIR)/test_%.c $(CORE_SRCS)
-	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
+$(OBJ_DIR):
+	mkdir -p $(OBJ_DIR)
 
-$(TEST_DIR)/bench_%: $(TEST_DIR)/bench_%.c $(CORE_SRCS)
-	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
+$(OBJ_DIR)/%.c.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
 
-$(EXAMPLE_DIR)/%: $(EXAMPLE_DIR)/%.c $(CORE_SRCS)
-	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
+$(OBJ_DIR)/%.cpp.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(TEST_DIR)/test_%: $(TEST_DIR)/test_%.c $(CORE_OBJS)
+	$(CC) $(CFLAGS) $< $(CORE_OBJS) $(LDFLAGS) -o $@
+
+$(TEST_DIR)/bench_%: $(TEST_DIR)/bench_%.c $(CORE_OBJS)
+	$(CC) $(CFLAGS) $< $(CORE_OBJS) $(LDFLAGS) -o $@
+
+$(EXAMPLE_DIR)/%: $(EXAMPLE_DIR)/%.c $(CORE_OBJS)
+	$(CC) $(CFLAGS) $< $(CORE_OBJS) $(LDFLAGS) -o $@
 
 tests: $(TEST_TARGETS)
 
@@ -88,3 +108,4 @@ examples: $(EXAMPLE_TARGETS)
 
 clean:
 	$(RM) $(TEST_TARGETS) $(BENCH_TARGETS) $(EXAMPLE_TARGETS)
+	rm -rf $(OBJ_DIR)

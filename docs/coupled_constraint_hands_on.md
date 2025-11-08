@@ -3,7 +3,7 @@
 FEM4C の `tutorial_manual.md` / `FEM_LEARNING_GUIDE.md` に倣い、Coupled 拘束を段階的に実装・検証するための演習メモです。  
 各チャプターは「理論メモ → 実装タスク → FEM4C で確認 → 検証課題」の構成になっています。
 
-> Tutorial 本編との重複を解消する統合計画は `docs/appendix_optional_ops.md` **E. Learning Path Integration Plan** を参照してください。演習内容を更新した場合は Appendix のチェックリスト経由でチュートリアルへ反映します。
+> 学習パス統合のステータス: W2（TODO マーカー整理）が進行中、W3（リンク検証自動化）が着手済みです。`docs/appendix_optional_ops.md` **E. Learning Path Integration Plan** と `docs/integration/learning_path_map.md` を確認し、演習を更新した場合はチェックリスト経由で Tutorial に反映してください。
 
 ---
 
@@ -18,6 +18,8 @@ FEM4C の `tutorial_manual.md` / `FEM_LEARNING_GUIDE.md` に倣い、Coupled 拘
 - **Implementation**: `practice/coupled/ch02_softness.c` にて `chrono_coupled_constraint2d_set_softness_distance/angle` と `chrono_coupled_constraint2d_set_*_spring` を段階的に変えながら、`diagnostics.min_pivot` と `max_pivot` を CSV に出力。  
 - **FEM4C Reference**: `FEM4C/docs/tutorial_manual.md` Chapter 05（剛性・境界条件）を読み、ソフトネスが連立方程式にどのように入り込むかをノートにまとめる。  
 - **Verification**: `./chrono-C-all/tests/bench_coupled_constraint --omega 0.9 --omega 1.0 --output data/softness_bench.csv` を実行し、`tools/plot_coupled_constraint_endurance.py --summary-json` で比較。
+- Multi-ω preset last updated: 2025-11-08T18:18:55Z
+- **Sync note**: Multi-ω の再計測結果を `data/diagnostics/bench_coupled_constraint_multi.csv` と `data/coupled_constraint_presets.yaml`（`multi_omega_reference`）に反映し、README の「Coupled Presets」と同じ内容を保つ。PR では `docs/reports/kkt_spectral_weekly.md` の Multi-ω テーブルも再生成する。
 
 ## Chapter 03. Contact + Coupled Integration
 - **Theory**: `docs/coupled_contact_test_notes.md` を読み、Contact 併用テストの意図と判定指標を把握。  

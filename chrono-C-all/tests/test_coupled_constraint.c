@@ -67,9 +67,14 @@ static void descriptor_log_write(const char *case_id,
                                  double time,
                                  const ChronoCoupledConstraint2DDiagnostics_C *diag);
 static void ensure_parent_directory(const char *path);
+static void dump_pivot_artifact(const char *reason,
+                                const ChronoCoupledConstraint2DDiagnostics_C *diag);
+static int report_auto_drop_failure(const char *reason, ChronoCoupledConstraint2D_C *constraint);
 
 static FILE *g_descriptor_log_fp = NULL;
 static const char *g_descriptor_method = "batch";
+static const char *g_descriptor_mode_override = NULL;
+static const char *g_pivot_artifact_dir = NULL;
 
 static const CoupledSweepCase kSweepCases[] = {
     {
@@ -132,14 +137,38 @@ int main(int argc, char **argv) {
             }
             descriptor_path = argv[++i];
             descriptor_enabled = 1;
+        } else if (strcmp(argv[i], "--descriptor-mode") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr, "--descriptor-mode requires a mode string\n");
+                return 1;
+            }
+            g_descriptor_mode_override = argv[++i];
+        } else if (strcmp(argv[i], "--pivot-artifact-dir") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr, "--pivot-artifact-dir requires a path\n");
+                return 1;
+            }
+            g_pivot_artifact_dir = argv[++i];
         } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
-            printf("Usage: %s [--use-kkt-descriptor] [--descriptor-log path]\n", argv[0]);
+            printf("Usage: %s [--use-kkt-descriptor] [--descriptor-log path]"
+                   " [--descriptor-mode mode] [--pivot-artifact-dir dir]\n",
+                   argv[0]);
             return 0;
         } else {
             fprintf(stderr, "Unknown argument: %s\n", argv[i]);
-            printf("Usage: %s [--use-kkt-descriptor] [--descriptor-log path]\n", argv[0]);
+            printf("Usage: %s [--use-kkt-descriptor] [--descriptor-log path]"
+                   " [--descriptor-mode mode] [--pivot-artifact-dir dir]\n",
+                   argv[0]);
             return 1;
         }
+    }
+
+    if (descriptor_enabled) {
+        g_descriptor_method = g_descriptor_mode_override ? g_descriptor_mode_override : "descriptor";
+    } else if (g_descriptor_mode_override) {
+        g_descriptor_method = g_descriptor_mode_override;
+    } else {
+        g_descriptor_method = "batch";
     }
 
     if (descriptor_enabled) {
@@ -151,9 +180,6 @@ int main(int argc, char **argv) {
         }
         fprintf(g_descriptor_log_fp,
                 "time,case,method,condition_bound,condition_spectral,min_pivot,max_pivot\n");
-        g_descriptor_method = "descriptor";
-    } else {
-        g_descriptor_method = "batch";
     }
 
     ChronoBody2D_C anchor;
@@ -557,6 +583,35 @@ static void ensure_parent_directory(const char *path) {
 #endif
 }
 
+static void dump_pivot_artifact(const char *reason,
+                                const ChronoCoupledConstraint2DDiagnostics_C *diag) {
+    if (!g_pivot_artifact_dir || !diag || diag->pivot_log_count <= 0) {
+        return;
+    }
+    char buffer[512];
+    const char *label = reason ? reason : "pivot";
+    snprintf(buffer, sizeof(buffer), "%s/%s_pivot.csv", g_pivot_artifact_dir, label);
+    ensure_parent_directory(buffer);
+    FILE *fp = fopen(buffer, "w");
+    if (!fp) {
+        return;
+    }
+    fprintf(fp, "index,value\n");
+    for (int i = 0; i < diag->pivot_log_count; ++i) {
+        fprintf(fp, "%d,%.9e\n", i, diag->pivot_log[i]);
+    }
+    fclose(fp);
+}
+
+static int report_auto_drop_failure(const char *reason, ChronoCoupledConstraint2D_C *constraint) {
+    if (constraint) {
+        const ChronoCoupledConstraint2DDiagnostics_C *diag =
+            chrono_coupled_constraint2d_get_diagnostics(constraint);
+        dump_pivot_artifact(reason, diag);
+    }
+    return 1;
+}
+
 
 static int run_auto_drop_recovery_test(void) {
     ChronoBody2D_C anchor;
@@ -649,7 +704,7 @@ static int run_auto_drop_recovery_test(void) {
 
     if (!drop_detected) {
         fprintf(stderr, "Auto-drop test: condition warning never triggered.\n");
-        return 1;
+        return report_auto_drop_failure("auto_drop_missing_warning", &constraint);
     }
 
     int active_eq = 0;
@@ -660,7 +715,7 @@ static int run_auto_drop_recovery_test(void) {
     }
     if (active_eq >= constraint.equation_count) {
         fprintf(stderr, "Auto-drop test: no equation was deactivated.\n");
-        return 1;
+        return report_auto_drop_failure("auto_drop_no_deactivate", &constraint);
     }
 
     const ChronoCoupledConstraint2DDiagnostics_C *diag =
@@ -670,12 +725,12 @@ static int run_auto_drop_recovery_test(void) {
                 "Auto-drop test: rank (%d) does not match active equations (%d).\n",
                 diag ? diag->rank : -1,
                 active_eq);
-        return 1;
+        return report_auto_drop_failure("auto_drop_rank_mismatch", &constraint);
     }
     if (diag->pivot_log_count <= 0 ||
         diag->pivot_log[diag->pivot_log_count - 1] > diag->pivot_log[0]) {
         fprintf(stderr, "Auto-drop test: pivot log ordering invalid.\n");
-        return 1;
+        return report_auto_drop_failure("auto_drop_pivot_order", &constraint);
     }
     return 0;
 }

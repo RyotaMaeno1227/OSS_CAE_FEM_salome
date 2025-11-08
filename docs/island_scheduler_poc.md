@@ -5,7 +5,9 @@ This memo captures the trial of replacing the OpenMP-only island loop with a tas
 
 - `CHRONO_ISLAND_SCHED_AUTO` (default) – keep the existing behaviour (serial unless OpenMP is enabled).
 - `CHRONO_ISLAND_SCHED_OPENMP` – force the classic OpenMP `schedule(static)` loop.
-- `CHRONO_ISLAND_SCHED_TBB` – opt into the new task backend (currently implemented as an OpenMP `schedule(dynamic)` stub until real oneTBB is linked).
+- `CHRONO_ISLAND_SCHED_TBB` – opt into the new task backend implemented in `src/chrono_island2d_tbb.cpp`. When oneTBB headers/libs are not available, the shim logs once and falls back to the OpenMP path.
+
+> Build note: set `TBB_LIBS=-ltbb` (or point to a custom lib directory) when running `make` to link against a system-provided oneTBB. Without the library the backend still compiles, but the runtime will warn that it is reusing the OpenMP loop.
 
 ## How to run the PoC
 
@@ -25,13 +27,14 @@ Reference CSV: `data/diagnostics/bench_island_scheduler.csv`
 |---------|--------:|------------------------:|-------|
 | auto (OpenMP static) | 4 | 0.046 ms | Reference path (0.00921 s total for 200 steps). |
 | openmp (forced) | 4 | 0.052 ms | Explicit OpenMP backend for comparison (0.01043 s / 200). |
-| tbb stub (fallback) | 1 | 0.069 ms | Stub currently forces serial execution; logs `solver` INFO once. |
+| tbb stub (legacy) | 1 | 0.069 ms | Old serial stub left for historical comparison. |
+| tbb fallback | 4 | 0.068 ms | oneTBB backend compiled but libraries missing; message points to enabling `TBB_LIBS`. |
 
 ## Risks & next steps
 
-- The current implementation is a stub—without `CHRONO_USE_TBB`, it emulates tasking via OpenMP `schedule(dynamic)` and logs a notice.  
+- The shim calls `oneapi::tbb::parallel_for` (or `tbb::parallel_for` on older distributions). Without headers/libs it degrades gracefully and tells the operator to link TBB.
 - Contact resolution still runs on the worker thread that owns the island; pinning contact updates to tasks may further reduce contention.  
-- Real oneTBB integration will require a small C++ shim (CMake option + per-platform binaries). The API surface above is already neutral so we can drop the stub in later.
+- Real oneTBB integration requires linking against the system lib (or shipping one in `third_party`). The API surface above stays neutral so we can flip the switch per platform.
 - Benchmarks show good gains once island sizes diverge, but uniform workloads may favour the static OpenMP path—keep the `scheduler` knob exposed for CI comparisons.
 
 ## 3D workspace PoC call pattern
@@ -56,3 +59,25 @@ ABI impact:
 - 3D-specific wrappers can live in a separate translation unit and call the accessors without touching the 2D layout.
 
 We will upstream the full PoC once the shared `ChronoConstraintCommon_C` typedef lands, but the API surface is already frozen and covered by the ABI guards.
+
+## Island step helper
+
+`chrono_island2d_island_step.h` exposes a single inline that both OpenMP と oneTBB バックエンドが共有している:
+
+```c
+/**
+ * @brief Run the constraint batch solve and contact resolution for a single island.
+ */
+static inline void chrono_island2d_step_island(ChronoIsland2D_C *island,
+                                               double dt,
+                                               const ChronoConstraint2DBatchConfig_C *cfg);
+```
+
+oneTBB 側 (`chrono_island2d_tbb.cpp`) もこのヘルパを呼び出すだけなので、島内での contact 解像ロジックは完全に共有される。
+
+## Enabling oneTBB locally
+
+1. **ライブラリとヘッダ** – `sudo apt install libtbb-dev` もしくは社内の Code_Aster 環境にある `libtbb.so.*` / `include/tbb/` を参照する。
+2. **ビルド時フラグ** – `TBB_INCLUDE_DIR=/path/to/include TBB_LIBS="-L/path/to/lib -ltbb" make bench` のように環境変数を与える (`LD_LIBRARY_PATH` に lib を入れておく)。
+3. **計測と CSV 更新** – `./chrono-C-all/tests/bench_island_solver --scheduler tbb --csv data/diagnostics/bench_island_scheduler.csv` を走らせて `docs/island_scheduler_poc.md` / `docs/coupled_island_migration_plan.md` に追記する。Fallback が出る場合は WARN が 1 回だけ記録されるので、lib が見えているか確認する。
+4. **CI での扱い** – Actions では TBB を入れていないため OpenMP fallback になる。実測値を共有する場合は上記手順でローカル測定し、CSV/ドキュメントを同じコミットに含める。

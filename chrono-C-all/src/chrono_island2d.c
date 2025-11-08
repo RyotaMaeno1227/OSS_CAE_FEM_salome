@@ -1,5 +1,6 @@
 #include "../include/chrono_island2d.h"
 #include "../include/chrono_logging.h"
+#include "../include/chrono_island2d_tbb.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -9,7 +10,9 @@
 #include <omp.h>
 #endif
 
-static int g_tbb_stub_warned = 0;
+#include "chrono_island2d_island_step.h"
+
+static int g_tbb_fallback_logged = 0;
 
 typedef struct ChronoIsland2DBodyMapEntry {
     ChronoBody2D_C *key;
@@ -624,11 +627,13 @@ void chrono_island2d_solve(const ChronoIsland2DWorkspace_C *workspace,
     ChronoConstraint2DBatchConfig_C constraint_cfg = {0};
     int enable_parallel = 0;
     ChronoIslandSchedulerBackend_C scheduler = CHRONO_ISLAND_SCHED_AUTO;
+    int max_threads = 0;
 
     if (config) {
         constraint_cfg = config->constraint_config;
         enable_parallel = config->enable_parallel;
         scheduler = config->scheduler;
+        max_threads = config->max_threads;
     }
 
     if (constraint_cfg.velocity_iterations <= 0) {
@@ -646,91 +651,29 @@ void chrono_island2d_solve(const ChronoIsland2DWorkspace_C *workspace,
 #else
         (void)enable_parallel, 0;
 #endif
-    int use_tbb_backend = (prefer_tbb && enable_parallel && workspace->island_count > 1);
+    int use_tbb_backend = prefer_tbb ? (workspace->island_count > 0)
+                                     : (enable_parallel && workspace->island_count > 1);
 
+#ifdef CHRONO_ISLAND_TBB_AVAILABLE
     if (use_tbb_backend) {
-        if (!g_tbb_stub_warned) {
-            chrono_log_write(CHRONO_LOG_LEVEL_INFO,
+        if (chrono_island2d_run_tbb(workspace, dt, &constraint_cfg, max_threads)) {
+            return;
+        }
+        if (!g_tbb_fallback_logged) {
+            chrono_log_write(CHRONO_LOG_LEVEL_WARNING,
                              CHRONO_LOG_CATEGORY_SOLVER,
-                             "TBB backend requested – stub path executing islands serially");
-            g_tbb_stub_warned = 1;
+                             "oneTBB backend requested but fell back to OpenMP path");
+            g_tbb_fallback_logged = 1;
         }
-        for (size_t island_idx = 0; island_idx < workspace->island_count; ++island_idx) {
-            ChronoIsland2D_C *island = &workspace->islands[island_idx];
-
-            if (island->constraint_count > 0) {
-                chrono_constraint2d_batch_solve(island->constraints,
-                                                island->constraint_count,
-                                                dt,
-                                                &constraint_cfg,
-                                                NULL);
-            }
-
-            if (island->contact_count > 0) {
-                for (size_t contact_idx = 0; contact_idx < island->contact_count; ++contact_idx) {
-                    ChronoContactPair2D_C *pair = island->contacts[contact_idx];
-                    if (!pair) {
-                        continue;
-                    }
-                    ChronoContactManifold2D_C *manifold = &pair->manifold;
-                    ChronoBody2D_C *body_a = pair->body_a;
-                    ChronoBody2D_C *body_b = pair->body_b;
-                    for (int point_idx = 0; point_idx < manifold->num_points; ++point_idx) {
-                        ChronoContactPoint2D_C *point = &manifold->points[point_idx];
-                        if (!point->is_active || !point->contact.has_contact) {
-                            continue;
-                        }
-                        chrono_collision2d_resolve_contact(body_a,
-                                                           body_b,
-                                                           &point->contact,
-                                                           manifold->combined_restitution,
-                                                           manifold->combined_friction_static,
-                                                           manifold->combined_friction_dynamic,
-                                                           manifold);
-                    }
-                }
-            }
-        }
-        return;
     }
+#else
+    (void)max_threads;
+#endif
 
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static) if (use_parallel)
 #endif
     for (size_t island_idx = 0; island_idx < workspace->island_count; ++island_idx) {
-        ChronoIsland2D_C *island = &workspace->islands[island_idx];
-
-        if (island->constraint_count > 0) {
-            chrono_constraint2d_batch_solve(island->constraints,
-                                            island->constraint_count,
-                                            dt,
-                                            &constraint_cfg,
-                                            NULL);
-        }
-
-        if (island->contact_count > 0) {
-            for (size_t contact_idx = 0; contact_idx < island->contact_count; ++contact_idx) {
-                ChronoContactPair2D_C *pair = island->contacts[contact_idx];
-                if (!pair) {
-                    continue;
-                }
-                ChronoContactManifold2D_C *manifold = &pair->manifold;
-                ChronoBody2D_C *body_a = pair->body_a;
-                ChronoBody2D_C *body_b = pair->body_b;
-                for (int point_idx = 0; point_idx < manifold->num_points; ++point_idx) {
-                    ChronoContactPoint2D_C *point = &manifold->points[point_idx];
-                    if (!point->is_active || !point->contact.has_contact) {
-                        continue;
-                    }
-                    chrono_collision2d_resolve_contact(body_a,
-                                                       body_b,
-                                                       &point->contact,
-                                                       manifold->combined_restitution,
-                                                       manifold->combined_friction_static,
-                                                       manifold->combined_friction_dynamic,
-                                                       manifold);
-                }
-            }
-        }
+        chrono_island2d_step_island(&workspace->islands[island_idx], dt, &constraint_cfg);
     }
 }

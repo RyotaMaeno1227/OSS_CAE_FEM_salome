@@ -1,0 +1,9 @@
+{
+  "calls": 51480,
+  "fallback_calls": 1320,
+  "cache_hits": 17121,
+  "cache_misses": 1359,
+  "cache_checks": 18480,
+  "cache_hit_rate": 0.926461,
+  "size_histogram": [0, 17160, 15840, 11880, 6600]
+}

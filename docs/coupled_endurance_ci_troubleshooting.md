@@ -177,7 +177,9 @@ Webhook 連携を有効化する前に、以下の手順でペイロードを検
      --filename latest.summary.validation.md \
      --description "Coupled Endurance schema validation (run $RUN_ID)"
    ```
-   Slack では `<https://gist.github.com/<id>|Schema validation gist>` として貼り付けると折りたたみリンク扱いにできる。`compose_endurance_notification.py` の `--summary-validation-report` 引数を使うと自動的に `<details>` ブロックで同じ内容が添付される。
+Slack では `<https://gist.github.com/<id>|Schema validation gist>` として貼り付けると折りたたみリンク扱いにできる。`compose_endurance_notification.py` の `--summary-validation-report` 引数を使うと自動的に `<details>` ブロックで同じ内容が添付される。
+
+![Schema validation gist flow](wiki_samples/schema_validation_gist.svg)
 
 サンプル: Run [#8723419085](https://github.com/RyotaMaeno1227/OSS_CAE_FEM_salome/actions/runs/8723419085)（Max condition 超過）では `Schema validation: PASS` が Slack の「Run details」フィールドに表示され、展開リンクから Markdown 全文を確認できる。
 
@@ -193,6 +195,22 @@ Webhook 連携を有効化する前に、以下の手順でペイロードを検
 
 ---
 
-## 13. Failure-rate ヒストリー
+## 13. Plan lint / SKIPPED JSON の扱い
+
+`nightly_coupled_island.yml` は `artifacts/nightly/latest_summary_validation.json` と `artifacts/nightly/endurance_plan_lint.json` をアップロードする。`compose_endurance_notification.py` v2 では以下の引数で Slack/E-mail に添付できる:
+
+```bash
+python tools/compose_endurance_notification.py \
+  --summary-validation-json artifacts/nightly/latest_summary_validation.json \
+  --plan-lint-json artifacts/nightly/endurance_plan_lint.json \
+  ...
+```
+
+- `status` が `SKIPPED` の場合は「最新 summary/plan が無い」ことを意味するため、Appendix B.5.2 の Run ID ログに記録して原因を切り分ける。  
+- `status: FAIL` で `message` が含まれている時は Slack の「Plan lint report」ブロックに `<details>` で表示されるので、リンク先を Issue コメントへ転記する。
+
+---
+
+## 14. Failure-rate ヒストリー
 
 Archive failure-rate の週次サマリは `tools/report_archive_failure_rate.py` で PNG/Markdown/JSON として生成され、`docs/reports/coupled_endurance_failure_history.md` に貼り付ける。ネットワーク制限があるローカル環境では `--skip-chart` を使い JSON/Markdown のみ生成し、PNG は CI の成果物を流用する。

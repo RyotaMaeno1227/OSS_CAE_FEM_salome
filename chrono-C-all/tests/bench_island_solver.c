@@ -176,10 +176,13 @@ static int run_benchmark_iteration(int num_islands,
 #ifdef _OPENMP
     config.enable_parallel = thread_count > 1 ? 1 : 0;
 #else
-    (void)thread_count;
     config.enable_parallel = 0;
 #endif
     config.scheduler = scheduler;
+    if (scheduler == CHRONO_ISLAND_SCHED_TBB) {
+        config.enable_parallel = 1;
+        config.max_threads = thread_count;
+    }
 
     start_time = wall_time();
 
@@ -346,11 +349,6 @@ int main(int argc, char **argv) {
         }
     }
 #endif
-    if (scheduler == CHRONO_ISLAND_SCHED_TBB && max_threads > 1) {
-        printf("TBB scheduler stub forces serial execution; clamping max_threads to 1\n");
-        max_threads = 1;
-    }
-
     double *baseline_positions = (double *)calloc((size_t)num_islands * 2, sizeof(double));
     double *baseline_velocities = (double *)calloc((size_t)num_islands * 2, sizeof(double));
     double *trial_positions = (double *)calloc((size_t)num_islands * 2, sizeof(double));
@@ -390,10 +388,6 @@ int main(int argc, char **argv) {
     printf(" threads=1 elapsed=%.6f s\n", baseline_time);
 
     for (int threads = 2; threads <= max_threads; ++threads) {
-        if (scheduler == CHRONO_ISLAND_SCHED_TBB) {
-            printf(" threads=%d skipped (TBB stub currently serial)\n", threads);
-            continue;
-        }
         double elapsed = 0.0;
         if (!run_benchmark_iteration(num_islands,
                                      steps,

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="520" viewBox="0 0 960 520">
+  <rect width="940" height="500" x="10" y="10" rx="12" ry="12" fill="#1e1e1e" stroke="#2f2f2f" stroke-width="2" />
+  <rect width="940" height="42" x="10" y="10" rx="12" ry="12" fill="#2f2f2f" stroke="#2f2f2f" />
+  <circle cx="34" cy="31" r="8" fill="#ff5f56" />
+  <circle cx="60" cy="31" r="8" fill="#ffbd2e" />
+  <circle cx="86" cy="31" r="8" fill="#27c93f" />
+  <text x="120" y="36" font-size="20" fill="#dcdcdc" font-family="'Fira Code', 'Menlo', monospace">schema_validation_gist.sh</text>
+  <text x="40" y="100" font-size="22" fill="#00d47a" font-family="'Fira Code', 'Menlo', monospace">$ gh gist create data/endurance_archive/latest.summary.validation.md \</text>
+  <text x="40" y="140" font-size="22" fill="#00d47a" font-family="'Fira Code', 'Menlo', monospace">&nbsp; &nbsp; --filename latest.summary.validation.md \</text>
+  <text x="40" y="180" font-size="22" fill="#00d47a" font-family="'Fira Code', 'Menlo', monospace">&nbsp; &nbsp; --description &quot;Schema validation for run 1234567890&quot;</text>
+  <text x="40" y="240" font-size="22" fill="#9cdcfe" font-family="'Fira Code', 'Menlo', monospace">copied gist url: https://gist.github.com/&lt;id&gt;</text>
+  <text x="40" y="300" font-size="20" fill="#d4d4d4" font-family="'Fira Code', 'Menlo', monospace">1. Run the command above after `workflow_dispatch`.</text>
+  <text x="40" y="340" font-size="20" fill="#d4d4d4" font-family="'Fira Code', 'Menlo', monospace">2. Paste the gist link into Slack/issue along with Run URL.</text>
+  <text x="40" y="380" font-size="20" fill="#d4d4d4" font-family="'Fira Code', 'Menlo', monospace">3. Attach `latest.summary.validation.md/json` as workflow artifacts.</text>
+  <text x="40" y="420" font-size="20" fill="#d4d4d4" font-family="'Fira Code', 'Menlo', monospace">(See Appendix B.5 for the Run ID log.)</text>
+</svg>
