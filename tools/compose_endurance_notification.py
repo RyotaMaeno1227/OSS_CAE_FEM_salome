@@ -22,6 +22,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-slack", required=True, help="File path to write Slack JSON payload.")
     parser.add_argument("--output-email", required=True, help="File path to write email text.")
     parser.add_argument(
+        "--output-email-html",
+        help="Optional HTML file for the email body (simple <pre> template).",
+    )
+    parser.add_argument(
         "--summary-validation-report",
         help="Optional Markdown summary of schema validation results to embed.",
     )
@@ -403,6 +407,11 @@ def main() -> int:
 
     Path(args.output_slack).write_text(json.dumps(slack_payload), encoding="utf-8")
     Path(args.output_email).write_text(email_body, encoding="utf-8")
+    if args.output_email_html:
+        html = "<html><body><pre style=\"font-family:Menlo,Consolas,monospace;white-space:pre-wrap;\">"
+        html += email_body.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        html += "</pre></body></html>"
+        Path(args.output_email_html).write_text(html, encoding="utf-8")
     return 0
 
 

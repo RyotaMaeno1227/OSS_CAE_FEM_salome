@@ -88,6 +88,55 @@ pandoc docs/coupled_constraint_presets_cheatsheet.md \
 - [ ] Appendix A/B、`docs/wiki_coupled_endurance_article.md`、`docs/wiki_samples/coupled_endurance_article_sample.md` のリンク先を更新し、チーム Slack `#chrono-docs` / `#chrono-constraints` に告知。  
 - [ ] `docs/documentation_changelog.md` に更新内容・担当者・日付（コミット日）を追記。
 
+#### A.3.2 外部環境で生成した PDF の受け渡し手順
+1. `pandoc ... --pdf-engine=xelatex` を実行した担当者は、以下テンプレでメモを残す:
+   ```
+   - 生成者: <名前>
+   - 生成日: YYYY-MM-DD
+   - 使用コマンド: pandoc ... --pdf-engine=xelatex
+   - アップロード先: docs/media/coupled/202511/presets_v1.pdf
+   - 差し替え対象: docs/media/coupled/presets.pdf
+   ```
+2. PDF を `docs/media/coupled/YYYYMM/` に保存し、`presets_latest.pdf` などバージョン付きのファイル名で共有。  
+3. リポジトリへの取り込み担当（通常はドキュメント班）は、ファイルを `docs/media/coupled/presets.pdf` に差し替え、旧版を年月ディレクトリへ退避。  
+4. `docs/media/coupled/README.md` に生成者・日付・元ファイルを追記し、差し替え完了を Appendix A.3.1 のチェックリストで確認。  
+5. Slack 連絡テンプレ:
+   ```
+   [preset-pdf-update] docs/media/coupled/presets.pdf を更新しました。
+   - 生成者: <名前> / 日付: YYYY-MM-DD
+   - コマンド: pandoc ...
+   - 影響ドキュメント: wiki / appendix A.3 / samples
+   ```
+
+#### A.4 メディア命名規則・保存先
+- ルート: `docs/media/coupled/{YYYYMM}/`（例: `docs/media/coupled/202511/`）。  
+- ファイル命名: `<topic>_<variant>_v<rev>.{pdf,png,gif,mp4}`（例: `presets_full_v1.pdf`）。  
+- 最新版シンボリックファイル: `docs/media/coupled/presets.pdf` のように固定名で参照し、差し替え時は必ず README に履歴を追記。  
+- Wiki/Appendix では固定名（例: `media/coupled/presets.pdf`）を参照し、詳細な履歴は README と年月ディレクトリに集約する。
+
+##### A.4.1 メディア更新ワークフロー
+1. **作成** – 担当者（例: Cチーム DevOps）が PNG/GIF/MP4 を `docs/media/coupled/YYYYMM/` へ配置し、`docs/media/coupled/README.md` に生成者・日付・元データを記録。  
+2. **レビュー** – Appendix A/B のオーナーがサイズ・命名規則を確認し、必要であれば Slack `#chrono-docs` で承認依頼。  
+3. **公開** – 承認後に固定名（例: `docs/media/coupled/endurance_overview.gif`）へコピーし、Wiki / Appendix のリンクを更新。  
+4. **アナウンス** – Slack `#chrono-docs` / `#chrono-constraints` にテンプレを用いて共有し、Appendix B.5.1 のローテ表へ Run ID / 更新日を記入。
+
+#### A.5 図版 (`docs/wiki_samples/schema_validation_gist.svg`) 差し替えガイド
+1. **編集ツール**: Figma または Inkscape。フォントは Noto Sans CJK（Bold/Regular）を使用。  
+2. **キャンバス**: 1280×720 px、背景透過。線幅 2 px、カラーパレットは `docs/styles/wiki_diagrams.json` に従う。  
+3. **書き出し**: SVG（Plain）で保存し、ファイル名は `schema_validation_gist.svg`。バージョン管理用に `docs/media/wiki/202511/schema_validation_gist_v2.svg` も保存。  
+4. **更新手順**:
+   - `docs/wiki_samples/schema_validation_gist.svg` を差し替え。
+   - Appendix A.5 と `docs/wiki_samples/README.md` に生成者・日付を記録。
+   - Slack `#chrono-docs` で告知（テンプレ: `[wiki-diagram] schema_validation_gist.svg updated by <name> on YYYY-MM-DD`）。
+
+##### A.5.1 承認フロー
+| ステップ | 担当 | 内容 |
+|---------|------|------|
+| Draft | 作成者（例: テクニカルライター） | Figma/Inkscape で更新し、PNG サムネイルを Slack へ共有。 |
+| Review | Appendix A 管理者 | フォント・サイズ・命名規則を確認し、`docs/media/wiki/YYYYMM/` の履歴をチェック。 |
+| Approve | チームリード（Cチーム） | 差し替え可否を決定し、`docs/documentation_changelog.md` へ反映。 |
+| Publish | 作成者 | 固定パスへコピーし、Wiki/Appendix のリンクと rotation 表を更新。 |
+
 --- 
 
 ## B. Wiki Workflow Templates & Checklists
@@ -183,10 +232,26 @@ h1. メンテナンス
 | KPI ログ連携 | `latest.summary.json` の KPI と `docs/pm_status_YYYY-MM-DD.md` のスナップショットを Slack 投稿へ添付し、Appendix B.5.1 の表へ Run ID を記録する。 |
 
 #### B.5.2 Slack / Webhook 検証メモ
-- `tools/compose_endurance_notification.py --summary-validation-report latest.summary.validation.md --summary-validation-json latest.summary.validation.json --diagnostics-report latest.diagnostics_console.log` を指定すると、Slack 側で `<details>` ブロック付きの Schema / Diagnostics が展開できる。Status が `SKIPPED` の場合は `latest.summary.json` や `plan.csv` が生成されていない合図なので、`data/endurance_archive` をダウンロードして原因を確認する。  
-- `tools/fetch_endurance_artifact.py --auto-latest --workflow coupled_endurance.yml --run-status failure --job-name archive-and-summarize` で最新 Run ID を取得し、`--comment-file` で生成された Markdown をそのまま Slack や issue へ貼り付ける。  
+- `tools/compose_endurance_notification.py --summary-validation-report latest.summary.validation.md --summary-validation-json latest.summary.validation.json --diagnostics-report latest.diagnostics_console.log --diagnostics-log latest.diagnostics.md` を指定すると、Slack 側で `<details>` ブロック付きの Schema / Diagnostics が展開できる。Status が `SKIPPED` の場合は `latest.summary.json` や `plan.csv` が生成されていない合図なので、`data/endurance_archive` をダウンロードして原因を確認する。  
+- 最新 Run ID を取得するには以下を実行する（`--latest` は `--auto-latest` のエイリアス）:
+  ```bash
+  python tools/fetch_endurance_artifact.py \
+    --latest \
+    --workflow coupled_endurance.yml \
+    --run-status failure \
+    --job-name archive-and-summarize \
+    --comment-file data/endurance_archive/repro/comment.md \
+    --console-comment-only
+  ```
+  Slack 投稿テンプレ:  
+  ```
+  [coupled-endurance] Run https://github.com/<org>/<repo>/actions/runs/<run_id>
+  Job log: <job_url>
+  latest.summary.validation: PASS (gist: https://gist.github.com/<id>)
+  Failure-rate digest: see archive_failure_rate.md/png
+  ```
 - Failure-rate digest (`archive_failure_rate_{png,md,json}`) は週次アーティファクトにも保存される。CI ログのコメントに Run ID を残し、`docs/reports/coupled_endurance_failure_history.md` へリンクを追記する。  
-- Nightly で `endurance_plan_lint.json` を得た場合は `--plan-lint-json` へ渡す。Slack の「Plan lint report」欄に `status=PASS/FAIL/SKIPPED` と `message` が表示されるため、B.5.1 の Run ID ログにも同じ値を控える。
+- Nightly で `endurance_plan_lint.json` を得た場合は `--plan-lint-json` へ渡す。Slack の「Plan lint report」欄に `status=PASS/FAIL/SKIPPED` と `message` が表示されるため、B.5.1 と B.5.3 の Run ID ログにも同じ値を控える。
 
 #### B.5.3 workflow_dispatch / Slack 検証ログ（直近 4 週）
 | 週 (開始日) | Run ID | Slack/Webhook 結果 | メモ |
@@ -195,6 +260,11 @@ h1. メンテナンス
 | 2024-07-29 | pending | 未検証（ローカル環境から Actions 実行不可） | 本番環境で `workflow_dispatch` 実施後に追記。 |
 | 2024-08-05 | pending | 未検証（ローカル環境から Actions 実行不可） | Slack/Webhook 監視のみ。 |
 | 2024-08-12 | pending | 未検証（ローカル環境から Actions 実行不可） | Appendix B.5.2 手順書に従い、Run ID を確定次第更新。 |
+
+#### B.5.4 Nightly artifact sharing
+- `artifacts/nightly/latest_summary_validation.json` と `artifacts/nightly/endurance_plan_lint.json` を `docs/reports/nightly/` 以下にコピーし、GitHub Pages（`gh-pages` ブランチなど）で参照できるようにする。  
+- 公開フォーマット例: `docs/reports/nightly/latest_summary_validation_<run-id>.md` に Markdown テーブルを追加し、JSON 全文は `<details>` で折りたたむ。  
+- Slack には Pages リンク（例: `https://<org>.github.io/<repo>/reports/nightly/latest_summary_validation_<run-id>.html`）を併記し、Run ID ログ（B.5.3）にも URL を控える。
 
 #### B.5.1 KPI Update Rotation
 | 曜日 | 対象ドキュメント | 主担当 | バックアップ | メモ |
@@ -206,6 +276,12 @@ h1. メンテナンス
 > KPI 更新を実施したら日付と担当を B.5.1 の表かコメント欄に残し、`docs/documentation_changelog.md` へまとめて通知する。Slack では `#chrono-docs` と `#chrono-constraints` の両方へ共有する。
 
 - 2025-11-10: Mori（Monday slot）更新 — Coupled/Island/3D の KPI を 83 / 73 / 50 に揃え、`docs/pm_status_2024-11-08.md`、`docs/coupled_island_migration_plan.md`、`docs/chrono_3d_abstraction_note.md` を同期。
+- 次回 `docs/media/coupled/presets.pdf` の Pandoc 差し替え予定日: **2025-11-20**（担当: Mori）。進捗と Run ID は Appendix A.3.2 / B.3 / B.5.1 で管理。
+
+##### B.5.1.a 外部カレンダー連携案
+- Google カレンダーに「KPI Rotation」カレンダーを作成し、月・水・金の担当者をイベントとして登録。  
+- `calendar_id` を `config/ops/kpi_rotation_calendar.txt` に保存し、スクリプトで Appendix B.5.1 表と同期する案を検討中。  
+- 導入可否: **検討中**（組織ポリシーで外部共有が制限されているため、2025Q4 の Ops 会議で判断予定）。
 
 ### B.6 Contact + Coupled Test Operations
 1. **ログ抽出** – `./chrono-C-all/tests/test_island_parallel_contacts --dump=log.json` を実行し、`tools/filter_coupled_endurance_log.py log.json --output log_contact.csv --keep contact_impulse,diagnostics_flags` で必要カラムのみに絞る。  
@@ -223,6 +299,7 @@ h1. メンテナンス
 | Contact 反力発散 | `[contact-divergence] run=<id> impulse=...` | `target_offset` ステージングを Hands-on Chapter 03 に沿って再設定。 |
 | KPI ログのみ共有 | `[contact-kpi] run=<id> max_cond=... warn_ratio=...` | `docs/pm_status_YYYY-MM-DD.md` の備考と Appendix B.5.1 に Run ID を記録。 |
 
+更新履歴: 2025-11-10 版で KPI テンプレと `[contact-kpi]` 行を加筆（Slack `#chrono-constraints` アナウンス済み）。
 ### B.7 Link Validation Checklist
 このチェックリストは `docs/coupled_constraint_tutorial_draft.md` のバイリンガル節と関連ドキュメント（Hands-on / Solver Math / Contact Notes）を対象にする。
 
@@ -250,10 +327,11 @@ h1. メンテナンス
 - 再現手順: `./chrono-C-all/tests/test_coupled_logging_integration` を実行し、標準出力に表示されるキャプチャ件数を確認する。
 
 ### C.2 GitHub API / Failure-rate Digests
-- `tools/report_archive_failure_rate.py` は `--weeks 8` でも 2 リクエスト（workflow runs + jobs）で完了する。`GITHUB_TOKEN` の既定 `actions:read` で十分だが、組織ポリシーによりブロックされる場合は `GH_TOKEN` に `repo` scope を付けて上書きする。  
+- `tools/report_archive_failure_rate.py` は `--weeks 8` でも 2 リクエスト（workflow runs + jobs）で完了する。`GITHUB_TOKEN` の既定 `actions:read` で十分だが、組織ポリシーで `workflow` エンドポイントが制限されている場合は Personal Access Token（`repo`, `workflow` scope 推奨）を `GH_TOKEN` に設定する。  
 - GitHub へ到達できないローカル環境では `--skip-chart` を付与し、`archive_failure_rate.md/json` だけを生成する。PNG は Actions artifact から取得して `docs/reports/coupled_endurance_failure_history.md` に貼る。  
 - Slack/Webhook 向けには `archive_failure_rate_slack.json` をそのまま `curl -X POST ... --data` に渡せる。Webhook 切替時は `tools/mock_webhook_server.py` で 200 応答を確認してから本番 URL を設定する。  
 - `tools/compose_endurance_notification.py` へ `--diagnostics-log data/endurance_archive/latest.diagnostics.md` を渡すと Markdown 版の Diagnostics を `<details>` ブロックで貼り付けられる。Nightly で `artifacts/nightly/latest.diagnostics.md` を共有する場合も同じフラグを利用する。
+- Secrets 運用は `docs/git_setup.md` の「GitHub Secrets」節と合わせてチェックし、`ENDURANCE_ALERT_WEBHOOK`・`GH_TOKEN`（必要なら PAT）・`CHRONO_BASELINE_CSV` などを更新する。
 
 ### C.3 Endurance CSV 必須カラム一覧
 `tools/filter_coupled_endurance_log.py --lint-only --require …` が PR 時に検証する列（2024-08 時点）:
@@ -269,6 +347,42 @@ drop_events_total
 ```
 
 列の追加・削除を伴う変更では、上記リストと CI ログ（`Validate endurance CSV filter` ステップ）を参照し、必要に応じて `--require` 引数を更新すること。
+
+### C.4 Slack を使わない場合の通知
+- **Webhook**: `curl -X POST <url> -H 'Content-Type: application/json' -d @archive_failure_rate_slack.json`。送信ログ（日時・HTTP ステータス・payload 抜粋）を `docs/logs/notification_audit.md` に追記する。  
+- **メール**: `tools/compose_endurance_notification.py --format eml --output out/mail.eml` を使い、SMTP 経由で送信。宛先・件名・送信時刻を Appendix B.5.1 のコメント欄に記録する。  
+- **テンプレ例**:
+  ```
+  Subject: [Coupled Nightly] WARN ratio exceeded (run <id>)
+  Body:
+  - max_condition: ...
+  - warn_ratio: ...
+  - log: s3://.../latest.summary.json
+  ```
+- **受信ログテンプレ（`docs/logs/notification_audit.md`）**
+  ```
+  - date: YYYY-MM-DD HH:MM
+    channel: webhook | email
+    endpoint: https://hooks.example/...
+    payload: archive_failure_rate_slack.json
+    status: 200
+    notes: (optional)
+  ```
+  Slack を利用できない期間はこのテンプレで履歴を管理し、復旧後に Appendix B.5.1 へ抜粋を転記する。
+
+### C.4 Webhook / Email Notification (Slack なし環境)
+1. `tools/compose_endurance_notification.py` を実行する際、`--output-email-html notifications/email.html` を指定して HTML テンプレートを生成する。  
+2. Webhook を使わない場合は `tools/mock_webhook_server.py` を省略し、メール送信スクリプト（例: `python tools/send_notification_email.py --body-file notifications/email.html`）で共有する。  
+3. Run ID と job ログ URL は必ずメール本文と Appendix B.5.3 のログに記録する。  
+4. 送信前チェックリスト:
+   - [ ] Run URL（`https://github.com/<org>/<repo>/actions/runs/<run-id>`）を本文に含めた。  
+   - [ ] schema/diagnostics/failure-rate (<details>) が正しく展開できるかプレビューした。  
+   - [ ] `latest.summary.validation.{md,json}` と `archive_failure_rate.{png,md,json}` を添付またはリンクした。  
+   - [ ] plan lint JSON が `SKIPPED` の場合、理由を本文へ追記した。
+
+下図は Slack での `--summary-validation-json` / `--plan-lint-json` 表示例（`docs/wiki_samples/nightly_validation_blocks.svg`）:
+
+![Nightly validation blocks](wiki_samples/nightly_validation_blocks.svg)
 
 ---
 
@@ -303,6 +417,15 @@ run_id,avg_solve_time_us,max_condition,max_pending_steps,unrecovered_drops
 2025-11-08T12:01:44Z,812.4,5.31e+05,0,0
 ```
 `logs/csv_issues.jsonl` には検出された WARN が 1 行ずつ JSON で追記されるため、CI では `tail -n +1 logs/csv_issues.jsonl` で差分を確認する。
+
+**しきい値のみ WARN 通知したい場合**
+```bash
+python3 tools/run_coupled_benchmark.py \
+  --config config/coupled_benchmark_thresholds.yaml \
+  --csv-validation warn \
+  --output data/coupled_benchmark_metrics_warn.csv
+```
+`--csv-validation warn` は値を記録しつつ終了コード 0 を返す。CI で失敗させたい場合は `fail` を使う。
 
 ### D.3 静的サイト生成
 ```bash
@@ -347,6 +470,23 @@ python3 tools/build_coupled_benchmark_site.py \
 2. CI では上記コマンドを `make lint-docs` などに組み込み、失敗時は Appendix B.7 のチェックボックスを未完にして次担当へ引き継ぐ。  
 3. 追加の Markdown を検証したい場合はコマンド末尾にパスを追加する。`--repo-root` で別ツリーにも対応可能。  
 4. スクリプトが欠落ファイルを報告したら `docs/documentation_changelog.md` に原因と修正内容を記録し、該当リンクを更新する。
+5. GitHub Actions 例:
+   ```yaml
+   - name: Lint docs links
+     run: python scripts/check_doc_links.py \
+            docs/coupled_constraint_tutorial_draft.md \
+            docs/coupled_constraint_hands_on.md \
+            docs/coupled_contact_test_notes.md
+   ```
+   これが失敗した場合は Appendix B.7 の「リンク検証」チェックを未完にし、エラー出力を PR に貼り付けて再レビューを依頼する。
+6. 失敗例と対処:
+   ```
+   Broken links detected:
+     - docs/coupled_constraint_tutorial_draft.md: missing docs/foo.md
+   ```
+   - 対応①: リンク先ファイルを追加。  
+   - 対応②: 不要リンクであれば記述を削除し、再度スクリプトを実行。  
+   - 対応③: 修正が完了したら `docs/documentation_changelog.md` にリンク更新を記録し、Slack `#chrono-docs` へ報告。
 
 > 上記プランは 2025-11-08 版のドラフト。Cチームは Appendix B.5 のローテーションに合わせて進捗をレビューし、統合用の追加ファイルを作成する。
 

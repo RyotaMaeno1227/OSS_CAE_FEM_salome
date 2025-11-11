@@ -179,6 +179,18 @@ Webhook 連携を有効化する前に、以下の手順でペイロードを検
    ```
 Slack では `<https://gist.github.com/<id>|Schema validation gist>` として貼り付けると折りたたみリンク扱いにできる。`compose_endurance_notification.py` の `--summary-validation-report` 引数を使うと自動的に `<details>` ブロックで同じ内容が添付される。
 
+短縮 URL 例:
+```bash
+gist_url=$(gh gist create data/endurance_archive/latest.summary.validation.md --filename latest.summary.validation.md --description "Schema validation (run $RUN_ID)" --public)
+printf "%s\n" "$gist_url" | xargs -I{} curl -s https://tinyurl.com/api-create.php?url={} > /tmp/schema_validation_url.txt
+```
+
+送信前チェックリスト:
+- [ ] Run URL, Job URL, gist（または artifact）リンクを本文に含めた。  
+- [ ] `latest.summary.validation.json` の `status` が Slack メッセージと一致しているか確認した。  
+- [ ] Failure-rate digest (`archive_failure_rate.md/png`) のリンクまたは添付を付けた。  
+- [ ] `plan.md` の抜粋を `<details>` ブロックでプレビューした。
+
 ![Schema validation gist flow](wiki_samples/schema_validation_gist.svg)
 
 サンプル: Run [#8723419085](https://github.com/RyotaMaeno1227/OSS_CAE_FEM_salome/actions/runs/8723419085)（Max condition 超過）では `Schema validation: PASS` が Slack の「Run details」フィールドに表示され、展開リンクから Markdown 全文を確認できる。
@@ -208,9 +220,10 @@ python tools/compose_endurance_notification.py \
 
 - `status` が `SKIPPED` の場合は「最新 summary/plan が無い」ことを意味するため、Appendix B.5.2 の Run ID ログに記録して原因を切り分ける。  
 - `status: FAIL` で `message` が含まれている時は Slack の「Plan lint report」ブロックに `<details>` で表示されるので、リンク先を Issue コメントへ転記する。
+- 表示イメージは `docs/wiki_samples/nightly_validation_blocks.svg`（Appendix C.4）を参照。
 
 ---
 
 ## 14. Failure-rate ヒストリー
 
-Archive failure-rate の週次サマリは `tools/report_archive_failure_rate.py` で PNG/Markdown/JSON として生成され、`docs/reports/coupled_endurance_failure_history.md` に貼り付ける。ネットワーク制限があるローカル環境では `--skip-chart` を使い JSON/Markdown のみ生成し、PNG は CI の成果物を流用する。
+Archive failure-rate の週次サマリは `tools/report_archive_failure_rate.py` で PNG/Markdown/JSON として生成され、`docs/reports/coupled_endurance_failure_history.md` に貼り付ける。ネットワーク制限があるローカル環境では `--skip-chart` や `--dry-run` を使い、JSON/Markdown のみを確認しつつ PNG は CI の成果物を流用する。

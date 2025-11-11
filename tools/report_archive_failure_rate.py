@@ -82,6 +82,11 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Skip PNG chart generation (useful when matplotlib is unavailable).",
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Do not write the PNG chart; still fetch data to preview Markdown/JSON outputs.",
+    )
     return parser.parse_args(argv)
 
 
@@ -321,12 +326,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     buckets = bucket_by_week(runs)
 
-    if not args.skip_chart:
+    if not (args.skip_chart or args.dry_run):
         write_chart(
             data=buckets,
             output_path=Path(args.output_chart),
             timezone_label=args.timezone,
         )
+    elif args.dry_run:
+        print("Dry-run mode: skipping chart generation.", file=sys.stderr)
 
     slack_payload = build_slack_payload(
         repo=args.repo,

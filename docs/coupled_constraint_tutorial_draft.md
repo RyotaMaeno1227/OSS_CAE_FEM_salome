@@ -10,6 +10,13 @@ FEM4C の学習サイクル（Understand → Implement → Inspect → Verify）
 3. **Hands-on / 体験** – パラメータを変更したりミニスクリプトを動かして挙動を観察。  
 4. **Verification / 検証** – 公式テストスイートを実行し、数値特性が維持されていることを確認。
 
+### Learning Path Snapshot (2025-11-08)
+| フェーズ | 状態 | 備考 |
+|----------|------|------|
+| W2 – Hands-on TODO 抽出 | ⏳ 進行中 | `practice/coupled/ch02_softness.c` 以降のタグ整理が残り。 |
+| W3 – Link Check 自動化 | 🆕 着手 | `scripts/check_doc_links.py` を追加、CI 組み込み準備中。 |
+| W4 – 統合レビュー | 未着手 | W2/W3 完了後に Appendix E へ完了報告。 |
+
 ---
 
 ## 1. Theory / 数式フェーズ

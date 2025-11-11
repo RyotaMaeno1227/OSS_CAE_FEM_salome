@@ -30,6 +30,16 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pyyaml
 
+      - name: Lint doc links
+        run: |
+          python scripts/check_doc_links.py \
+            docs/coupled_constraint_tutorial_draft.md \
+            docs/coupled_constraint_hands_on.md \
+            docs/coupled_contact_test_notes.md
+
+      - name: Run multi-omega format tests
+        run: python -m unittest tools.tests.test_update_multi_omega_assets
+
       - name: Build test binaries
         working-directory: chrono-C-all
         run: |

@@ -61,7 +61,14 @@
 | `docs/coupled_contact_test_notes.md` | Appendix B.6 / Slack KPI テンプレへの導線を追記 | Cチーム | Contact Ops メモを同期 |
 | `scripts/check_doc_links.py` | Tutorial/Hands-on/Notes のリンク検証スクリプトを追加 | Tooling | Appendix E.1 から呼び出し |
 | `docs/integration/learning_path_map.md` | W2/W3/W4 ステータスと詳細メモを追記 | Cチーム | Appendix E との整合 |
-| `docs/coupled_constraint_tutorial_draft.md`, `docs/coupled_constraint_hands_on.md` | 統合ステータス（W2 進行中 / W3 着手）を冒頭へ明記 | Cチーム | 学習パス進捗を共有 |
+| `docs/coupled_constraint_tutorial_draft.md`, `docs/coupled_constraint_hands_on.md` | 統合ステータス（W2 進行中 / W3 着手）と Learning Path Snapshot 表を追記 | Cチーム | 学習パス進捗を共有 |
+| `docs/media/coupled/README.md` | プレースホルダ PDF の注意書きと Slack テンプレを追加 | Cチーム | Appendix A.3.2 と連動 |
+| `README.md` | `scripts/check_doc_links.py` の使い方を追加 | Cチーム | ドキュメント lint を周知 |
+| `docs/appendix_optional_ops.md` | 外部 PDF 受け渡し、命名規則、Webhook/メール通知、Google カレンダー案、図版ガイドを追加 | Cチーム | Appendix A/C/B.5.1 を拡張 |
+| `docs/wiki_coupled_endurance_article.md` | 備考に Pandoc 差し替え待ちと担当・予定日を記載、ローテ表を最新化 | Cチーム | Appendix B.3/B.4 と同期 |
+| `docs/wiki_samples/coupled_endurance_article_sample.md` | ローテ表を本編と同書式に更新し、Appendix B.5 への往復リンクを追記 | Cチーム | サンプルとの整合を確保 |
+| `docs/chrono_coupled_constraint_tutorial.md` | Appendix 参照リンクを再確認し、運用系記述が無い状態を維持 | Cチーム | Appendix A/C へのリダイレクトのみ残存 |
+| `.github/workflows/ci.yaml` | `scripts/check_doc_links.py` を docs lint ステップに追加 | Tooling | Tutorial/Hands-on のリンク検証を CI で強制 |
 
 Slack summary (2025-11-10, #chrono-docs / #chrono-constraints):
 - Preset PDF remains provisional (Pandoc unavailable); checklist + README note added.  

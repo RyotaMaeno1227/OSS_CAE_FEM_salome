@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import csv
 import shutil
+import sys
 import tempfile
 from pathlib import Path
 from typing import Iterable, List, Sequence, Set
@@ -76,6 +77,25 @@ def _collect_equation_columns(fieldnames: Iterable[str]) -> Set[str]:
     return eq_columns
 
 
+def _print_missing_table(path: Path, missing: List[str]) -> None:
+    if not missing:
+        return
+    lines = [
+        "",
+        "Required columns check failed:",
+        "+----------------+------------------------------------------------+-----------------------------+",
+        "| File           | Missing columns                                | Suggested action            |",
+        "+----------------+------------------------------------------------+-----------------------------+",
+    ]
+    missing_display = ", ".join(missing)
+    action = "Update CSV producer or adjust --require list."
+    lines.append(
+        f"| {path.name:<14} | {missing_display:<46} | {action:<27} |"
+    )
+    lines.append("+----------------+------------------------------------------------+-----------------------------+")
+    print("\n".join(lines), file=sys.stderr)
+
+
 def filter_csv(
     input_path: Path,
     output_path: Path,
@@ -93,6 +113,7 @@ def filter_csv(
 
         missing_required = sorted(required - set(fieldnames))
         if missing_required:
+            _print_missing_table(input_path, missing_required)
             missing_csv = ", ".join(missing_required)
             raise RuntimeError(f"{input_path}: missing required columns: {missing_csv}")
 

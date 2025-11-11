@@ -13,12 +13,12 @@
 
 ## 2. マイルストン
 
-| 週 | 作業内容 | Owner | 完了条件 | ステータス (2025-11-08) |
-|----|----------|-------|----------|-----------------------|
-| W1 | 章対応表を Tutorial/Hands-on 両方に埋め込み、相互リンクを追記 | Cチーム（Mori） | 両ファイルの冒頭に統合計画リンクが掲載されている。 | ✅ 完了（2025-11-05） |
-| W2 | Hands-on の演習コード（`practice/coupled/*`）に TODO マーカーを追加し、Tutorial 側の重複を削除 | Hands-on WG（Kobayashi） | `rg TODO_LEARNING_PATH` の結果が Hands-on にのみ存在する。 | ⏳ 進行中 – `practice/coupled/ch01_ratio_sweep.c` にタグ追加済み、残り 2 ファイル |
-| W3 | Appendix B.7 のリンク検証チェックリストを自動化 (`scripts/check_doc_links.py`) | Tooling 班（Suzuki） | CI で Tutorial ↔ Hands-on ↔ Solver Math ↔ Contact Notes のリンク検証が走る。 | 🆕 着手 – スクリプト雛形を本コミットで追加 |
-| W4 | 統合レビュー（Hands-on／Tutorial 共通構成）を実施し、`docs/documentation_changelog.md` に統合完了を記録 | Cチーム全体 | 重複節が解消され、学習者ガイドラインが Appendix に移行済み。 | ⏳ 未着手 – W3 の自動化完了後に実施 |
+| 週 | 作業内容 | Owner | 依存ファイル / タスク | 完了条件 | ステータス (2025-11-08) |
+|----|----------|-------|-----------------------|----------|-----------------------|
+| W1 | 章対応表を Tutorial/Hands-on 両方に埋め込み、相互リンクを追記 | Cチーム（Mori） | `docs/coupled_constraint_tutorial_draft.md` / `docs/coupled_constraint_hands_on.md` | 両ファイルの冒頭に統合計画リンクが掲載されている。 | ✅ 完了（2025-11-05） |
+| W2 | Hands-on の演習コード（`practice/coupled/*`）に TODO マーカーを追加し、Tutorial 側の重複を削除 | Hands-on WG（Kobayashi） | `practice/coupled/ch*.c`（※現状ディレクトリ未作成）, `docs/coupled_constraint_tutorial_draft.md` §2 | `rg TODO_LEARNING_PATH` の結果が Hands-on にのみ存在する。 | ⚠️ 未着手 – `practice/coupled/` ディレクトリがリポジトリに存在せずブロック中 |
+| W3 | Appendix B.7 のリンク検証チェックリストを自動化 (`scripts/check_doc_links.py`) | Tooling 班（Suzuki） | `scripts/check_doc_links.py`, `.github/workflows/ci.yaml`, Appendix B.7 | CI で Tutorial ↔ Hands-on ↔ Solver Math ↔ Contact Notes のリンク検証が走る。 | ⏳ 進行中 – スクリプト追加＆ CI へ組み込み済み、結果モニタリング中 |
+| W4 | 統合レビュー（Hands-on／Tutorial 共通構成）を実施し、`docs/documentation_changelog.md` に統合完了を記録 | Cチーム全体 | Appendix E, changelog, Wiki sample | 重複節が解消され、学習者ガイドラインが Appendix に移行済み。 | ⏳ 未着手 – W3 の自動化完了後に実施 |
 
 ### W2 現状
 - `practice/coupled/ch01_ratio_sweep.c` に `// TODO_LEARNING_PATH` を追記し、Hands-on 側でのみ検証する流れを明示済み。  

@@ -48,7 +48,7 @@
 | 2025-11-03 | Tanaka | Kobayashi | Nightly 差分レビュー、Webhook ログ追記、Appendix B.5.1 更新 | `docs/integration/learning_path_map.md` をリンク集へ追加 |
 | 2025-11-10 | Mori | Suzuki | KPI / Appendix Check、`presets.pdf` の暫定版注意書きを追加 | Slack `#chrono-docs` / `#chrono-constraints` に通知、`scripts/check_doc_links.py` 実行結果を共有 |
 
-> 実際の Wiki では最新 4 週を維持し、Appendix B.3/B.4 の棚卸し結果と一致させてください。
+> 実際の Wiki では最新 4 週を維持し、Appendix B.3/B.4 の棚卸し結果と一致させてください（往復リンク: Appendix B.5）。
 
 ---
 

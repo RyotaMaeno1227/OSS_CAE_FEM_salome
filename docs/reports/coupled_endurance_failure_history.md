@@ -11,7 +11,7 @@ To refresh this page:
 1. Download the latest artifact (`coupled-endurance-<run-id>`) and copy the generated Markdown table into a new section below.
 2. Update the chart link if a new PNG should be embedded.
 
-> Note: interactive generation of these files requires GitHub REST access. Locally you can run `python tools/report_archive_failure_rate.py --repo <owner>/<repo> --workflow coupled_endurance.yml --job-name archive-and-summarize --weeks 8 --output-chart ... --output-markdown ... --skip-chart` when `api.github.com` is reachable.
+> Note: interactive generation of these files requires GitHub REST access. Locally you can run `python tools/report_archive_failure_rate.py --repo <owner>/<repo> --workflow coupled_endurance.yml --job-name archive-and-summarize --weeks 8 --output-chart ... --output-markdown ... --skip-chart --dry-run` when `api.github.com` is reachable, so you can preview the Markdown without regenerating PNGs.
 
 ## Latest Snapshot (fill after artifact download)
 

@@ -193,7 +193,8 @@ chrono_coupled_constraint2d_set_condition_warning_policy(&coupled, &policy);
 
 ## 8. メディア／通知の参照先
 
-> 画像生成・GIF/MP4・GitHub Pages・Slack 通知などの運用手順は `docs/appendix_optional_ops.md` **A. Media Publishing & Sharing** と **C. Logging & Notification Guidance** に移動しました。本編では数値チューニングのみ扱い、必要に応じて付録を参照してください。
+> 画像生成・GIF/MP4・GitHub Pages・Slack 通知などの運用手順は `docs/appendix_optional_ops.md` **A. Media Publishing & Sharing** と **C. Logging & Notification Guidance** に移動しました。本編では数値チューニングのみ扱い、必要に応じて付録を参照してください。  
+> （2025-11-10 再確認済み: 本章に運用系の手順は残っていません。）
 
 ---
 

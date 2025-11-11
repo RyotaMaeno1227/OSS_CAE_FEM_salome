@@ -67,6 +67,11 @@ def parse_args() -> argparse.Namespace:
         help="Automatically select the newest run (prefers failures).",
     )
     parser.add_argument(
+        "--latest",
+        action="store_true",
+        help="Alias for --auto-latest.",
+    )
+    parser.add_argument(
         "--workflow",
         help="Workflow file or ID to filter when auto-selecting runs.",
     )
@@ -366,7 +371,7 @@ def main() -> int:
         except ValueError as exc:
             print(f"Error: {exc}", file=sys.stderr)
             return 1
-    elif args.auto_latest:
+    elif args.auto_latest or args.latest:
         try:
             run_id = auto_select_latest_run(
                 args.gh_path,
