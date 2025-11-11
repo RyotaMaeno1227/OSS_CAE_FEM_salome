@@ -21,6 +21,20 @@
 5. **PM/PoC ドキュメント** – `docs/pm_status_2024-11-08.md`、`docs/coupled_island_migration_plan.md`、`docs/island_scheduler_poc.md` が最新の PoC 前提とタスク分解を保持。
 6. **Descriptor CI モード** – `tests/test_coupled_constraint --descriptor-mode actions --pivot-artifact-dir ...` を Actions へ追加し、`docs/logs/kkt_descriptor_poc_e2e.md` と `docs/reports/kkt_spectral_weekly.md` の差分を直接リンク可能にした。Multi-ω CSV と `tools/compare_kkt_logs.py` のレポート拡張も同じフローで再生成する。
 7. **Multi-ω 自動更新ツール** – `python3 tools/update_multi_omega_assets.py --refresh-report` が `bench_coupled_constraint` の再計測、README／Hands-on／`data/coupled_constraint_presets.yaml`／`data/diagnostics/kkt_backend_stats.json` を同一タイムスタンプで更新し、週報 (`docs/reports/kkt_spectral_weekly.md`) まで反映するようになった。
+8. **Descriptor Run ID 更新スクリプト** – `tools/update_descriptor_run_id.py --run-id <GITHUB_RUN_ID>` で `docs/logs/kkt_descriptor_poc_e2e.md` と `docs/coupled_island_migration_plan.md` の Run ID を同時更新できる。`descriptor-e2e` ジョブの完了後に実行し、ドキュメントと KPIs を揃える。
+
+### Pending / Environment Tasks
+
+- **oneTBB 実測** – `bench_island_solver --scheduler tbb` の実測値は oneTBB 導入環境が整い次第計測。現状は `tbb_fallback` 行でフォールバック時間を記録。
+- **Descriptor log artifacts** – 次回 CI Run の `github.run_id` を取得したら `python3 tools/update_descriptor_run_id.py --run-id <ID>` を実行し、`docs/logs/kkt_descriptor_poc_e2e.md` と Migration Plan を同時更新。
+- **Jacobian evidence** – `tests/test_island_parallel_contacts --jacobian-log artifacts/contact/contact_jacobian_log.csv` をローカルで実行し、`--jacobian-report docs/coupled_contact_test_notes.md` で placeholder を差し替える。CI が通ったタイミングでエビデンスを貼り替える。
+
+### Run ID 更新フロー（`tools/update_descriptor_run_id.py`）
+
+1. `descriptor-e2e` ジョブ完了後に Actions の Run ID（例: `6876543210`）を控える。
+2. リポジトリルートで `python3 tools/update_descriptor_run_id.py --run-id 6876543210` を実行。
+3. スクリプトが `docs/logs/kkt_descriptor_poc_e2e.md` と `docs/coupled_island_migration_plan.md` を同時更新するので、`git diff` で Run ID が揃っているか確認。
+4. 必要に応じて `tests/test_island_parallel_contacts --jacobian-report docs/coupled_contact_test_notes.md --jacobian-log ...` を追走し、Jacobian セクションも同じ Run ID を参照させる。
 
 ---
 
@@ -45,7 +59,8 @@
 - `./chrono-C-all/tests/bench_coupled_constraint --omega 0.85 --omega 0.92 --csv data/diagnostics/bench_coupled_constraint_multi.csv`  
 - `./chrono-C-all/tests/test_contact_jacobian_3dof`（※統合後は `test_island_parallel_contacts`）  
 - `./chrono-C-all/tests/bench_island_solver --scheduler auto --csv data/diagnostics/bench_island_scheduler.csv`  
-- `python3 tools/compare_kkt_logs.py data/diagnostics/chrono_c_kkt_log.csv data/diagnostics/chrono_main_kkt_log.csv --report docs/reports/kkt_spectral_weekly.md`
+- `python3 tools/compare_kkt_logs.py data/diagnostics/chrono_c_kkt_log.csv data/diagnostics/chrono_main_kkt_log.csv --report docs/reports/kkt_spectral_weekly.md --csv-output docs/reports/kkt_spectral_weekly.csv`
+- `python3 tools/run_contact_jacobian_check.py --log data/diagnostics/contact_jacobian_log.csv --report docs/coupled_contact_test_notes.md`（Jacobian エビデンスを素早く更新）
 
 上記テストは CI の `ci.yaml` でも自動実行されるが、パラメータ変更時は必ずローカルで先に回す。ログ／CSV は `data/diagnostics/` 配下に追記し、PR 説明に含める。
 
@@ -62,6 +77,7 @@
 1. **ライブラリの入手** – Linux では `sudo apt-get install libtbb-dev` などで `tbb` とヘッダを導入する。既存の Code_Aster 環境を使う場合は `/usr/lib` や `../Code_Aster/.../lib/libtbb*.so` を参照してもよい。
 2. **ビルド設定** – 環境変数で `TBB_INCLUDE_DIR=/path/to/include`、`TBB_LIBS="-L/path/to/lib -ltbb"` を渡し、`make bench` で `chrono_island2d_tbb.cpp` が `tbb::parallel_for` を拾えるようにする。実行時は `LD_LIBRARY_PATH` に同じ lib ディレクトリを追加する。
 3. **性能ログ取得** – `./chrono-C-all/tests/bench_island_solver --scheduler tbb --csv data/diagnostics/bench_island_scheduler.csv` を走らせ、`docs/island_scheduler_poc.md` と `docs/coupled_island_migration_plan.md` の表を更新する。フォールバック時はログに WARN が 1 回だけ出る。
+   - WARN (`oneTBB headers not found at build time; using fallback path`) が出た場合は `ldd chrono-C-all/tests/bench_island_solver` で `libtbb.so` の解決状況を確認し、`TBB_LIBS` が正しく渡っているかをチェック。
 4. **ドキュメント更新** – oneTBB を有効化する手順を PR 説明に含め、`docs/a_team_handoff.md` の本節と `docs/island_scheduler_poc.md` の「Risks & next steps」を同タイミングで修正する。
 
 ---

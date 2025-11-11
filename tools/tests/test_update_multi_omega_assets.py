@@ -71,6 +71,35 @@ class UpdateCommandBlockTest(unittest.TestCase):
         )
         self.assertEqual(result, expected)
 
+    def test_handles_additional_markdown_sections(self) -> None:
+        source = textwrap.dedent(
+            """\
+            ## Appendix
+            Refer to the profiling command below:
+            ```bash
+            ./chrono-C-all/tests/bench_coupled_constraint \\
+              --omega 0.9 \\
+              --output data/tmp.csv
+            ```
+            Continue with analysis.
+            """
+        )
+        result = self._rewrite(source, [0.8, 1.1])
+        expected = textwrap.dedent(
+            """\
+            ## Appendix
+            Refer to the profiling command below:
+            ```bash
+            ./chrono-C-all/tests/bench_coupled_constraint \\
+              --omega 0.8 \\
+              --omega 1.1 \\
+              --output data/tmp.csv
+            ```
+            Continue with analysis.
+            """
+        )
+        self.assertEqual(result, expected)
+
 
 if __name__ == "__main__":
     unittest.main()

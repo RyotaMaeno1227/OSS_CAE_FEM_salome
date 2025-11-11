@@ -29,6 +29,7 @@ Reference CSV: `data/diagnostics/bench_island_scheduler.csv`
 | openmp (forced) | 4 | 0.052 ms | Explicit OpenMP backend for comparison (0.01043 s / 200). |
 | tbb stub (legacy) | 1 | 0.069 ms | Old serial stub left for historical comparison. |
 | tbb fallback | 4 | 0.068 ms | oneTBB backend compiled but libraries missing; message points to enabling `TBB_LIBS`. |
+| tbb (oneTBB enabled) | 4 | — | Pending hardware run (`bench_island_solver --scheduler tbb --csv ...` with `TBB_LIBS=-ltbb`). Update `data/diagnostics/bench_island_scheduler.csv` and re-run `python3 tools/update_descriptor_run_id.py` once the measurement is captured. |
 
 ## Risks & next steps
 
@@ -62,7 +63,7 @@ We will upstream the full PoC once the shared `ChronoConstraintCommon_C` typedef
 
 ## Island step helper
 
-`chrono_island2d_island_step.h` exposes a single inline that both OpenMP と oneTBB バックエンドが共有している:
+`chrono_island2d_island_step.h` exposes a single inline that both OpenMP と oneTBB バックエンドが共有している。このヘッダには 2D ループと 3D ラッパ―から再利用する例が Doxygen コメントとして記載されている (`src/chrono_island2d_island_step.h`)。
 
 ```c
 /**

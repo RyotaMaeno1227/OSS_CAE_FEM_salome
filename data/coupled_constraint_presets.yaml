@@ -149,6 +149,8 @@ use_cases:
 
   - id: multi_omega_reference
     description: Multi-ω ベンチおよび Hands-on 参照用プリセット
+    # Hands-on Chapter 02 と README の "Coupled Presets" で参照する共通セット。
+    # omega スイープは `tools/update_multi_omega_assets.py` で 0.85 / 1.0 / 1.15 を計測する前提。
     base:
       ratio_distance: 0.78
       ratio_angle: -0.22
@@ -167,3 +169,4 @@ use_cases:
     last_updated: 2025-11-08T18:18:55Z
     notes:
       - `bench_coupled_constraint --omega 0.85/1.0/1.15` の CSV とセットで更新し、README および Hands-on Chapter 02 と同期させる。
+      - README/Hands-on のコマンドブロックは `tools/update_multi_omega_assets.py --refresh-report` で同時に書き換える。

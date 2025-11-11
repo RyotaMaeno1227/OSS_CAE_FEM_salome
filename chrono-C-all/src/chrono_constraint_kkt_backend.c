@@ -1,6 +1,9 @@
 #include <math.h>
 #include <stddef.h>
 #include <string.h>
+#ifdef DEBUG_KKT
+#include <stdio.h>
+#endif
 
 #include "../include/chrono_constraint_kkt_backend.h"
 #include "../include/chrono_small_matrix.h"
@@ -105,6 +108,16 @@ int chrono_kkt_backend_invert_small(const double *src,
            helper_result.pivot_history,
            sizeof(result->pivot_history));
     result->success = 1;
+
+#ifdef DEBUG_KKT
+    fprintf(stderr,
+            "[kkt-debug] n=%d min_pivot=%.3e max_pivot=%.3e rank=%d cache_hits=%lu\n",
+            n,
+            result->min_pivot,
+            result->max_pivot,
+            result->rank,
+            g_kkt_stats.cache_hits);
+#endif
 
     chrono_kkt_backend_cache_store(src, n, pivot_epsilon, result);
     return 1;

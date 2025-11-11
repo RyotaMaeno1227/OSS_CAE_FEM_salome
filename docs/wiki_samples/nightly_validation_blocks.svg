@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="520" viewBox="0 0 960 520">
+  <rect width="940" height="500" x="10" y="10" rx="12" ry="12" fill="#1e1e1e" stroke="#2f2f2f" stroke-width="2" />
+  <text x="60" y="80" font-size="24" fill="#ffffff" font-family="'Fira Code', 'Menlo', monospace">Slack preview: summary/plan lint blocks</text>
+  <rect width="840" height="120" x="60" y="110" rx="8" ry="8" fill="#0f2027" stroke="#2f4f4f" />
+  <text x="80" y="150" font-size="18" fill="#a0f0d0" font-family="'Fira Code', 'Menlo', monospace">Schema validation (JSON)</text>
+  <text x="80" y="180" font-size="16" fill="#dcdcdc" font-family="'Fira Code', 'Menlo', monospace">Status: PASS</text>
+  <text x="80" y="205" font-size="16" fill="#dcdcdc" font-family="'Fira Code', 'Menlo', monospace">message: &quot;latest.summary.json validated&quot;</text>
+  <rect width="840" height="140" x="60" y="260" rx="8" ry="8" fill="#27100f" stroke="#4f2f2f" />
+  <text x="80" y="300" font-size="18" fill="#f0c0a0" font-family="'Fira Code', 'Menlo', monospace">Plan lint report</text>
+  <text x="80" y="330" font-size="16" fill="#dcdcdc" font-family="'Fira Code', 'Menlo', monospace">Status: SKIPPED (Plan CSV not available on nightly runner)</text>
+  <text x="80" y="360" font-size="16" fill="#dcdcdc" font-family="'Fira Code', 'Menlo', monospace">Use `--plan-lint-json artifacts/nightly/endurance_plan_lint.json`</text>
+  <text x="60" y="430" font-size="16" fill="#bbbbbb" font-family="'Fira Code', 'Menlo', monospace">* 実際の Slack メッセージでは &lt;details&gt; を展開して JSON 本文を確認</text>
+</svg>

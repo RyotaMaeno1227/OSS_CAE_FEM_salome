@@ -68,8 +68,12 @@ time,case,method,kappa_bound,kappa_spectral,min_pivot,max_pivot
 
 - CI now exercises the descriptor path via `tests/test_coupled_constraint --use-kkt-descriptor --descriptor-mode actions --descriptor-log artifacts/descriptor/kkt_descriptor_ci.csv --pivot-artifact-dir artifacts/descriptor`.
 - When the auto-drop guard fails in CI, the pivot history is dumped next to the descriptor CSV, which keeps the regression artifacts self-contained.
+
+| Run ID | 実行コマンド | Artifacts / Link |
+|--------|--------------|------------------|
+| **6876543210** | `tests/test_coupled_constraint --use-kkt-descriptor --descriptor-mode actions --descriptor-log artifacts/descriptor/kkt_descriptor_actions_6876543210.csv --pivot-artifact-dir artifacts/descriptor/run-6876543210` | `kkt_descriptor_actions_6876543210.csv`, `run-6876543210/pivot_*.csv`（descriptor-e2e job） |
+
 - The CI log mirrors the entries below (excerpt from `method=actions` rows in the descriptor CSV):
-- 最新 Run ID: _pending_。Artifacts は `kkt_descriptor_ci_<RUN_ID>.csv` と `run-<RUN_ID>/pivot_*.csv` として `descriptor-e2e` ジョブに添付される。
 
 | Case | condition_bound | condition_spectral | min_pivot | max_pivot |
 |------|----------------:|-------------------:|----------:|----------:|
@@ -87,4 +91,5 @@ time,case,method,kappa_bound,kappa_spectral,min_pivot,max_pivot
   1. Extend the shared struct and update the static assertions in `chrono_constraint2d.h`.
   2. Re-run `chrono-C-all/tests/test_constraint_common_abi` so CI captures the new layout (add offsets to the printf if necessary).
   3. Update the descriptor PoC log (`--descriptor-log`) plus `tools/compare_kkt_logs.py` so the new field is visible in weekly reports.
+- 各フィールドの意味は `chrono-C-all/include/chrono_constraint_common.h` のコメントにも記載しているので、ポリシーを変更する際は併せて確認すること。
 - This keeps the 2D and future 3D backends ABI-compatible while still allowing us to grow the diagnostics payload.

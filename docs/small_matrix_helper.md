@@ -30,3 +30,15 @@ Small-matrix inversion throughput (successes/s)
 - `src/chrono_constraint_kkt_backend.c` now delegates to `chrono_smallmat_invert_with_history(...)`, so the KKT backend and descriptor layer share the same pivot history/min/max logic.
 - Future 3D descriptors only need to extend `CHRONO_SMALL_MAT_MAX_N`; the backend automatically mirrors `pivot_history[]` into `ChronoConstraintDiagnostics_C`.
 - `ChronoKKTBackendStats_C` exposes `cache_hits`/`cache_misses`/`cache_checks` に加えてサイズごとのヒストグラムを保持するようになった。`chrono-C-all/tests/bench_coupled_constraint --stats-json data/diagnostics/kkt_backend_stats.json` を実行すると値が JSON に落ち、`tools/compare_kkt_logs.py --kkt-stats …` が週次レポートへヒット率を追記する。
+
+### kkt_backend_stats.json の読み方
+
+`data/diagnostics/kkt_backend_stats.json` は以下のフィールドを持つシンプルな JSON オブジェクトです:
+
+| フィールド | 意味 |
+|-----------|------|
+| `calls` / `fallback_calls` | KKT backend への呼び出し総数と SmallMatrix で処理できずフォールバックした回数。 |
+| `cache_hits` / `cache_misses` / `cache_checks` | `chrono_kkt_backend_cache_*` の統計。`cache_hit_rate` は `cache_hits / cache_checks` を表す。 |
+| `size_histogram` | 添字 `n` が `n` 式を持つブロックのリクエスト件数に相当する（0 は未使用）。 |
+
+`jq '.cache_hit_rate' data/diagnostics/kkt_backend_stats.json` のように単純なツールで参照できるため、Multi-ω 計測や descriptor PoC のレビューに添付しておくと便利です。

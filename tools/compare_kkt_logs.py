@@ -76,6 +76,10 @@ def parse_args() -> argparse.Namespace:
         help="Multi-ω bench CSV path (default: %(default)s)",
     )
     parser.add_argument(
+        "--multi-omega-json",
+        help="Optional Multi-ω bench JSON path (preferred when available).",
+    )
+    parser.add_argument(
         "--failure-json",
         default="data/diagnostics/archive_failure_rate_summary.json",
         help="Archive failure-rate summary JSON (default: %(default)s)",
@@ -84,6 +88,10 @@ def parse_args() -> argparse.Namespace:
         "--kkt-stats",
         default="data/diagnostics/kkt_backend_stats.json",
         help="Chrono KKT backend stats JSON (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--csv-output",
+        help="Optional CSV path mirroring the Scenario comparison table.",
     )
     return parser.parse_args()
 
@@ -159,6 +167,29 @@ def load_multi_omega(path: Path) -> List[MultiOmegaSummary]:
     return sorted(records.values(), key=lambda item: (item.scenario, item.omega))
 
 
+def load_multi_omega_json(path: Path) -> List[MultiOmegaSummary]:
+    if not path.exists():
+        return []
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    records: List[MultiOmegaSummary] = []
+    for entry in payload:
+        records.append(
+            MultiOmegaSummary(
+                scenario=entry.get("scenario", "default"),
+                omega=float(entry.get("omega", 0.0)),
+                max_eq_count=int(entry.get("eq_count", 0)),
+                max_condition=float(entry.get("max_condition", 0.0)),
+                max_condition_spectral=float(entry.get("max_condition_spectral", 0.0)),
+                max_condition_gap=float(entry.get("max_condition_gap", 0.0)),
+                min_pivot=float(entry.get("min_pivot", 0.0)),
+                max_pivot=float(entry.get("max_pivot", 0.0)),
+                drop_events=int(entry.get("drop_events", 0)),
+                avg_solve_time_us=float(entry.get("avg_solve_time_us", 0.0)),
+            )
+        )
+    return sorted(records, key=lambda item: (item.scenario, item.omega))
+
+
 def load_failure_summary(path: Path) -> Optional[FailureSummary]:
     if not path.exists():
         return None
@@ -194,12 +225,65 @@ def format_diff(a: float | None, b: float | None) -> str:
     return f"{delta:.3e}"
 
 
-def generate_report(chrono_c: Dict[Tuple[str, int], KKTRecord],
-                    chrono_main: Dict[Tuple[str, int], KKTRecord],
+def build_comparison_rows(chrono_c: Dict[Tuple[str, int], KKTRecord],
+                          chrono_main: Dict[Tuple[str, int], KKTRecord]) -> List[dict]:
+    keys = sorted(set(chrono_c.keys()) | set(chrono_main.keys()))
+    rows: List[dict] = []
+    for key in keys:
+        chrono_c_rec = chrono_c.get(key)
+        chrono_main_rec = chrono_main.get(key)
+        scenario, eq_count = key
+        status = "⚠️"
+        bound_delta = None
+        spectral_delta = None
+        if chrono_c_rec and chrono_main_rec:
+            bound_delta = abs(chrono_c_rec.kappa_bound - chrono_main_rec.kappa_bound)
+            spectral_delta = abs(chrono_c_rec.kappa_spectral - chrono_main_rec.kappa_spectral)
+            tolerance = max(chrono_c_rec.kappa_bound, chrono_main_rec.kappa_bound) * 0.05
+            if bound_delta <= tolerance and spectral_delta <= tolerance:
+                status = "✅"
+        elif chrono_c_rec or chrono_main_rec:
+            status = "⚠️"
+        rows.append(
+            {
+                "scenario": scenario,
+                "eq_count": eq_count,
+                "c_bound": chrono_c_rec.kappa_bound if chrono_c_rec else None,
+                "m_bound": chrono_main_rec.kappa_bound if chrono_main_rec else None,
+                "d_bound": format_diff(
+                    chrono_c_rec.kappa_bound if chrono_c_rec else None,
+                    chrono_main_rec.kappa_bound if chrono_main_rec else None,
+                ),
+                "c_spec": chrono_c_rec.kappa_spectral if chrono_c_rec else None,
+                "m_spec": chrono_main_rec.kappa_spectral if chrono_main_rec else None,
+                "d_spec": format_diff(
+                    chrono_c_rec.kappa_spectral if chrono_c_rec else None,
+                    chrono_main_rec.kappa_spectral if chrono_main_rec else None,
+                ),
+                "d_min": format_diff(
+                    chrono_c_rec.min_pivot if chrono_c_rec else None,
+                    chrono_main_rec.min_pivot if chrono_main_rec else None,
+                ),
+                "d_max": format_diff(
+                    chrono_c_rec.max_pivot if chrono_c_rec else None,
+                    chrono_main_rec.max_pivot if chrono_main_rec else None,
+                ),
+                "d_pivot0": format_diff(
+                    chrono_c_rec.pivot_primary if chrono_c_rec else None,
+                    chrono_main_rec.pivot_primary if chrono_main_rec else None,
+                ),
+                "log_c": chrono_c_rec.log_level_actual if chrono_c_rec else "n/a",
+                "log_m": chrono_main_rec.log_level_actual if chrono_main_rec else "n/a",
+                "status": status,
+            }
+        )
+    return rows
+
+
+def generate_report(comparison_rows: List[dict],
                     omega_records: Optional[List[MultiOmegaSummary]] = None,
                     failure_summary: Optional[FailureSummary] = None,
                     kkt_stats: Optional[dict] = None) -> str:
-    keys = sorted(set(chrono_c.keys()) | set(chrono_main.keys()))
     lines = [
         "# Weekly KKT / Spectral Comparison",
         "",
@@ -208,56 +292,27 @@ def generate_report(chrono_c: Dict[Tuple[str, int], KKTRecord],
         "|----------|---------:|--------------:|-----------------:|-----:|---------------:|"
         "------------------:|------:|-------------:|-------------:|-----------:|---------------------|--------|",
     ]
-    for key in keys:
-        chrono_c_rec = chrono_c.get(key)
-        chrono_main_rec = chrono_main.get(key)
-        scenario, eq_count = key
-        status = "⚠️"
-        if chrono_c_rec and chrono_main_rec:
-            # flag condition deltas above 5%
-            bound_delta = abs(chrono_c_rec.kappa_bound - chrono_main_rec.kappa_bound)
-            spectral_delta = abs(chrono_c_rec.kappa_spectral - chrono_main_rec.kappa_spectral)
-            tolerance = max(chrono_c_rec.kappa_bound, chrono_main_rec.kappa_bound) * 0.05
-            if bound_delta <= tolerance and spectral_delta <= tolerance:
-                status = "✅"
-        elif chrono_c_rec or chrono_main_rec:
-            status = "⚠️"
+    def val_or_na(value: float | None) -> str:
+        return format_scientific(value) if value is not None else "n/a"
 
-        def val_or_na(value: float | None) -> str:
-            return format_scientific(value) if value is not None else "n/a"
-
+    for row in comparison_rows:
         lines.append(
             "| {scenario} | {eq_count} | {c_bound} | {m_bound} | {d_bound} | "
             "{c_spec} | {m_spec} | {d_spec} | {d_min} | {d_max} | {d_pivot0} | {log_c}/{log_m} | {status} |".format(
-                scenario=scenario,
-                eq_count=eq_count,
-                c_bound=val_or_na(chrono_c_rec.kappa_bound if chrono_c_rec else None),
-                m_bound=val_or_na(chrono_main_rec.kappa_bound if chrono_main_rec else None),
-                d_bound=format_diff(
-                    chrono_c_rec.kappa_bound if chrono_c_rec else None,
-                    chrono_main_rec.kappa_bound if chrono_main_rec else None,
-                ),
-                c_spec=val_or_na(chrono_c_rec.kappa_spectral if chrono_c_rec else None),
-                m_spec=val_or_na(chrono_main_rec.kappa_spectral if chrono_main_rec else None),
-                d_spec=format_diff(
-                    chrono_c_rec.kappa_spectral if chrono_c_rec else None,
-                    chrono_main_rec.kappa_spectral if chrono_main_rec else None,
-                ),
-                d_min=format_diff(
-                    chrono_c_rec.min_pivot if chrono_c_rec else None,
-                    chrono_main_rec.min_pivot if chrono_main_rec else None,
-                ),
-                d_max=format_diff(
-                    chrono_c_rec.max_pivot if chrono_c_rec else None,
-                    chrono_main_rec.max_pivot if chrono_main_rec else None,
-                ),
-                d_pivot0=format_diff(
-                    chrono_c_rec.pivot_primary if chrono_c_rec else None,
-                    chrono_main_rec.pivot_primary if chrono_main_rec else None,
-                ),
-                log_c=(chrono_c_rec.log_level_actual if chrono_c_rec else "n/a"),
-                log_m=(chrono_main_rec.log_level_actual if chrono_main_rec else "n/a"),
-                status=status,
+                scenario=row["scenario"],
+                eq_count=row["eq_count"],
+                c_bound=val_or_na(row["c_bound"]),
+                m_bound=val_or_na(row["m_bound"]),
+                d_bound=row["d_bound"],
+                c_spec=val_or_na(row["c_spec"]),
+                m_spec=val_or_na(row["m_spec"]),
+                d_spec=row["d_spec"],
+                d_min=row["d_min"],
+                d_max=row["d_max"],
+                d_pivot0=row["d_pivot0"],
+                log_c=row["log_c"],
+                log_m=row["log_m"],
+                status=row["status"],
             )
         )
 
@@ -331,11 +386,16 @@ def main() -> int:
     args = parse_args()
     chrono_c_path = Path(args.chrono_c)
     chrono_main_path = Path(args.chrono_main)
-    omega_records = load_multi_omega(Path(args.multi_omega))
+    if args.multi_omega_json:
+        omega_records = load_multi_omega_json(Path(args.multi_omega_json))
+    else:
+        omega_records = load_multi_omega(Path(args.multi_omega))
     failure_summary = load_failure_summary(Path(args.failure_json))
+    chrono_c_records = load_records(chrono_c_path)
+    chrono_main_records = load_records(chrono_main_path)
+    chrono_rows = build_comparison_rows(chrono_c_records, chrono_main_records)
     report_text = generate_report(
-        load_records(chrono_c_path),
-        load_records(chrono_main_path),
+        chrono_rows,
         omega_records,
         failure_summary,
         load_kkt_stats(Path(args.kkt_stats)),
@@ -345,6 +405,48 @@ def main() -> int:
     output_path.write_text(report_text + "\n", encoding="utf-8")
     print(report_text)
     print(f"\nWrote report to {output_path}")
+
+    if args.csv_output:
+        csv_path = Path(args.csv_output)
+        csv_path.parent.mkdir(parents=True, exist_ok=True)
+        with csv_path.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.writer(handle)
+            writer.writerow(
+                [
+                    "scenario",
+                    "eq_count",
+                    "kappa_bound_chrono_c",
+                    "kappa_bound_chrono_main",
+                    "delta_bound",
+                    "kappa_spectral_chrono_c",
+                    "kappa_spectral_chrono_main",
+                    "delta_spectral",
+                    "delta_min_pivot",
+                    "delta_max_pivot",
+                    "delta_primary_pivot",
+                    "log_levels",
+                    "status",
+                ]
+            )
+            for row in chrono_rows:
+                writer.writerow(
+                    [
+                        row["scenario"],
+                        row["eq_count"],
+                        row["c_bound"] if row["c_bound"] is not None else "",
+                        row["m_bound"] if row["m_bound"] is not None else "",
+                        row["d_bound"],
+                        row["c_spec"] if row["c_spec"] is not None else "",
+                        row["m_spec"] if row["m_spec"] is not None else "",
+                        row["d_spec"],
+                        row["d_min"],
+                        row["d_max"],
+                        row["d_pivot0"],
+                        f"{row['log_c']}/{row['log_m']}",
+                        row["status"],
+                    ]
+                )
+        print(f"Wrote comparison CSV to {csv_path}")
     return 0
 
 

@@ -82,8 +82,28 @@ python3 tools/filter_ci_failures.py test.log --output test_coupled_island.log
     --omega 0.85 \
     --omega 1 \
     --omega 1.15 \
-    --output data/diagnostics/bench_coupled_constraint_multi.csv
+    --output data/diagnostics/bench_coupled_constraint_multi.csv \
+    --result-json data/diagnostics/bench_coupled_constraint_multi.json
   ```
 - Multi-ω preset last updated: 2025-11-08T18:18:55Z
 - The resulting CSV feeds `tools/compare_kkt_logs.py` so the Multi-ω table in `docs/reports/kkt_spectral_weekly.md` stays up to date. Keep the new `multi_omega_reference` preset in `data/coupled_constraint_presets.yaml` in sync with the Hands-on Chapter 02 exercises.
 - The CSV can still be dropped into design docs or pasted directly into PRs (`tools/plot_coupled_constraint_endurance.py --summary-json` for quick stats). Note: Chapter 02 of `docs/coupled_constraint_hands_on.md` references the same presets, so update both locations in the same commit.
+- `python3 tools/update_multi_omega_assets.py --refresh-report` 実行で上記コマンドブロック（README / Hands-on）と preset・Multi-ω CSV・`data/diagnostics/kkt_backend_stats.json` を自動同期できる。PR では dry-run (`python -m unittest tools.tests.test_update_multi_omega_assets`) も通すこと。
+
+## Documentation Link Lint
+
+- `scripts/check_doc_links.py` scans Markdown files for `docs/` links and ensures the targets exist.  
+- Run it locally before doc-heavy PRs:
+  ```bash
+  python scripts/check_doc_links.py \
+    docs/coupled_constraint_tutorial_draft.md \
+    docs/coupled_constraint_hands_on.md \
+    docs/coupled_contact_test_notes.md
+  ```
+- CI (docs lint) will execute the same script; fix the offending file paths if it reports `missing docs/...`.
+- Failure example:
+  ```
+  Broken links detected:
+    - docs/coupled_constraint_tutorial_draft.md: missing docs/nonexistent.md
+  ```
+  対処手順: (1) パス誤りを修正するかリンク先ファイルを追加、(2) `python scripts/check_doc_links.py ...` を再実行し成功を確認、(3) `docs/documentation_changelog.md` に修正内容を追記。

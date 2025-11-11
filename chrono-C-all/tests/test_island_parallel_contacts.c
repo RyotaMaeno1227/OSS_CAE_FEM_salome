@@ -254,9 +254,12 @@ int main(int argc, char **argv) {
                 return 1;
             }
             jacobian_log_path = argv[++arg];
+        } else if (strcmp(argv[arg], "--jacobian-log-default") == 0) {
+            jacobian_log_path = "contact_jacobian_log.csv";
         } else if (strcmp(argv[arg], "--help") == 0 || strcmp(argv[arg], "-h") == 0) {
             fprintf(stderr,
-                    "Usage: %s [--jacobian-report docs/...md] [--jacobian-log path.csv]\n",
+                    "Usage: %s [--jacobian-report docs/...md] [--jacobian-log path.csv] "
+                    "[--jacobian-log-default]\n",
                     argv[0]);
             return 0;
         } else {

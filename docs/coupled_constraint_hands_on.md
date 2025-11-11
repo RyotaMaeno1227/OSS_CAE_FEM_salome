@@ -5,6 +5,13 @@ FEM4C の `tutorial_manual.md` / `FEM_LEARNING_GUIDE.md` に倣い、Coupled 拘
 
 > 学習パス統合のステータス: W2（TODO マーカー整理）が進行中、W3（リンク検証自動化）が着手済みです。`docs/appendix_optional_ops.md` **E. Learning Path Integration Plan** と `docs/integration/learning_path_map.md` を確認し、演習を更新した場合はチェックリスト経由で Tutorial に反映してください。
 
+### Learning Path Snapshot (2025-11-08)
+| フェーズ | 状態 | 依存ファイル |
+|----------|------|--------------|
+| W2 – Hands-on TODO 抽出 | ⏳ `ch02/ch03` 整理中 | `practice/coupled/ch02_softness.c`, `ch03_contact.c` |
+| W3 – Link Check 自動化 | 🆕 着手 | `scripts/check_doc_links.py`, Appendix B.7 |
+| W4 – 統合レビュー | 未着手 | Appendix E, `docs/documentation_changelog.md` |
+
 ---
 
 ## Chapter 01. Warm-up – Ratio Sweep
@@ -24,7 +31,8 @@ FEM4C の `tutorial_manual.md` / `FEM_LEARNING_GUIDE.md` に倣い、Coupled 拘
     --omega 0.85 \
     --omega 1 \
     --omega 1.15 \
-    --output data/diagnostics/bench_coupled_constraint_multi.csv
+    --output data/diagnostics/bench_coupled_constraint_multi.csv \
+    --result-json data/diagnostics/bench_coupled_constraint_multi.json
   ```
   `tools/plot_coupled_constraint_endurance.py --summary-json` で差分を可視化し、README の「Coupled Presets」と同じ条件で議論できるようにする。
 - Multi-ω preset last updated: 2025-11-08T18:18:55Z

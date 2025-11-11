@@ -22,10 +22,11 @@ Coupled 拘束と Contact 拘束を同一島で解く際の意図と判定方法
 | 3DOF Jacobian 行 | `test_island_parallel_contacts` | `chrono_contact2d_build_jacobian_3dof` の Normal/Rolling/Torsional 行が `ChronoContactPair2D` の姿勢と一致（許容誤差 1e-9）。 |
 
 <!-- jacobian-status:start -->
-_Auto-generated status pending update._
+**CI Run 6876543210 (pending artifacts)** – `tools/run_contact_jacobian_check.py` でローカル実行すると `data/diagnostics/contact_jacobian_log.csv` に最新ログが生成され、`docs/coupled_contact_test_notes.md` も `--jacobian-report` 経由で自動更新される。CI で新しい Run ID が確定したら `python3 tools/update_descriptor_run_id.py --run-id <ID>` → `python3 tools/run_contact_jacobian_check.py --log artifacts/contact/contact_jacobian_log.csv --report docs/coupled_contact_test_notes.md --extra-args --jacobian-log-default` の順に再実行し、このブロックを書き換える。
 <!-- jacobian-status:end -->
 
-- `tests/test_island_parallel_contacts --jacobian-report docs/coupled_contact_test_notes.md --jacobian-log out/contact_jacobian.csv` を実行すると上記ステータスとログが自動更新される（CI では `--jacobian-log` のみ使用し、Markdown 変更はローカルで行う）。
+- `tests/test_island_parallel_contacts --jacobian-report docs/coupled_contact_test_notes.md --jacobian-log out/contact_jacobian.csv`（または `--jacobian-log-default`）を実行すると上記ステータスとログが自動更新される（CI では `--jacobian-log` のみ使用し、Markdown 変更はローカルで行う）。
+- `python3 tools/run_contact_jacobian_check.py` を使うと Jacobian CSV と Markdown の両方を 1 コマンドで更新できる（`--skip-report` でログのみ取得も可）。
 
 ## 3. ログ読み解き手順
 1. `./chrono-C-all/tests/test_island_parallel_contacts --dump=log.json` を実行し、Coupled 拘束 ID と Contact manifold ID を対応付ける。  

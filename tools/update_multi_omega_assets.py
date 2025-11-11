@@ -13,6 +13,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_BENCH = REPO_ROOT / "chrono-C-all" / "tests" / "bench_coupled_constraint"
 DEFAULT_OUTPUT = REPO_ROOT / "data" / "diagnostics" / "bench_coupled_constraint_multi.csv"
 DEFAULT_STATS = REPO_ROOT / "data" / "diagnostics" / "kkt_backend_stats.json"
+DEFAULT_RESULT_JSON = REPO_ROOT / "data" / "diagnostics" / "bench_coupled_constraint_multi.json"
 README_PATH = REPO_ROOT / "README.md"
 HANDSON_PATH = REPO_ROOT / "docs" / "coupled_constraint_hands_on.md"
 PRESET_PATH = REPO_ROOT / "data" / "coupled_constraint_presets.yaml"
@@ -36,6 +37,11 @@ def parse_args() -> argparse.Namespace:
         "--stats-json",
         default=str(DEFAULT_STATS),
         help="Path for the KKT backend stats JSON (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--result-json",
+        default=str(DEFAULT_RESULT_JSON),
+        help="Path for the multi-ω JSON dump (default: %(default)s)",
     )
     parser.add_argument(
         "--preset-id",
@@ -80,6 +86,8 @@ def run_bench(args: argparse.Namespace) -> None:
         args.output,
         "--stats-json",
         args.stats_json,
+        "--result-json",
+        args.result_json,
     ]
     for omega in args.omegas:
         cmd.extend(["--omega", format_omega(omega)])

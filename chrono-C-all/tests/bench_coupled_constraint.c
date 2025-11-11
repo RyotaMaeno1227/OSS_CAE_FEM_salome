@@ -381,6 +381,42 @@ static void write_result(FILE *out, const CoupledBenchResult *result) {
             result->scenario ? result->scenario : "default");
 }
 
+static void write_result_json(FILE *out, const CoupledBenchResult *result, int *entry_count) {
+    if (!out || !result || !entry_count) {
+        return;
+    }
+    if (*entry_count > 0) {
+        fprintf(out, ",\n");
+    }
+    fprintf(out, "  {\n");
+    fprintf(out, "    \"eq_count\": %d,\n", result->eq_count);
+    fprintf(out, "    \"epsilon\": %.6e,\n", result->epsilon);
+    fprintf(out, "    \"omega\": %.6f,\n", result->solver_omega);
+    fprintf(out, "    \"sharpness\": %.6f,\n", result->solver_sharpness);
+    fprintf(out, "    \"tolerance\": %.6e,\n", result->solver_tolerance);
+    fprintf(out, "    \"max_condition\": %.6e,\n", result->max_condition);
+    fprintf(out, "    \"avg_condition\": %.6e,\n", result->avg_condition);
+    fprintf(out, "    \"max_condition_spectral\": %.6e,\n", result->max_condition_spectral);
+    fprintf(out, "    \"avg_condition_spectral\": %.6e,\n", result->avg_condition_spectral);
+    fprintf(out, "    \"max_condition_gap\": %.6e,\n", result->max_condition_gap);
+    fprintf(out, "    \"avg_condition_gap\": %.6e,\n", result->avg_condition_gap);
+    fprintf(out, "    \"min_pivot\": %.6e,\n", result->min_pivot);
+    fprintf(out, "    \"max_pivot\": %.6e,\n", result->max_pivot);
+    fprintf(out, "    \"avg_solve_time_us\": %.6e,\n", result->avg_solve_time_us);
+    fprintf(out, "    \"drop_events\": %d,\n", result->drop_events);
+    fprintf(out, "    \"drop_index_mask\": %u,\n", result->drop_index_mask);
+    fprintf(out, "    \"recovery_events\": %d,\n", result->recovery_events);
+    fprintf(out, "    \"avg_recovery_steps\": %.6e,\n", result->avg_recovery_steps);
+    fprintf(out, "    \"max_recovery_steps\": %d,\n", result->max_recovery_steps);
+    fprintf(out, "    \"unrecovered_drops\": %d,\n", result->unrecovered_drops);
+    fprintf(out, "    \"max_pending_steps\": %d,\n", result->max_pending_steps);
+    fprintf(out,
+            "    \"scenario\": \"%s\"\n",
+            result->scenario ? result->scenario : "default");
+    fprintf(out, "  ");
+    *entry_count += 1;
+}
+
 static int write_stats_json(const char *path) {
     if (!path) {
         return 1;
@@ -411,14 +447,16 @@ static int write_stats_json(const char *path) {
 }
 
 static void print_usage(const char *program) {
-    fprintf(stderr, "Usage: %s [--output path] [--omega value] [--stats-json path]\n", program);
-    fprintf(stderr, "  --omega value   Append a solver over-relaxation factor (can be repeated).\n");
-    fprintf(stderr, "  --stats-json    Dump Chrono KKT backend stats to the given JSON file.\n");
+    fprintf(stderr, "Usage: %s [--output path] [--omega value] [--stats-json path] [--result-json path]\n", program);
+    fprintf(stderr, "  --omega value      Append a solver over-relaxation factor (can be repeated).\n");
+    fprintf(stderr, "  --stats-json       Dump Chrono KKT backend stats to the given JSON file.\n");
+    fprintf(stderr, "  --result-json      Save per-case bench metrics as JSON alongside the CSV output.\n");
 }
 
 int main(int argc, char **argv) {
     const char *output_path = NULL;
     const char *stats_json_path = NULL;
+    const char *result_json_path = NULL;
     double omega_values[8];
     size_t omega_count = 0;
     for (int i = 1; i < argc; ++i) {
@@ -470,6 +508,12 @@ int main(int argc, char **argv) {
                 return 1;
             }
             stats_json_path = argv[++i];
+        } else if (strcmp(argv[i], "--result-json") == 0) {
+            if (i + 1 >= argc) {
+                print_usage(argv[0]);
+                return 1;
+            }
+            result_json_path = argv[++i];
         } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
             print_usage(argv[0]);
             return 0;
@@ -500,6 +544,20 @@ int main(int argc, char **argv) {
             "drop_index_mask,recovery_events,avg_recovery_steps,max_recovery_steps,unrecovered_drops,"
             "max_pending_steps,scenario\n");
 
+    FILE *json_out = NULL;
+    int json_entry_count = 0;
+    if (result_json_path) {
+        json_out = fopen(result_json_path, "w");
+        if (!json_out) {
+            fprintf(stderr, "Failed to open JSON output: %s\n", result_json_path);
+            if (out != stdout) {
+                fclose(out);
+            }
+            return 1;
+        }
+        fprintf(json_out, "[\n");
+    }
+
     const int equation_counts[] = {1, 2, 3, 4};
     const size_t eq_count_total = sizeof(equation_counts) / sizeof(equation_counts[0]);
     const double epsilons[] = {0.0, 1e-4, 1e-6, 1e-8};
@@ -519,12 +577,18 @@ int main(int argc, char **argv) {
                 }
                 CoupledBenchResult result = bench_case(eq_count, epsilon, "default", NULL, omega);
                 write_result(out, &result);
+                if (json_out) {
+                    write_result_json(json_out, &result, &json_entry_count);
+                }
             }
         }
 
         CoupledBenchResult stress =
             bench_case(4, 0.0, "spectral_stress", setup_spectral_stress_case, omega);
         write_result(out, &stress);
+        if (json_out) {
+            write_result_json(json_out, &stress, &json_entry_count);
+        }
     }
 
     if (stats_json_path && !write_stats_json(stats_json_path)) {
@@ -537,6 +601,10 @@ int main(int argc, char **argv) {
 
     if (out != stdout) {
         fclose(out);
+    }
+    if (json_out) {
+        fprintf(json_out, "\n]\n");
+        fclose(json_out);
     }
 
     return 0;
