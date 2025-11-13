@@ -26,7 +26,7 @@ Coupled 拘束と Contact 拘束を同一島で解く際の意図と判定方法
 <!-- jacobian-status:end -->
 
 - `tests/test_island_parallel_contacts --jacobian-report docs/coupled_contact_test_notes.md --jacobian-log out/contact_jacobian.csv`（または `--jacobian-log-default`）を実行すると上記ステータスとログが自動更新される（CI では `--jacobian-log` のみ使用し、Markdown 変更はローカルで行う）。
-- `python3 tools/run_contact_jacobian_check.py --output-dir data/diagnostics/jacobians` を使うと保存先ディレクトリを切り替えつつ Jacobian CSV と Markdown の両方を 1 コマンドで更新できる（`--skip-report` でログのみ取得も可）。
+- `python3 tools/run_contact_jacobian_check.py --output-dir data/diagnostics/jacobians --report docs/coupled_contact_test_notes.md` を使うと保存先ディレクトリを切り替えつつ Jacobian CSV と Markdown の両方を 1 コマンドで更新できる（`--skip-report` でログのみ取得も可）。`--list-presets` を付けると Hands-on/README で参照しているプリセット候補が表示されるので、レポートへ貼る際の脚注に利用できる。
 
 ### Placeholder → 実データ更新チェックリスト
 
@@ -34,6 +34,14 @@ Coupled 拘束と Contact 拘束を同一島で解く際の意図と判定方法
 2. `python3 tools/run_contact_jacobian_check.py --output-dir artifacts/contact --report docs/coupled_contact_test_notes.md` を実行し、CI と同じディレクトリ構成で CSV を取得。
 3. `git diff docs/coupled_contact_test_notes.md` を確認し、placeholder テキストが実測値に置き換わっていることをレビュー。
 4. 必要に応じて `artifacts/contact/contact_jacobian_log.csv` を PR 添付、`docs/logs/kkt_descriptor_poc_e2e.md` の Run ID 表と突き合わせる。
+
+Slack テンプレ（placeholder → 実データ差し替え時）:
+```
+[contact-jacobian] run=<id>
+- report: docs/coupled_contact_test_notes.md#jacobian-status
+- log: artifacts/contact/contact_jacobian_log.csv
+- notes: pivot drift < 1e-6 / WARN=0
+```
 
 ## 3. ログ読み解き手順
 1. `./chrono-C-all/tests/test_island_parallel_contacts --dump=log.json` を実行し、Coupled 拘束 ID と Contact manifold ID を対応付ける。  

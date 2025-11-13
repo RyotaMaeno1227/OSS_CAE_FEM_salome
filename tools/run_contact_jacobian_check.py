@@ -44,11 +44,44 @@ def parse_args() -> argparse.Namespace:
         nargs=argparse.REMAINDER,
         help="Additional arguments forwarded to the binary (everything after '--').",
     )
+    parser.add_argument(
+        "--list-presets",
+        action="store_true",
+        help="Show preset IDs/descriptions from data/coupled_constraint_presets.yaml and exit.",
+    )
     return parser.parse_args()
+
+
+def list_presets() -> None:
+    preset_file = REPO_ROOT / "data" / "coupled_constraint_presets.yaml"
+    if not preset_file.exists():
+        print(f"Preset file not found: {preset_file}")
+        return
+    entries = []
+    current_id = None
+    current_desc = ""
+    for line in preset_file.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if stripped.startswith("- id:"):
+            if current_id:
+                entries.append((current_id, current_desc.strip()))
+            current_id = stripped.split(":", 1)[1].strip()
+            current_desc = ""
+        elif stripped.startswith("description:"):
+            current_desc = stripped.split(":", 1)[1].strip()
+    if current_id:
+        entries.append((current_id, current_desc.strip()))
+    print("Available presets (id — description):")
+    for preset_id, desc in entries:
+        display = desc or "(no description)"
+        print(f"  - {preset_id} — {display}")
 
 
 def main() -> int:
     args = parse_args()
+    if args.list_presets:
+        list_presets()
+        return 0
     log_path = Path(args.log)
     if args.output_dir:
         output_dir = Path(args.output_dir)

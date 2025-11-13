@@ -152,6 +152,10 @@ use_cases:
     # Hands-on Chapter 02 と README の "Coupled Presets" で参照する共通セット。
     # Shared preset consumed by Hands-on Chapter 02 / README (multi-ω demo).
     # omega スイープは `tools/update_multi_omega_assets.py` で 0.85 / 1.0 / 1.15 を計測する前提。
+    # QC metadata:
+    #   last_sync: 2025-11-08T18:18:55Z
+    #   csv_sha256: ecabc90891ce7a51afebb272a63a90d9105a737199787012f5241952ce12d16a
+    #   json_sha256: e3f7284c989f26bae45dc799954e219b684d3eb389bbcb8a68ebcbd0e877bf1a
     base:
       ratio_distance: 0.78
       ratio_angle: -0.22

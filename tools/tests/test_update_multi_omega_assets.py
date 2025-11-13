@@ -100,6 +100,32 @@ class UpdateCommandBlockTest(unittest.TestCase):
         )
         self.assertEqual(result, expected)
 
+    def test_preserves_comment_lines_in_block(self) -> None:
+        source = textwrap.dedent(
+            """\
+            ```bash
+            # keep this comment
+            ./chrono-C-all/tests/bench_coupled_constraint \\
+              --omega 0.9 \\
+              --output data/tmp.csv
+            # trailing comment
+            ```
+            """
+        )
+        result = self._rewrite(source, [0.8])
+        expected = textwrap.dedent(
+            """\
+            ```bash
+            # keep this comment
+            ./chrono-C-all/tests/bench_coupled_constraint \\
+              --omega 0.8 \\
+              --output data/tmp.csv
+            # trailing comment
+            ```
+            """
+        )
+        self.assertEqual(result, expected)
+
 
 if __name__ == "__main__":
     unittest.main()

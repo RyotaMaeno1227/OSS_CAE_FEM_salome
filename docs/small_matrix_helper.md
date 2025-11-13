@@ -53,3 +53,37 @@ Small-matrix inversion throughput (successes/s)
 
 - `label` には `chrono_constraint2d` がセットした constraint アドレス／式数が入る。
 - `n` / `min_pivot` / `max_pivot` / `rank` は `ChronoKKTBackendResult_C` の値と一致するので、`docs/logs/kkt_descriptor_poc_e2e.md` や `docs/reports/kkt_spectral_weekly.md` の Δκ_s と合わせて調査できる。
+- 解析手順の例:
+  1. `make tests CFLAGS='-DDEBUG_KKT'` でビルド。
+  2. 対象テストを実行し、stderr を `tee debug.log` で保存。
+  3. `rg --no-heading --line-number "\\[kkt-debug" debug.log` で問題行を抽出し、constraint ポインタごとに `sort`。
+  4. `jq '.[] | select(.scenario==\"tele_yaw_control\")' data/diagnostics/chrono_c_diagnostics.json` のように diag JSON と突き合わせ、ピボット差分や WARN フラグを確認する。
+
+### KKT JSON → CSV 変換案
+
+`tools/compare_kkt_logs.py --kkt-stats` で使用している JSON を Aチームが簡易 CSV へ変換できるよう、以下の Python スニペット案を残す。
+
+```bash
+python - <<'PY'
+import csv, json
+from pathlib import Path
+
+payload = json.loads(Path("data/diagnostics/kkt_backend_stats.json").read_text())
+rows = [
+    {
+        "label": entry["label"],
+        "min_pivot": entry["min_pivot"],
+        "max_pivot": entry["max_pivot"],
+        "condition_number": entry["condition_number"],
+        "condition_number_spectral": entry["condition_number_spectral"],
+    }
+    for entry in payload.get("diagnostics", [])
+]
+with open("data/diagnostics/kkt_backend_stats_flat.csv", "w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(handle, fieldnames=rows[0].keys())
+    writer.writeheader()
+    writer.writerows(rows)
+PY
+```
+
+この CSV を `tools/compare_kkt_logs.py --diag-json data/diagnostics/sample_diag.json` の結果と突き合わせれば、A/B 両チームで条件数の異常値を共有しやすくなる。

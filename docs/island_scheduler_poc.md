@@ -29,11 +29,12 @@ Reference CSV: `data/diagnostics/bench_island_scheduler.csv`
 | openmp (forced) | 4 | 0.052 ms | Explicit OpenMP backend for comparison (0.01043 s / 200). |
 | tbb stub (legacy) | 1 | 0.069 ms | Old serial stub left for historical comparison. |
 | tbb fallback | 4 | 0.068 ms | oneTBB backend compiled but libraries missing; message points to enabling `TBB_LIBS`. |
-| tbb (oneTBB enabled) | 4 | — | Pending hardware run (`bench_island_solver --scheduler tbb --csv ...` with `TBB_LIBS=-ltbb`). Update `data/diagnostics/bench_island_scheduler.csv` and re-run `python3 tools/update_descriptor_run_id.py` once the measurement is captured. |
+| tbb (oneTBB enabled) | 4 | — | Pending hardware run (`bench_island_solver --scheduler tbb --csv ...` with `TBB_LIBS=-ltbb`). Update `data/diagnostics/bench_island_scheduler.csv`（または `data/diagnostics/island_scheduler/tbb_<date>.csv` に測定ログを保存）し、`python3 tools/update_descriptor_run_id.py` 再実行で Evidence を揃える。 |
 
 ## Risks & next steps
 
 - The shim calls `oneapi::tbb::parallel_for` (or `tbb::parallel_for` on older distributions). Without headers/libs it degrades gracefully and tells the operator to link TBB.
+- Pending 実測は `data/diagnostics/island_scheduler/tbb_<YYYYMMDD>.csv` へ生ログを残し、テーブル更新時に `data/diagnostics/bench_island_scheduler.csv` に反映させる。
 - Contact resolution still runs on the worker thread that owns the island; pinning contact updates to tasks may further reduce contention.  
 - Real oneTBB integration requires linking against the system lib (or shipping one in `third_party`). The API surface above stays neutral so we can flip the switch per platform.
 - Benchmarks show good gains once island sizes diverge, but uniform workloads may favour the static OpenMP path—keep the `scheduler` knob exposed for CI comparisons.

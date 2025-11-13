@@ -36,6 +36,7 @@
 2. リポジトリルートで `python3 tools/update_descriptor_run_id.py --run-id 6876543210` を実行。
 3. スクリプトが `docs/logs/kkt_descriptor_poc_e2e.md` と `docs/coupled_island_migration_plan.md` を同時更新するので、`git diff` で Run ID が揃っているか確認。
 4. 必要に応じて `tests/test_island_parallel_contacts --jacobian-report docs/coupled_contact_test_notes.md --jacobian-log ...` を追走し、Jacobian セクションも同じ Run ID を参照させる。
+   - 変更内容を確認したい場合は `python3 tools/update_descriptor_run_id.py --dry-run --run-id <ID>` で差分を印刷してから本番コマンドを実行する。
 
 ### `tools/compare_kkt_logs.py` – 出力サンプル & 添付手順
 
@@ -85,6 +86,17 @@
 - ブロッカー例: oneTBB ビルド失敗、Δκ_s が閾値逸脱、3DOF Jacobian が Contact 回帰に統合できない場合。エスカレーション先は PM / Architect WG。  
 - Evidence 保管先: `docs/logs/`（PoC）、`docs/reports/`（週次）、`data/diagnostics/`（CSV）。PR では必ずこれらへの差分リンクを添付する。
 
+### Coupled endurance CSV lint（例）
+
+`python3 tools/filter_coupled_endurance_log.py data/coupled_constraint_endurance.csv --lint-only --require condition_number_spectral,condition_gap,min_eigenvalue,max_eigenvalue,active_equations,drop_events_total` を実行すると以下の Markdown が stderr に出力されます。Slack や PR コメントへそのまま貼り、欠落列を共有してください。
+
+```
+### Coupled endurance CSV lint (missing columns)
+| File | Missing columns | Suggested action |
+| --- | --- | --- |
+| `data/coupled_constraint_endurance.csv` | `condition_number_spectral`<br>`condition_gap` | Ensure the log exporter emits these columns or update `--require` if the schema changed. |
+```
+
 ---
 
 ## 6. oneTBB 導入ガイド
@@ -96,10 +108,23 @@
 
 ## 7. Evidence Quicklinks
 
-- Descriptor / KKT: `docs/logs/kkt_descriptor_poc_e2e.md`, `docs/reports/kkt_spectral_weekly.md`, `docs/reports/kkt_spectral_weekly.csv`
-- Diagnostics stats: `data/diagnostics/kkt_backend_stats.json`, `data/diagnostics/chrono_c_diagnostics.json`（`tools/compare_kkt_logs.py --diag-json` の入力）
-- Contact Jacobian: `data/diagnostics/contact_jacobian_log.csv`（`tools/run_contact_jacobian_check.py --output-dir ...`）と `docs/coupled_contact_test_notes.md`
-- Island/TBB: `docs/island_scheduler_poc.md`, `data/diagnostics/bench_island_scheduler.csv`
+| Doc / Artifact | Quick Link | Run ID / 更新テンプレ |
+|----------------|------------|-----------------------|
+| Descriptor & Weekly report | `docs/logs/kkt_descriptor_poc_e2e.md`, `docs/reports/kkt_spectral_weekly.md`, `docs/reports/kkt_spectral_weekly.csv` | `| <RUN_ID> | <ISO8601> | <Owner> | <preset/omega> | <cmd> | <artifacts> | <memo> |` |
+| Diagnostics stats | `data/diagnostics/kkt_backend_stats.json`, `data/diagnostics/chrono_c_diagnostics.json`（`tools/compare_kkt_logs.py --diag-json` 入力） | 更新時は `python3 tools/compare_kkt_logs.py --csv-output ... --diag-json ...` を PR 説明へ貼る |
+| Contact Jacobian | `data/diagnostics/contact_jacobian_log.csv`, `docs/coupled_contact_test_notes.md` | `python3 tools/run_contact_jacobian_check.py --output-dir artifacts/contact --report docs/coupled_contact_test_notes.md` |
+| Island/TBB | `docs/island_scheduler_poc.md`, `data/diagnostics/bench_island_scheduler.csv`（＋ `data/diagnostics/island_scheduler/tbb_<date>.csv`） | TBB 実測時に Run ID (bench) を `docs/island_scheduler_poc.md` のメモ欄へ追記 |
+
+Weekly Run ID を記録するときは上記テンプレをそのままテーブルへ追加し、`tools/update_descriptor_run_id.py --dry-run --run-id <ID>` で差分を確認してからコミットしてください。
+- Evidence Markdown テンプレ: Appendix B.5.5 を参照（Run ID / artifact / log の 3 行ブロック）。
+
+#### Evidence 記入例
+```
+- Run: [#6876543210](https://github.com/acme/highperformanceFEM/actions/runs/6876543210)
+- Artifact: [`coupled-endurance-6876543210`](https://github.com/acme/highperformanceFEM/actions/runs/6876543210/artifacts/123456)
+- Log: [`docs/logs/kkt_descriptor_poc_e2e.md`](../docs/logs/kkt_descriptor_poc_e2e.md)
+```
+JSON や CSV を添付する場合はファイル名（例: `data/diagnostics/chrono_c_diagnostics.json`）を文末に追記する。
 
 ---
 
