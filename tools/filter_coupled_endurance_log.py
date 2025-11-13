@@ -80,19 +80,18 @@ def _collect_equation_columns(fieldnames: Iterable[str]) -> Set[str]:
 def _print_missing_table(path: Path, missing: List[str]) -> None:
     if not missing:
         return
+    missing_md = "<br>".join(f"`{name}`" for name in missing)
+    action = (
+        "Ensure the log exporter emits these columns or update `--require` if the schema changed."
+    )
     lines = [
         "",
-        "Required columns check failed:",
-        "+----------------+------------------------------------------------+-----------------------------+",
-        "| File           | Missing columns                                | Suggested action            |",
-        "+----------------+------------------------------------------------+-----------------------------+",
+        "### Coupled endurance CSV lint (missing columns)",
+        "| File | Missing columns | Suggested action |",
+        "| --- | --- | --- |",
+        f"| `{path}` | {missing_md} | {action} |",
+        "",
     ]
-    missing_display = ", ".join(missing)
-    action = "Update CSV producer or adjust --require list."
-    lines.append(
-        f"| {path.name:<14} | {missing_display:<46} | {action:<27} |"
-    )
-    lines.append("+----------------+------------------------------------------------+-----------------------------+")
     print("\n".join(lines), file=sys.stderr)
 
 

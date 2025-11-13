@@ -311,6 +311,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     token = args.token or os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
     headers = _headers(token)
+    generated_files: List[str] = []
 
     now = dt.datetime.now(dt.timezone.utc)
     window_start = now - dt.timedelta(weeks=max(args.weeks, 1))
@@ -332,6 +333,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             output_path=Path(args.output_chart),
             timezone_label=args.timezone,
         )
+        generated_files.append(args.output_chart)
     elif args.dry_run:
         print("Dry-run mode: skipping chart generation.", file=sys.stderr)
 
@@ -343,6 +345,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         weeks=args.weeks,
     )
     Path(args.output_slack).write_text(json.dumps(slack_payload), encoding="utf-8")
+    generated_files.append(args.output_slack)
 
     if args.output_json:
         summary = {
@@ -363,8 +366,17 @@ def main(argv: Sequence[str] | None = None) -> int:
             ],
         }
         Path(args.output_json).write_text(json.dumps(summary, indent=2), encoding="utf-8")
+        generated_files.append(args.output_json)
     if args.output_markdown:
         write_markdown(buckets, Path(args.output_markdown))
+        generated_files.append(args.output_markdown)
+
+    if args.dry_run:
+        print("Dry-run summary (files written in this run except chart):", file=sys.stderr)
+    else:
+        print("Generated files:", file=sys.stderr)
+    for path in generated_files:
+        print(f" - {path}", file=sys.stderr)
     return 0
 
 

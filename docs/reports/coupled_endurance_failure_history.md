@@ -16,3 +16,13 @@ To refresh this page:
 ## Latest Snapshot (fill after artifact download)
 
 _Pending update – run `workflow_dispatch` and paste the contents of `archive_failure_rate.md` here along with the PNG link._
+
+Placeholder structure (replace per Run ID):
+
+```
+### Run <ID> (<date>)
+
+![Archive failure rate](../data/endurance_archive/archive_failure_rate.png)
+
+<paste archive_failure_rate.md table here>
+```

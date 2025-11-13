@@ -32,10 +32,14 @@ jobs:
 
       - name: Lint doc links
         run: |
-          python scripts/check_doc_links.py \
-            docs/coupled_constraint_tutorial_draft.md \
-            docs/coupled_constraint_hands_on.md \
-            docs/coupled_contact_test_notes.md
+          mkdir -p artifacts/ci
+          {
+            echo "## Doc link check ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+            python scripts/check_doc_links.py \
+              docs/coupled_constraint_tutorial_draft.md \
+              docs/coupled_constraint_hands_on.md \
+              docs/coupled_contact_test_notes.md
+          } | tee artifacts/ci/doc_link_report.md
 
       - name: Run multi-omega format tests
         run: python -m unittest tools.tests.test_update_multi_omega_assets
@@ -132,6 +136,7 @@ jobs:
             artifacts/ci/condition_gap_report.md
             artifacts/ci/sample_latest_summary.md
             artifacts/ci/sample_latest_summary.json
+            artifacts/ci/doc_link_report.md
             artifacts/contact
 
       - name: Fail if tests failed

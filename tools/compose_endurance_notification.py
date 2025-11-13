@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from html import escape
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -408,12 +409,22 @@ def main() -> int:
     Path(args.output_slack).write_text(json.dumps(slack_payload), encoding="utf-8")
     Path(args.output_email).write_text(email_body, encoding="utf-8")
     if args.output_email_html:
-        html = "<html><body><pre style=\"font-family:Menlo,Consolas,monospace;white-space:pre-wrap;\">"
-        html += email_body.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        html += "</pre></body></html>"
-        Path(args.output_email_html).write_text(html, encoding="utf-8")
+        Path(args.output_email_html).write_text(_render_html_email(email_body), encoding="utf-8")
     return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
+def _render_html_email(text: str) -> str:
+    escaped = escape(text)
+    return """<html>
+  <head>
+    <meta charset="utf-8"/>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.4; padding: 1.5rem; background: #f8f9fb; color: #1f2a35; }
+      pre { background: #1e1e1e; color: #f5f5f5; padding: 1rem; border-radius: 8px; overflow-x: auto; white-space: pre-wrap; font-family: "Fira Code", Menlo, Consolas, monospace; }
+      a { color: #0366d6; }
+    </style>
+  </head>
+  <body>
+    <pre>""" + escaped + "</pre>\n  </body>\n</html>"
