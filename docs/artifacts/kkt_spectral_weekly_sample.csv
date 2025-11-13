@@ -1,3 +1,0 @@
-scenario,eq_count,delta_kappa,delta_kappa_spectral,delta_min_pivot,delta_max_pivot,status
-default,2,1.5e-03,2.0e-04,1.0e-02,5.0e-02,PASS
-spectral_stress,4,1.0e+23,1.9e+23,-2.0e-03,3.1e-02,INVESTIGATE
