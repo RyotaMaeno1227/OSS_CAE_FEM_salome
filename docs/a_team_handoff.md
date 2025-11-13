@@ -40,7 +40,7 @@
 
 ### `tools/compare_kkt_logs.py` – 出力サンプル & 添付手順
 
-`python3 tools/compare_kkt_logs.py --csv-output docs/reports/kkt_spectral_weekly.csv --diag-json data/diagnostics/chrono_c_diagnostics.json` を実行すると、Markdown（`docs/reports/kkt_spectral_weekly.md`）と CSV の両方が更新されます。レビュー時は以下のような差分を PR 説明へ貼りつつ、生成された CSV を artifacts に添付してください。
+`python3 tools/compare_kkt_logs.py --csv-output docs/reports/kkt_spectral_weekly.csv --diag-json data/diagnostics/chrono_c_diagnostics_sample.json` を実行すると、Markdown（`docs/reports/kkt_spectral_weekly.md`）と CSV の両方が更新されます。レビュー時は以下のような差分を PR 説明へ貼りつつ、生成された CSV を artifacts に添付してください。
 
 ```
 | Scenario | eq_count | κ̂ (Chrono-C) | κ̂ (chrono-main) | Δκ̂ | κ_s (Chrono-C) | κ_s (chrono-main) | Δκ_s | min pivot Δ | max pivot Δ | pivot₀ Δ | Log levels (C/main) | Status |
@@ -49,7 +49,7 @@
 ```
 
 - `docs/reports/kkt_spectral_weekly.csv` はそのまま Excel / Google Sheet へ流用可能。
-- `--diag-json data/diagnostics/chrono_c_diagnostics.json` を指定すると `ChronoConstraintDiagnostics_C` の各ケース（min/max pivot, κ_s）を Markdown に追加し、`data/diagnostics/kkt_backend_stats.json` と突き合わせられる。
+- `--diag-json data/diagnostics/chrono_c_diagnostics_sample.json` を指定すると `ChronoConstraintDiagnostics_C` の各ケース（min/max pivot, κ_s）を Markdown に追加し、`data/diagnostics/kkt_backend_stats.json` と突き合わせられる。
 
 ---
 
@@ -111,7 +111,7 @@
 | Doc / Artifact | Quick Link | Run ID / 更新テンプレ |
 |----------------|------------|-----------------------|
 | Descriptor & Weekly report | `docs/logs/kkt_descriptor_poc_e2e.md`, `docs/reports/kkt_spectral_weekly.md`, `docs/reports/kkt_spectral_weekly.csv` | `| <RUN_ID> | <ISO8601> | <Owner> | <preset/omega> | <cmd> | <artifacts> | <memo> |` |
-| Diagnostics stats | `data/diagnostics/kkt_backend_stats.json`, `data/diagnostics/chrono_c_diagnostics.json`（`tools/compare_kkt_logs.py --diag-json` 入力） | 更新時は `python3 tools/compare_kkt_logs.py --csv-output ... --diag-json ...` を PR 説明へ貼る |
+| Diagnostics stats | `data/diagnostics/kkt_backend_stats.json`, `data/diagnostics/sample_diag.json`（`tools/compare_kkt_logs.py --diag-json` 入力） | 更新時は `python3 tools/compare_kkt_logs.py --csv-output ... --diag-json ...` を PR 説明へ貼る |
 | Contact Jacobian | `data/diagnostics/contact_jacobian_log.csv`, `docs/coupled_contact_test_notes.md` | `python3 tools/run_contact_jacobian_check.py --output-dir artifacts/contact --report docs/coupled_contact_test_notes.md` |
 | Island/TBB | `docs/island_scheduler_poc.md`, `data/diagnostics/bench_island_scheduler.csv`（＋ `data/diagnostics/island_scheduler/tbb_<date>.csv`） | TBB 実測時に Run ID (bench) を `docs/island_scheduler_poc.md` のメモ欄へ追記 |
 
@@ -124,7 +124,7 @@ Weekly Run ID を記録するときは上記テンプレをそのままテーブ
 - Artifact: [`coupled-endurance-6876543210`](https://github.com/acme/highperformanceFEM/actions/runs/6876543210/artifacts/123456)
 - Log: [`docs/logs/kkt_descriptor_poc_e2e.md`](../docs/logs/kkt_descriptor_poc_e2e.md)
 ```
-JSON や CSV を添付する場合はファイル名（例: `data/diagnostics/chrono_c_diagnostics.json`）を文末に追記する。
+JSON や CSV を添付する場合はファイル名（例: `data/diagnostics/chrono_c_diagnostics_sample.json`）を文末に追記する。
 
 ---
 

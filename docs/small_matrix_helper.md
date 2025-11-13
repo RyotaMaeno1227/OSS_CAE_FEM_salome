@@ -57,7 +57,7 @@ Small-matrix inversion throughput (successes/s)
   1. `make tests CFLAGS='-DDEBUG_KKT'` でビルド。
   2. 対象テストを実行し、stderr を `tee debug.log` で保存。
   3. `rg --no-heading --line-number "\\[kkt-debug" debug.log` で問題行を抽出し、constraint ポインタごとに `sort`。
-  4. `jq '.[] | select(.scenario==\"tele_yaw_control\")' data/diagnostics/chrono_c_diagnostics.json` のように diag JSON と突き合わせ、ピボット差分や WARN フラグを確認する。
+  4. `jq '.[] | select(.scenario==\"tele_yaw_control\")' data/diagnostics/chrono_c_diagnostics_sample.json` のように diag JSON と突き合わせ、ピボット差分や WARN フラグを確認する。
 
 ### KKT JSON → CSV 変換案
 

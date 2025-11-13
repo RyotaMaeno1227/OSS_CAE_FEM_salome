@@ -83,7 +83,7 @@ time,case,method,kappa_bound,kappa_spectral,min_pivot,max_pivot
 | hydraulic_lift_sync | 1.00e+00 | 1.00e+00 | 5.39e-01 | 5.39e-01 |
 | optic_alignment_trim | 1.00e+00 | 1.00e+00 | 1.18e+00 | 1.18e+00 |
 
-`python3 tools/compare_kkt_logs.py --csv-output docs/reports/kkt_spectral_weekly.csv --diag-json data/diagnostics/chrono_c_diagnostics.json` で Markdown + CSV + constraint diagnostics を同時生成できるので、Run ID 表と合わせて PR/Slack へ添付すると差分確認が容易です。
+`python3 tools/compare_kkt_logs.py --csv-output docs/reports/kkt_spectral_weekly.csv --diag-json data/diagnostics/sample_diag.json` で Markdown + CSV + constraint diagnostics を同時生成できるので、Run ID 表と合わせて PR/Slack へ添付すると差分確認が容易です。
 
 - サンプル: `docs/artifacts/kkt_spectral_weekly_sample.csv` は `--csv-output` の最小例（Δκ/Δpivot 列）なので、レビュー時の添付フォーマット参照に使えます。
 

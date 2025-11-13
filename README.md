@@ -130,6 +130,15 @@ python3 tools/filter_ci_failures.py test.log --output test_coupled_island.log
   ```
   対処手順: (1) パス誤りを修正するかリンク先ファイルを追加、(2) `python scripts/check_doc_links.py ...` を再実行し成功を確認、(3) `docs/documentation_changelog.md` に修正内容を追記。
 
+## Preset Link Smoke Test
+
+- `scripts/check_preset_links.py` は README / Hands-on / Wiki（本編・サンプル）が `docs/coupled_constraint_presets_cheatsheet.md` を参照しているかを検証します。  
+- 実行例:
+  ```bash
+  python scripts/check_preset_links.py
+  ```
+- CI でも同テストが走ります。失敗時は `.md` リンクが欠落しているファイルを更新し、Appendix B.3/B.5 のローテ表に Markdown 確認結果を記録してください。
+
 ## Coupled Endurance Artifact Fetch Helper
 
 `tools/fetch_endurance_artifact.py` には最新失敗 Run を自動検出する `--latest` フラグがあります（`--auto-latest` のエイリアス）。GitHub CLI と `actions:read` 権限があれば以下で Slack/PR 向けのコメント Markdown を取得できます。
@@ -154,7 +163,7 @@ python tools/fetch_endurance_artifact.py \
 ## Troubleshooting / Debugging Tips
 
 - **KKT backend tracing** – ビルド時に `-DDEBUG_KKT` を付与すると `chrono_kkt_backend_invert_small` が constraint アドレス／行番号付きで pivot 情報を stderr へ吐きます。`tools/compare_kkt_logs.py` の結果と照らして rank 落ちの箇所を絞り込めます。
-- **KKT weekly diff export** – `python3 tools/compare_kkt_logs.py --csv-output docs/reports/kkt_spectral_weekly.csv --diag-json data/diagnostics/chrono_c_diagnostics.json` で Markdown + CSV を同時生成し、A/B/C どのチームでも同じフォーマットを添付できます。
+- **KKT weekly diff export** – `python3 tools/compare_kkt_logs.py --csv-output docs/reports/kkt_spectral_weekly.csv --diag-json data/diagnostics/sample_diag.json` で Markdown + CSV を同時生成し、A/B/C どのチームでも同じフォーマットを添付できます。
 - **Jacobian capture** – `tests/test_island_parallel_contacts --jacobian-log-default` で即席 CSV を生成可能。`python3 tools/run_contact_jacobian_check.py --output-dir tmp/jacobians --report docs/coupled_contact_test_notes.md` を使うとログと Markdown が同時に生成され、`--list-presets` で Hands-on 向けプリセット候補も確認できます。
 - **Jacobian placeholder 解除** – `docs/coupled_contact_test_notes.md` のチェックリストに従い、`tools/update_descriptor_run_id.py --run-id <ID>` → `python3 tools/run_contact_jacobian_check.py --output-dir artifacts/contact --report docs/coupled_contact_test_notes.md` を実行し、`git diff` で placeholder が実測値に置き換わったことを確認します。
 - **Descriptor Run ID 同期** – CI Run 完了後は `python3 tools/update_descriptor_run_id.py --run-id <GITHUB_RUN_ID>` を忘れず実行し、`docs/logs/kkt_descriptor_poc_e2e.md` / `docs/coupled_island_migration_plan.md` / Jacobian ノートで参照を揃えます。`tools/update_descriptor_run_id.py --dry-run --run-id <ID>` で変更を確認してからコミットできます。
