@@ -69,6 +69,10 @@
 | `docs/wiki_samples/coupled_endurance_article_sample.md` | ローテ表を本編と同書式に更新し、Appendix B.5 への往復リンクを追記 | Cチーム | サンプルとの整合を確保 |
 | `docs/chrono_coupled_constraint_tutorial.md` | Appendix 参照リンクを再確認し、運用系記述が無い状態を維持 | Cチーム | Appendix A/C へのリダイレクトのみ残存 |
 | `.github/workflows/ci.yaml` | `scripts/check_doc_links.py` を docs lint ステップに追加 | Tooling | Tutorial/Hands-on のリンク検証を CI で強制 |
+| `docs/appendix_optional_ops.md` | Markdown 方針（A/B/C/D/E）、ローテ表の Markdown チェック欄、通知テンプレ整備を追記 | Cチーム | Appendix 全体で PDF 排除を明文化 |
+| `docs/wiki_coupled_endurance_article.md` / `docs/wiki_samples/coupled_endurance_article_sample.md` | ローテ表に Markdown 方針列を追加し、例外条件を記載 | Cチーム | Wiki/サンプル共に `.md` 参照を保証 |
+| `README.md`, `docs/media/coupled/README.md` | `scripts/check_doc_links.py` の運用例と Slack テンプレの参照先を追記 | Cチーム | lint/告知フローを統一 |
+| `docs/logs/notification_audit.md` | Webhook/メール通知の記録テンプレを新規追加 | Cチーム | Appendix C.4 とリンク
 
 Slack summary (2025-11-10, #chrono-docs / #chrono-constraints):
 - Preset PDF remains provisional (Pandoc unavailable); checklist + README note added.  

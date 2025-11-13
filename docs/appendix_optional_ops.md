@@ -79,6 +79,15 @@ ani.save("docs/media/coupled/endurance_stride5.mp4", writer="ffmpeg", fps=24)
 - [ ] `docs/documentation_changelog.md` に更新内容・担当者・コミット日を追記。  
 - [ ] Appendix B.3/B.5 のローテーション表に更新日・担当を記録し、Slack へ通知。  
 - [ ] 必要に応じて `docs/media/coupled/README.md` に Markdown 運用である旨の注意書きを追加。
+- 差分記録テンプレ（PR 説明や README へ貼り付け可能）:
+  ```
+  ### Preset cheat sheet update log
+  - Author: <Name>
+  - Date: YYYY-MM-DD
+  - Sections touched: e.g., Section 2 ratio table, Appendix notes
+  - Link validation: scripts/check_doc_links.py ✔︎
+  - Notified: README / Hands-on / Wiki links + Slack #chrono-docs
+  ```
 
 #### A.3.2 （任意）外部向け PDF を作る場合
 - チーム外へ配布する必要がある場合のみ `pandoc docs/coupled_constraint_presets_cheatsheet.md -o presets.pdf` でローカル生成し、個別に共有する。  
@@ -137,7 +146,7 @@ h1. クイックリンク
 * [CI トラブルシュート手順書|<社内パス>/coupled_endurance_ci_troubleshooting]
 * [チュートリアル / メディア生成|<社内パス>/chrono_coupled_constraint_tutorial]
 * [パラメータ YAML|<Git リポジトリ URL>/data/coupled_constraint_presets.yaml]
-* [チートシート PDF|<社内ストレージ>/coupled_constraint_presets_cheatsheet.pdf]
+* [チートシート (Markdown)|<Git リポジトリ URL>/docs/coupled_constraint_presets_cheatsheet.md]
 * [アーティファクト一覧|https://github.com/<org>/<repo>/actions?...]
 
 h1. 運用フロー
@@ -176,6 +185,7 @@ h1. メンテナンス
 - [ ] 変更内容を Slack `#chrono-constraints` へ報告した。  
 - [ ] 引き継ぎ情報（更新日・未解決課題）を次担当へ共有した。  
 - [ ] 公開後 24 時間以内にスクリーンショット一覧が最新か再確認した。
+- [ ] README / Hands-on / Wiki / Appendix のプリセットリンクが Markdown（`.md`）を指していることを確認した。  
 - [ ] `docs/pm_status_YYYY-MM-DD.md` と `docs/coupled_island_migration_plan.md` の KPI 表を同じ値に更新し、B.5.1 の担当欄を埋めた。  
 - [ ] Contact + Coupled テスト運用（B.6）でログ解析／通知分岐をレビューした。  
 - [ ] リンク検証チェックリスト（B.7）を実行し、結果を記録した。
@@ -189,12 +199,12 @@ h1. メンテナンス
 5. 次担当者へタスクを割り当て、次回レビュー予定日を設定。
 
 #### B.4.1 Wiki 更新棚卸し（直近 4 週）
-| 週 (開始日) | 担当 | B.3 チェック | B.4 公開プロセス | 備考 |
-|-------------|------|--------------|-------------------|------|
-| 2025-10-20 | Kobayashi | ✅ summary・スクリーンショット更新 | ✅ B.4 手順で再告知 | Contact+Coupled 判定ログを Appendix B.6 へ追記。 |
-| 2025-10-27 | Suzuki | ⚠️ スクリーンショット差し替えが 12h 遅延（KPI は更新済み） | ✅ 公開・通知済み | 遅延理由（CI 障害）を #chrono-docs に共有。 |
-| 2025-11-03 | Tanaka | ✅ KPI & メディア更新、引き継ぎメモ作成 | ✅ Nightly 差分と Webhook ログを追記 | Appendix B.5.1 ローテーション表を最新化。 |
-| 2025-11-10 | Mori | ✅ KPI / Appendix B.3/B.6 棚卸し、プリセット Markdown 参照の注意書きを Wiki/README に追記 | ✅ PR #6250 で Wiki 同期、Slack `#chrono-docs` & `#chrono-constraints` 通知 | `scripts/check_doc_links.py` の結果をローテ表に記録。 |
+| 週 (開始日) | 担当 | B.3 チェック | Markdown 運用確認 | B.4 公開プロセス | 備考 |
+|-------------|------|--------------|-------------------|-------------------|------|
+| 2025-10-20 | Kobayashi | ✅ summary・スクリーンショット更新 | ✅ チートシートが `.md` を指していることを確認 | ✅ B.4 手順で再告知 | Contact+Coupled 判定ログを Appendix B.6 へ追記。 |
+| 2025-10-27 | Suzuki | ⚠️ スクリーンショット差し替えが 12h 遅延（KPI は更新済み） | ✅ Markdown 方針維持 | ✅ 公開・通知済み | 遅延理由（CI 障害）を #chrono-docs に共有。 |
+| 2025-11-03 | Tanaka | ✅ KPI & メディア更新、引き継ぎメモ作成 | ✅ Markdown のみ参照（PDF 無し） | ✅ Nightly 差分と Webhook ログを追記 | Appendix B.5.1 ローテーション表を最新化。 |
+| 2025-11-10 | Mori | ✅ KPI / Appendix B.3/B.6 棚卸し、Markdown 注意書きを更新 | ✅ README/Hands-on/Wiki のリンクを再チェック | ✅ PR #6250 で Wiki 同期、Slack `#chrono-docs` & `#chrono-constraints` 通知 | `scripts/check_doc_links.py` の結果をローテ表に記録。 |
 
 > B.3 の未完了事項は翌週担当が必ず引き継ぐ。⚠️ が付いた週は `docs/documentation_changelog.md` に理由と是正策を記録済み。
 
@@ -247,12 +257,25 @@ h1. メンテナンス
 - 公開フォーマット例: `docs/reports/nightly/latest_summary_validation_<run-id>.md` に Markdown テーブルを追加し、JSON 全文は `<details>` で折りたたむ。  
 - Slack には Pages リンク（例: `https://<org>.github.io/<repo>/reports/nightly/latest_summary_validation_<run-id>.html`）を併記し、Run ID ログ（B.5.3）にも URL を控える。
 
+#### B.5.5 Evidence Markdown テンプレ
+Evidence 列には以下のテンプレを貼り、Run ID／Artifact／ログを紐づける。
+
+```markdown
+- Run: [#<run-id>](https://github.com/<org>/<repo>/actions/runs/<run-id>)
+- Artifact: [`coupled-endurance-<run-id>`](https://github.com/<org>/<repo>/actions/runs/<run-id>/artifacts/<artifact-id>)
+- Log: [`docs/logs/kkt_descriptor_poc_e2e.md`](../docs/logs/kkt_descriptor_poc_e2e.md)
+```
+
+状況に応じて `diagnostics_console.log` や `archive_failure_rate.md` へのリンクを増やし、`docs/a_team_handoff.md` / `docs/coupled_island_migration_plan.md` の Evidence 列で共通化する。
+
+> Multi-ω 更新手順の詳細は README「Multi-ω 差分チェック手順」節、および `tools/update_multi_omega_assets.py --refresh-report` の説明を参照。
+
 #### B.5.1 KPI Update Rotation
-| 曜日 | 対象ドキュメント | 主担当 | バックアップ | メモ |
-|------|------------------|--------|--------------|------|
-| 月曜 | `docs/pm_status_2024-11-08.md`（週次ステータス最新号をコピーして運用） | Mori | Suzuki | `docs/coupled_island_migration_plan.md` の KPI と揃えること。 |
-| 水曜 | `docs/coupled_island_migration_plan.md` KPI 表 (§5.1) | Kobayashi | Tanaka | `docs/pm_status_YYYY-MM-DD.md` と数値一致を確認。 |
-| 金曜 | Appendix B.5 ローテーション表／Slack 通知履歴 | Suzuki | Mori | 週次ログが揃っているかをチェックし、必要なら週報へ転記。 |
+| 曜日 | 対象ドキュメント | 主担当 | バックアップ | Markdown 確認 | メモ |
+|------|------------------|--------|--------------|----------------|------|
+| 月曜 | `docs/pm_status_2024-11-08.md`（週次ステータス最新号をコピーして運用） | Mori | Suzuki | ✅ / ⚠️ を記入 | `docs/coupled_island_migration_plan.md` の KPI と揃えること。 |
+| 水曜 | `docs/coupled_island_migration_plan.md` KPI 表 (§5.1) | Kobayashi | Tanaka | ✅ / ⚠️ | `docs/pm_status_YYYY-MM-DD.md` と数値一致を確認。 |
+| 金曜 | Appendix B.5 ローテーション表／Slack 通知履歴 | Suzuki | Mori | ✅ / ⚠️ | 週次ログが揃っているかをチェックし、必要なら週報へ転記。 |
 
 > KPI 更新を実施したら日付と担当を B.5.1 の表かコメント欄に残し、`docs/documentation_changelog.md` へまとめて通知する。Slack では `#chrono-docs` と `#chrono-constraints` の両方へ共有する。
 
@@ -299,6 +322,21 @@ h1. メンテナンス
 | Pending | Failure-rate artifact (`archive_failure_rate.{png,md,json}`) を再生成して `docs/reports/coupled_endurance_failure_history.md` へ貼付 | `tools/report_archive_failure_rate.py` を `--dry-run` なしで実行 |
 | Net-required | Nightly Slack で `--summary-validation-json` / `--plan-lint-json` ブロックのスクショ取得 | Appendix C.4 に添付 |
 | Net-required | `docs/logs/notification_audit.md` にメール/Webhook 通知の記録を追加 | 非 Slack チャネル向け |
+| Net-required | Multi-ω 実行結果チェックリスト（README 参照）を週次で回し、差分を `docs/reports/kkt_spectral_weekly.md` に貼付 | 担当: B チーム（Aタスク支援） |
+
+`tools/compare_kkt_logs.py` への Issue/PR 依頼テンプレ:
+```
+### Summary
+- chrono-c log: data/diagnostics/chrono_c_kkt_log.csv (commit ...)
+- chrono-main log: data/diagnostics/chrono_main_kkt_log.csv
+- diag-json: data/diagnostics/sample_diag.json
+- observed delta: Δκ_s > 5% on scenario=<name>, eq=<count>
+
+### Requested change
+- [ ] add new diagnostics column / preset
+- [ ] update report layout
+```
+B チームに依頼する際は上記テンプレで Issue を立て、Appendix B.8 の表にリンクを残す。
 
 --- 
 

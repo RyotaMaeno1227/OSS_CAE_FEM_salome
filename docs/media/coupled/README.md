@@ -5,6 +5,7 @@
 | _N/A_ | プリセットは Markdown (`docs/coupled_constraint_presets_cheatsheet.md`) を直接参照 |  | PDF を生成する場合は Appendix A.3.2 の任意手順を利用（リポジトリには含めない）。
 
 ## Slack 通知テンプレ（Markdown 運用）
+※ Appendix B.5 の「Coupled Endurance Operations」にも同テンプレを掲載
 ```
 [preset-md-update] docs/coupled_constraint_presets_cheatsheet.md を更新しました。
 - 変更者: <名前> / 変更日: YYYY-MM-DD
