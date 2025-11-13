@@ -3,6 +3,7 @@
 最終更新: 2025-11-08  
 対象: Aチーム（Coupled 拘束／Contact 3DOF／島ソルバ／KKT Diagnostics）
 
+**Quicklinks:** [現況](#1-現況サマリ) | [成果物](#2-直近の成果物) | [Pending](#pending--environment-tasks) | [Backlog](#3-未完了タスク--担当) | [テスト手順](#4-推奨テスト運用コマンド) | [Run ID フロー](#run-id-更新フローツール-update_descriptor_run_idpy) | [週次レポート出力例](#toolscompare_kkt_logs.py--出力サンプル--添付手順) | [Evidence](#7-evidence-quicklinks)
 ---
 
 ## 1. 現況サマリ
@@ -35,6 +36,19 @@
 2. リポジトリルートで `python3 tools/update_descriptor_run_id.py --run-id 6876543210` を実行。
 3. スクリプトが `docs/logs/kkt_descriptor_poc_e2e.md` と `docs/coupled_island_migration_plan.md` を同時更新するので、`git diff` で Run ID が揃っているか確認。
 4. 必要に応じて `tests/test_island_parallel_contacts --jacobian-report docs/coupled_contact_test_notes.md --jacobian-log ...` を追走し、Jacobian セクションも同じ Run ID を参照させる。
+
+### `tools/compare_kkt_logs.py` – 出力サンプル & 添付手順
+
+`python3 tools/compare_kkt_logs.py --csv-output docs/reports/kkt_spectral_weekly.csv --diag-json data/diagnostics/chrono_c_diagnostics.json` を実行すると、Markdown（`docs/reports/kkt_spectral_weekly.md`）と CSV の両方が更新されます。レビュー時は以下のような差分を PR 説明へ貼りつつ、生成された CSV を artifacts に添付してください。
+
+```
+| Scenario | eq_count | κ̂ (Chrono-C) | κ̂ (chrono-main) | Δκ̂ | κ_s (Chrono-C) | κ_s (chrono-main) | Δκ_s | min pivot Δ | max pivot Δ | pivot₀ Δ | Log levels (C/main) | Status |
+|----------|---------:|--------------:|-----------------:|-----:|---------------:|------------------:|------:|-------------:|-------------:|-----------:|---------------------|--------|
+| tele_yaw_control | 2 | 1.266e+03 | 1.266e+03 | 1.0e-03 | 1.245e+03 | 1.246e+03 | 1.0e+00 | 2.0e-02 | 3.0e-02 | 0.0e+00 | warning/warning | ✅ |
+```
+
+- `docs/reports/kkt_spectral_weekly.csv` はそのまま Excel / Google Sheet へ流用可能。
+- `--diag-json data/diagnostics/chrono_c_diagnostics.json` を指定すると `ChronoConstraintDiagnostics_C` の各ケース（min/max pivot, κ_s）を Markdown に追加し、`data/diagnostics/kkt_backend_stats.json` と突き合わせられる。
 
 ---
 
@@ -79,6 +93,13 @@
 3. **性能ログ取得** – `./chrono-C-all/tests/bench_island_solver --scheduler tbb --csv data/diagnostics/bench_island_scheduler.csv` を走らせ、`docs/island_scheduler_poc.md` と `docs/coupled_island_migration_plan.md` の表を更新する。フォールバック時はログに WARN が 1 回だけ出る。
    - WARN (`oneTBB headers not found at build time; using fallback path`) が出た場合は `ldd chrono-C-all/tests/bench_island_solver` で `libtbb.so` の解決状況を確認し、`TBB_LIBS` が正しく渡っているかをチェック。
 4. **ドキュメント更新** – oneTBB を有効化する手順を PR 説明に含め、`docs/a_team_handoff.md` の本節と `docs/island_scheduler_poc.md` の「Risks & next steps」を同タイミングで修正する。
+
+## 7. Evidence Quicklinks
+
+- Descriptor / KKT: `docs/logs/kkt_descriptor_poc_e2e.md`, `docs/reports/kkt_spectral_weekly.md`, `docs/reports/kkt_spectral_weekly.csv`
+- Diagnostics stats: `data/diagnostics/kkt_backend_stats.json`, `data/diagnostics/chrono_c_diagnostics.json`（`tools/compare_kkt_logs.py --diag-json` の入力）
+- Contact Jacobian: `data/diagnostics/contact_jacobian_log.csv`（`tools/run_contact_jacobian_check.py --output-dir ...`）と `docs/coupled_contact_test_notes.md`
+- Island/TBB: `docs/island_scheduler_poc.md`, `data/diagnostics/bench_island_scheduler.csv`
 
 ---
 

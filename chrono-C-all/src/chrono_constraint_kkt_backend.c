@@ -1,5 +1,6 @@
 #include <math.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 #ifdef DEBUG_KKT
 #include <stdio.h>
@@ -19,6 +20,21 @@ typedef struct ChronoKKTBackendCacheEntry {
 
 static ChronoKKTBackendStats_C g_kkt_stats = {0, 0, 0, 0, 0, {0}};
 static ChronoKKTBackendCacheEntry g_kkt_cache[CHRONO_COUPLED_KKT_MAX_EQ + 1];
+#ifdef DEBUG_KKT
+static char g_kkt_debug_label[128];
+#endif
+
+void chrono_kkt_backend_set_debug_label(const char *label) {
+#ifdef DEBUG_KKT
+    if (label) {
+        snprintf(g_kkt_debug_label, sizeof(g_kkt_debug_label), "%s", label);
+    } else {
+        g_kkt_debug_label[0] = '\0';
+    }
+#else
+    (void)label;
+#endif
+}
 
 void chrono_kkt_backend_reset_stats(void) {
     memset(&g_kkt_stats, 0, sizeof(g_kkt_stats));
@@ -110,8 +126,12 @@ int chrono_kkt_backend_invert_small(const double *src,
     result->success = 1;
 
 #ifdef DEBUG_KKT
+    const char *label = g_kkt_debug_label[0] ? g_kkt_debug_label : "n/a";
     fprintf(stderr,
-            "[kkt-debug] n=%d min_pivot=%.3e max_pivot=%.3e rank=%d cache_hits=%lu\n",
+            "[kkt-debug:%s:%d] label=%s n=%d min_pivot=%.3e max_pivot=%.3e rank=%d cache_hits=%lu\n",
+            __FILE__,
+            __LINE__,
+            label,
             n,
             result->min_pivot,
             result->max_pivot,

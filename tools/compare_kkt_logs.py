@@ -53,6 +53,17 @@ class FailureSummary:
     buckets: List[FailureBucket]
 
 
+@dataclass
+class DiagnosticsRecord:
+    scenario: str
+    eq_count: int
+    min_pivot: float
+    max_pivot: float
+    condition_number: float
+    condition_number_spectral: float
+    flags: int
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -92,6 +103,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--csv-output",
         help="Optional CSV path mirroring the Scenario comparison table.",
+    )
+    parser.add_argument(
+        "--diag-json",
+        help="Chrono Constraint Diagnostics JSON (list of scenario/eq entries).",
     )
     return parser.parse_args()
 
@@ -214,6 +229,27 @@ def load_kkt_stats(path: Path) -> Optional[dict]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def load_diag_json(path: Path) -> List[DiagnosticsRecord]:
+    if not path or not path.exists():
+        return []
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    records: List[DiagnosticsRecord] = []
+    entries = payload if isinstance(payload, list) else [payload]
+    for entry in entries:
+        records.append(
+            DiagnosticsRecord(
+                scenario=entry.get("scenario", "default"),
+                eq_count=int(entry.get("eq_count", 0)),
+                min_pivot=float(entry.get("min_pivot", 0.0)),
+                max_pivot=float(entry.get("max_pivot", 0.0)),
+                condition_number=float(entry.get("condition_number", 0.0)),
+                condition_number_spectral=float(entry.get("condition_number_spectral", 0.0)),
+                flags=int(entry.get("flags", 0)),
+            )
+        )
+    return records
+
+
 def format_scientific(value: float) -> str:
     return f"{value:.3e}"
 
@@ -283,7 +319,8 @@ def build_comparison_rows(chrono_c: Dict[Tuple[str, int], KKTRecord],
 def generate_report(comparison_rows: List[dict],
                     omega_records: Optional[List[MultiOmegaSummary]] = None,
                     failure_summary: Optional[FailureSummary] = None,
-                    kkt_stats: Optional[dict] = None) -> str:
+                    kkt_stats: Optional[dict] = None,
+                    diag_records: Optional[List[DiagnosticsRecord]] = None) -> str:
     lines = [
         "# Weekly KKT / Spectral Comparison",
         "",
@@ -379,6 +416,24 @@ def generate_report(comparison_rows: List[dict],
         upper = len(histogram_values) - 1 if histogram_values else 0
         lines.append("")
         lines.append(f"Histogram (eq_count=0…{upper}): [{histogram}]")
+    if diag_records:
+        lines.append("")
+        lines.append("## Constraint Diagnostics (JSON)")
+        lines.append("")
+        lines.append("| Scenario | eq_count | κ̂ | κ_s | min pivot | max pivot | flags |")
+        lines.append("|----------|---------:|----:|----:|----------:|----------:|------:|")
+        for record in diag_records:
+            lines.append(
+                "| {scenario} | {eq} | {kappa} | {kappa_s} | {min_pivot} | {max_pivot} | 0x{flags:02x} |".format(
+                    scenario=record.scenario,
+                    eq=record.eq_count,
+                    kappa=format_scientific(record.condition_number),
+                    kappa_s=format_scientific(record.condition_number_spectral),
+                    min_pivot=format_scientific(record.min_pivot),
+                    max_pivot=format_scientific(record.max_pivot),
+                    flags=record.flags,
+                )
+            )
     return "\n".join(lines)
 
 
@@ -394,11 +449,13 @@ def main() -> int:
     chrono_c_records = load_records(chrono_c_path)
     chrono_main_records = load_records(chrono_main_path)
     chrono_rows = build_comparison_rows(chrono_c_records, chrono_main_records)
+    diag_records = load_diag_json(Path(args.diag_json)) if args.diag_json else None
     report_text = generate_report(
         chrono_rows,
         omega_records,
         failure_summary,
         load_kkt_stats(Path(args.kkt_stats)),
+        diag_records,
     )
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)

@@ -31,6 +31,8 @@ int chrono_kkt_backend_invert_small(const double *src,
                                     double pivot_epsilon,
                                     ChronoKKTBackendResult_C *result);
 
+void chrono_kkt_backend_set_debug_label(const char *label);
+
 const ChronoKKTBackendStats_C *chrono_kkt_backend_get_stats(void);
 void chrono_kkt_backend_reset_stats(void);
 

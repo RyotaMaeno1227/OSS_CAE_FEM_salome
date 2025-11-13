@@ -26,7 +26,14 @@ Coupled 拘束と Contact 拘束を同一島で解く際の意図と判定方法
 <!-- jacobian-status:end -->
 
 - `tests/test_island_parallel_contacts --jacobian-report docs/coupled_contact_test_notes.md --jacobian-log out/contact_jacobian.csv`（または `--jacobian-log-default`）を実行すると上記ステータスとログが自動更新される（CI では `--jacobian-log` のみ使用し、Markdown 変更はローカルで行う）。
-- `python3 tools/run_contact_jacobian_check.py` を使うと Jacobian CSV と Markdown の両方を 1 コマンドで更新できる（`--skip-report` でログのみ取得も可）。
+- `python3 tools/run_contact_jacobian_check.py --output-dir data/diagnostics/jacobians` を使うと保存先ディレクトリを切り替えつつ Jacobian CSV と Markdown の両方を 1 コマンドで更新できる（`--skip-report` でログのみ取得も可）。
+
+### Placeholder → 実データ更新チェックリスト
+
+1. 最新 CI Run ID を `python3 tools/update_descriptor_run_id.py --run-id <ID>` でドキュメントへ反映。
+2. `python3 tools/run_contact_jacobian_check.py --output-dir artifacts/contact --report docs/coupled_contact_test_notes.md` を実行し、CI と同じディレクトリ構成で CSV を取得。
+3. `git diff docs/coupled_contact_test_notes.md` を確認し、placeholder テキストが実測値に置き換わっていることをレビュー。
+4. 必要に応じて `artifacts/contact/contact_jacobian_log.csv` を PR 添付、`docs/logs/kkt_descriptor_poc_e2e.md` の Run ID 表と突き合わせる。
 
 ## 3. ログ読み解き手順
 1. `./chrono-C-all/tests/test_island_parallel_contacts --dump=log.json` を実行し、Coupled 拘束 ID と Contact manifold ID を対応付ける。  

@@ -69,9 +69,9 @@ time,case,method,kappa_bound,kappa_spectral,min_pivot,max_pivot
 - CI now exercises the descriptor path via `tests/test_coupled_constraint --use-kkt-descriptor --descriptor-mode actions --descriptor-log artifacts/descriptor/kkt_descriptor_ci.csv --pivot-artifact-dir artifacts/descriptor`.
 - When the auto-drop guard fails in CI, the pivot history is dumped next to the descriptor CSV, which keeps the regression artifacts self-contained.
 
-| Run ID | 実行コマンド | Artifacts / Link |
-|--------|--------------|------------------|
-| **6876543210** | `tests/test_coupled_constraint --use-kkt-descriptor --descriptor-mode actions --descriptor-log artifacts/descriptor/kkt_descriptor_actions_6876543210.csv --pivot-artifact-dir artifacts/descriptor/run-6876543210` | `kkt_descriptor_actions_6876543210.csv`, `run-6876543210/pivot_*.csv`（descriptor-e2e job） |
+| Run ID | 検証日時 (UTC) | 担当 | 実行コマンド | Artifacts / Link | 差分メモ |
+|--------|----------------|------|--------------|------------------|-----------|
+| **6876543210** | 2025-11-08T04:15:00Z | Mori (Team A) | `tests/test_coupled_constraint --use-kkt-descriptor --descriptor-mode actions --descriptor-log artifacts/descriptor/kkt_descriptor_actions_6876543210.csv --pivot-artifact-dir artifacts/descriptor/run-6876543210` | `kkt_descriptor_actions_6876543210.csv`, `run-6876543210/pivot_*.csv`（descriptor-e2e job） | Δκ_s < 5% で安定、auto-drop 未発生。 |
 
 - The CI log mirrors the entries below (excerpt from `method=actions` rows in the descriptor CSV):
 
@@ -83,7 +83,7 @@ time,case,method,kappa_bound,kappa_spectral,min_pivot,max_pivot
 | hydraulic_lift_sync | 1.00e+00 | 1.00e+00 | 5.39e-01 | 5.39e-01 |
 | optic_alignment_trim | 1.00e+00 | 1.00e+00 | 1.18e+00 | 1.18e+00 |
 
-`tools/compare_kkt_logs.py` ingests this CSV (plus the chrono-main dump) and renders the weekly table in `docs/reports/kkt_spectral_weekly.md`, so reviewers can diff the CI artifacts instead of hand-comparing raw logs.
+`python3 tools/compare_kkt_logs.py --csv-output docs/reports/kkt_spectral_weekly.csv` で Markdown + CSV を同時生成できるので、Run ID 表と合わせて PR/Slack へ添付すると差分確認が容易です。
 
 ### ABI policy for constraint diagnostics
 

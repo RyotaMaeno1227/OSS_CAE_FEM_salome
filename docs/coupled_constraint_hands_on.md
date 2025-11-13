@@ -37,6 +37,7 @@ FEM4C の `tutorial_manual.md` / `FEM_LEARNING_GUIDE.md` に倣い、Coupled 拘
   `tools/plot_coupled_constraint_endurance.py --summary-json` で差分を可視化し、README の「Coupled Presets」と同じ条件で議論できるようにする。
 - Multi-ω preset last updated: 2025-11-08T18:18:55Z
 - **Sync note**: Multi-ω の再計測結果を `data/diagnostics/bench_coupled_constraint_multi.csv` と `data/coupled_constraint_presets.yaml`（`multi_omega_reference`）に反映し、README の「Coupled Presets」と同じ内容を保つ。PR では `docs/reports/kkt_spectral_weekly.md` の Multi-ω テーブルも再生成する。
+  - `python3 tools/update_multi_omega_assets.py --refresh-report` で README/Hands-on/プリセット/CSV+JSON/kkt stats/週次レポートが一括更新される。
 
 ## Chapter 03. Contact + Coupled Integration
 - **Theory**: `docs/coupled_contact_test_notes.md` を読み、Contact 併用テストの意図と判定指標を把握。  

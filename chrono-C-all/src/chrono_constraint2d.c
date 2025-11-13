@@ -277,7 +277,8 @@ static void coupled_constraint_clear_equation_buffers(ChronoCoupledConstraint2D_
 
 /* Derivation of the matrix build and pivot policy is documented in
  * docs/coupled_constraint_solver_math.md for cross-reference. */
-static int coupled_constraint_invert_matrix(const double *src,
+static int coupled_constraint_invert_matrix(const ChronoCoupledConstraint2D_C *constraint,
+                                            const double *src,
                                             double *dst,
                                             int n,
                                             double pivot_epsilon,
@@ -286,6 +287,15 @@ static int coupled_constraint_invert_matrix(const double *src,
                                             int *rank,
                                             ChronoKKTBackendResult_C *details) {
     ChronoKKTBackendResult_C backend_result;
+#ifdef DEBUG_KKT
+    char debug_label[128];
+    snprintf(debug_label,
+             sizeof(debug_label),
+             "constraint=%p eq=%d",
+             (const void *)constraint,
+             n);
+    chrono_kkt_backend_set_debug_label(debug_label);
+#endif
     if (!chrono_kkt_backend_invert_small(src, n, pivot_epsilon, &backend_result)) {
         return 0;
     }
@@ -1628,7 +1638,8 @@ static void chrono_coupled_constraint2d_prepare_impl(void *constraint_ptr, doubl
             }
         }
         ChronoKKTBackendResult_C backend_details;
-        if (coupled_constraint_invert_matrix(sys_local,
+        if (coupled_constraint_invert_matrix(constraint,
+                                             sys_local,
                                              inv_local,
                                              active_count,
                                              CHRONO_COUPLED_PIVOT_EPSILON,

@@ -42,3 +42,14 @@ Small-matrix inversion throughput (successes/s)
 | `size_histogram` | 添字 `n` が `n` 式を持つブロックのリクエスト件数に相当する（0 は未使用）。 |
 
 `jq '.cache_hit_rate' data/diagnostics/kkt_backend_stats.json` のように単純なツールで参照できるため、Multi-ω 計測や descriptor PoC のレビューに添付しておくと便利です。
+
+### DEBUG_KKT ログ例
+
+`make tests CFLAGS='-DDEBUG_KKT'` のようにビルドすると KKT backend が行番号＋ラベル付きで pivot 履歴を stderr に出力します。`chrono_constraint2d` 側で constraint ポインタと式カウントを埋め込んでおり、問題の島を特定しやすくなります。
+
+```
+[kkt-debug:chrono_constraint_kkt_backend.c:94] label=constraint=0x5562df2fdc10 eq=3 n=3 min_pivot=1.472e+02 max_pivot=3.884e+02 rank=3 cache_hits=12
+```
+
+- `label` には `chrono_constraint2d` がセットした constraint アドレス／式数が入る。
+- `n` / `min_pivot` / `max_pivot` / `rank` は `ChronoKKTBackendResult_C` の値と一致するので、`docs/logs/kkt_descriptor_poc_e2e.md` や `docs/reports/kkt_spectral_weekly.md` の Δκ_s と合わせて調査できる。

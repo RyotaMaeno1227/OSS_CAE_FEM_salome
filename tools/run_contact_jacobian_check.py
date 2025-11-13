@@ -36,6 +36,10 @@ def parse_args() -> argparse.Namespace:
         help="Skip updating the Markdown status block.",
     )
     parser.add_argument(
+        "--output-dir",
+        help="Directory to place the Jacobian log (overrides the directory portion of --log).",
+    )
+    parser.add_argument(
         "--extra-args",
         nargs=argparse.REMAINDER,
         help="Additional arguments forwarded to the binary (everything after '--').",
@@ -46,7 +50,12 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     log_path = Path(args.log)
-    log_path.parent.mkdir(parents=True, exist_ok=True)
+    if args.output_dir:
+        output_dir = Path(args.output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        log_path = output_dir / log_path.name
+    else:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
 
     cmd = [args.binary]
     cmd.extend(["--jacobian-log", str(log_path)])

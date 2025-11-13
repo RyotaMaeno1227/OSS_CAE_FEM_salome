@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Run the multi-ω bench, refresh preset metadata, and sync documentation."""
+"""Run the multi-ω bench, refresh preset metadata, and sync documentation.
+
+Outputs updated in a single run:
+  - README.md / docs/coupled_constraint_hands_on.md command blocks
+  - data/coupled_constraint_presets.yaml (multi_omega_reference)
+  - data/diagnostics/bench_coupled_constraint_multi.csv / .json
+  - data/diagnostics/kkt_backend_stats.json
+  - docs/reports/kkt_spectral_weekly.md (when --refresh-report is set)
+"""
 
 from __future__ import annotations
 
