@@ -67,6 +67,7 @@ ani.save("docs/media/coupled/endurance_stride5.mp4", writer="ffmpeg", fps=24)
   - `npm exec broken-link-checker -- --allow-redirect` 等でリンク検査を定期実行。
 
 ### A.3 Preset Cheat Sheet（Markdown 配布）
+> **Markdown-first policy:** プリセットの正は `docs/coupled_constraint_presets_cheatsheet.md`（Markdown）です。PDF は Appendix A.3.2 の例外手順で個別に生成する場合のみ利用し、リポジトリには含めません。
 プリセットは `docs/coupled_constraint_presets_cheatsheet.md` を正とし、GitHub 上の Markdown で閲覧・配布する。PDF への変換は必須ではなく、希望者が個別に Pandoc で生成する場合のみ Appendix A.3.2 を参照する。
 
 - Wiki / Appendix / README では Markdown への相対リンクを貼る（例: `docs/coupled_constraint_presets_cheatsheet.md`）。  
@@ -76,6 +77,7 @@ ani.save("docs/media/coupled/endurance_stride5.mp4", writer="ffmpeg", fps=24)
 #### A.3.1 配布チェックリスト（Markdown ベース）
 - [ ] `docs/coupled_constraint_presets_cheatsheet.md` を更新し、`scripts/check_doc_links.py` でリンク整合性を確認した。  
 - [ ] README、Hands-on、Wiki（本編＋サンプル）のプリセットリンクが Markdown 版を指していることを確認。  
+- [ ] `python scripts/check_preset_links.py` を実行し、上記ファイル群で `.md` 参照が維持されていることを検証。  
 - [ ] `docs/documentation_changelog.md` に更新内容・担当者・コミット日を追記。  
 - [ ] Appendix B.3/B.5 のローテーション表に更新日・担当を記録し、Slack へ通知。  
 - [ ] 必要に応じて `docs/media/coupled/README.md` に Markdown 運用である旨の注意書きを追加。
@@ -99,6 +101,7 @@ ani.save("docs/media/coupled/endurance_stride5.mp4", writer="ffmpeg", fps=24)
   ```
 
 #### A.4 メディア命名規則・保存先
+> **Markdown-first policy:** プリセットは Markdown を参照するため、ここで扱うメディアは GIF/PNG/MP4 など可視化資産のみです。固定 PDF を保持しない方針です（A.3.2 の例外を除く）。
 - ルート: `docs/media/coupled/{YYYYMM}/`（例: `docs/media/coupled/202511/`）。  
 - ファイル命名: `<topic>_<variant>_v<rev>.{png,gif,mp4}`（例: `endurance_overview_v1.gif`）。  
 - プリセットは Markdown 参照のため固定 PDF は不要。メディア（GIF/MP4）だけ `docs/media/coupled/` に配置し、履歴は README に追記する。  
@@ -111,12 +114,14 @@ ani.save("docs/media/coupled/endurance_stride5.mp4", writer="ffmpeg", fps=24)
 4. **アナウンス** – Slack `#chrono-docs` / `#chrono-constraints` にテンプレを用いて共有し、Appendix B.5.1 のローテ表へ Run ID / 更新日を記入。
 
 #### A.5 図版 (`docs/wiki_samples/schema_validation_gist.svg`) 差し替えガイド
+> **Markdown-first policy:** 図版内のテキストも Markdown ドキュメントの内容と矛盾しないようにし、プレースホルダや注記は `docs/coupled_constraint_presets_cheatsheet.md` を参照して更新します。PDF 由来の記述は追加しません。
 1. **編集ツール**: Figma または Inkscape。フォントは Noto Sans CJK（Bold/Regular）を使用。  
 2. **キャンバス**: 1280×720 px、背景透過。線幅 2 px、カラーパレットは `docs/styles/wiki_diagrams.json` に従う。  
 3. **書き出し**: SVG（Plain）で保存し、ファイル名は `schema_validation_gist.svg`。バージョン管理用に `docs/media/wiki/202511/schema_validation_gist_v2.svg` も保存。  
 4. **更新手順**:
    - `docs/wiki_samples/schema_validation_gist.svg` を差し替え。
    - Appendix A.5 と `docs/wiki_samples/README.md` に生成者・日付を記録。
+   - 図版内でプリセット値を示す場合は `docs/coupled_constraint_presets_cheatsheet.md` の表を引用し、Markdown と同じ数値に揃える。
    - Slack `#chrono-docs` で告知（テンプレ: `[wiki-diagram] schema_validation_gist.svg updated by <name> on YYYY-MM-DD`）。
 
 ##### A.5.1 承認フロー
@@ -293,7 +298,7 @@ Evidence 列には以下のテンプレを貼り、Run ID／Artifact／ログを
    - `condition_warning` あり & `contact_impulse` が連続増加 → Slack `#chrono-constraints` に *Contact saturation* テンプレで通知。  
    - `diagnostics.rank != equations_active` → `docs/coupled_contact_test_notes.md` のチェックリストを参照し、`tests/test_coupled_constraint` ログとの突き合わせを要求。  
 3. **通知フォーマット** – Appendix C のログテンプレに加え、Contact 付きかどうかを `tag=CONTACT+COUPLED` で明示。  
-4. **週次レビュー** – `docs/coupled_contact_test_notes.md` の判定指標表を更新し、`docs/wiki_coupled_endurance_article.md` からのリンクを確認。  
+4. **週次レビュー** – `docs/coupled_contact_test_notes.md` の判定指標表を更新し、`docs/wiki_coupled_endurance_article.md` からのリンク（Markdown を正とする）を確認。  
 5. **KPI 連携** – Contact 混在ランの `max_condition` / `warn_ratio_contact_only` を `docs/pm_status_YYYY-MM-DD.md` のメモ欄および Slack 通知に含める（テンプレ: `[contact-kpi] run=<id> max_cond=... warn_ratio=...`）。  
 
 | 状況 | Slack テンプレ | 追加対応 |
@@ -323,6 +328,7 @@ Evidence 列には以下のテンプレを貼り、Run ID／Artifact／ログを
 | Net-required | Nightly Slack で `--summary-validation-json` / `--plan-lint-json` ブロックのスクショ取得 | Appendix C.4 に添付 |
 | Net-required | `docs/logs/notification_audit.md` にメール/Webhook 通知の記録を追加 | 非 Slack チャネル向け |
 | Net-required | Multi-ω 実行結果チェックリスト（README 参照）を週次で回し、差分を `docs/reports/kkt_spectral_weekly.md` に貼付 | 担当: B チーム（Aタスク支援） |
+| Net-required | Markdown ベースでのプリセット進捗確認（README / Hands-on / Wiki の `.md` リンクを `scripts/check_preset_links.py` で検証） | Appendix B.3/B.5 から参照 |
 
 `tools/compare_kkt_logs.py` への Issue/PR 依頼テンプレ:
 ```
@@ -376,8 +382,8 @@ drop_events_total
 列の追加・削除を伴う変更では、上記リストと CI ログ（`Validate endurance CSV filter` ステップ）を参照し、必要に応じて `--require` 引数を更新すること。
 
 ### C.4 Slack を使わない場合の通知
-- **Webhook**: `curl -X POST <url> -H 'Content-Type: application/json' -d @archive_failure_rate_slack.json`。送信ログ（日時・HTTP ステータス・payload 抜粋）を `docs/logs/notification_audit.md` に追記する。  
-- **メール**: `tools/compose_endurance_notification.py --format eml --output out/mail.eml` を使い、SMTP 経由で送信。宛先・件名・送信時刻を Appendix B.5.1 のコメント欄に記録する。  
+- **Webhook**: `curl -X POST <url> -H 'Content-Type: application/json' -d @archive_failure_rate_slack.json`。送信ログ（日時・HTTP ステータス・payload 抜粋）を `docs/logs/notification_audit.md` に追記する。添付資料は Markdown（`latest.summary.validation.md` 等）へのリンクで共有し、PDF は使用しない。  
+- **メール**: `tools/compose_endurance_notification.py --format eml --output out/mail.eml` を使い、SMTP 経由で送信。本文には Markdown サマリを貼り付け、宛先・件名・送信時刻を Appendix B.5.1 のコメント欄に記録する。  
 - **テンプレ例**:
   ```
   Subject: [Coupled Nightly] WARN ratio exceeded (run <id>)
@@ -516,6 +522,11 @@ python3 tools/build_coupled_benchmark_site.py \
    - 対応①: リンク先ファイルを追加。  
    - 対応②: 不要リンクであれば記述を削除し、再度スクリプトを実行。  
    - 対応③: 修正が完了したら `docs/documentation_changelog.md` にリンク更新を記録し、Slack `#chrono-docs` へ報告。
+
+### E.2 Preset Link Smoke Test
+- `python scripts/check_preset_links.py` を実行し、README / Hands-on / Wiki（本編＋サンプル）が `docs/coupled_constraint_presets_cheatsheet.md` を参照していることを確認。  
+- 引数を渡すと追加ファイルもチェックできる。CI でも同コマンドを実行し、失敗時は Appendix B.3/B.5 の Markdown チェック欄を未完にする。  
+- 修正後は `docs/documentation_changelog.md` に更新理由を追記し、Slack `#chrono-docs` で共有する。
 
 > 上記プランは 2025-11-08 版のドラフト。Cチームは Appendix B.5 のローテーションに合わせて進捗をレビューし、統合用の追加ファイルを作成する。
 

@@ -48,6 +48,7 @@
 | 2025-11-10 | Mori | Suzuki | KPI / Appendix Check、プリセットの Markdown 参照を案内 | ✅（例外条件は Appendix A.3.2） | Slack `#chrono-docs` / `#chrono-constraints` に通知、`scripts/check_doc_links.py` 実行結果を共有 |
 
 > 実際の Wiki では最新 4 週を維持し、Appendix B.3/B.4 の棚卸し結果と一致させてください（往復リンク: Appendix B.5）。
+> プリセットは Markdown (`docs/coupled_constraint_presets_cheatsheet.md`) を唯一の参照元とし、PDF が必要な場合のみ Appendix A.3.2 の任意手順で生成します。
 
 ---
 

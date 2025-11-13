@@ -55,4 +55,4 @@
 
 最終同期日: **2025-11-10** （更新担当: Mori / レビュー: Kobayashi）  
 次回レビュー予定: 2025-11-17 週（Appendix B.5 ローテーション表に従う）。B.5.1 の担当ローテ（Wednesday: Kobayashi, Friday: Suzuki）に合わせて schema validation gist と workflow_dispatch 監査を行うこと。  
-補足: 2024-08-26 週（担当: Tanaka）で `workflow_dispatch` + schema validation gist 共有（Appendix B.5.2）を実施予定。Run ID が確定次第、当表および Appendix B.5.3 のログを更新する。
+補足: 2024-08-26 週（担当: Tanaka）で `workflow_dispatch` + schema validation gist 共有（Appendix B.5.2）を実施予定。Run ID が確定次第、当表および Appendix B.5.3 のログを更新する。プリセットは Markdown (`docs/coupled_constraint_presets_cheatsheet.md`) を唯一の参照元とし、PDF が必要な場合のみ Appendix A.3.2 の例外手順を用いる。

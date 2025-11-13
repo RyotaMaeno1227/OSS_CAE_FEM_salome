@@ -165,3 +165,19 @@ sudo apt-get install pandoc texlive-latex-extra texlive-fonts-recommended
    - 音声が不要な場合は OBS 設定でマイク音声を無効化し、代わりにキャプションを挿入。
 
 動画を併せて公開することで、新規メンバーが手順を視覚的に理解しやすくなります。録画した素材は定期的に見直し、コマンドや依存バージョンが古くなっていないか確認してください。
+
+## 6. Appendix A.3.1 更新チェックリスト
+- [ ] `data/coupled_constraint_presets.yaml` と本 Markdown のテーブル／推奨範囲を同期。  
+- [ ] `scripts/check_doc_links.py docs/coupled_constraint_tutorial_draft.md docs/coupled_constraint_hands_on.md docs/coupled_contact_test_notes.md` を実行し、リンク整合性を確認。  
+- [ ] `scripts/check_preset_links.py` を実行し、README / Hands-on / Wiki で `docs/coupled_constraint_presets_cheatsheet.md` が参照されていることを確認。  
+- [ ] README、Hands-on Chapter 02、Wiki（本編＋サンプル）のプリセット説明を更新し、Slack `#chrono-docs` / `#chrono-constraints` へ通知。  
+- [ ] `docs/documentation_changelog.md` と Appendix B.3/B.5 のローテ表に更新日・担当を記録。
+
+### 更新記録テンプレ
+```
+- Date: YYYY-MM-DD
+- Author: <Name>
+- Summary: (例) ratio_distance の推奨範囲を 1.2 → 1.1 へ変更、cam_follow_adjust テーブルを更新
+- Related files: README.md / docs/coupled_constraint_hands_on.md / docs/wiki_coupled_endurance_article.md
+- Validation: scripts/check_doc_links.py ✔︎ / scripts/check_preset_links.py ✔︎
+```

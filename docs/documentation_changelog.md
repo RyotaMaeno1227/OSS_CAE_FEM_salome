@@ -73,6 +73,7 @@
 | `docs/wiki_coupled_endurance_article.md` / `docs/wiki_samples/coupled_endurance_article_sample.md` | ローテ表に Markdown 方針列を追加し、例外条件を記載 | Cチーム | Wiki/サンプル共に `.md` 参照を保証 |
 | `README.md`, `docs/media/coupled/README.md` | `scripts/check_doc_links.py` の運用例と Slack テンプレの参照先を追記 | Cチーム | lint/告知フローを統一 |
 | `docs/logs/notification_audit.md` | Webhook/メール通知の記録テンプレを新規追加 | Cチーム | Appendix C.4 とリンク
+| `scripts/check_preset_links.py` & `.github/workflows/ci.yaml` | Markdown プリセットリンク検証スクリプトを追加し、CI に組み込み | Tooling | README/Hands-on/Wiki が `.md` を参照しているか自動チェック |
 
 Slack summary (2025-11-10, #chrono-docs / #chrono-constraints):
 - Preset PDF remains provisional (Pandoc unavailable); checklist + README note added.  

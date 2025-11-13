@@ -20,4 +20,4 @@
   notes: WARN ratio exceeded; CC to ops lead
 ```
 
-> Appendix C.4 のテンプレに従い、新しい通知ごとに追記してください。
+> Appendix C.4 のテンプレに従い、新しい通知ごとに追記してください。実際の運用では Run ID / summary リンク / Markdown レポートへの参照を `notes` フィールドに含めます。

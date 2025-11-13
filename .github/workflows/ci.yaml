@@ -41,6 +41,9 @@ jobs:
               docs/coupled_contact_test_notes.md
           } | tee artifacts/ci/doc_link_report.md
 
+      - name: Check preset links (Markdown)
+        run: python scripts/check_preset_links.py
+
       - name: Run multi-omega format tests
         run: python -m unittest tools.tests.test_update_multi_omega_assets
 

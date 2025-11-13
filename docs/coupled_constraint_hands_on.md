@@ -4,6 +4,7 @@ FEM4C の `tutorial_manual.md` / `FEM_LEARNING_GUIDE.md` に倣い、Coupled 拘
 各チャプターは「理論メモ → 実装タスク → FEM4C で確認 → 検証課題」の構成になっています。
 
 > 学習パス統合のステータス: W2（TODO マーカー整理）が進行中、W3（リンク検証自動化）が着手済みです。`docs/appendix_optional_ops.md` **E. Learning Path Integration Plan** と `docs/integration/learning_path_map.md` を確認し、演習を更新した場合はチェックリスト経由で Tutorial に反映してください。
+> プリセットは `docs/coupled_constraint_presets_cheatsheet.md`（Markdown）を参照してください。
 
 ### Learning Path Snapshot (2025-11-08)
 | フェーズ | 状態 | 依存ファイル |
