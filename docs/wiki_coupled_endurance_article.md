@@ -12,8 +12,7 @@
 - [Coupled チュートリアル（実行ログ・メディア生成）](../docs/chrono_coupled_constraint_tutorial.md)
 - [Coupled Hands-on / 学習ガイド](../docs/coupled_constraint_hands_on.md)
 - [パラメータプリセット（YAML）](../data/coupled_constraint_presets.yaml)
-- [パラメータチートシート](../docs/coupled_constraint_presets_cheatsheet.md)
-- [プリセット PDF（配布用）](../docs/media/coupled/presets.pdf)
+- [パラメータチートシート（Markdown）](../docs/coupled_constraint_presets_cheatsheet.md)
 - GitHub アーティファクト: `https://github.com/<org>/<repo>/actions?query=workflow%3A%22Coupled+Endurance%22`
 
 ## 3. 運用フロー（要約）
@@ -44,7 +43,7 @@
 ## 6. 備考
 - 具体的な URL・テンプレート・チェックリストは `docs/appendix_optional_ops.md` を参照。  
 - 本草案は引き続き数値検証観点で更新し、運用情報は付録へ切り出している。
-- `docs/media/coupled/presets.pdf` は現在 Pandoc 不可環境での暫定版。正式版は Appendix A.3.2 の手順で 2025-11-20 を目安に差し替え予定（担当: Mori）。
+- プリセットは Markdown 運用（`docs/coupled_constraint_presets_cheatsheet.md`）。外部配布が必要な場合のみ Appendix A.3.2 を参考に個別で PDF 化する。
 
 ## 7. 担当ローテーション / 同期ログ
 | 週 (開始日) | 主担当 | バックアップ | 主タスク | 備考 |
@@ -52,7 +51,7 @@
 | 2025-10-20 | Kobayashi | Tanaka | summary・スクリーンショット更新、Contact+Coupled 判定ログを Appendix B.6 へ反映 | `tools/filter_coupled_endurance_log.py` contact モードを検証。 |
 | 2025-10-27 | Suzuki | Mori | KPI 更新、スクリーンショット差し替え（12h 遅延を報告） | 遅延理由（CI 障害）を備忘録に追記。 |
 | 2025-11-03 | Tanaka | Kobayashi | Nightly 差分レビュー、Webhook ログ追記、Appendix B.5.1 ローテーション更新 | `docs/integration/learning_path_map.md` を Wiki リンク集へ追加。 |
-| 2025-11-10 | Mori | Suzuki | KPI / Appendix B.3 & B.6 棚卸し、`presets.pdf` が暫定版である旨を Wiki と README に追記 | Slack `#chrono-docs` / `#chrono-constraints` へ通知、`scripts/check_doc_links.py` の結果を共有。 |
+| 2025-11-10 | Mori | Suzuki | KPI / Appendix B.3 & B.6 棚卸し、プリセットを Markdown 参照に切り替えた旨を Wiki と README に追記 | Slack `#chrono-docs` / `#chrono-constraints` へ通知、`scripts/check_doc_links.py` の結果を共有。 |
 
 最終同期日: **2025-11-10** （更新担当: Mori / レビュー: Kobayashi）  
 次回レビュー予定: 2025-11-17 週（Appendix B.5 ローテーション表に従う）

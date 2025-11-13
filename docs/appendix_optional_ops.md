@@ -66,53 +66,34 @@ ani.save("docs/media/coupled/endurance_stride5.mp4", writer="ffmpeg", fps=24)
   - 実機ブラウザで GIF/MP4 の再生を検証し、カクつきがあれば `stride` や `fps` を見直す。
   - `npm exec broken-link-checker -- --allow-redirect` 等でリンク検査を定期実行。
 
-### A.3 Preset Cheat Sheet PDF
-`docs/coupled_constraint_presets_cheatsheet.md` を Pandoc + XeLaTeX で PDF 化し、`docs/media/coupled/presets.pdf` へ保存してから Wiki / Appendix から参照する。
+### A.3 Preset Cheat Sheet（Markdown 配布）
+プリセットは `docs/coupled_constraint_presets_cheatsheet.md` を正とし、GitHub 上の Markdown で閲覧・配布する。PDF への変換は必須ではなく、希望者が個別に Pandoc で生成する場合のみ Appendix A.3.2 を参照する。
 
-```bash
-mkdir -p docs/media/coupled
-pandoc docs/coupled_constraint_presets_cheatsheet.md \
-  -o docs/media/coupled/presets.pdf \
-  --pdf-engine=xelatex \
-  -V mainfont="Noto Sans CJK JP"
-```
-- 依存: `pandoc`, `texlive-latex-extra`, `texlive-fonts-recommended`。  
-- 生成した PDF は Appendix A/B や Wiki のクイックリンクに貼り付け、更新日と担当を `docs/media/coupled/README.md` に追記する。  
-- GIF/MP4 と同様に `du -h docs/media/coupled/presets.pdf` でサイズを確認し、20 MB 未満に保つ。
-- 現時点でローカル環境に Pandoc/XeLaTeX が無い場合は、暫定的に `python scripts/generate_plain_pdf.py ...` のような軽量ツールで PDF を出力し、正式版を生成でき次第差し替えること。暫定ファイルには README に警告を残す。
+- Wiki / Appendix / README では Markdown への相対リンクを貼る（例: `docs/coupled_constraint_presets_cheatsheet.md`）。  
+- 参照先を更新した場合は `docs/documentation_changelog.md` に記録し、Slack `#chrono-docs` / `#chrono-constraints` に周知する。  
+- 印刷や外部配布が不要なため、`docs/media/coupled/` 以下に PDF を保持しない。
 
-#### A.3.1 PDF 最終チェックリスト
-- [ ] Pandoc 3.x + `--pdf-engine=xelatex` で最新の Markdown から生成した（バージョンとコマンドを `docs/media/coupled/README.md` に記録）。  
-- [ ] フォント: Noto Sans/Serif CJK など埋め込み済みか `pdffonts docs/media/coupled/presets.pdf` で確認し、CID フォントが `yes` になっている。  
-- [ ] ファイルサイズが 20 MB 未満である（`du -h docs/media/coupled/presets.pdf`）。  
-- [ ] Appendix A/B、`docs/wiki_coupled_endurance_article.md`、`docs/wiki_samples/coupled_endurance_article_sample.md` のリンク先を更新し、チーム Slack `#chrono-docs` / `#chrono-constraints` に告知。  
-- [ ] `docs/documentation_changelog.md` に更新内容・担当者・日付（コミット日）を追記。
+#### A.3.1 配布チェックリスト（Markdown ベース）
+- [ ] `docs/coupled_constraint_presets_cheatsheet.md` を更新し、`scripts/check_doc_links.py` でリンク整合性を確認した。  
+- [ ] README、Hands-on、Wiki（本編＋サンプル）のプリセットリンクが Markdown 版を指していることを確認。  
+- [ ] `docs/documentation_changelog.md` に更新内容・担当者・コミット日を追記。  
+- [ ] Appendix B.3/B.5 のローテーション表に更新日・担当を記録し、Slack へ通知。  
+- [ ] 必要に応じて `docs/media/coupled/README.md` に Markdown 運用である旨の注意書きを追加。
 
-#### A.3.2 外部環境で生成した PDF の受け渡し手順
-1. `pandoc ... --pdf-engine=xelatex` を実行した担当者は、以下テンプレでメモを残す:
-   ```
-   - 生成者: <名前>
-   - 生成日: YYYY-MM-DD
-   - 使用コマンド: pandoc ... --pdf-engine=xelatex
-   - アップロード先: docs/media/coupled/202511/presets_v1.pdf
-   - 差し替え対象: docs/media/coupled/presets.pdf
-   ```
-2. PDF を `docs/media/coupled/YYYYMM/` に保存し、`presets_latest.pdf` などバージョン付きのファイル名で共有。  
-3. リポジトリへの取り込み担当（通常はドキュメント班）は、ファイルを `docs/media/coupled/presets.pdf` に差し替え、旧版を年月ディレクトリへ退避。  
-4. `docs/media/coupled/README.md` に生成者・日付・元ファイルを追記し、差し替え完了を Appendix A.3.1 のチェックリストで確認。  
-5. Slack 連絡テンプレ:
-   ```
-   [preset-pdf-update] docs/media/coupled/presets.pdf を更新しました。
-   - 生成者: <名前> / 日付: YYYY-MM-DD
-   - コマンド: pandoc ...
-   - 影響ドキュメント: wiki / appendix A.3 / samples
-   ```
+#### A.3.2 （任意）外部向け PDF を作る場合
+- チーム外へ配布する必要がある場合のみ `pandoc docs/coupled_constraint_presets_cheatsheet.md -o presets.pdf` でローカル生成し、個別に共有する。  
+- リポジトリにはアップロードしない。Slack テンプレ:
+  ```
+  [preset-md-export] Markdown 版プリセットを外部共有のため PDF 化しました（添付参照）。
+  - 生成者: <名前> / 日付: YYYY-MM-DD
+  - 元ファイル: docs/coupled_constraint_presets_cheatsheet.md
+  ```
 
 #### A.4 メディア命名規則・保存先
 - ルート: `docs/media/coupled/{YYYYMM}/`（例: `docs/media/coupled/202511/`）。  
-- ファイル命名: `<topic>_<variant>_v<rev>.{pdf,png,gif,mp4}`（例: `presets_full_v1.pdf`）。  
-- 最新版シンボリックファイル: `docs/media/coupled/presets.pdf` のように固定名で参照し、差し替え時は必ず README に履歴を追記。  
-- Wiki/Appendix では固定名（例: `media/coupled/presets.pdf`）を参照し、詳細な履歴は README と年月ディレクトリに集約する。
+- ファイル命名: `<topic>_<variant>_v<rev>.{png,gif,mp4}`（例: `endurance_overview_v1.gif`）。  
+- プリセットは Markdown 参照のため固定 PDF は不要。メディア（GIF/MP4）だけ `docs/media/coupled/` に配置し、履歴は README に追記する。  
+- Wiki/Appendix では `docs/coupled_constraint_presets_cheatsheet.md` を直接リンクし、詳細な履歴は changelog とローテ表に集約。
 
 ##### A.4.1 メディア更新ワークフロー
 1. **作成** – 担当者（例: Cチーム DevOps）が PNG/GIF/MP4 を `docs/media/coupled/YYYYMM/` へ配置し、`docs/media/coupled/README.md` に生成者・日付・元データを記録。  
@@ -213,7 +194,7 @@ h1. メンテナンス
 | 2025-10-20 | Kobayashi | ✅ summary・スクリーンショット更新 | ✅ B.4 手順で再告知 | Contact+Coupled 判定ログを Appendix B.6 へ追記。 |
 | 2025-10-27 | Suzuki | ⚠️ スクリーンショット差し替えが 12h 遅延（KPI は更新済み） | ✅ 公開・通知済み | 遅延理由（CI 障害）を #chrono-docs に共有。 |
 | 2025-11-03 | Tanaka | ✅ KPI & メディア更新、引き継ぎメモ作成 | ✅ Nightly 差分と Webhook ログを追記 | Appendix B.5.1 ローテーション表を最新化。 |
-| 2025-11-10 | Mori | ✅ KPI / Appendix B.3/B.6 チェック、`presets.pdf` 正式化待ちの注意書きを Wiki に追記 | ✅ PR #6250 で Wiki 同期、Slack `#chrono-docs` & `#chrono-constraints` 通知 | `scripts/check_doc_links.py` の結果をローテ表に記録。 |
+| 2025-11-10 | Mori | ✅ KPI / Appendix B.3/B.6 棚卸し、プリセット Markdown 参照の注意書きを Wiki/README に追記 | ✅ PR #6250 で Wiki 同期、Slack `#chrono-docs` & `#chrono-constraints` 通知 | `scripts/check_doc_links.py` の結果をローテ表に記録。 |
 
 > B.3 の未完了事項は翌週担当が必ず引き継ぐ。⚠️ が付いた週は `docs/documentation_changelog.md` に理由と是正策を記録済み。
 
@@ -254,12 +235,12 @@ h1. メンテナンス
 - Nightly で `endurance_plan_lint.json` を得た場合は `--plan-lint-json` へ渡す。Slack の「Plan lint report」欄に `status=PASS/FAIL/SKIPPED` と `message` が表示されるため、B.5.1 と B.5.3 の Run ID ログにも同じ値を控える。
 
 #### B.5.3 workflow_dispatch / Slack 検証ログ（直近 4 週）
-| 週 (開始日) | Run ID | Slack/Webhook 結果 | メモ |
-|-------------|--------|--------------------|------|
-| 2024-07-22 | n/a | (Bチーム合流前) | 以降の棚卸し対象に追加。 |
-| 2024-07-29 | pending | 未検証（ローカル環境から Actions 実行不可） | 本番環境で `workflow_dispatch` 実施後に追記。 |
-| 2024-08-05 | pending | 未検証（ローカル環境から Actions 実行不可） | Slack/Webhook 監視のみ。 |
-| 2024-08-12 | pending | 未検証（ローカル環境から Actions 実行不可） | Appendix B.5.2 手順書に従い、Run ID を確定次第更新。 |
+| 週 (開始日) | Run ID | Slack/Webhook 結果 | メモ | ToDo |
+|-------------|--------|--------------------|------|------|
+| 2024-07-22 | n/a | (Bチーム合流前) | 以降の棚卸し対象に追加。 | 初回 `workflow_dispatch` 実行で追記 |
+| 2024-07-29 | pending | 未検証（ローカル環境から Actions 実行不可） | 本番環境で `workflow_dispatch` 実施後に追記。 | Actions 実行者: TBD / Slack スクショ必須 |
+| 2024-08-05 | pending | 未検証（ローカル環境から Actions 実行不可） | Slack/Webhook 監視のみ。 | Run ID と gist URL を Appendix へ追加 |
+| 2024-08-12 | pending | 未検証（ローカル環境から Actions 実行不可） | Appendix B.5.2 手順書に従い、Run ID を確定次第更新。 | Failure-rate digest の PNG/MD を history へ貼付 |
 
 #### B.5.4 Nightly artifact sharing
 - `artifacts/nightly/latest_summary_validation.json` と `artifacts/nightly/endurance_plan_lint.json` を `docs/reports/nightly/` 以下にコピーし、GitHub Pages（`gh-pages` ブランチなど）で参照できるようにする。  
@@ -276,7 +257,7 @@ h1. メンテナンス
 > KPI 更新を実施したら日付と担当を B.5.1 の表かコメント欄に残し、`docs/documentation_changelog.md` へまとめて通知する。Slack では `#chrono-docs` と `#chrono-constraints` の両方へ共有する。
 
 - 2025-11-10: Mori（Monday slot）更新 — Coupled/Island/3D の KPI を 83 / 73 / 50 に揃え、`docs/pm_status_2024-11-08.md`、`docs/coupled_island_migration_plan.md`、`docs/chrono_3d_abstraction_note.md` を同期。
-- 次回 `docs/media/coupled/presets.pdf` の Pandoc 差し替え予定日: **2025-11-20**（担当: Mori）。進捗と Run ID は Appendix A.3.2 / B.3 / B.5.1 で管理。
+- プリセットは Markdown 運用。外部共有のために PDF 化する場合のみ Appendix A.3.2 を参照し、履歴は Appendix B.3/B.5.1 で管理。
 
 ##### B.5.1.a 外部カレンダー連携案
 - Google カレンダーに「KPI Rotation」カレンダーを作成し、月・水・金の担当者をイベントとして登録。  
@@ -310,6 +291,14 @@ h1. メンテナンス
 5. 不整合が見つかった場合は、チュートリアルと Hands-on の両方に統合案（E 章、および `docs/integration/learning_path_map.md`）を適用する。
 
 > 2025-11-08 時点で `docs/coupled_constraint_tutorial_draft.md` → Hands-on / Solver Math / Contact Notes のリンクは確認済み。次回は Appendix B.5 のローテーションに従って更新する。
+
+### B.8 Bチーム Pending / Net-required Tasks
+| ステータス | 内容 | 備考 |
+|------------|------|------|
+| Pending | `coupled_endurance.yml` を `workflow_dispatch` 実行し Run ID を Appendix B.5.3 へ記録 | ネットワーク可用環境必須 |
+| Pending | Failure-rate artifact (`archive_failure_rate.{png,md,json}`) を再生成して `docs/reports/coupled_endurance_failure_history.md` へ貼付 | `tools/report_archive_failure_rate.py` を `--dry-run` なしで実行 |
+| Net-required | Nightly Slack で `--summary-validation-json` / `--plan-lint-json` ブロックのスクショ取得 | Appendix C.4 に添付 |
+| Net-required | `docs/logs/notification_audit.md` にメール/Webhook 通知の記録を追加 | 非 Slack チャネル向け |
 
 --- 
 
@@ -383,6 +372,8 @@ drop_events_total
 下図は Slack での `--summary-validation-json` / `--plan-lint-json` 表示例（`docs/wiki_samples/nightly_validation_blocks.svg`）:
 
 ![Nightly validation blocks](wiki_samples/nightly_validation_blocks.svg)
+
+通知ログを蓄積する場合は `docs/logs/notification_audit.md` のテンプレートを利用し、Run ID／連絡先／リンクを追記する。
 
 ---
 

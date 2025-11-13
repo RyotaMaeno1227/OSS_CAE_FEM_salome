@@ -15,7 +15,6 @@
 - [Hands-on ガイド](../coupled_constraint_hands_on.md)
 - [パラメータ YAML](../../data/coupled_constraint_presets.yaml)
 - [チートシート（Markdown）](../coupled_constraint_presets_cheatsheet.md)
-- [チートシート PDF](../media/coupled/presets.pdf)
 - [アーティファクト一覧](https://github.com/example/highperformanceFEM/actions?query=workflow%3A%22Coupled+Endurance%22)
 
 ## 運用フロー（サマリ）
@@ -46,7 +45,7 @@
 | 2025-10-20 | Kobayashi | Tanaka | summary・スクリーンショット更新、Contact+Coupled 判定ログを Appendix B.6 へ反映 | Slack `#chrono-docs` 通知済み |
 | 2025-10-27 | Suzuki | Mori | KPI 更新、スクリーンショット差し替え（12h 遅延を報告） | 遅延理由（CI 障害）を備忘録に追記 |
 | 2025-11-03 | Tanaka | Kobayashi | Nightly 差分レビュー、Webhook ログ追記、Appendix B.5.1 更新 | `docs/integration/learning_path_map.md` をリンク集へ追加 |
-| 2025-11-10 | Mori | Suzuki | KPI / Appendix Check、`presets.pdf` の暫定版注意書きを追加 | Slack `#chrono-docs` / `#chrono-constraints` に通知、`scripts/check_doc_links.py` 実行結果を共有 |
+| 2025-11-10 | Mori | Suzuki | KPI / Appendix Check、プリセットの Markdown 参照を案内 | Slack `#chrono-docs` / `#chrono-constraints` に通知、`scripts/check_doc_links.py` 実行結果を共有 |
 
 > 実際の Wiki では最新 4 週を維持し、Appendix B.3/B.4 の棚卸し結果と一致させてください（往復リンク: Appendix B.5）。
 

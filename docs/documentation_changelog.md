@@ -48,13 +48,13 @@
 | `docs/pm_status_2024-11-08.md` | `docs/coupled_island_migration_plan.md` と同期する KPI 表を追加 | Cチーム | Appendix B.5.1 の担当ローテ管理下 |
 | `docs/chrono_3d_abstraction_note.md` | KPI バッジを 80/70/45 に更新し、pm_status / Migration plan と同期する旨を明記 | Cチーム | Section 10 |
 | `docs/coupled_island_migration_plan.md` | KPI スナップショット表に最新進捗（82%/72%/48%）を追記し、pm_status との同期手順を追記 | Cチーム | KKT ディスクリプタ PoC 連動 |
-| `docs/media/coupled/presets.pdf` | Appendix A.3 レシピに基づくプリセット PDF を追加（暫定レイアウト） | Cチーム | Pandoc 不在のため簡易 PDF で代替、Slack `#chrono-docs`/`#chrono-constraints` へ共有済み |
+| `docs/coupled_constraint_presets_cheatsheet.md` | Appendix A.3 ベースで Markdown 参照へ集約（PDF 依存を撤廃） | Cチーム | Slack `#chrono-docs`/`#chrono-constraints` で周知 |
 | `docs/wiki_coupled_endurance_article.md` | Appendix 連携リンク・KPI 棚卸し表・最新 4 週の同期ログを更新 | Cチーム | Appendix B.3/B.4 と同期 |
 | `docs/wiki_samples/coupled_endurance_article_sample.md` | Appendix 連携版テンプレに合わせてクイックリンクと操作説明を刷新 | Cチーム | サンプルは本文のみを保持 |
 | `docs/appendix_optional_ops.md` | A.3（PDF）, B.3/B.4 棚卸し、B.5.1 KPI ログ、B.6/B.7 チェックリスト、D.2/D.3 CLI、E 章リンクを更新 | Cチーム | Wiki / KPI / Benchmark / 学習パスの統合運用 |
 | `docs/integration/learning_path_map.md` | Hands-on ↔ Tutorial の章対応とマイルストンを記したドラフトを新規追加 | Cチーム | Appendix E から参照 |
 | `docs/coupled_constraint_hands_on.md` | Appendix E / Integration map への案内を冒頭へ追加 | Cチーム | 学習パスでナビゲーションを統一 |
-| `docs/media/coupled/presets.pdf` | Pandoc が利用できない環境のため暫定 PDF を継続し、正式版生成チェックリストを Appendix A.3 に追加 | Cチーム | Slack `#chrono-docs` / `#chrono-constraints` で共有 |
+| `docs/coupled_constraint_presets_cheatsheet.md` | Markdown 配布を正式化し、Appendix A.3 に外部 PDF 生成手順（任意）を追記 | Cチーム | Slack `#chrono-docs` / `#chrono-constraints` で共有 |
 | `docs/wiki_coupled_endurance_article.md` / `docs/wiki_samples/coupled_endurance_article_sample.md` | 最新 4 週のローテログと PDF リンク、Appendix 連携の棚卸し結果を反映 | Cチーム | Appendix B.3/B.4 と同期 |
 | `docs/pm_status_2024-11-08.md`, `docs/coupled_island_migration_plan.md`, `docs/chrono_3d_abstraction_note.md` | KPI を 83 / 73 / 50 に更新し、Appendix B.5.1 へ記録 | Cチーム | 2025-11-10 ローテ |
 | `docs/appendix_optional_ops.md` | PDF 最終チェックリスト、Contact+Coupled KPI 通知、Benchmark CLI 出力例、Link Check 手順を追加 | Cチーム | Appendix A/B/D/E を拡充 |
