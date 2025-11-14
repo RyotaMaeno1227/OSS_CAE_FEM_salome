@@ -215,3 +215,25 @@ jobs:
             $COMMENT_OPTS
           echo "--- Coupled Endurance repro comment ---"
           cat data/endurance_archive/repro/comment.md
+      # === Slack 通知ステップ ===
+      - name: Notify Slack (Coupled Endurance result)
+        # ワークフローが成功・失敗どちらでも通知したいので always()
+        if: ${{ always() }}
+        uses: slackapi/slack-github-action@v2.0.0
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+        with:
+          payload: |
+            {
+              "text": "Coupled Endurance Maintenance: ${{ job.status }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Coupled Endurance Maintenance* が `${{ job.status }}` になりました。\nRun: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|詳細を見る>"
+                  }
+                }
+              ]
+            }
