@@ -256,7 +256,7 @@ h1. メンテナンス
 | 2024-07-29 | pending | 未検証（ローカル環境から Actions 実行不可） | 本番環境で `workflow_dispatch` 実施後に追記。 | Actions 実行者: TBD / Slack スクショ必須 |
 | 2024-08-05 | pending | 未検証（ローカル環境から Actions 実行不可） | Slack/Webhook 監視のみ。 | Run ID と gist URL を Appendix へ追加 |
 | 2024-08-12 | pending | 未検証（ローカル環境から Actions 実行不可） | Appendix B.5.2 手順書に従い、Run ID を確定次第更新。 | Failure-rate digest の PNG/MD を history へ貼付 |
-
+| 2025-11-17 | Run ID 19375305257 | 実施内容 | Slack/Webhook 結果 | 備考 |
 #### B.5.4 Nightly artifact sharing
 - `artifacts/nightly/latest_summary_validation.json` と `artifacts/nightly/endurance_plan_lint.json` を `docs/reports/nightly/` 以下にコピーし、GitHub Pages（`gh-pages` ブランチなど）で参照できるようにする。  
 - 公開フォーマット例: `docs/reports/nightly/latest_summary_validation_<run-id>.md` に Markdown テーブルを追加し、JSON 全文は `<details>` で折りたたむ。  
