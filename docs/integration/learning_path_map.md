@@ -1,6 +1,8 @@
 # Coupled Constraint Learning Path Integration (Draft)
 
-このメモは `docs/coupled_constraint_tutorial_draft.md`（説明主体）と `docs/coupled_constraint_hands_on.md`（演習主体）を統合して学習パスを一本化するためのロードマップです。Appendix E（`docs/appendix_optional_ops.md`）の計画に対応し、章単位のマッピングと実装タスクを可視化します。
+このメモは `docs/coupled_constraint_tutorial_draft.md`（説明主体）と `docs/coupled_constraint_hands_on.md`（演習主体）を統合して学習パスを一本化するためのロードマップです。旧 Appendix E は撤去済みのため、本メモを唯一の参照として章単位のマッピングと実装タスクを可視化します。
+
+> 3D 拡張を検討する場合は `docs/chrono_3d_abstraction_note.md` の「学習パス向けサマリ」を先に読み、段階的に参照するようにしてください。
 
 ## 1. 章対応表
 
@@ -33,7 +35,20 @@
 - W2 と W3 が完了した時点で、Tutorial 側の Hands-on セクション（§4）を短縮し、Hands-on へ誘導するだけの構成に変更する。  
 - 統合レビューでは Appendix E と本マップを照合し、`docs/documentation_changelog.md` へ「Learning Path Integration complete」を記載する。
 
-## 3. リスク / TODO
+## 3. 可視化スナップショット
+
+学習パスと Hands-on の進捗を共有しやすくするため、SVG 形式のサマリ図とスクリーンショットを追加しました。`docs/integration/assets/` 配下でバージョン管理しているため、ドキュメントから直接参照できます。
+
+![Learning Path Overview](assets/learning_path_overview.svg)
+
+- 図の生成元: `docs/integration/assets/learning_path_overview.svg`（手動編集可能な SVG）。Chapter/Appendix の流れと Run ID/Evidence の格納先を示しています。
+
+![Hands-on Chapter 02 & 03 Progress](assets/hands_on_ch02_progress.svg)
+
+- 図の生成元: `docs/integration/assets/hands_on_ch02_progress.svg`。Chapter 02/03 の TODO 解消状況と紐付くアーティファクト（CSV、README 節）をラベル化しています。
+- Hands-on 更新時は `tools/update_multi_omega_assets.py --refresh-report` を実行し、図中のステータス表示も合わせて編集してください。
+
+## 4. リスク / TODO
 - [ ] Pandoc 出力と Hands-on スクリプトが同じ図版を参照できるよう、`docs/media/coupled/` の命名規約を決める。 (Owner: Suzuki)
 - [ ] Hands-on の FEM4C 参照リンクを Tutorial 側 glossary へ昇格させ、章間の行き来を減らす。 (Owner: Mori)
 - [ ] Appendix E の「移行完了条件」を `docs/documentation_changelog.md` にも記載し、レビュー時の観点を共有する。 (Owner: Kobayashi)

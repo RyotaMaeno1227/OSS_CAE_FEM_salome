@@ -10,6 +10,9 @@
 | `cam_follow_adjust` | カム位相補正 | 0.48 | -0.32 | 0.018 / 0.024 | 24.0 / 12.0 | 追加式（index 1）で比率 0.55 / -0.25 を設定。 |
 | `counterbalance_beam` | カウンターバランス梁 | 0.85 | -0.30 | 0.013 / 0.022 | 42.0 / 20.0 | 補助式（index 1）を `max_drop=1` で自動ドロップ対象に。 |
 | `docking_guide` | ドッキング誘導 | 0.72 | -0.25 | 0.020 / 0.034 | 30.0 / 14.0 | ステージ毎に `target_offset` や比率を更新。 |
+| `hydraulic_lift_sync` | 油圧リフト同期 | 0.62 | 0.18 | 0.017 / 0.030 | 34.0 / 15.0 | `ratio_angle` を 0.2 まで上げると応答性が向上。 |
+| `optic_alignment_trim` | 光学装置トリム | 0.35 | -0.48 | 0.020 / 0.034 | 22.0 / 11.0 | 並列拘束では `target_offset` を ±0.003 で交互に切替。 |
+| `multi_omega_reference` | Hands-on／README 共通 | 0.78 | -0.22 | 0.015 / 0.028 | 28.0 / 12.0 | Multi-ω スイープ (0.85/1.0/1.15) の再計測用。 |
 
 > YAML の正確な値は `data/coupled_constraint_presets.yaml` を参照してください。`extra_equations` や `staged_adjustments` も同ファイルに含まれています。
 
@@ -166,18 +169,18 @@ sudo apt-get install pandoc texlive-latex-extra texlive-fonts-recommended
 
 動画を併せて公開することで、新規メンバーが手順を視覚的に理解しやすくなります。録画した素材は定期的に見直し、コマンドや依存バージョンが古くなっていないか確認してください。
 
-## 6. Appendix A.3.1 更新チェックリスト
+## 6. 更新チェックリスト
 - [ ] `data/coupled_constraint_presets.yaml` と本 Markdown のテーブル／推奨範囲を同期。  
 - [ ] `scripts/check_doc_links.py docs/coupled_constraint_tutorial_draft.md docs/coupled_constraint_hands_on.md docs/coupled_contact_test_notes.md` を実行し、リンク整合性を確認。  
 - [ ] `scripts/check_preset_links.py` を実行し、README / Hands-on / Wiki で `docs/coupled_constraint_presets_cheatsheet.md` が参照されていることを確認。  
-- [ ] README、Hands-on Chapter 02、Wiki（本編＋サンプル）のプリセット説明を更新し、Slack `#chrono-docs` / `#chrono-constraints` へ通知。  
-- [ ] `docs/documentation_changelog.md` と Appendix B.3/B.5 のローテ表に更新日・担当を記録。
+- [ ] README、Hands-on Chapter 02、Wiki（本編＋サンプル）のプリセット説明を更新し、必要に応じて Slack `#chrono-docs` / `#chrono-constraints` へ共有（自動通知は行わない）。  
+- [ ] `docs/documentation_changelog.md` に更新日・担当を記録し、Migration Plan（`docs/coupled_island_migration_plan.md`）と整合させる。
 
 ### 更新記録テンプレ
 ```
 - Date: YYYY-MM-DD
 - Author: <Name>
 - Summary: (例) ratio_distance の推奨範囲を 1.2 → 1.1 へ変更、cam_follow_adjust テーブルを更新
-- Related files: README.md / docs/coupled_constraint_hands_on.md / docs/wiki_coupled_endurance_article.md
+- Related files: README.md / docs/coupled_constraint_hands_on.md
 - Validation: scripts/check_doc_links.py ✔︎ / scripts/check_preset_links.py ✔︎
 ```

@@ -1,6 +1,6 @@
 # Coupled & Contact Core API (Minimal Set, English)
 
-This note mirrors `docs/coupled_contact_api_minimal.md` but is written in English so mixed teams can reference the same API surface. Only the bare minimum required to drive the core solver is listed here; optional helpers (logging, media generation, notifications, etc.) live in `docs/appendix_optional_ops.md`.
+This note mirrors `docs/coupled_contact_api_minimal.md` but is written in English so mixed teams can reference the same API surface. Only the bare minimum required to drive the core solver is listed here; optional helpers (logging, media generation, notifications, etc.) were removed from the repository and should be implemented per team environment if needed.
 
 ## Phase-by-Phase API Overview
 
@@ -40,4 +40,4 @@ This note mirrors `docs/coupled_contact_api_minimal.md` but is written in Englis
 
 ## Non-core API
 
-Anything that does not affect numerical correctness (log handlers, custom notifications, media export) is considered optional. Those utilities are catalogued in `docs/appendix_optional_ops.md` (Appendix C/D). When proposing new APIs, first decide whether they belong in this minimal list or in the optional appendix by checking whether they are required to reproduce solver results.
+Anything that does not affect numerical correctness (log handlers, custom notifications, media export) has been removed from this repository. When proposing new APIs, first decide whether they belong in this minimal list or should remain private to each environment.

@@ -1,0 +1,5 @@
+scenario,eq_count,kappa_bound_chrono_c,kappa_bound_chrono_main,delta_bound,kappa_spectral_chrono_c,kappa_spectral_chrono_main,delta_spectral,delta_min_pivot,delta_max_pivot,delta_primary_pivot,log_levels,status
+default,2,1.0,1.0015,1.500e-03,1.0,1.0015,1.500e-03,5.000e-02,8.000e-02,8.000e-02,warning/warning,✅
+default,3,1.0,1.0002,2.000e-04,1.0,1.0002,2.000e-04,2.900e-02,7.000e-02,7.000e-02,warning/warning,✅
+default,4,1.0,1.0001,1.000e-04,1.0,1.0001,1.000e-04,2.600e-02,1.500e-01,1.500e-01,warning/warning,✅
+spectral_stress,4,1e+26,9.99e+25,1.000e+23,1e+26,9.981e+25,1.900e+23,1.000e-04,2.500e+01,2.500e+01,info/info,✅

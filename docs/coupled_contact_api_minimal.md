@@ -36,8 +36,8 @@
 
 | コンポーネント | 関数 | 主な用途 | 参照 |
 |----------------|------|----------|------|
-| Coupled 拘束 | `chrono_coupled_constraint2d_get_diagnostics` | ランク、条件数、Pivot 最小値/最大値を取得 | `chrono-C-all/include/chrono_constraint2d.h:577` |
-| Coupled 拘束 | `chrono_coupled_constraint2d_get_condition_warning_policy` / `set_condition_warning_policy` | 条件数ワーニングの自動ドロップやログ設定 | `chrono-C-all/include/chrono_constraint2d.h:578`, `:589` |
+| Coupled 拘束 | `chrono_coupled_constraint2d_get_diagnostics` | ランク、行和/スペクトル条件数、Pivot 最小値/最大値、固有値ログを取得 | `chrono-C-all/include/chrono_constraint2d.h:577` |
+| Coupled 拘束 | `chrono_coupled_constraint2d_get_condition_warning_policy` / `set_condition_warning_policy` | 自動ドロップ、クールダウン時間、コールバックの設定 | `chrono-C-all/include/chrono_constraint2d.h:578`, `:589` |
 | 接触管理 | `chrono_contact_manager2d_end_step` | ステップ終了時のマニフォールド集計・後処理 | `chrono-C-all/include/chrono_collision2d.h:70` |
 | 島ソルバ | `ChronoIsland2DSolveConfig_C` (`enable_parallel`, `constraint_config`) | 並列モードや反復回数のトラッキング設定 | `chrono-C-all/include/chrono_island2d.h:65` |
 
@@ -45,5 +45,5 @@
 
 ## 4. 非コア API の扱い
 
-- ログレベル変更、条件数通知コールバック、メディア生成スクリプト等は `docs/appendix_optional_ops.md` を参照（Appendix C/D）。  
+- ログレベル変更、条件数通知コールバック、メディア生成スクリプト等は現在リポジトリから撤去済みです。必要であれば各チーム環境で個別に実装してください。  
 - 上記に含まれない追加 API を導入する場合は、数値解に直接寄与するかを基準にこのリストへ加えるかを判断する。

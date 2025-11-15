@@ -5,6 +5,11 @@
 - モチベーション: 近々予定されている 3D 版移植議論の事前資料として、構造変更の影響範囲と段階的な移行計画を可視化する。
 - 前提: 既存 2D 実装は C API を維持しながら進化中（`docs/chrono_2d_development_plan.md` 参照）。3D でも C API を維持し、テスト・CI フローを共存させる方針とする。
 
+### 学習パス向けサマリ
+- 2D/3D で共通化できるコンポーネントを整理したチェックリストを `docs/integration/learning_path_map.md` の可視化セクション経由で参照できるようにしました。
+- 学習者は **拘束基底構造体 → 関数テーブル → ワークスペース** の順に読み進めると移行ポイントを理解しやすい構成になっています。
+- Run ID や Evidence を追加する際は `docs/abc_team_chat_handoff.md#run-id--evidence-テンプレ` を併用し、3D 版検討ログも同テンプレで管理します。
+
 ## 2. 抽象化対象（2D → 共通化）
 - **拘束基底構造体**: `chrono-C-all/include/chrono_constraint2d.h` の `ChronoConstraint2DBase_C`（ボディ参照＋ ops テーブル）を `ChronoConstraintCommon_C`（仮称）へリネームし、軸数や積分計算に依存しないメンバだけを残す。2D 固有フィールド（`accumulated_impulse` 等）は派生側へ移譲。
 - **関数テーブル**: `ChronoConstraint2DOps_C` をそのまま再利用し、3D 拘束も `prepare` / `apply_warm_start` / `solve_velocity` / `solve_position` の 4 フェーズで統一。演算対象が 3 成分になるだけなので署名変更は不要。
@@ -72,7 +77,7 @@ To surface progress in status reports, embed either Markdown-style progress bars
 ```
 - The `progress-bar.dev` badge renders in GitHub issues/PRs. For offline docs, replace with inline SVG hosted under `docs/media/badges/`.
 
-These values mirror `docs/coupled_island_migration_plan.md` §5.1 and `docs/pm_status_2024-11-08.md` の KPI Snapshots (2025-11-10 担当: Mori). Update all three locations together per Appendix B.5.1.
+These values mirror `docs/coupled_island_migration_plan.md` §5.1 and `docs/pm_status_2024-11-08.md` の KPI Snapshots (2025-11-10 担当: Mori). 旧 Appendix B.5.1 の運用枠は削除されたため、同じ週次レビューで必ず 3 か所を同時更新する。
 
 **ASCII Gantt snippet (monthly granularity)**
 ```markdown

@@ -128,7 +128,7 @@ void coupled_attach_warning_logger(ChronoCoupledConstraint2D_C *constraint) {
 }
 ```
 
-## 5. 運用ヒント（付録参照）
+## 5. 運用ヒント（外部運用）
 
-ログ解析や CI でのハンドリング手順は `docs/appendix_optional_ops.md` の **C. Logging & Notification Guidance** へ移動しました。  
-本編では API と実装サンプルにフォーカスし、運用フローは付録のチェックリストを参照してください。
+ログ解析や CI でのハンドリング手順はリポジトリから削除しました。必要であれば各チーム環境で独自に運用してください。  
+本編では API と実装サンプルにフォーカスし、旧 Appendix で扱っていた通知フローは外部ドキュメントを参照してください。

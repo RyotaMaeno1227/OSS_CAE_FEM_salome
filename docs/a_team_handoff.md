@@ -64,7 +64,7 @@
 | 週次自動化 | `kkt_spectral_weekly.md` と `bench_coupled_constraint_multi.csv` を一括更新するスクリプト化。 | docs/reports/kkt_spectral_weekly.md | Medium |
 | Contact+Coupled ベンチ拡張 | 3DOF Jacobian対応の `tests/test_coupled_constraint` 派生を追加し、`docs/coupled_island_migration_plan.md` の進捗に紐付ける。 | docs/coupled_contact_test_notes.md | Medium |
 | Scheduler ログ拡張 | backend 選択と fallback を `ChronoIslandSchedulerBackend_C` に記録し、週次レポートで OpenMP/TBB 差異を比較。 | chrono_island2d.c, docs/island_scheduler_poc.md | Medium |
-| Shared KPI 更新運用 | Appendix B.5.1 のローテーションに沿って `docs/pm_status_2024-11-08.md` / Migration Plan / `docs/chrono_3d_abstraction_note.md` を同時更新。 | docs/appendix_optional_ops.md B.5 | Medium |
+| Shared KPI 更新運用 | `docs/pm_status_2024-11-08.md` / Migration Plan / `docs/chrono_3d_abstraction_note.md` を同じ Run ID で更新。 | チーム共有メモ | Medium |
 | Evidence 整理 | `docs/reports/kkt_spectral_weekly.md` と `docs/island_scheduler_poc.md` に最新 Run ID, commit, コマンドを追記し、Slack 共有のテンプレ化。 |  | Medium |
 
 ---
@@ -82,22 +82,9 @@
 ---
 
 ## 5. 連絡とエスカレーション
-- 週次レビュー: Appendix B.5 の水曜枠。Aチーム代表は KPI 値と backlog 表を更新し、Slack `#chrono-constraints` に `docs/logs/kkt_descriptor_poc_e2e.md` へのリンクを貼る。  
+- 週次レビュー: 旧 Appendix B.5 の枠は廃止したため、`docs/coupled_island_migration_plan.md` の KPI 表をそのままレビュー議事録として更新する。通知チャネルは任意（Slack `#chrono-constraints` もしくは新チャットのピン）。Slack が使えない場合は PR / Issue コメントに `docs/logs/kkt_descriptor_poc_e2e.md` 等のリンクを貼る。  
 - ブロッカー例: oneTBB ビルド失敗、Δκ_s が閾値逸脱、3DOF Jacobian が Contact 回帰に統合できない場合。エスカレーション先は PM / Architect WG。  
 - Evidence 保管先: `docs/logs/`（PoC）、`docs/reports/`（週次）、`data/diagnostics/`（CSV）。PR では必ずこれらへの差分リンクを添付する。
-
-### Coupled endurance CSV lint（例）
-
-`python3 tools/filter_coupled_endurance_log.py data/coupled_constraint_endurance.csv --lint-only --require condition_number_spectral,condition_gap,min_eigenvalue,max_eigenvalue,active_equations,drop_events_total` を実行すると以下の Markdown が stderr に出力されます。Slack や PR コメントへそのまま貼り、欠落列を共有してください。
-
-```
-### Coupled endurance CSV lint (missing columns)
-| File | Missing columns | Suggested action |
-| --- | --- | --- |
-| `data/coupled_constraint_endurance.csv` | `condition_number_spectral`<br>`condition_gap` | Ensure the log exporter emits these columns or update `--require` if the schema changed. |
-```
-
----
 
 ## 6. oneTBB 導入ガイド
 1. **ライブラリの入手** – Linux では `sudo apt-get install libtbb-dev` などで `tbb` とヘッダを導入する。既存の Code_Aster 環境を使う場合は `/usr/lib` や `../Code_Aster/.../lib/libtbb*.so` を参照してもよい。
@@ -116,7 +103,7 @@
 | Island/TBB | `docs/island_scheduler_poc.md`, `data/diagnostics/bench_island_scheduler.csv`（＋ `data/diagnostics/island_scheduler/tbb_<date>.csv`） | TBB 実測時に Run ID (bench) を `docs/island_scheduler_poc.md` のメモ欄へ追記 |
 
 Weekly Run ID を記録するときは上記テンプレをそのままテーブルへ追加し、`tools/update_descriptor_run_id.py --dry-run --run-id <ID>` で差分を確認してからコミットしてください。
-- Evidence Markdown テンプレ: Appendix B.5.5 を参照（Run ID / artifact / log の 3 行ブロック）。
+- Evidence Markdown テンプレは本節で示した 3 行形式（Run / Artifact / Log）をそのまま使用する。
 
 #### Evidence 記入例
 ```

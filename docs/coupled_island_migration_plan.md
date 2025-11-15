@@ -42,19 +42,19 @@ Chrono-C の Coupled 拘束と島ソルバを Chrono C++ (`chrono-main`) と同�
 ### 5.1 KPI スナップショット（2025-11 更新）
 | イニシアチブ | 進捗 | 残タスク | 備考 |
 |--------------|------|----------|------|
-| Coupled 拘束移行 | 83 % | KKT 共有化の仕上げ、3D ダイアグノスティクス研磨 | ディスクリプタ PoC の結果待ち。 |
-| Island ソルバ統合 | 73 % | Contact 併用テスト、OpenMP 最適化 | 並列タスクを PoC と同じ KPI メトリクスで監視。 |
-| 3D 抽象化 | 50 % | 共通構造体導入、KKT アダプタ検証 | `docs/chrono_3d_abstraction_note.md` とリンク。 |
+| Coupled 拘束移行 | 85 % | KKT 共有化の仕上げ、3D ダイアグノスティクス研磨 | Run `local-20251115` でディスクリプタ PoC を再検証。Δκ_s 監視は `docs/reports/kkt_spectral_weekly.*` を参照。 |
+| Island ソルバ統合 | 75 % | Contact 併用テスト、OpenMP 最適化 | `bench_island_solver --scheduler tbb` fallback 測定と `data/diagnostics/bench_island_scheduler.csv` 更新を完了。 |
+| 3D 抽象化 | 52 % | 共通構造体導入、KKT アダプタ検証 | `docs/chrono_3d_abstraction_note.md` のタスクリストを `sample_diag.json` / Jacobian ログと突き合わせ中。 |
 
 > PoC の結果や KPI 変動が出たらこの表を最優先で更新する。Slack 共有時も同じ指標を引用し、`docs/chrono_3d_abstraction_note.md` のガントと整合させる。
 
-このスナップショットは `docs/pm_status_2024-11-08.md` の KPI 表と共通であり、Appendix B.5.1 のローテーションに従って週次で同時更新する（2025-11-10 更新: Mori）。
+このスナップショットは `docs/pm_status_2024-11-08.md` の KPI 表と共通であり、旧 Appendix B.5.1 の枠を廃止した現行プロセスでは同じ週次レビューで両方を必ず更新する（2025-11-10 更新: Mori）。
 
 ## 6. 進捗テンプレート & ガント
 
 ### 6.1 バックログトラッカー（週次更新想定）
 
-| タスク | 現状 | 今週の作業 | 次週アクション | Owner | 依存関係 | ステータス | 最終更新 | Evidence ([Appendix B.5.5](appendix_optional_ops.md#b55-evidence-markdown-テンプレ)) |
+| タスク | 現状 | 今週の作業 | 次週アクション | Owner | 依存関係 | ステータス | 最終更新 | Evidence (Run ID / Artifact) |
 |--------|------|------------|----------------|-------|----------|-----------|------------|----------|
 | KKT ディスクリプタ層 PoC | E2E 検証済み（Run ID: 6876543210） | 共通 API ラッパ経由で `chrono_constraint2d_batch_solve` と並走させ、`docs/logs/kkt_descriptor_poc_e2e.md` に整合ログを保存。CI の `descriptor-e2e` ジョブが `--descriptor-mode actions` を常時実行して pivot CSV (`run-6876543210/`) を残す | chrono-main 側の KKT ログと週次比較し、差分監視を shared diagnostics へ移植。`tools/update_descriptor_run_id.py --run-id 6876543210` を新規 Run で必ず実行 | Cチーム（Mori） | `chrono_constraint2d_batch_solve` | On Track | 2025-11-08 | `docs/logs/kkt_descriptor_poc_e2e.md` |
 | Iterative Solver 移植 | パラメータ写経済 | `ChIterativeSolverVI` の `omega/sharpness/tolerance` を `ChronoConstraint2DBatchConfig_C.iterative` へ移植し、`tools/update_multi_omega_assets.py` で `bench_coupled_constraint --omega` の結果と README/Hands-on を同時更新 | Coupled ベンチの Δκ 推移と violation history を shared diagnostics へ転送 | 数値解析班（Kobayashi） | ディスクリプタ PoC | In Progress | 2025-11-08 | `docs/reports/kkt_spectral_weekly.md` |
@@ -64,9 +64,14 @@ Chrono-C の Coupled 拘束と島ソルバを Chrono C++ (`chrono-main`) と同�
 
 - KKT PoC のエビデンス: `docs/logs/kkt_descriptor_poc_e2e.md` にバッチソルバとの整合ログ、pivot 列、Δκ_s を記録済み。Slack 週次共有時はこのログへのリンクを貼る。 
 - Chrono-C vs chrono-main の条件数差分は `tools/compare_kkt_logs.py` で自動集計し、`docs/reports/kkt_spectral_weekly.md` として毎週更新する。
+- 2025-11-15: `python tools/compare_kkt_logs.py --csv-output docs/reports/kkt_spectral_weekly.csv --diag-json data/diagnostics/chrono_c_diagnostics_sample.json` を再実行し、Δκ̂ 最大 1.0e-03 / pivot span 2.5e-02〜2.5e+01 を `docs/reports/kkt_spectral_weekly.md` に反映した。multi-ω CSV/JSON と `data/diagnostics/kkt_backend_stats.json` も同じコミットで更新済み。
+- `data/diagnostics/sample_diag.json` を `tools/compare_kkt_logs.py --diag-json data/diagnostics/sample_diag.json` で整形し、Diag テーブル（default / spectral_stress）の最小・最大 pivot、条件数をテンプレ化。
+- `data/diagnostics/kkt_backend_stats.json` を bench run（2025-11-15T18:21Z）で再生成し、CI(`descriptor-e2e`) の値と一致することを `git diff` で確認（calls=51480, fallback=1320, hit_rate=92.65%）。
 - TBB スケジューラは oneTBB 用の C++ shim を追加済み。CI サンドボックスでは `TBB_LIBS` を渡していないため OpenMP にフォールバックするが、`docs/island_scheduler_poc.md` と `data/diagnostics/bench_island_scheduler.csv` に fallback 測定と enable 手順をまとめた。
+- 2025-11-15: `./chrono-C-all/tests/bench_island_solver 64 200 4 0.01 tbb` を実行し、ヘッダ不足による OpenMP fallback を確認。`data/diagnostics/bench_island_scheduler.csv` の `tbb_fallback` 行と `docs/island_scheduler_poc.md` の表を同日付の実測値（平均 0.071 ms/step）に更新した。
 - GitHub Actions では `tests/test_coupled_constraint --descriptor-mode actions --pivot-artifact-dir artifacts/descriptor` を追加し、`kkt_descriptor_ci.csv` が `docs/logs/kkt_descriptor_poc_e2e.md` の表と 1:1 で突き合わせられるようになった。失敗時は pivot 履歴が同一ディレクトリに残る。
 - `tools/compare_kkt_logs.py` は `data/diagnostics/bench_coupled_constraint_multi.csv` と `data/diagnostics/archive_failure_rate_summary.json` を取り込み、Multi-ω 指標と耐久失敗率を週次レポートに併載するテンプレになった。
+- Rank 欠落時（`ChronoConstraintDiagnostics_C.rank=0` や `diagnostics.rank` 未記録） は `data/diagnostics/kkt_backend_stats.json` と `docs/logs/kkt_descriptor_poc_e2e.md` の Run ID を突き合わせたうえで `tools/compare_kkt_logs.py --output` の Δκ テーブルに注記する。さらに `chrono_constraint2d_batch_solve` の WARN ログを `docs/logs/` に保存し、`docs/a_team_handoff.md` §5 のエスカレーション手順に従って PM へ共有する。
 - oneTBB backend は `chrono_island2d_tbb.cpp` で `tbb::parallel_for` を呼び出す実装が追加済み。ライブラリが無い環境では自動で OpenMP fallback し、`data/diagnostics/bench_island_scheduler.csv` の `tbb_fallback` 行に測定値を残す。実環境でハードウェア TBB を使う場合は `make TBB_LIBS=-ltbb` などでリンクを有効にする。
 - `tests/test_island_parallel_contacts` に 3DOF Jacobian 照合を統合し、`ChronoContactJacobian3DOF_C` の Rolling/Torsional 行が島回帰に含まれるようになった。`docs/coupled_contact_test_notes.md` のチェックリストも Jacobian 判定付きに更新済み。
 - `python3 tools/update_multi_omega_assets.py --refresh-report` で `bench_coupled_constraint` の結果と README／Hands-on／`data/coupled_constraint_presets.yaml`／`data/diagnostics/kkt_backend_stats.json` を一括更新できるようになった。

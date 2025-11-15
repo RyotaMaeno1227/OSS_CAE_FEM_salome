@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="320" viewBox="0 0 760 320">
+  <style>
+    .title { font: bold 20px 'DejaVu Sans', sans-serif; fill: #1f2a44; }
+    .label { font: 15px 'DejaVu Sans', sans-serif; fill: #1f2a44; }
+    .phase { fill: #dbeafe; stroke: #1d4ed8; stroke-width: 2; rx: 8; ry: 8; }
+    .arrow { stroke: #0f172a; stroke-width: 2; marker-end: url(#arrowhead); }
+  </style>
+  <defs>
+    <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="2" refY="4" orient="auto">
+      <polygon points="0 0, 8 4, 0 8" fill="#0f172a" />
+    </marker>
+  </defs>
+  <text class="title" x="20" y="32">Coupled Constraint Learning Path Overview</text>
+  <g transform="translate(40,80)">
+    <rect class="phase" width="200" height="80" />
+    <text class="label" x="16" y="38">Chapter 01</text>
+    <text class="label" x="16" y="60">Ratio Sweep</text>
+  </g>
+  <g transform="translate(300,80)">
+    <rect class="phase" width="200" height="80" />
+    <text class="label" x="16" y="38">Chapter 02</text>
+    <text class="label" x="16" y="60">Softness & Springs</text>
+  </g>
+  <g transform="translate(560,80)">
+    <rect class="phase" width="200" height="80" />
+    <text class="label" x="16" y="38">Chapter 03</text>
+    <text class="label" x="16" y="60">Contact Integration</text>
+  </g>
+  <g transform="translate(180,200)">
+    <rect class="phase" width="200" height="80" />
+    <text class="label" x="16" y="38">Chapter 04</text>
+    <text class="label" x="16" y="60">Endurance / Diagnostics</text>
+  </g>
+  <g transform="translate(440,200)">
+    <rect class="phase" width="200" height="80" />
+    <text class="label" x="16" y="38">Appendix</text>
+    <text class="label" x="16" y="60">Reports & Evidence</text>
+  </g>
+  <line class="arrow" x1="240" y1="120" x2="300" y2="120" />
+  <line class="arrow" x1="500" y1="120" x2="560" y2="120" />
+  <line class="arrow" x1="360" y1="160" x2="360" y2="200" />
+  <line class="arrow" x1="340" y1="240" x2="440" y2="240" />
+  <text class="label" x="60" y="290">Run IDs / Evidence: docs/logs/ ・ docs/reports/</text>
+</svg>

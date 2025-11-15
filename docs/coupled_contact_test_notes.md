@@ -22,7 +22,7 @@ Coupled 拘束と Contact 拘束を同一島で解く際の意図と判定方法
 | 3DOF Jacobian 行 | `test_island_parallel_contacts` | `chrono_contact2d_build_jacobian_3dof` の Normal/Rolling/Torsional 行が `ChronoContactPair2D` の姿勢と一致（許容誤差 1e-9）。 |
 
 <!-- jacobian-status:start -->
-**CI Run 6876543210 (pending artifacts)** – `tools/run_contact_jacobian_check.py` でローカル実行すると `data/diagnostics/contact_jacobian_log.csv` に最新ログが生成され、`docs/coupled_contact_test_notes.md` も `--jacobian-report` 経由で自動更新される。CI で新しい Run ID が確定したら `python3 tools/update_descriptor_run_id.py --run-id <ID>` → `python3 tools/run_contact_jacobian_check.py --log artifacts/contact/contact_jacobian_log.csv --report docs/coupled_contact_test_notes.md --extra-args --jacobian-log-default` の順に再実行し、このブロックを書き換える。
+_Last verified: 2025-11-15T18:23:36Z (max abs error 0.000e+00 ≤ tol 1.000e-09)._
 <!-- jacobian-status:end -->
 
 - `tests/test_island_parallel_contacts --jacobian-report docs/coupled_contact_test_notes.md --jacobian-log out/contact_jacobian.csv`（または `--jacobian-log-default`）を実行すると上記ステータスとログが自動更新される（CI では `--jacobian-log` のみ使用し、Markdown 変更はローカルで行う）。
@@ -46,8 +46,8 @@ Slack テンプレ（placeholder → 実データ差し替え時）:
 ## 3. ログ読み解き手順
 1. `./chrono-C-all/tests/test_island_parallel_contacts --dump=log.json` を実行し、Coupled 拘束 ID と Contact manifold ID を対応付ける。  
 2. `tools/filter_coupled_endurance_log.py --input log.json --focus contact` で Contact 関連 WARN を抽出。  
-3. `docs/appendix_optional_ops.md` **B.6 Contact + Coupled Test Operations** に従い、Slack 通知テンプレと KPI 連携（`[contact-kpi]` タグ）を更新する。  
-4. Appendix C のログテンプレと組み合わせ、CI アラートや `docs/wiki_coupled_endurance_article.md` のローテーション表へ反映する。
+3. 通知テンプレはリポジトリから撤去済み。必要なら各チームの環境に合わせて Slack/メールの書式を用意し、Run ID のみを共有する。  
+4. CI アラートは Run ID とログのみ共有し、以前あった Wiki ローテーション表は廃止済み。
 
 ## 4. よくあるトラブル
 - **WARN が常時発生する**: `ratio_distance` / `ratio_angle` の縮尺が Contact の剛性より強すぎる。ソフトネスを増やして `condition_number` を 1e5 以下に抑える。  
@@ -58,7 +58,7 @@ Slack テンプレ（placeholder → 実データ差し替え時）:
 - `docs/coupled_constraint_tutorial_draft.md` §3 Verification  
 - `docs/coupled_constraint_solver_math.md` §3 条件数評価  
 - `docs/coupled_island_migration_plan.md` §6 進捗テンプレート  
-- `docs/appendix_optional_ops.md` **A/B/C**（ログ解析・Wiki テンプレ・通知）
+- 運用系ドキュメントはすべて削除済み（ログ解析や Wiki 差し替えは各チーム運用の責任で実施）。
 
 ## 6. 3DOF Jacobian 統合メモ
 

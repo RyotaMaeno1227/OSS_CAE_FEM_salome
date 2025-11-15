@@ -28,8 +28,14 @@ Reference CSV: `data/diagnostics/bench_island_scheduler.csv`
 | auto (OpenMP static) | 4 | 0.046 ms | Reference path (0.00921 s total for 200 steps). |
 | openmp (forced) | 4 | 0.052 ms | Explicit OpenMP backend for comparison (0.01043 s / 200). |
 | tbb stub (legacy) | 1 | 0.069 ms | Old serial stub left for historical comparison. |
-| tbb fallback | 4 | 0.068 ms | oneTBB backend compiled but libraries missing; message points to enabling `TBB_LIBS`. |
+| tbb fallback | 4 | 0.071 ms | 2025-11-15 実行: `bench_island_solver --scheduler tbb`（headers 不足で OpenMP fallback）。`data/diagnostics/bench_island_scheduler.csv` の `tbb_fallback` を更新済み。 |
 | tbb (oneTBB enabled) | 4 | — | Pending hardware run (`bench_island_solver --scheduler tbb --csv ...` with `TBB_LIBS=-ltbb`). Update `data/diagnostics/bench_island_scheduler.csv`（または `data/diagnostics/island_scheduler/tbb_<date>.csv` に測定ログを保存）し、`python3 tools/update_descriptor_run_id.py` 再実行で Evidence を揃える。 |
+
+### Escalation rules
+
+- **Fallback persists after providing `TBB_INCLUDE_DIR` / `TBB_LIBS`** – Collect the bench output, `make bench` log, and `ldd chrono-C-all/tests/bench_island_solver` result, then escalate to the parallelization lead (Tanaka) via the Aチームチャット。`docs/a_team_handoff.md` の「島 scheduler（oneTBB）」タスク ID を引用する。
+- **Bench crash or NaN timings** – Stop editing CSVs, move the raw log to `data/diagnostics/island_scheduler/tbb_<date>.csv`, and open an issue referencing this memo plus `docs/coupled_island_migration_plan.md` §6.1 の "島ワークスペース 3D 拡張" 行。
+- **CI fallback regressions** – If Actions logs show repeated WARN without local repro, file it under `docs/documentation_changelog.md` (tag `island_scheduler`) and notify PM in the weekly chat. Keep `tbb_fallback` row unchanged until root cause is verified.
 
 ## Risks & next steps
 

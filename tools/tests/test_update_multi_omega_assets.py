@@ -74,7 +74,7 @@ class UpdateCommandBlockTest(unittest.TestCase):
     def test_handles_additional_markdown_sections(self) -> None:
         source = textwrap.dedent(
             """\
-            ## Appendix
+            ## Legacy Appendix
             Refer to the profiling command below:
             ```bash
             ./chrono-C-all/tests/bench_coupled_constraint \\
@@ -87,7 +87,7 @@ class UpdateCommandBlockTest(unittest.TestCase):
         result = self._rewrite(source, [0.8, 1.1])
         expected = textwrap.dedent(
             """\
-            ## Appendix
+            ## Legacy Appendix
             Refer to the profiling command below:
             ```bash
             ./chrono-C-all/tests/bench_coupled_constraint \\

@@ -171,7 +171,7 @@ use_cases:
       baumgarte: 0.37
       slop: 0.0005
       max_correction: 0.08
-    last_updated: 2025-11-08T18:18:55Z
+    last_updated: 2025-11-15T18:21:10Z
     notes:
       - `bench_coupled_constraint --omega 0.85/1.0/1.15` の CSV とセットで更新し、README および Hands-on Chapter 02 と同期させる。
       - README/Hands-on のコマンドブロックは `tools/update_multi_omega_assets.py --refresh-report` で同時に書き換える。

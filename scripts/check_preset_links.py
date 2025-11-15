@@ -14,8 +14,6 @@ import sys
 DEFAULT_FILES = [
     "README.md",
     "docs/coupled_constraint_hands_on.md",
-    "docs/wiki_coupled_endurance_article.md",
-    "docs/wiki_samples/coupled_endurance_article_sample.md",
 ]
 
 TARGET = "docs/coupled_constraint_presets_cheatsheet.md"

@@ -63,6 +63,7 @@ time,case,method,kappa_bound,kappa_spectral,min_pivot,max_pivot
 - The descriptor backend now emits per-step pivot rows that are mirrored into `ChronoCoupledConstraintDiagnostics_C`.
 - Both solvers share the same Jacobi eigen estimator; the only differences in Δκ_s came from floating-point accumulate order.
 - `tests/test_coupled_constraint --use-kkt-descriptor --mark-stage 1.2:stage_capture --mark-stage 2.4:stage_final` was used to stamp the CSV for tutorial screenshots.
+- 2025-11-15: `tests/test_constraint_common_abi` を再ビルドして `ChronoConstraintDiagnostics_C` のサイズ (136 bytes) / `pivot_log` オフセット (56 bytes) / `log_level_actual` オフセット (128 bytes) を記録（上記コマンド出力参照）。
 
 ## 6. GitHub Actions Integration (2025-11)
 
@@ -72,6 +73,7 @@ time,case,method,kappa_bound,kappa_spectral,min_pivot,max_pivot
 | Run ID | 検証日時 (UTC) | 担当 | 計測対象 (omega / preset) | 実行コマンド | Artifacts / Link | 差分メモ |
 |--------|----------------|------|--------------------------|--------------|------------------|-----------|
 | **6876543210** | 2025-11-08T04:15:00Z | Mori (Team A) | multi_omega_reference / ω=0.85,1.0,1.15 | `tests/test_coupled_constraint --use-kkt-descriptor --descriptor-mode actions --descriptor-log artifacts/descriptor/kkt_descriptor_actions_6876543210.csv --pivot-artifact-dir artifacts/descriptor/run-6876543210` | `kkt_descriptor_actions_6876543210.csv`, `run-6876543210/pivot_*.csv`（descriptor-e2e job） | Δκ_s < 5% で安定、auto-drop 未発生。 |
+| **local-20251115** | 2025-11-15T18:19:09Z | Codex (Team A support) | descriptor_actions_local / ω=default | `tests/test_coupled_constraint --use-kkt-descriptor --descriptor-mode actions --pivot-artifact-dir artifacts/descriptor` | `docs/logs/kkt_descriptor_actions_local_20251115.csv`（手動計測、pivot ログ共用） | solver WARN: cond=2.41e+08 だが auto_recover 済み。追加 Δκ_s 変化なし。 |
 
 - The CI log mirrors the entries below (excerpt from `method=actions` rows in the descriptor CSV):
 

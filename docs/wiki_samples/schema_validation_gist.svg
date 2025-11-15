@@ -12,5 +12,5 @@
   <text x="40" y="300" font-size="20" fill="#d4d4d4" font-family="'Fira Code', 'Menlo', monospace">1. Run the command above after `workflow_dispatch`.</text>
   <text x="40" y="340" font-size="20" fill="#d4d4d4" font-family="'Fira Code', 'Menlo', monospace">2. Paste the gist link into Slack/issue along with Run URL.</text>
   <text x="40" y="380" font-size="20" fill="#d4d4d4" font-family="'Fira Code', 'Menlo', monospace">3. Attach `latest.summary.validation.md/json` as workflow artifacts.</text>
-  <text x="40" y="420" font-size="20" fill="#d4d4d4" font-family="'Fira Code', 'Menlo', monospace">(See Appendix B.5 for the Run ID log.)</text>
+  <text x="40" y="420" font-size="20" fill="#d4d4d4" font-family="'Fira Code', 'Menlo', monospace">(See docs/abc_team_chat_handoff.md §5 for the Run ID log.)</text>
 </svg>

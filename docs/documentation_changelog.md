@@ -2,6 +2,22 @@
 
 このページは Coupled/3D 関連ドキュメントの更新履歴を集約するための草案です。正式運用時は週次で最新エントリを追加し、Wiki / 社内ポータルと同期してください。
 
+## 2025-11-14 更新
+
+| ドキュメント | 主な変更内容 | 担当 | 備考 |
+|--------------|--------------|------|------|
+| `README.md` | リポジトリの目的を Project Chrono 移植＋教育資料に限定し、通知／ベンチ公開／Appendix 参照を整理 | Aチーム（Mori） | Coupled Benchmark Site / Link Lint など運用節を削除し、新レイアウトを提示 |
+| `docs/a_team_handoff.md` | Appendix B.5 系導線を撤去し、週次レビュー／Evidence テンプレを本編に統合 | Aチーム（Mori） | Slack 共有は任意周知のみと明記 |
+| `docs/coupled_island_migration_plan.md`, `docs/chrono_3d_abstraction_note.md` | KPI テーブルの更新手順から Appendix 参照を除去し、週次レビューでの直接更新方針を明記 | Aチーム（Mori） | pm_status との同期手順も追記 |
+| `docs/coupled_constraint_presets_cheatsheet.md` | 更新チェックリストを Appendix 依存から独立させ、Slack 通知は任意作業と説明 | Docs 班（Nakajima） | `scripts/check_preset_links.py` 実行を継続 |
+| `docs/coupled_constraint_hands_on.md` | 学習パス表の Appendix 参照を撤去し、リンク検証フローを現行仕様へ更新 | Docs 班 |
+| `docs/chrono_2d_development_plan.md` | Appendix への移行計画をアーカイブ扱いにし、ユーティリティ系はスコープ外と明記 | Aチーム |
+| `docs/pm_status_2024-11-08.md` | 通知／Endurance Archive の扱いを更新し、空ディレクトリを残す方針を記録 | PM |
+| `docs/abc_team_chat_handoff.md` | Bチーム 15 件タスクの実施ログ、Run #19381234567 の反映状況を明記 | Bチーム（Diagnostics） | セクション 9 に完了マークを追加 |
+| `docs/pm_status_2024-11-08.md` | Bセクションへ Nightly 更新ログ（Run ID、CSV 追記、テンプレ整備、権限確認）を追加 | Bチーム（Diagnostics） | Run 優先順位ルール・監視コマンド・workflow_dispatch 手順を追記 |
+| `docs/git_setup.md` | Nightly 向け Git 差分確認チートシートを新設 | Bチーム（Diagnostics） | `git add data/coupled_constraint_endurance.csv ...` など定型手順を記載 |
+| `docs/templates/b_team_endurance_templates.md` | Endurance 失敗共有／summary 配布テンプレを新規作成 | Bチーム（Diagnostics） | チャット投稿用。Run 個別情報はリポジトリに残さない |
+
 ## 2025-10-21 更新
 
 | ドキュメント | 主な変更内容 | 担当 | 備考 |
@@ -62,18 +78,26 @@
 | `scripts/check_doc_links.py` | Tutorial/Hands-on/Notes のリンク検証スクリプトを追加 | Tooling | Appendix E.1 から呼び出し |
 | `docs/integration/learning_path_map.md` | W2/W3/W4 ステータスと詳細メモを追記 | Cチーム | Appendix E との整合 |
 | `docs/coupled_constraint_tutorial_draft.md`, `docs/coupled_constraint_hands_on.md` | 統合ステータス（W2 進行中 / W3 着手）と Learning Path Snapshot 表を追記 | Cチーム | 学習パス進捗を共有 |
-| `docs/media/coupled/README.md` | プレースホルダ PDF の注意書きと Slack テンプレを追加 | Cチーム | Appendix A.3.2 と連動 |
-| `README.md` | `scripts/check_doc_links.py` の使い方を追加 | Cチーム | ドキュメント lint を周知 |
-| `docs/appendix_optional_ops.md` | 外部 PDF 受け渡し、命名規則、Webhook/メール通知、Google カレンダー案、図版ガイドを追加 | Cチーム | Appendix A/C/B.5.1 を拡張 |
-| `docs/wiki_coupled_endurance_article.md` | 備考に Pandoc 差し替え待ちと担当・予定日を記載、ローテ表を最新化 | Cチーム | Appendix B.3/B.4 と同期 |
-| `docs/wiki_samples/coupled_endurance_article_sample.md` | ローテ表を本編と同書式に更新し、Appendix B.5 への往復リンクを追記 | Cチーム | サンプルとの整合を確保 |
-| `docs/chrono_coupled_constraint_tutorial.md` | Appendix 参照リンクを再確認し、運用系記述が無い状態を維持 | Cチーム | Appendix A/C へのリダイレクトのみ残存 |
 | `.github/workflows/ci.yaml` | `scripts/check_doc_links.py` を docs lint ステップに追加 | Tooling | Tutorial/Hands-on のリンク検証を CI で強制 |
+
+## 2025-11-14 更新
+
+| ドキュメント | 主な変更内容 | 担当 | 備考 |
+|--------------|--------------|------|------|
+| `docs/appendix_optional_ops.md`, `docs/coupled_endurance_ci_troubleshooting.md`, `docs/wiki_coupled_endurance_article*.md`, `docs/media/coupled/README.md`, `docs/logs/notification_audit.md` | Project Chrono 移植と教育資料に scope を絞るため、通知／運用系ドキュメントを削除 | PM | 長時間耐久運用は各チーム環境へ移譲 |
+| `tools/filter_coupled_endurance_log.py`, `tools/report_archive_failure_rate.py`, `tools/compose_endurance_notification.py`, `tools/fetch_endurance_artifact.py` | 同上、通知系スクリプトを削除 | PM | 不要機能の撤去 |
+| README / Hands-on / チュートリアル各種 | Appendix 参照を削除し、Chrono 移植＋教育コンテンツのみに整理 | Cチーム | Markdown 方針＋Chrono 重点に統一 |
 | `docs/appendix_optional_ops.md` | Markdown 方針（A/B/C/D/E）、ローテ表の Markdown チェック欄、通知テンプレ整備を追記 | Cチーム | Appendix 全体で PDF 排除を明文化 |
 | `docs/wiki_coupled_endurance_article.md` / `docs/wiki_samples/coupled_endurance_article_sample.md` | ローテ表に Markdown 方針列を追加し、例外条件を記載 | Cチーム | Wiki/サンプル共に `.md` 参照を保証 |
 | `README.md`, `docs/media/coupled/README.md` | `scripts/check_doc_links.py` の運用例と Slack テンプレの参照先を追記 | Cチーム | lint/告知フローを統一 |
 | `docs/logs/notification_audit.md` | Webhook/メール通知の記録テンプレを新規追加 | Cチーム | Appendix C.4 とリンク
 | `scripts/check_preset_links.py` & `.github/workflows/ci.yaml` | Markdown プリセットリンク検証スクリプトを追加し、CI に組み込み | Tooling | README/Hands-on/Wiki が `.md` を参照しているか自動チェック |
+| `docs/coupled_constraint_hands_on.md`, `practice/coupled/ch0x_*`, `practice/README.md` | Chapter 02/03 TODO を解消し、Practice ソースと Appendix C（Multi-ω 更新手順）を追加 | Cチーム | Run ID / Evidence は `docs/abc_team_chat_handoff.md` と同期 |
+| `docs/coupled_constraint_presets_cheatsheet.md`, `data/coupled_constraint_presets.yaml` | ユースケース表に hydraulic/optic/multi_omega を追加し、YAML と値を突合 | Cチーム | `python scripts/check_preset_links.py` を実行済み |
+| `docs/integration/learning_path_map.md`, `docs/integration/assets/learning_path_overview.svg`, `.../hands_on_ch02_progress.svg` | 可視化セクションと SVG 図版を追加し、`docs/chrono_3d_abstraction_note.md` からリンク | Cチーム | Hands-on/README で参照 |
+| `README.md`, `docs/git_setup.md` | Educational Materials へのリンク整備、Run ID／preset チェックの手順を追加 | Cチーム | C チームの週次チェック項目へ反映 |
+| `docs/abc_team_chat_handoff.md`, `docs/pm_status_2024-11-08.md`, `docs/wiki_samples/schema_validation_gist.svg` | タスク表 15 件／チャットテンプレ更新、C チーム欄の進捗メモ・Run ID 参照先を刷新 | Cチーム | 新チャットのピン留め前提 |
+| `docs/coupled_contact_api_minimal*.md`, `docs/chrono_coupled_constraint_tutorial.md`, `docs/chrono_3d_abstraction_note.md` | 日英 API ドキュメントの用語整理、Chrono main との式番号対応表・学習者向けサマリを追記 | Cチーム | Learning Path / Tutorial から参照 |
 
 Slack summary (2025-11-10, #chrono-docs / #chrono-constraints):
 - Preset PDF remains provisional (Pandoc unavailable); checklist + README note added.  

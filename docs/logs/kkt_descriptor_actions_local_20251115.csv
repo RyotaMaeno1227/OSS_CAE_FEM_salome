@@ -1,0 +1,10 @@
+time,case,method,condition_bound,condition_spectral,min_pivot,max_pivot
+0.000000,tele_yaw_control,actions,3.790484e+00,3.643688e+00,5.935079e-01,2.160364e+00
+4.050000,tele_yaw_control,actions,3.790484e+00,3.643688e+00,5.943629e-01,2.160364e+00
+7.200000,tele_yaw_control,actions,3.790484e+00,3.643688e+00,5.943629e-01,2.160364e+00
+15.295500,tele_yaw_control,actions,3.790484e+00,3.643688e+00,5.943629e-01,2.160364e+00
+3.150000,tele_yaw_control,actions,1.000000e+00,1.000000e+00,1.745753e+00,1.745753e+00
+3.150000,cam_follow_adjust,actions,1.000000e+00,1.000000e+00,7.024593e-01,7.024593e-01
+3.150000,counterbalance_beam,actions,1.000000e+00,1.000000e+00,1.142963e+00,1.142963e+00
+3.150000,hydraulic_lift_sync,actions,1.000000e+00,1.000000e+00,5.391795e-01,5.391795e-01
+3.150000,optic_alignment_trim,actions,1.000000e+00,1.000000e+00,1.180056e+00,1.180056e+00

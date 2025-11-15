@@ -1,0 +1,36 @@
+{
+  "samples": 7210,
+  "time_start": 0.0,
+  "time_end": 25.2315,
+  "duration": 25.2315,
+  "max_condition": 10.91,
+  "mean_condition": 10.88237309292649,
+  "median_condition": 10.88235,
+  "warn_frames": 7210,
+  "warn_ratio": 1.0,
+  "rank_frames": 0,
+  "rank_ratio": 0.0,
+  "max_distance_abs": 0.745886,
+  "max_angle_abs": 0.512656,
+  "eq_ids": [
+    "eq0",
+    "eq1",
+    "eq2"
+  ],
+  "eq_force_distance_max": {
+    "eq0": 16.302295,
+    "eq1": 0.0,
+    "eq2": 7.359832
+  },
+  "eq_force_angle_max": {
+    "eq0": 33.513927,
+    "eq1": 0.0,
+    "eq2": 13.354245
+  },
+  "eq_impulse_max": {
+    "eq0": 0.044135,
+    "eq1": 0.0,
+    "eq2": 0.043955
+  },
+  "version": 1
+}

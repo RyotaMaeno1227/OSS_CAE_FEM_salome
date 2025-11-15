@@ -73,7 +73,7 @@
 | 島分割 & 並列 | Union-Find / OpenMP の一貫性とスケール | `test_island_builder`, `test_island_parallel_contacts`, `bench_island_solver` | 島数、並列 vs 直列の一致、スループット |
 | 継続回帰 | 長時間シナリオでのドリフト検出 | `test_planar_constraint_longrun`, `test_polygon_spin_collision`, `test_distance_angle_endurance` | ドリフト量、安定化効果 |
 
-- 上表に含まれないユーティリティ系（例: `test_coupled_logging_integration`）は任意機能扱いとし、Appendix へ移行予定 (`docs/optional_features_appendix_plan.md` 参照)。
+- 上表に含まれないユーティリティ系（例: `test_coupled_logging_integration`）は任意機能扱いとし、現在のスコープ（Chrono 移植＋教育資料）からは除外する。履歴は `docs/optional_features_appendix_plan.md` に残しているが新規追加は行わない。
 - CI は上記カテゴリから最小限セットを実行し、数値解の健全性に集中する。メディア生成や通知は CI スコープ外。
 
 ## 4. マイルストンとタスク一覧
@@ -105,7 +105,7 @@
 - **チュートリアル／教育コンテンツ（計算コア向け）**
   - `FEM4C/docs/FEM_LEARNING_GUIDE.md` と `FEM4C/docs/tutorial_manual.md` を参照し、Coupled 拘束・接触ソルバの基本計算フローを学べる最小教材を整備する。
   - 導出メモ (`docs/coupled_constraint_solver_math.md`) や移行計画 (`docs/coupled_island_migration_plan.md`) と連携し、数式・サンプルコード・テストケースへの導線をまとめる。
-  - 教材は Markdown ベースで管理し、通知や可視化など計算に直結しない話題は appendix に切り分ける。
+  - 教材は Markdown ベースで管理し、通知や可視化など計算に直結しない話題はリポジトリ外に任せる（以前の Appendix 領域は削除済み）。
 - **次のアクション候補（計算コア限定）**
   1. 摩擦付き接触での複数接触点・マンifold拡張（複数点、永続性）を検討し、継続接触の安定化を図る。
   2. Coupled 拘束の多式解法で 3D 版と同等の安定性を得るため、条件数改善やピボット選択の最適化を進める。

@@ -6,6 +6,20 @@
 > テストや可視化スクリプトは `tests/test_coupled_constraint*.c`、`tools/plot_coupled_constraint_endurance.py` を参照してください。
 > 各ユースケースのパラメータは `data/coupled_constraint_presets.yaml` にも整理してあり、スクリプトからそのまま読み込めます。
 
+### Chrono-main ドキュメントとの対応
+
+Chrono main 側（`third_party/chrono/chrono-main/docs/coupled_constraint_tutorial.md`）で用いられている式／図番号とのマッピングを以下に整理しました。Chrono C ハンズオンが参照する Run ID を共有化する際、この表を使うと差分レビューが容易になります。
+
+| Chrono main リファレンス | 本資料の参照 | 備考 |
+|--------------------------|--------------|------|
+| Eq. (1) Coupled Descriptor 基本式 | §1 テレスコピック＋ヨー制御 – 設定手順 1–3 | `ratio_distance`/`ratio_angle`/Baumgarte を同じ数式で扱う。 |
+| Eq. (3) Spring / Softness 展開 | §2 カム機構 – パラメータ表および手順 2–4 | stiffness/damping の係数は Chrono main の `k_d`, `k_a` に一致。 |
+| Eq. (5) 多式拘束（extra equations） | §3 カウンターバランス梁 – 設定手順 1–3 | `chrono_coupled_constraint2d_add_equation` の index と Chrono main の `Equation i` が対応。 |
+| Fig. 2 Docking Layout | §4 ドッキングガイド – ASCII 図 | Chrono main の 2D 図を ASCII にした上で角度オフセット注釈を追加。 |
+| Eq. (7) Contact + Coupled Jacobian | §5（Contact+Coupled 併用）および Appendix B | Hands-on Chapter 03 で `chrono_contact2d_build_jacobian_3dof` を参照する箇所。 |
+
+> Chrono main に追従して式番号が変わった場合は、上表を更新し `docs/documentation_changelog.md` へ記録してください。
+
 ---
 
 ## 1. テレスコピック＋ヨー制御
@@ -193,7 +207,7 @@ chrono_coupled_constraint2d_set_condition_warning_policy(&coupled, &policy);
 
 ## 8. メディア／通知の参照先
 
-> 画像生成・GIF/MP4・GitHub Pages・Slack 通知などの運用手順は `docs/appendix_optional_ops.md` **A. Media Publishing & Sharing** と **C. Logging & Notification Guidance** に移動しました。本編では数値チューニングのみ扱い、必要に応じて付録を参照してください。  
+> 画像生成・GIF/MP4・通知などの運用手順はリポジトリから削除され、各チーム環境で任意に構築する前提に変わりました。本編では数値チューニングのみ扱います。
 > （2025-11-10 再確認済み: 本章に運用系の手順は残っていません。）
 > プリセット関連はすべて Markdown (`docs/coupled_constraint_presets_cheatsheet.md`) を参照する方針で統一しています。
 
