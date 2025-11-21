@@ -42,7 +42,7 @@ provide learning material for engineers picking up the solver stack. すべて�
 - **Contact API note** – `docs/coupled_contact_api_minimal.md` (日) /
   `docs/coupled_contact_api_minimal_en.md` (英) が C API サーフェスを網羅。
 - **Learning path map** – `docs/integration/learning_path_map.md` でロードマップと
-  推奨コンテンツ順序を確認でき、同ディレクトリの `assets/*.svg` に図版を格納。
+  推奨コンテンツ順序を確認でき、同ディレクトリの `assets/*.svg` に図版を格納（手動編集でステータスや Run ID を更新）。
 - **Preset cheat sheet** – `docs/coupled_constraint_presets_cheatsheet.md` と
   `data/coupled_constraint_presets.yaml` を同期し、Multi-ω 設定や演習条件を共有。
 - **Practice sources** – `practice/README.md` と `practice/coupled/ch0x_*` を Hands-on 手順に従って更新し、Run ID/Evidence を `docs/abc_team_chat_handoff.md` のテンプレへ記録。

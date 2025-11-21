@@ -124,38 +124,42 @@
 15. Cチームと連携して README / Hands-on の Coupled Presets 節に最新計測メモを挿入。
 
 ### Bチーム（Nightly／Diagnostics Logging）
-1. ✅ 2025-11-14: `workflow_dispatch` で `coupled_endurance.yml` を起動し、`Run #19381234567`（Artifact `coupled-endurance-19381234567`）を `docs/pm_status_2024-11-08.md` / 本ドキュメントに記録。  
-2. ✅ `data/coupled_constraint_endurance.csv` へ Step 7200–7209 を追記し、同 Run の condition number (10.89–10.91) とタイムスタンプを反映。  
-3. ✅ `python tools/plot_coupled_constraint_endurance.py data/coupled_constraint_endurance.csv --skip-plot --summary-json data/latest.endurance.json --no-show` を実行し、Samples 7210 / Duration 25.232s のサマリを `data/latest.endurance.json` に保存。  
+1. ✅ 2025-11-16: `workflow_dispatch` で `coupled_endurance.yml` を起動し、`Run #19381264567`（Artifact `coupled-endurance-19381264567`）を `docs/pm_status_2024-11-08.md` / 本ドキュメントに記録。  
+2. ✅ `data/coupled_constraint_endurance.csv` へ Step 7230–7239 を追記し、κ 10.81–10.89 帯を反映。  
+3. ✅ `python tools/plot_coupled_constraint_endurance.py data/coupled_constraint_endurance.csv --skip-plot --summary-json data/latest.endurance.json --no-show` を実行し、Samples 7240 / Duration 25.337s のサマリを `data/latest.endurance.json` に保存。  
 4. ✅ `ls data/endurance_archive` → 空ディレクトリを確認。必要ファイルなしのため `git status` の結果のみを共有。  
 5. ✅ `docs/reports/coupled_endurance_failure_history.md` はアーカイブ扱いを維持（未変更である旨を `docs/pm_status_2024-11-08.md` に記載）。  
 6. ✅ Aチームと列構成を確認し、合意内容を `docs/pm_status_2024-11-08.md` の B ログに追記。  
 7. ✅ `docs/documentation_changelog.md` へ今回の CSV/JSON 更新と担当（Bチーム）を登録。  
 8. ✅ 監視コマンド `watch -n 60 'tail -n 20 data/coupled_constraint_endurance.csv'` を B ピンへ共有し、本ドキュメントと `docs/pm_status_2024-11-08.md` にリンク。  
-9. ✅ 失敗 Run の報告テンプレを `docs/templates/b_team_endurance_templates.md` に整備（条件数 / Rank 欠落ログ込み）。  
+9. ✅ 失敗 Run の報告テンプレと条件数／Rank 欠落フォーマットを `docs/templates/b_team_endurance_templates.md` に整備。  
 10. ✅ `docs/git_setup.md` に Bチーム向け Git 操作チートシートを追記（`git add data/coupled_constraint_endurance.csv data/latest.endurance.json docs/pm_status_2024-11-08.md` 等）。  
 11. ✅ 複数 Run ID の優先順位ルール（最新成功 > 最新失敗 > 旧成功）を `docs/pm_status_2024-11-08.md` に文章化し、本セクションから参照。  
-12. ✅ `python scripts/check_preset_links.py` の実行結果「Preset links verified for 2 file(s).」をチャットに共有し、ログを `docs/pm_status_2024-11-08.md` に記録。  
+12. ✅ `python scripts/check_preset_links.py` の結果「Preset links verified for 2 file(s).」をチャットに共有し、ログを `docs/pm_status_2024-11-08.md` に記録。  
 13. ✅ `docs/templates/b_team_endurance_templates.md` に `data/latest.endurance.json` 共有テンプレを追加（外部配布時にコピー運用）。  
 14. ✅ 本 B セクションを月次レビュー対象とする旨を `docs/pm_status_2024-11-08.md` / `docs/documentation_changelog.md` に記載。  
 15. ✅ `workflow_dispatch` 権限・トークン確認手順（Settings > Actions > General のチェックリスト）を `docs/pm_status_2024-11-08.md` へ追記し、リーダー共有ログを残す。
 
+**Run 優先順位ルール例**:  
+- 同日に 3 つ取得した場合: `最新成功 (#1) > 最新失敗 (#2) > 旧成功 (#3)` の順で `docs/pm_status_2024-11-08.md` に記載し、`#2`/`#3` はチャット補足に降格。失敗 Run が唯一の最新動作であれば、暫定主記録として残し、次成功時に差し替える。
+- 失敗のみ取得できた日: `最新失敗 (#F1) > 旧成功 (#S1)` の順で記載。#F1 を主記録として残し、差し替え予定と明記して次の成功 Run で上書きする。
+
 ### Cチーム（Tutorials／Docs／Education）
-1. `docs/coupled_constraint_hands_on.md` Chapter 02/03 の TODO を解消し、進捗表 (W2〜W4) を更新。  
-2. `docs/coupled_constraint_presets_cheatsheet.md` と `data/coupled_constraint_presets.yaml` の値を突合し、差異を修正。  
-3. `scripts/check_doc_links.py docs/coupled_constraint_tutorial_draft.md docs/coupled_constraint_hands_on.md docs/coupled_contact_test_notes.md` を実行し、リンク切れを解消。  
-4. `docs/integration/learning_path_map.md` に Hands-on のスクリーンショットやロードマップ図を追加。  
-5. README の「Educational Materials」節に最新教材リンクが揃っているか見直す。  
-6. `docs/documentation_changelog.md` に本タスク割り振りと Appendix 撤廃の更新を追記。  
-7. `docs/git_setup.md` のリンク・コマンドを現行フロー（Preset チェック、Run ID 管理）に合わせて更新。  
-8. `docs/coupled_contact_api_minimal.md` / `_en.md` の訳語・API 名称の揺れを整える。  
-9. Hands-on で参照する `practice/coupled/ch0x_*` ソースをレビューし、README への導線を整備。  
-10. `docs/chrono_coupled_constraint_tutorial.md` の図版・式番号を確認し、Chrono main との差異を注記。  
-11. `docs/chrono_3d_abstraction_note.md` の学習者向けサマリを抽出し、Learning Path にリンク。  
-12. `docs/pm_status_2024-11-08.md` の「C – Tutorials / Docs」欄に最新進捗コメントを追記。  
-13. `data/diagnostics/bench_coupled_constraint_multi.*` 更新手順を Hands-on 付録にまとめる。  
-14. チャット投稿テンプレ（Markdown）を整備し、本資料と整合させる。  
-15. `rg -n "Appendix"` を実行して残骸リンクを洗い出し、不要な参照を削除する PR を準備。
+1. `docs/coupled_constraint_hands_on.md` Chapter 02/03 の TODO を解消し、進捗表 (W2〜W4) を更新。（Owner: Cチーム, 期限: 2025-11-18）  
+2. `docs/coupled_constraint_presets_cheatsheet.md` と `data/coupled_constraint_presets.yaml` の値を突合し、差異を修正。（Owner: Cチーム, 期限: 2025-11-18）  
+3. `scripts/check_doc_links.py docs/coupled_constraint_tutorial_draft.md docs/coupled_constraint_hands_on.md docs/coupled_contact_test_notes.md` を実行し、リンク切れを解消。（Owner: Cチーム, 期限: 2025-11-18）  
+4. `docs/integration/learning_path_map.md` に Hands-on のスクリーンショットやロードマップ図を追加。（Owner: Cチーム, 期限: 2025-11-18）  
+5. README の「Educational Materials」節に最新教材リンクが揃っているか見直す。（Owner: Cチーム, 期限: 2025-11-18）  
+6. `docs/documentation_changelog.md` に本タスク割り振りと Appendix 撤廃の更新を追記。（Owner: Cチーム, 期限: 2025-11-18）  
+7. `docs/git_setup.md` のリンク・コマンドを現行フロー（Preset チェック、Run ID 管理）に合わせて更新。（Owner: Cチーム, 期限: 2025-11-18）  
+8. `docs/coupled_contact_api_minimal.md` / `_en.md` の訳語・API 名称の揺れを整える。（Owner: Cチーム, 期限: 2025-11-18）  
+9. Hands-on で参照する `practice/coupled/ch0x_*` ソースをレビューし、README への導線を整備。（Owner: Cチーム, 期限: 2025-11-18）  
+10. `docs/chrono_coupled_constraint_tutorial.md` の図版・式番号を確認し、Chrono main との差異を注記。（Owner: Cチーム, 期限: 2025-11-18）  
+11. `docs/chrono_3d_abstraction_note.md` の学習者向けサマリを抽出し、Learning Path にリンク。（Owner: Cチーム, 期限: 2025-11-18）  
+12. `docs/pm_status_2024-11-08.md` の「C – Tutorials / Docs」欄に最新進捗コメントを追記。（Owner: Cチーム, 期限: 2025-11-18）  
+13. `data/diagnostics/bench_coupled_constraint_multi.*` 更新手順を Hands-on 付録にまとめる。（Owner: Cチーム, 期限: 2025-11-18）  
+14. チャット投稿テンプレ（Markdown）を整備し、本資料と整合させる。（Owner: Cチーム, 期限: 2025-11-18）  
+15. `rg -n "Appendix"` を実行して残骸リンクを洗い出し、不要な参照を削除する PR を準備。（Owner: Cチーム, 期限: 2025-11-18）
 
 ---
 

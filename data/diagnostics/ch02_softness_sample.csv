@@ -1,0 +1,4 @@
+phase,softness_distance,softness_angle,min_pivot,max_pivot
+stage_a,0.0150,0.0280,0.00120,0.00336
+stage_b,0.0180,0.0320,0.00144,0.00384
+stage_c,0.0200,0.0340,0.00160,0.00408

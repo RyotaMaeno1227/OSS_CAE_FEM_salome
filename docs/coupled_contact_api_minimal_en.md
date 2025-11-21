@@ -1,6 +1,6 @@
 # Coupled & Contact Core API (Minimal Set, English)
 
-This note mirrors `docs/coupled_contact_api_minimal.md` but is written in English so mixed teams can reference the same API surface. Only the bare minimum required to drive the core solver is listed here; optional helpers (logging, media generation, notifications, etc.) were removed from the repository and should be implemented per team environment if needed.
+This note mirrors `docs/coupled_contact_api_minimal.md` but is written in English so mixed teams can reference the same API surface. Only the bare minimum required to drive the core solver is listed here; optional helpers (logging, media generation, notifications, etc.) were removed from the repository and should be implemented per team environment if needed outside this repo.
 
 ## Phase-by-Phase API Overview
 

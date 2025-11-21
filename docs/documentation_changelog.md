@@ -17,6 +17,14 @@
 | `docs/pm_status_2024-11-08.md` | Bセクションへ Nightly 更新ログ（Run ID、CSV 追記、テンプレ整備、権限確認）を追加 | Bチーム（Diagnostics） | Run 優先順位ルール・監視コマンド・workflow_dispatch 手順を追記 |
 | `docs/git_setup.md` | Nightly 向け Git 差分確認チートシートを新設 | Bチーム（Diagnostics） | `git add data/coupled_constraint_endurance.csv ...` など定型手順を記載 |
 | `docs/templates/b_team_endurance_templates.md` | Endurance 失敗共有／summary 配布テンプレを新規作成 | Bチーム（Diagnostics） | チャット投稿用。Run 個別情報はリポジトリに残さない |
+| `docs/pm_status_2024-11-08.md` | 新規 Run #19381254567 を追記し、監視ワンライナー／κ・Rank 3行テンプレ、週次計画欄を追加 | Bチーム（Diagnostics） | B ログ 2025-11-15 セクションに記録 |
+| `docs/pm_status_2024-11-08.md` | 新規 Run #19381264567 を追記し、監視ワンライナー実行例と週次計画を更新 | Bチーム（Diagnostics） | B ログ 2025-11-16 セクションに記録 |
+| `docs/abc_team_chat_handoff.md` | Bチームタスク表と Run 優先順位ルール例を更新（#19381264567, Step 7210–7239） | Bチーム（Diagnostics） | セクション 9 に反映 |
+| `docs/templates/b_team_endurance_templates.md` | 複数 Run 報告例追加（成功/失敗混在）、κ/Rank 3行テンプレ補足、監視・列チェック・Rank 抽出ワンライナーを拡充 | Bチーム（Diagnostics） | 週次運用手順を明文化 |
+| `docs/git_setup.md` | Endurance 更新後の最小確認ブロックを確認実行、追記維持 | Bチーム（Diagnostics） | tail/plot/preset check のセットを提示 |
+| `docs/pm_status_2024-11-08.md` | 新規 Run #19381244567 を追記し、監視ワンライナー／フォーマット共有運用を明文化 | Bチーム（Diagnostics） | Nightly B ログを 2025-11-14 セクションに追加 |
+| `docs/abc_team_chat_handoff.md` | Bチームタスク表を最新 Run (#19381244567) に更新 | Bチーム（Diagnostics） | Step 7210–7219 の反映を明記 |
+| `docs/templates/b_team_endurance_templates.md` | 監視ワンライナー・κ/Rank サマリ・外部配布定型文を追記 | Bチーム（Diagnostics） | Aチーム共有用のサマリ定型を明文化 |
 
 ## 2025-10-21 更新
 
@@ -98,6 +106,18 @@
 | `README.md`, `docs/git_setup.md` | Educational Materials へのリンク整備、Run ID／preset チェックの手順を追加 | Cチーム | C チームの週次チェック項目へ反映 |
 | `docs/abc_team_chat_handoff.md`, `docs/pm_status_2024-11-08.md`, `docs/wiki_samples/schema_validation_gist.svg` | タスク表 15 件／チャットテンプレ更新、C チーム欄の進捗メモ・Run ID 参照先を刷新 | Cチーム | 新チャットのピン留め前提 |
 | `docs/coupled_contact_api_minimal*.md`, `docs/chrono_coupled_constraint_tutorial.md`, `docs/chrono_3d_abstraction_note.md` | 日英 API ドキュメントの用語整理、Chrono main との式番号対応表・学習者向けサマリを追記 | Cチーム | Learning Path / Tutorial から参照 |
+
+## 2025-11-17 更新
+
+| ドキュメント | 主な変更内容 | 担当 | 備考 |
+|--------------|--------------|------|------|
+| `docs/coupled_constraint_hands_on.md`, `practice/coupled/ch0x_*`, `practice/README.md` | Hands-on Chapter 02/03 のサンプルに Chrono API 呼び出しを組み込み、出力 CSV/ログ（`data/diagnostics/ch02_softness_sample.csv`, `ch03_contact_sample.log`）を配置 | Cチーム | Run ID 例: `local-20251117-ch02`, `local-20251117-ch03` |
+| `docs/coupled_constraint_presets_cheatsheet.md`, `data/coupled_constraint_presets.yaml` | プリセット表と YAML の値を再突合し、hydraulic/optic/multi-ω 行を更新 | Cチーム | `python scripts/check_preset_links.py` 実行済み |
+| `docs/integration/learning_path_map.md`, `docs/integration/assets/hands_on_ch02_progress.svg` | 学習パスの可視化を更新し、Run ID 例と図版更新手順を追記 | Cチーム | SVG を手動編集しステータスを反映 |
+| `README.md`, `docs/git_setup.md` | Educational Materials と preset チェック／Run ID 連携の手順を整合 | Cチーム | Hands-on との導線を明示 |
+| `docs/abc_team_chat_handoff.md` | C チームタスクに Owner/期限を追記し、チャット配布用に整理 | Cチーム | 新チャットのピン留め前提 |
+| `docs/chrono_coupled_constraint_tutorial.md`, `docs/coupled_contact_api_minimal*.md`, `docs/chrono_3d_abstraction_note.md` | Chrono main との図版・式番号対応表と学習者向けサマリを更新、Appendix 表記を整理 | Cチーム | 用語揺れ/リンク切れを修正 |
+| `tools/tests/test_update_multi_omega_assets.py` | 旧 Appendix 記述を削除し、テストケースをノート表記へ変更 | Cチーム | Appendix 廃止方針に合わせて整備 |
 
 Slack summary (2025-11-10, #chrono-docs / #chrono-constraints):
 - Preset PDF remains provisional (Pandoc unavailable); checklist + README note added.  

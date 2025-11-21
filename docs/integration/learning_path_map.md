@@ -15,17 +15,17 @@
 
 ## 2. マイルストン
 
-| 週 | 作業内容 | Owner | 依存ファイル / タスク | 完了条件 | ステータス (2025-11-08) |
+| 週 | 作業内容 | Owner | 依存ファイル / タスク | 完了条件 | ステータス (2025-11-17) |
 |----|----------|-------|-----------------------|----------|-----------------------|
 | W1 | 章対応表を Tutorial/Hands-on 両方に埋め込み、相互リンクを追記 | Cチーム（Mori） | `docs/coupled_constraint_tutorial_draft.md` / `docs/coupled_constraint_hands_on.md` | 両ファイルの冒頭に統合計画リンクが掲載されている。 | ✅ 完了（2025-11-05） |
-| W2 | Hands-on の演習コード（`practice/coupled/*`）に TODO マーカーを追加し、Tutorial 側の重複を削除 | Hands-on WG（Kobayashi） | `practice/coupled/ch*.c`（※現状ディレクトリ未作成）, `docs/coupled_constraint_tutorial_draft.md` §2 | `rg TODO_LEARNING_PATH` の結果が Hands-on にのみ存在する（Markdown 方針で `.md` を参照）。 | ⚠️ 未着手 – `practice/coupled/` ディレクトリがリポジトリに存在せずブロック中 |
-| W3 | Appendix B.7 のリンク検証チェックリストを自動化 (`scripts/check_doc_links.py` + `scripts/check_preset_links.py`) | Tooling 班（Suzuki） | 両スクリプト, `.github/workflows/ci.yaml`, Appendix B.7/E.2 | CI で Tutorial ↔ Hands-on ↔ Solver Math ↔ Contact Notes ↔ Markdown プリセットのリンク検証が走る。 | ⏳ 進行中 – 2 つのスクリプトを CI へ組み込み済み、結果モニタリング中 |
-| W4 | 統合レビュー（Hands-on／Tutorial 共通構成）を実施し、`docs/documentation_changelog.md` に統合完了を記録 | Cチーム全体 | Appendix E, changelog, Wiki sample | 重複節が解消され、学習者ガイドラインが Appendix に移行済み（プリセットは Markdown を参照）。 | ⏳ 未着手 – W2/W3 完了後に実施 |
+| W2 | Hands-on の演習コード（`practice/coupled/*`）に TODO マーカーを追加し、Tutorial 側の重複を削除 | Hands-on WG（Kobayashi） | `practice/coupled/ch*.c`（設置済み）, `docs/coupled_constraint_tutorial_draft.md` §2 | `rg TODO_LEARNING_PATH` の結果が Hands-on にのみ存在し、`data/diagnostics/ch02_softness_sample.csv` / `ch03_contact_sample.log` を参照。 | ✅ 完了（2025-11-17, Run ID 例: `local-20251117-ch02` / `local-20251117-ch03`） |
+| W3 | Appendix B.7 のリンク検証チェックリストを自動化 (`scripts/check_doc_links.py` + `scripts/check_preset_links.py`) | Tooling 班（Suzuki） | 両スクリプト, `.github/workflows/ci.yaml`, Appendix B.7/E.2 | CI で Tutorial ↔ Hands-on ↔ Solver Math ↔ Contact Notes ↔ Markdown プリセットのリンク検証が走る。 | ⏳ 進行中 – スクリプト実行ログあり、CI 連携を監視中 |
+| W4 | 統合レビュー（Hands-on／Tutorial 共通構成）を実施し、`docs/documentation_changelog.md` に統合完了を記録 | Cチーム全体 | changelog, Wiki sample | 重複節が解消され、学習者ガイドラインが本マップへ集約。 | ⏳ 未着手 – W2/W3 完了後に実施 |
 
 ### W2 現状
-- `practice/coupled/ch01_ratio_sweep.c` に `// TODO_LEARNING_PATH` を追記し、Hands-on 側でのみ検証する流れを明示済み。  
-- 残タスク: `ch02_softness.c`、`ch03_contact.c` のコメント整備、および Tutorial §2.1 の冗長なコード断片の削除。  
-- 目標日: 2025-11-12。
+- `practice/coupled/ch01_ratio_sweep.c` に Chrono API 呼び出しを組み込み、Hands-on 側でのみ検証する流れを明示済み。  
+- `ch02_softness.c` / `ch03_contact.c` のサンプルを配置し、出力先を `data/diagnostics/ch02_softness_sample.csv` / `ch03_contact_sample.log` に固定。  
+- 目標日: 2025-11-17（Run ID 例: `local-20251117-ch02`, `local-20251117-ch03`）。
 
 ### W3 現状
 - `scripts/check_doc_links.py` を追加し、`docs/coupled_constraint_tutorial_draft.md` / Hands-on / Solver Math / Contact Notes の参照整合性を検証できるようにした。  
@@ -47,6 +47,10 @@
 
 - 図の生成元: `docs/integration/assets/hands_on_ch02_progress.svg`。Chapter 02/03 の TODO 解消状況と紐付くアーティファクト（CSV、README 節）をラベル化しています。
 - Hands-on 更新時は `tools/update_multi_omega_assets.py --refresh-report` を実行し、図中のステータス表示も合わせて編集してください。
+
+#### 図版の更新手順（簡易）
+- 編集対象: `docs/integration/assets/learning_path_overview.svg`, `docs/integration/assets/hands_on_ch02_progress.svg`
+- 手順: テキストエディタで直接編集し、進捗バーやステータスラベルを最新 Run ID に合わせて手動更新する（例: `local-20251117-ch02`）。変更後は `git diff` を確認し、`scripts/check_doc_links.py` を再実行。
 
 ## 4. リスク / TODO
 - [ ] Pandoc 出力と Hands-on スクリプトが同じ図版を参照できるよう、`docs/media/coupled/` の命名規約を決める。 (Owner: Suzuki)

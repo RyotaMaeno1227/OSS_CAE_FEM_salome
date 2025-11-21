@@ -8,7 +8,7 @@
     .status-done { fill: #dcfce7; }
     .status-ip { fill: #fef3c7; }
   </style>
-  <text class="title" x="20" y="32">Hands-on Chapter 02 / 03 Progress Snapshot (2025-11-14)</text>
+  <text class="title" x="20" y="32">Hands-on Chapter 02 / 03 Progress Snapshot (2025-11-17)</text>
   <g transform="translate(20,60)">
     <rect class="header-bg" width="720" height="36" rx="6" ry="6" />
     <text class="header" x="24" y="84">Task</text>
@@ -25,13 +25,13 @@
     <text class="cell" x="340" y="86">README.md §Educational Materials</text>
     <rect class="status-done" x="520" y="12" width="180" height="24" rx="6" ry="6" />
     <rect class="status-done" x="520" y="40" width="180" height="24" rx="6" ry="6" />
-    <rect class="status-ip" x="520" y="68" width="180" height="24" rx="6" ry="6" />
+    <rect class="status-done" x="520" y="68" width="180" height="24" rx="6" ry="6" />
     <text class="cell" x="560" y="30">Done</text>
     <text class="cell" x="560" y="58">Done</text>
-    <text class="cell" x="560" y="86">In Progress</text>
+    <text class="cell" x="560" y="86">Done</text>
   </g>
   <g transform="translate(20,210)">
-    <text class="cell" x="0" y="0">Figure: Generated from `python tools/update_multi_omega_assets.py --refresh-report` output and documentation audit.</text>
+    <text class="cell" x="0" y="0">Figure: Updated after runs local-20251117-ch02 / ch03 and preset sync.</text>
     <text class="cell" x="0" y="26">Use this snapshot when onboarding reviewers to highlight which artifacts must be cross-checked.</text>
   </g>
 </svg>

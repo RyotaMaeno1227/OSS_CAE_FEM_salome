@@ -8,7 +8,7 @@
 
 ### Chrono-main ドキュメントとの対応
 
-Chrono main 側（`third_party/chrono/chrono-main/docs/coupled_constraint_tutorial.md`）で用いられている式／図番号とのマッピングを以下に整理しました。Chrono C ハンズオンが参照する Run ID を共有化する際、この表を使うと差分レビューが容易になります。
+Chrono main 側（`third_party/chrono/chrono-main/docs/coupled_constraint_tutorial.md`、2025-11-15 時点）で用いられている式／図番号とのマッピングを以下に整理しました。Chrono C ハンズオンが参照する Run ID を共有化する際、この表を使うと差分レビューが容易になります。Chrono main が更新された場合は式・図番号を再確認してください。
 
 | Chrono main リファレンス | 本資料の参照 | 備考 |
 |--------------------------|--------------|------|

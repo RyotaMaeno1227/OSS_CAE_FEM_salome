@@ -174,3 +174,12 @@ git commit -m \"B-team: log Run #19381234567 and refresh endurance artifacts\"
 - `data/endurance_archive/` にファイルを置かないルールを守るため、`ls data/endurance_archive` の結果も記録しておく。  
 - 共有チャットには `git status` と `python scripts/check_preset_links.py` の実行結果を貼り付け、A/C チームに通知する。  
 - Run ID が複数ある場合は、本ドキュメントの手順に従い優先順位ルール（最新成功 > 最新失敗 > 旧成功）でログを整理する。
+
+### Endurance 更新後の最小確認ブロック（抜粋して使う）
+```bash
+git status -sb
+tail -n 3 data/coupled_constraint_endurance.csv
+python tools/plot_coupled_constraint_endurance.py data/coupled_constraint_endurance.csv --skip-plot --summary-json data/latest.endurance.json --no-show
+python scripts/check_preset_links.py  # 週次フローの一環
+```
+- 上記出力をスクリーンショット化し、Run ID と併せてチャットへ共有。必要なら `head -n 1 ... | python - <<'PY' ...` で列数も確認する。

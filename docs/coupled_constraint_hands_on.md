@@ -26,6 +26,7 @@ FEM4C の `tutorial_manual.md` / `FEM_LEARNING_GUIDE.md` に倣い、Coupled 拘
 - **Implementation**: `practice/coupled/ch02_softness.c` にて `chrono_coupled_constraint2d_set_softness_distance/angle` と `chrono_coupled_constraint2d_set_*_spring` を段階的に変えながら、`diagnostics.min_pivot` と `max_pivot` を CSV に出力。  
 - **FEM4C Reference**: `FEM4C/docs/tutorial_manual.md` Chapter 05（剛性・境界条件）を読み、ソフトネスが連立方程式にどのように入り込むかをノートにまとめる。  
 - **Verification**: Multi-ω ベンチを実行してソフトネス掃引を比較（TODO は 2025-11-14 の Run で解消済み）。
+  - サンプル出力: `data/diagnostics/ch02_softness_sample.csv`（`practice/coupled/ch02_softness.c` で生成）。Run ID 例: `local-20251117-ch02`。
 
   ```bash
   ./chrono-C-all/tests/bench_coupled_constraint \
@@ -46,6 +47,7 @@ FEM4C の `tutorial_manual.md` / `FEM_LEARNING_GUIDE.md` に倣い、Coupled 拘
 - **Implementation**: `practice/coupled/ch03_contact.c` で `chrono_collision2d_detect_polygon_polygon` を呼び出しつつ Coupled 拘束を同一島で解く短いシミュレーションを実装。  
 - **FEM4C Reference**: `FEM_LEARNING_GUIDE.md` の「接触境界条件」を参照し、拘束の組合せでどのように挙動が変わるかを議論。  
 - **Verification**: `./chrono-C-all/tests/test_island_parallel_contacts` を実行し、`docs/coupled_contact_test_notes.md` のチェックリストに沿ってログを読み解く（Chapter 03 TODO は 2025-11-14 に整理済み）。
+  - サンプル出力ログを `data/diagnostics/ch03_contact_sample.log` に収集し、Run ID 例 `local-20251117-ch03` と併せて Evidence テンプレへ転記。
 
 ## Chapter 04. Endurance & Diagnostics
 - **Theory**: `docs/coupled_constraint_solver_math.md#3-条件数評価と式ドロップ` を読み、`condition_policy` の挙動を整理。  
@@ -82,5 +84,5 @@ practice/
 ### 付録 C. Multi-ω ベンチ更新手順
 1. `./chrono-C-all/tests/bench_coupled_constraint --omega 0.85 --omega 1 --omega 1.15 --output data/diagnostics/bench_coupled_constraint_multi.csv --result-json data/diagnostics/bench_coupled_constraint_multi.json` を実行して CSV/JSON を更新する。必要なら `--stats-json data/diagnostics/kkt_backend_stats.json` も併せて出力。
 2. `python tools/update_multi_omega_assets.py --refresh-report` を実行し、README / Hands-on（本書） / `docs/coupled_constraint_presets_cheatsheet.md` / `data/coupled_constraint_presets.yaml` / `docs/reports/kkt_spectral_weekly.md` の Multi-ω セクションが同じタイムスタンプになるよう同期する。
-3. `data/diagnostics/bench_coupled_constraint_multi.csv` と `.json` の diff を確認し、`docs/abc_team_chat_handoff.md` の A/C 両チームタスク表に Run ID・Artifacts・分析結果を記録する。
+3. `data/diagnostics/bench_coupled_constraint_multi.csv` と `.json` の diff を確認し、`docs/abc_team_chat_handoff.md` の A/C 両チームタスク表に Run ID・Artifacts・分析結果を記録する（例: Run `local-20251117-multiomega`）。
 4. Evidence 追加後は `python scripts/check_preset_links.py` の結果とともに `docs/documentation_changelog.md` へ更新履歴を追記し、`docs/integration/assets/hands_on_ch02_progress.svg` のステータスラベルも手動更新する。

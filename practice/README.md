@@ -10,4 +10,25 @@ Chrono C 版 Hands-on で利用する演習コードは `practice/coupled/` に�
 | `coupled/ch03_contact.c` | Contact API と Coupled 拘束を同一島で組み合わせるミニシミュレーション。 |
 | `coupled/ch04_endurance.py` | Endurance ログを集約し、ベンチ結果を自動可視化する。 |
 
-> include パスは `-I../chrono-C-all/include`、リンク時は Chrono C ライブラリ（`-lchrono_c` など）を指定してください。演習コードは `docs/coupled_constraint_hands_on.md` の手順と Run ID テンプレを参照して進めます。
+## ビルド・実行例
+
+Chrono C の include パスとライブラリパスを指定してください（makefile 使用を推奨）。
+
+```bash
+# ch01: 条件数サンプル（要: chrono-C-all ビルド済み）
+gcc -I../chrono-C-all/include coupled/ch01_ratio_sweep.c -L../chrono-C-all/lib -lchrono_c -o ch01_ratio_sweep
+./ch01_ratio_sweep > data/diagnostics/ch01_ratio_sweep.log
+
+# ch02: ソフトネス掃引（実行で CSV を生成）
+gcc -I../chrono-C-all/include coupled/ch02_softness.c -L../chrono-C-all/lib -lchrono_c -o ch02_softness
+./ch02_softness
+
+# ch03: Contact + Coupled 統合（ボディ定義を埋めてから実行）
+gcc -I../chrono-C-all/include coupled/ch03_contact.c -L../chrono-C-all/lib -lchrono_c -o ch03_contact
+./ch03_contact
+
+# ch04: Endurance 可視化ヘルパ（ログ必須）
+python coupled/ch04_endurance.py
+```
+
+演習コードは `docs/coupled_constraint_hands_on.md` の手順と Run ID テンプレを参照して進めます。Evidence を残す際は `docs/abc_team_chat_handoff.md` の Run ID テンプレ表に記載してください。

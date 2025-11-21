@@ -2,7 +2,7 @@
 
 > English translation is available in `docs/coupled_contact_api_minimal_en.md`.
 
-計算コアを駆動するために必要な C API の最小セットを整理する。ここに挙げない補助 API（ログ、通知、メディア生成など）は任意機能として Appendix へ分離する。
+計算コアを駆動するために必要な C API の最小セットを整理する。ここに挙げない補助 API（ログ、通知、メディア生成など）はリポジトリ外の任意実装とする。
 
 ## フェーズ別 API
 
