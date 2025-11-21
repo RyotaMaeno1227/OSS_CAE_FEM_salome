@@ -72,6 +72,7 @@ time,case,method,kappa_bound,kappa_spectral,min_pivot,max_pivot
 
 | Run ID | 検証日時 (UTC) | 担当 | 計測対象 (omega / preset) | 実行コマンド | Artifacts / Link | 差分メモ |
 |--------|----------------|------|--------------------------|--------------|------------------|-----------|
+| **19582037625** | 2025-11-??T??:??:??Z (CI) | Actions (Team A) | descriptor-e2e / method=actions | `tests/test_coupled_constraint --use-kkt-descriptor --descriptor-mode actions --descriptor-log artifacts/descriptor/kkt_descriptor_actions_19582037625.csv --pivot-artifact-dir artifacts/descriptor/run-19582037625` | `kkt_descriptor_actions_19582037625.csv`, `run-19582037625/pivot_*.csv`（descriptor-e2e job） | CI actions モード緑化（auto-drop なし）。 |
 | **6876543210** | 2025-11-08T04:15:00Z | Mori (Team A) | multi_omega_reference / ω=0.85,1.0,1.15 | `tests/test_coupled_constraint --use-kkt-descriptor --descriptor-mode actions --descriptor-log artifacts/descriptor/kkt_descriptor_actions_6876543210.csv --pivot-artifact-dir artifacts/descriptor/run-6876543210` | `kkt_descriptor_actions_6876543210.csv`, `run-6876543210/pivot_*.csv`（descriptor-e2e job） | Δκ_s < 5% で安定、auto-drop 未発生。 |
 | **local-20251115** | 2025-11-15T18:19:09Z | Codex (Team A support) | descriptor_actions_local / ω=default | `tests/test_coupled_constraint --use-kkt-descriptor --descriptor-mode actions --pivot-artifact-dir artifacts/descriptor` | `docs/logs/kkt_descriptor_actions_local_20251115.csv`（手動計測、pivot ログ共用） | solver WARN: cond=2.41e+08 だが auto_recover 済み。追加 Δκ_s 変化なし。 |
 
