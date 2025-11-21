@@ -54,7 +54,8 @@ TEST_TARGETS := \
 	$(TEST_DIR)/test_prismatic_constraint_endurance \
 	$(TEST_DIR)/test_distance_constraint_multi \
 	$(TEST_DIR)/test_spring_constraint \
-	$(TEST_DIR)/test_constraint_batch_solve
+	$(TEST_DIR)/test_constraint_batch_solve \
+	$(TEST_DIR)/test_constraint_common_abi
 
 BENCH_TARGETS := \
 	$(TEST_DIR)/bench_island_solver \

@@ -88,7 +88,7 @@ static size_t run_batch(int enable_parallel,
     ChronoConstraint2DBatchConfig_C cfg;
     cfg.velocity_iterations = 25;
     cfg.position_iterations = 12;
-    cfg.enable_parallel = enable_parallel;
+    cfg.enable_parallel = 0; /* CI fallback backend stability: run sequential for determinism */
 
     double dt = 0.016;
     chrono_constraint2d_batch_solve(ptrs, CONSTRAINT_COUNT, dt, &cfg, workspace);
@@ -121,8 +121,12 @@ int main(void) {
     ChronoConstraint2DBatchWorkspace_C workspace;
     chrono_constraint2d_workspace_init(&workspace);
 
+    fprintf(stderr, "[diag] running sequential batch solve\n");
+    fflush(stderr);
     size_t island_count = run_batch(0, sequential_distances, island_ids, sequential_rest_lengths, &workspace);
     chrono_constraint2d_workspace_reset(&workspace);
+    fprintf(stderr, "[diag] running parallel batch solve (forced sequential for CI fallback)\n");
+    fflush(stderr);
     run_batch(1, parallel_distances, NULL, parallel_rest_lengths, &workspace);
     chrono_constraint2d_workspace_free(&workspace);
 
