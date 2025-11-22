@@ -4,14 +4,15 @@
 
 ## 1. 必須チェック（CI で fail させるもの）
 - Build + Test（Makefile/CMake 問わず）: ビルド失敗・テスト失敗で fail。
-- CSV スキーマ: 列数と必須カラム欠落で fail。
+- CSV スキーマ: 列数と必須カラム欠落で fail（chrono-2d は time, case, method, vn, vt, mu_s, mu_d, stick, condition_bound, condition_spectral, min_pivot, max_pivot）。
+- 値域: mu_s/mu_d∈[0,2], stick∈{0,1}, condition*/pivot>0, time>=0 でなければ fail。
 - Lint（doc/preset links）: リンク切れで fail。
 - ABI チェック（該当ターゲットがある場合）: オフセット/サイズずれで fail。
 
 ## 2. Artifacts 方針（最小セット・除外ルール）
 - **残すもの**: `test.log` tail（~400 行）、スキーマチェック結果（数行）、生成 CSV/JSON（1–2 個）、ABI diff（fail 時のみ）、descriptor CSV+pivot（必要最小限）。
 - **除外するもの**: フルビルド成果物、巨大中間ファイル、重複ログ、コアダンプ。
-- 保存期間: デフォルト 90 日で開始。容量逼迫時に 30 日へ短縮。
+- 保存期間: デフォルト 90 日で開始。容量逼迫時に 30 日へ短縮（chrono-2d CI は 30 日、bench は 14 日）。
 
 ## 3. Run ID の扱い
 - 命名: `chrono-2d-ci-<run_id>` / `chrono-main-ci-<run_id>` のように系統を prefix。
@@ -40,9 +41,9 @@
 - Python パッケージは必要最小限（例: `pip install pyyaml` 程度）。
 
 ## 8. タイムアウト / リトライ / フレーク対策
-- タイムアウト: ビルド 20 分、テスト 10 分を上限目安に設定。
-- リトライ: フレークテストは 1 回リトライ許可（将来オプション）。ログに `retry=1` を記録。
-- フレーク検知: 同一テスト名の失敗→成功をログでマーク。
+- タイムアウト: ビルド 20 分、テスト 10 分を上限目安に設定（chrono-2d CI に適用）。
+- リトライ: フレークテストは 1 回リトライ許可（実験版で運用）。ログに `retry=1` を記録。
+- フレーク検知: 同一テスト名の失敗→成功をログでマーク（将来オプション）。
 
 ## 9. PR 分割方針
 1) 最小 build+test（OpenMP）＋ CSV アップロード + ログ tail。
@@ -53,7 +54,7 @@
 
 ## 10. Artifacts サイズ・整形・環境情報
 - ログ整形: `tail -n 400 test.log` をアップロード。必要なら `filter_ci_failures.py` でタグ付け版を追加。
-- 環境情報: `uname -a`, `gcc --version`, `cmake --version` を `artifacts/ci/env.txt` に記録（数行）。
+- 環境情報: `uname -a`, `gcc --version`, `python --version` を env ファイルに記録（数行）。
 - サイズ上限: 1 ジョブあたり 10–20 MB を目標。超過しそうなら pivot/JSON を圧縮。
 
 ## 11. 失敗時トラブルシュート（チェックリスト）
@@ -72,6 +73,7 @@
 - Logs: tail uploaded (test.log, tagged if any)
 - Notes: <pass/fail>, <next action>
 ```
+- chrono-2d 例: `Run #<id> | Artifact: chrono-2d-ci-<id> | CSV schema OK (kkt_descriptor_actions_local.csv) | Logs: test.log tail | Env: env.txt`
 
 ## 13. 導入手順書（適用手順の骨子）
 - 本ファイルを参照し、YAML 雛形を `.github/workflows/` に新規追加。
