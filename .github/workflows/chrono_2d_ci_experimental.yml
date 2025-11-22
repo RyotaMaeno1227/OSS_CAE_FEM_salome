@@ -1,0 +1,163 @@
+name: chrono-2d-ci-experimental
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_bench:
+        description: "Run bench (make bench) and compare drift"
+        required: false
+        default: "false"
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+
+env:
+  CSV_PATH: artifacts/kkt_descriptor_actions_local.csv
+  BENCH_CSV: bench_pivots.csv
+  BENCH_DRIFT_THRESHOLD: "1.5"  # 1.5x drift triggers warning
+  BUILD_TIMEOUT: 20m
+  TEST_TIMEOUT: 10m
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip-ci]')"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install deps (OpenMP only)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential python3 python3-pip
+          gcc --version
+          python3 --version
+
+      - name: Build chrono-2d tests
+        timeout-minutes: 20
+        run: |
+          make clean
+          make tests
+
+      - name: Run chrono-2d tests (with retry=1)
+        id: run_tests
+        continue-on-error: true
+        timeout-minutes: 10
+        run: |
+          rm -f test.log
+          set -o pipefail
+          attempt() {
+            if make test > test.log 2>&1; then
+              tail -n 200 test.log
+              echo "status=success" >> $GITHUB_OUTPUT
+              return 0
+            else
+              tail -n 400 test.log
+              return 1
+            fi
+          }
+          if attempt; then
+            exit 0
+          else
+            echo "retry=1" >> $GITHUB_OUTPUT
+            sleep 5
+            if attempt; then
+              echo "status=flaky-pass" >> $GITHUB_OUTPUT
+              exit 0
+            else
+              echo "status=failure" >> $GITHUB_OUTPUT
+              exit 1
+            fi
+          fi
+
+      - name: CSV schema check (extended)
+        run: |
+          python3 tools/check_chrono2d_csv_schema.py "${CSV_PATH}"
+
+      - name: Record environment
+        if: always()
+        run: |
+          {
+            echo "# Environment"
+            echo "Run: ${GITHUB_RUN_ID}"
+            echo "OS: $(uname -a)"
+            echo "gcc: $(gcc --version | head -n 1)"
+            echo "python: $(python3 --version)"
+            echo "date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > artifacts_env.txt
+
+      - name: Summarize Run ID and artifacts
+        if: always()
+        run: |
+          {
+            echo "- Run: #${GITHUB_RUN_ID} (chrono-2d experimental)"
+            echo "- Artifact: chrono-2d-ci-exp-${GITHUB_RUN_ID}"
+            echo "- CSV: ${CSV_PATH} (schema: time,case,method,vn,vt,mu_s,mu_d,stick,condition_bound,condition_spectral,min_pivot,max_pivot)"
+            echo "- Logs: test.log (tail uploaded), env.txt"
+            echo "- Status: ${{ steps.run_tests.outputs.status }}"
+            echo "- Retry: ${{ steps.run_tests.outputs.retry || '0' }}"
+          } > artifacts_ci_summary.md
+
+      - name: Upload minimal artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrono-2d-ci-exp-${{ github.run_id }}
+          path: |
+            test.log
+            ${CSV_PATH}
+            artifacts_ci_summary.md
+            artifacts_env.txt
+          retention-days: 30
+
+      - name: Fail if tests failed
+        if: steps.run_tests.outcome == 'failure'
+        run: exit 1
+
+  bench-optional:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: |
+      github.event.inputs.run_bench == 'true'
+      && !contains(github.event.head_commit.message, '[skip-ci]')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install deps (OpenMP only)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential python3 python3-pip
+          gcc --version
+          python3 --version
+
+      - name: Run bench (opt-in)
+        id: bench_run
+        continue-on-error: true
+        run: |
+          make bench > bench.log 2>&1 || true
+          if test -f "${BENCH_CSV}"; then
+            tail -n 20 "${BENCH_CSV}"
+          fi
+
+      - name: Bench drift check (1.5x warn)
+        if: always()
+        run: |
+          python3 tools/compare_bench_csv.py "${BENCH_CSV}" --threshold ${BENCH_DRIFT_THRESHOLD} > bench_drift.txt || true
+
+      - name: Upload bench artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrono-2d-bench-exp-${{ github.run_id }}
+          path: |
+            bench.log
+            ${BENCH_CSV}
+            bench_drift.txt
+          retention-days: 14
