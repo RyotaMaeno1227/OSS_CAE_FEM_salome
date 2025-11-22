@@ -175,6 +175,10 @@ git commit -m \"B-team: log Run #19381234567 and refresh endurance artifacts\"
 - 共有チャットには `git status` と `python scripts/check_preset_links.py` の実行結果を貼り付け、A/C チームに通知する。  
 - Run ID が複数ある場合は、本ドキュメントの手順に従い優先順位ルール（最新成功 > 最新失敗 > 旧成功）でログを整理する。
 
+## 12. chrono-2d/chrono-main と Chrono C の区別
+- Run ID にプレフィックスを付けて混同を防ぐ: `local-chrono2d-...`, `#<ID> (chrono-main)`, `#<ID> (Chrono C)`。
+- preset チェックや Run ID 連携は `python scripts/check_preset_links.py` 実行 → `docs/abc_team_chat_handoff.md` の各テンプレ（Chrono C / chrono-main / chrono-2d）に記録する。
+
 ### Endurance 更新後の最小確認ブロック（抜粋して使う）
 ```bash
 git status -sb

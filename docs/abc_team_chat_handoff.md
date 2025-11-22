@@ -93,6 +93,15 @@
 ```
 - `docs/coupled_island_migration_plan.md` の chrono-main 行と同期すること。
 
+### chrono-2d 用テンプレ
+```
+- Run: local-chrono2d-<yyyymmdd>-<seq>
+- Artifact: chrono-2d/artifacts/kkt_descriptor_actions_local.csv
+- Log: docs/chrono_2d_readme.md
+- Notes: {condition_spectral, min_pivot, max_pivot, case}
+```
+- Chrono C / chrono-main と混在しないよう、Run ID に `chrono2d` を含める。
+
 ---
 
 ## 7. 代表コマンド集

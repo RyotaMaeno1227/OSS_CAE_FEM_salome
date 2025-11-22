@@ -30,10 +30,14 @@ typedef struct {
     ConstraintType type;
     Body2D *a;
     Body2D *b;
-    double axis[2];        /* For planar/prismatic/gear */
-    double anchor_a[2];    /* Local anchors */
-    double anchor_b[2];
-    double friction;       /* For contact */
+    double axis[2];         /* For planar/prismatic/gear (unit vector) */
+    double anchor_a[2];     /* Local anchors (body A) */
+    double anchor_b[2];     /* Local anchors (body B) */
+    double contact_point[2];/* World contact point (for contact) */
+    double normal[2];       /* World normal (for contact) */
+    double friction_static; /* Static friction coeff (contact) */
+    double friction_dynamic;/* Dynamic friction coeff (contact) */
+    double restitution;     /* Normal restitution (contact) */
 } Constraint2D;
 
 typedef struct {
