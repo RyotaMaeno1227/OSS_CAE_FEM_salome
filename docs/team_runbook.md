@@ -19,6 +19,7 @@
   - Run ID / Artifact / Log パス  
   - `git status` 概要と生成物有無  
   - リンクチェック結果（実行した場合）
+- 完了報告は `docs/team_status.md` の自チームセクションのみを編集して追記する（他セクションは触らない）。
 
 ## Aチームタスク（実装/検証・長期）
 1. OpenMP on/off 切替オプションをCLI化し、pivot/cond差分を自動比較するテストを追加。  
