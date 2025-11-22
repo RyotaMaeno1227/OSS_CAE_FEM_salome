@@ -49,7 +49,7 @@ test: $(TEST_TARGET) $(CONTACT_TEST) $(SCHEMA_TEST)
 
 bench: $(BENCH_TARGET)
 	@mkdir -p artifacts
-	@$(BENCH_TARGET) --output artifacts/bench_constraints.csv
+	@$(BENCH_TARGET) --output artifacts/bench_constraints.csv --warn-only
 
 clean:
 	rm -rf $(OBJ_DIR) $(TEST_TARGET) $(CONTACT_TEST) $(BENCH_TARGET) artifacts

@@ -53,6 +53,18 @@ typedef struct {
     double mu_s;
     double mu_d;
     int stick; /* 1=stick, 0=slip */
+    ConstraintType type;
+    double axis[2];
+    double anchor_a[2];
+    double anchor_b[2];
+    double contact_point[2];
+    double normal[2];
+    double mass_a;
+    double mass_b;
+    double inertia_a;
+    double inertia_b;
+    double j_rows[2][6];
+    int j_row_count;
 } ConstraintCase;
 
 typedef struct {
@@ -70,6 +82,8 @@ typedef struct {
     double mu_s;
     double mu_d;
     int stick;
+    double j_rows[2][6];
+    int j_row_count;
 } ConstraintStats;
 
 void body_init(Body2D *b, double mass, double inertia, double x, double y);

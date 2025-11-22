@@ -6,7 +6,7 @@
 - 3D 非対応を明記（本書・チャット・テンプレに「chrono-2d」を含める）。
 - 依存は OpenMP のみ（oneTBB など不要）。
 - 命名ポリシー: プレフィックスに余分な「Chrono」を付けない。生成物は `artifacts/` 配下、CSV は `kkt_descriptor_actions_local.csv` を基本形とする。
-- 月次で Run ID / CSV サンプルを差し替え、`docs/documentation_changelog.md` に記録する。
+- 月次で Run ID / CSV サンプルを差し替え、`docs/documentation_changelog.md` に記録する（目安: 毎月1週目）。
 
 ## ビルドとテスト
 - 手順:
@@ -24,7 +24,8 @@
 1) `make test` で CSV 生成（`artifacts/kkt_descriptor_actions_local.csv`）  
 2) `condition_spectral`, `min_pivot`, `max_pivot` を確認  
 3) 判定: `condition_spectral` 10 前後、`min_pivot` ≥ 1e-3 なら安定。異常値は `case` / `time` を特定し Run ID と共有。  
-4) チャット共有: 下記テンプレに従い Run ID / CSV 抜粋を貼る（例: `echo \"Run local-chrono2d-20251118-01 / Artifact chrono-2d/artifacts/kkt_descriptor_actions_local.csv\"` を貼付）。
+4) チャット共有: 下記テンプレに従い Run ID / CSV 抜粋を貼る（例: `echo "Run local-chrono2d-20251118-01 / Artifact chrono-2d/artifacts/kkt_descriptor_actions_local.csv"`）。
+5) リンク/整合チェック: `python tools/check_chrono2d_csv_schema.py --csv artifacts/kkt_descriptor_actions_local.csv`（ヘッダ検証）、`python scripts/check_doc_links.py docs/chrono_2d_readme.md docs/abc_team_chat_handoff.md` を実行し、結果をチャットに貼る。
 
 ### Hands-on ショートカットスクリプト
 `chrono-2d/scripts/run_hands_on.sh <RUN_ID>`  
@@ -33,7 +34,7 @@
 
 ## Run ID 記録テンプレ（chrono-2d）
 ```
-- Run: local-chrono2d-<yyyymmdd>-<seq>（例: local-chrono2d-20251118-01）（例: local-chrono2d-20251118-01）
+- Run: local-chrono2d-<yyyymmdd>-<seq>（例: local-chrono2d-20251118-01）
 - Artifact: chrono-2d/artifacts/kkt_descriptor_actions_local.csv
 - Log: docs/chrono_2d_readme.md （Run ID を本文に追記）
 - Notes: {condition_spectral, min_pivot, max_pivot, case, time}

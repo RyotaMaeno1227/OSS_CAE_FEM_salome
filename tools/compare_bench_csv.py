@@ -3,7 +3,7 @@
 Compare bench CSV (bench_pivots.csv) against previous snapshot to detect drift.
 Expected columns: case,threads,time_us
 Outputs a warning if time_us exceeds threshold * previous.
-This script is intended for informational use; it returns 0 even on drift.
+Optional flag `--fail-on-drift` makes the script exit 1 if drift is detected.
 """
 import csv
 import sys
@@ -36,6 +36,7 @@ def main() -> int:
     parser.add_argument("current")
     parser.add_argument("--previous", default=None, help="path to previous bench_pivots.csv")
     parser.add_argument("--threshold", type=float, default=1.5, help="drift threshold ratio")
+    parser.add_argument("--fail-on-drift", action="store_true", help="exit 1 when drift is detected")
     args = parser.parse_args()
 
     cur_path = Path(args.current)
@@ -75,9 +76,9 @@ def main() -> int:
         for w in warnings:
             case, threads, base, now = w
             print(f"  {case} threads={threads}: prev={base:.2f}us now={now:.2f}us")
-    else:
-        print("no drift detected")
+        return 1 if args.fail_on_drift else 0
 
+    print("no drift detected")
     return 0
 
 

@@ -118,6 +118,7 @@
 | `docs/abc_team_chat_handoff.md` | C チームタスクに Owner/期限を追記し、チャット配布用に整理 | Cチーム | 新チャットのピン留め前提 |
 | `docs/chrono_coupled_constraint_tutorial.md`, `docs/coupled_contact_api_minimal*.md`, `docs/chrono_3d_abstraction_note.md` | Chrono main との図版・式番号対応表と学習者向けサマリを更新、Appendix 表記を整理 | Cチーム | 用語揺れ/リンク切れを修正 |
 | `tools/tests/test_update_multi_omega_assets.py` | 旧 Appendix 記述を削除し、テストケースをノート表記へ変更 | Cチーム | Appendix 廃止方針に合わせて整備 |
+| `docs/abc_team_chat_handoff.md`, `docs/chrono_2d_readme.md` | Run ID ワンライナーとリンクチェック運用を追記し、chrono-2d 月次更新手順を強化 | Cチーム | Run ID 例: local-chrono2d-20251118-01 |
 | `docs/chrono_main_descriptor_hands_on.md`, `docs/logs/kkt_descriptor_poc_e2e_chrono_main.md`, `docs/chrono_main_ci_plan.md`, `third_party/chrono/chrono-main/practice/*`, `tools/update_descriptor_run_id.py` | chrono-main 向け Hands-on/ログ/CI案/Practice 雛形を追加し、Run ID 更新スクリプトに `--variant chrono-main` を導入 | Cチーム | 実行用バイナリは未作成。`ch01_descriptor_e2e.sh <RUN_ID>` 実測後に Evidence を追記する想定 |
 | `third_party/chrono/chrono-main/README.md`, `docs/logs/kkt_descriptor_poc_e2e_chrono_main.md`, `docs/coupled_island_migration_plan.md`, `docs/abc_team_chat_handoff.md` | chrono-main 向け descriptor-e2e Run ID テンプレ、ログ、README の CI 最小手順を追加 | Cチーム | Run ID 例: 19582037625、CI ジョブ名 `descriptor-e2e-chrono-main` |
 | `docs/chrono_2d_readme.md`, `docs/abc_team_chat_handoff.md`, `docs/git_setup.md` | chrono-2d 用 README と Run ID テンプレを追加し、OpenMP のみ依存・3D 非対応を明記 | Cチーム | Run ID 例: `local-chrono2d-20251117-01` |

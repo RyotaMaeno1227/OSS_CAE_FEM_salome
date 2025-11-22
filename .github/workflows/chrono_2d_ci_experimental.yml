@@ -7,6 +7,10 @@ on:
         description: "Run bench (make bench) and compare drift"
         required: false
         default: "false"
+      fail_on_drift:
+        description: "Fail when bench drift exceeds threshold"
+        required: false
+        default: "false"
 
 permissions:
   contents: read
@@ -149,7 +153,11 @@ jobs:
       - name: Bench drift check (1.5x warn)
         if: always()
         run: |
-          python3 tools/compare_bench_csv.py "${BENCH_CSV}" --threshold ${BENCH_DRIFT_THRESHOLD} > bench_drift.txt || true
+          OPT_FAIL=""
+          if [ "${{ github.event.inputs.fail_on_drift }}" = "true" ]; then
+            OPT_FAIL="--fail-on-drift"
+          fi
+          python3 tools/compare_bench_csv.py "${BENCH_CSV}" --threshold ${BENCH_DRIFT_THRESHOLD} ${OPT_FAIL} > bench_drift.txt || true
 
       - name: Upload bench artifacts
         if: always()

@@ -115,6 +115,11 @@
 - CSV excerpt: <該当行を貼付>
 - Next action requested: <再実行/パラメータ共有/レビュー依頼>
 ```
+
+### Run ID 貼付ワンライナー（共通）
+- Chrono C: `echo "Run #<ID> / Artifact <name> / Log <path>"`  
+- chrono-main: `echo "Run #<ID> (chrono-main) / Artifact descriptor-e2e-<ID> / Log docs/logs/kkt_descriptor_poc_e2e_chrono_main.md"`  
+- chrono-2d: `echo "Run local-chrono2d-<date>-<seq> / Artifact chrono-2d/artifacts/kkt_descriptor_actions_local.csv / Log docs/chrono_2d_readme.md"`
 - README/Hands-on/リンクチェックの流れは `docs/chrono_2d_readme.md` を参照し、結果をチャットに貼る。
 
 ---
