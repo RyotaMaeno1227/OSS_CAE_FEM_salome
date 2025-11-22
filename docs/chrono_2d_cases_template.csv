@@ -1,2 +1,2 @@
-time,case,method,condition_bound,condition_spectral,min_pivot,max_pivot
-0.000000,tele_yaw_control,actions,1.650000e+00,1.650000e+00,1.100000e+00,1.100000e+00
+time,case,method,vn,vt,mu_s,mu_d,stick,condition_bound,condition_spectral,min_pivot,max_pivot
+0.000000,tele_yaw_control,actions,0.00,0.00,0.50,0.40,1,1.650000e+00,1.650000e+00,1.100000e+00,1.100000e+00

@@ -24,16 +24,16 @@
 1) `make test` で CSV 生成（`artifacts/kkt_descriptor_actions_local.csv`）  
 2) `condition_spectral`, `min_pivot`, `max_pivot` を確認  
 3) 判定: `condition_spectral` 10 前後、`min_pivot` ≥ 1e-3 なら安定。異常値は `case` / `time` を特定し Run ID と共有。  
-4) チャット共有: 下記テンプレに従い Run ID / CSV 抜粋を貼る。
+4) チャット共有: 下記テンプレに従い Run ID / CSV 抜粋を貼る（例: `echo \"Run local-chrono2d-20251118-01 / Artifact chrono-2d/artifacts/kkt_descriptor_actions_local.csv\"` を貼付）。
 
 ### Hands-on ショートカットスクリプト
 `chrono-2d/scripts/run_hands_on.sh <RUN_ID>`  
 `make test` → CSV 生成 → 先頭行表示 → `artifacts/run_id.log` にメモ。  
-例: `./scripts/run_hands_on.sh local-chrono2d-20251117-01`
+例: `./scripts/run_hands_on.sh local-chrono2d-20251118-01`
 
 ## Run ID 記録テンプレ（chrono-2d）
 ```
-- Run: local-chrono2d-<yyyymmdd>-<seq>
+- Run: local-chrono2d-<yyyymmdd>-<seq>（例: local-chrono2d-20251118-01）
 - Artifact: chrono-2d/artifacts/kkt_descriptor_actions_local.csv
 - Log: docs/chrono_2d_readme.md （Run ID を本文に追記）
 - Notes: {condition_spectral, min_pivot, max_pivot, case, time}

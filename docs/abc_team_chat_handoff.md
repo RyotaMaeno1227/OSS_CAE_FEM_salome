@@ -102,6 +102,8 @@
 - Notes: {condition_spectral, min_pivot, max_pivot, case}
 ```
 - Chrono C / chrono-main と混在しないよう、Run ID に `chrono2d` を含める。
+- ワンライナー例: `echo "Run local-chrono2d-20251118-01 / Artifact chrono-2d/artifacts/kkt_descriptor_actions_local.csv"` を貼る。
+- README/Hands-on/リンクチェックの流れは `docs/chrono_2d_readme.md` を参照し、結果をチャットに貼る。
 - README/Hands-on/リンクチェックの流れは `docs/chrono_2d_readme.md` を参照し、結果をチャットに貼る。
 
 ---

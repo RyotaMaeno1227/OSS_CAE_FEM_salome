@@ -178,6 +178,7 @@ git commit -m \"B-team: log Run #19381234567 and refresh endurance artifacts\"
 ## 12. chrono-2d/chrono-main と Chrono C の区別
 - Run ID にプレフィックスを付けて混同を防ぐ: `local-chrono2d-...`, `#<ID> (chrono-main)`, `#<ID> (Chrono C)`。
 - preset チェックや Run ID 連携は `python scripts/check_preset_links.py` 実行 → `docs/abc_team_chat_handoff.md` の各テンプレ（Chrono C / chrono-main / chrono-2d）に記録する。
+- chrono-2d はリンクチェックも実施: `python scripts/check_doc_links.py docs/chrono_2d_readme.md docs/abc_team_chat_handoff.md` を更新時に走らせ、結果をチャットへ貼る（表記揺れ/命名ポリシーも確認）。
 
 ### Endurance 更新後の最小確認ブロック（抜粋して使う）
 ```bash

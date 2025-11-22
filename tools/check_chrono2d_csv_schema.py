@@ -1,50 +1,58 @@
 #!/usr/bin/env python3
-"""
-Check chrono-2d CSV schema for kkt_descriptor_actions_local.csv.
-Required columns:
-  time, case, method, condition_bound, condition_spectral, min_pivot, max_pivot
-Fails with exit 1 if columns are missing or file is unreadable.
-"""
-import csv
-import sys
-from pathlib import Path
+"""Validate chrono-2d CSV schema and optionally emit a fresh sample.
 
-REQUIRED = [
-    "time",
-    "case",
-    "method",
-    "condition_bound",
-    "condition_spectral",
-    "min_pivot",
-    "max_pivot",
-]
+Usage:
+  python tools/check_chrono2d_csv_schema.py --csv chrono-2d/artifacts/kkt_descriptor_actions_local.csv
+  python tools/check_chrono2d_csv_schema.py --emit-sample chrono-2d/artifacts/kkt_descriptor_actions_local.csv
+"""
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+import sys
+
+TEMPLATE = Path("docs/chrono_2d_cases_template.csv")
+EXPECTED_HEADER = (
+    "time,case,method,condition_bound,condition_spectral,min_pivot,max_pivot\n"
+)
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--csv", type=Path, help="CSV to validate")
+    parser.add_argument("--emit-sample", type=Path, help="Write template sample to this path")
+    return parser.parse_args()
+
+
+def validate(csv_path: Path) -> bool:
+    text = csv_path.read_text(encoding="utf-8")
+    if not text.startswith(EXPECTED_HEADER):
+        sys.stderr.write(f"[chrono-2d] Header mismatch in {csv_path}\n")
+        return False
+    return True
+
+
+def emit_sample(dst: Path) -> None:
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    dst.write_text(TEMPLATE.read_text(encoding="utf-8"), encoding="utf-8")
+    print(f"[chrono-2d] Wrote sample to {dst}")
 
 
 def main() -> int:
-    if len(sys.argv) != 2:
-        print("usage: check_chrono2d_csv_schema.py <csv_path>", file=sys.stderr)
-        return 1
-    path = Path(sys.argv[1])
-    if not path.exists():
-        print(f"error: file not found: {path}", file=sys.stderr)
-        return 1
-    try:
-        with path.open(newline="") as f:
-            reader = csv.reader(f)
-            header = next(reader)
-    except Exception as exc:  # pragma: no cover
-        print(f"error: failed to read {path}: {exc}", file=sys.stderr)
-        return 1
-
-    missing = [c for c in REQUIRED if c not in header]
-    if missing:
-        print(f"error: missing columns: {missing}", file=sys.stderr)
-        print(f"header: {header}", file=sys.stderr)
-        return 1
-
-    print(f"ok: {path} cols={len(header)} contains {REQUIRED}")
+    args = parse_args()
+    if args.csv:
+        ok = validate(args.csv)
+        if ok:
+            print(f"[chrono-2d] OK: {args.csv}")
+        else:
+            return 1
+    if args.emit_sample:
+        emit_sample(args.emit_sample)
+    if not args.csv and not args.emit_sample:
+        print("No action. Use --csv to validate or --emit-sample to write template")
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())
