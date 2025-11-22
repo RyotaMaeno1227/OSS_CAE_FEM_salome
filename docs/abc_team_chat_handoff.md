@@ -72,6 +72,7 @@
 - Run ID 生成後は `git status`、主要差分 (`git diff docs/...`) のスクリーンショット／引用を共有。
 - Evidence 追加前後で `tools/update_multi_omega_assets.py --refresh-report` の結果に差分がないか確認。
 - chrono-2d CI を実行した場合は Run ID と artifacts パス（例: `chrono-2d-ci-<run>`、`artifacts/kkt_descriptor_actions_local.csv`）を共有し、スキーマチェック結果を記録する。
+- CI 結果共有ワンライナー例: `Run #<id> | Artifact: chrono-2d-ci-<id> | CSV schema OK (kkt_descriptor_actions_local.csv) | Logs: test.log tail | Env: env.txt`
 
 ---
 
@@ -93,6 +94,7 @@
 - Notes: {rank, condition_number_row_sum/spectral, pivot span}
 ```
 - `docs/coupled_island_migration_plan.md` の chrono-main 行と同期すること。
+- ワンライナー例: `echo "Run #19582037625 / Artifact descriptor-e2e-19582037625"` をチャットに貼る。
 
 ### chrono-2d 用テンプレ
 ```
@@ -104,6 +106,15 @@
 - Chrono C / chrono-main と混在しないよう、Run ID に `chrono2d` を含める。
 - ワンライナー例: `echo "Run local-chrono2d-20251118-01 / Artifact chrono-2d/artifacts/kkt_descriptor_actions_local.csv"` を貼る。
 - README/Hands-on/リンクチェックの流れは `docs/chrono_2d_readme.md` を参照し、結果をチャットに貼る。
+
+### 逸脱・異常時の連絡テンプレ
+```
+[chrono-2d/chrono-main/Chrono C] anomaly report
+- Run: <ID> / Artifact: <path>
+- Symptom: <例: condition_spectral > 20, min_pivot < 1e-4>
+- CSV excerpt: <該当行を貼付>
+- Next action requested: <再実行/パラメータ共有/レビュー依頼>
+```
 - README/Hands-on/リンクチェックの流れは `docs/chrono_2d_readme.md` を参照し、結果をチャットに貼る。
 
 ---

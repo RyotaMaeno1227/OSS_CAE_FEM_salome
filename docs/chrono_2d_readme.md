@@ -33,7 +33,7 @@
 
 ## Run ID 記録テンプレ（chrono-2d）
 ```
-- Run: local-chrono2d-<yyyymmdd>-<seq>（例: local-chrono2d-20251118-01）
+- Run: local-chrono2d-<yyyymmdd>-<seq>（例: local-chrono2d-20251118-01）（例: local-chrono2d-20251118-01）
 - Artifact: chrono-2d/artifacts/kkt_descriptor_actions_local.csv
 - Log: docs/chrono_2d_readme.md （Run ID を本文に追記）
 - Notes: {condition_spectral, min_pivot, max_pivot, case, time}
