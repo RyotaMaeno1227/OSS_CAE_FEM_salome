@@ -1,0 +1,27 @@
+{
+  "distance": [
+    {"name": "dist_short", "anchor_a": [0.0, 0.0], "anchor_b": [0.1, 0.0]},
+    {"name": "dist_long", "anchor_a": [0.0, 0.0], "anchor_b": [1.0, 0.0]}
+  ],
+  "revolute": [
+    {"name": "rev_center", "anchor_a": [0.0, 0.0], "anchor_b": [0.0, 0.0]},
+    {"name": "rev_offset", "anchor_a": [0.1, 0.0], "anchor_b": [-0.05, 0.02]}
+  ],
+  "planar": [
+    {"name": "planar_x", "axis": [1.0, 0.0]},
+    {"name": "planar_diag", "axis": [0.7071, 0.7071]}
+  ],
+  "prismatic": [
+    {"name": "prismatic_y", "axis": [0.0, 1.0]},
+    {"name": "prismatic_diag", "axis": [0.7071, 0.7071]}
+  ],
+  "gear": [
+    {"name": "gear_basic"}
+  ],
+  "contact": [
+    {"ref": "contact_stick"},
+    {"ref": "contact_slip"},
+    {"ref": "contact_zero_friction"},
+    {"ref": "contact_high_speed"}
+  ]
+}

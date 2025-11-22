@@ -1,0 +1,7 @@
+name,vn,vt,mu_s,mu_d,expected_stick
+contact_stick,0.5,0.01,0.6,0.4,1
+contact_slip,0.5,0.50,0.6,0.4,0
+contact_slip_high_mu,0.5,0.30,0.9,0.7,1
+contact_zero_friction,0.5,0.05,0.0,0.0,0
+contact_high_speed,0.5,2.00,0.6,0.4,0
+contact_low_normal,0.01,0.05,0.6,0.4,0

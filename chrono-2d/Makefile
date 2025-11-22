@@ -14,10 +14,11 @@ OBJS := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRCS))
 TEST_TARGET := $(TEST_DIR)/test_coupled_constraint
 CONTACT_TEST := $(TEST_DIR)/test_contact_regression
 BENCH_TARGET := $(TEST_DIR)/bench_constraints
+SCHEMA_TEST := $(TEST_DIR)/test_schema
 
-.PHONY: all clean test bench
+.PHONY: all clean test bench schema
 
-all: $(TEST_TARGET) $(CONTACT_TEST) $(BENCH_TARGET)
+all: $(TEST_TARGET) $(CONTACT_TEST) $(BENCH_TARGET) $(SCHEMA_TEST)
 
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
@@ -34,12 +35,17 @@ $(CONTACT_TEST): $(TEST_DIR)/test_contact_regression.c $(OBJS)
 $(BENCH_TARGET): $(TEST_DIR)/bench_constraints.c $(OBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) $^ $(LDFLAGS) -o $@
 
-test: $(TEST_TARGET) $(CONTACT_TEST)
+$(SCHEMA_TEST): $(TEST_DIR)/test_schema.c
+	$(CC) $(CFLAGS) $(INCLUDES) $^ $(LDFLAGS) -o $@
+
+test: $(TEST_TARGET) $(CONTACT_TEST) $(SCHEMA_TEST)
 	@echo "Running coupled constraint test"
 	@mkdir -p artifacts
 	@$(TEST_TARGET) --descriptor-log artifacts/kkt_descriptor_actions_local.csv
 	@echo "Running contact regression test"
 	@$(CONTACT_TEST)
+	@echo "Running schema test"
+	@$(SCHEMA_TEST)
 
 bench: $(BENCH_TARGET)
 	@mkdir -p artifacts

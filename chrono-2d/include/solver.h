@@ -60,10 +60,23 @@ typedef struct {
     int count;
 } SolveResult;
 
+typedef struct {
+    double min_pivot;
+    double max_pivot;
+    double condition_bound;
+    double condition_spectral;
+    double vn;
+    double vt;
+    double mu_s;
+    double mu_d;
+    int stick;
+} ConstraintStats;
+
 void body_init(Body2D *b, double mass, double inertia, double x, double y);
 double compute_pivot(const Constraint2D *c);
 double compute_condition(const Constraint2D *c);
 SolveResult run_coupled_constraint(void);
 SolveResult run_contact_regression(void);
+ConstraintStats compute_stats(const Constraint2D *c);
 
 #endif  // CHRONO2D_SOLVER_H

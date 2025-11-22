@@ -4,18 +4,6 @@
 
 #include "solver.h"
 
-typedef struct {
-    double min_pivot;
-    double max_pivot;
-    double condition_bound;
-    double condition_spectral;
-    double vn;
-    double vt;
-    double mu_s;
-    double mu_d;
-    int stick;
-} ConstraintStats;
-
 static double dot(const double a[2], const double b[2]) {
     return a[0] * b[0] + a[1] * b[1];
 }
@@ -110,7 +98,7 @@ static void accumulate_stats(const double *pivots,
     stats->condition_spectral = stats->condition_bound;
 }
 
-static ConstraintStats compute_stats(const Constraint2D *c) {
+ConstraintStats compute_stats(const Constraint2D *c) {
     ConstraintStats stats = {0};
     double pivots[4];
     int pivot_count = 0;

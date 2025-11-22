@@ -11,6 +11,39 @@ typedef struct {
     double cond_max;
 } RangeRule;
 
+static int verbose = 0;
+static int dump_json = 0;
+static const char *dump_path = "artifacts/failure_dump.json";
+
+static void dump_failure_json(const char *reason, const SolveResult *res) {
+    if (!dump_json)
+        return;
+    FILE *fp = fopen(dump_path, "w");
+    if (!fp)
+        return;
+    fprintf(fp, "{\n  \"reason\": \"%s\",\n  \"cases\": [\n", reason);
+    for (int i = 0; i < res->count; ++i) {
+        const ConstraintCase *c = &res->cases[i];
+        fprintf(fp,
+                "    {\"name\":\"%s\",\"time\":%.6f,\"cond\":%.6e,\"pivot_min\":%.6e,"
+                "\"pivot_max\":%.6e,\"vn\":%.6e,\"vt\":%.6e,\"mu_s\":%.3f,\"mu_d\":%.3f,"
+                "\"stick\":%d}%s\n",
+                c->name,
+                c->time,
+                c->condition_bound,
+                c->min_pivot,
+                c->max_pivot,
+                c->vn,
+                c->vt,
+                c->mu_s,
+                c->mu_d,
+                c->stick,
+                (i + 1 == res->count) ? "" : ",");
+    }
+    fprintf(fp, "  ]\n}\n");
+    fclose(fp);
+}
+
 static int load_ranges(const char *path, RangeRule *rules, int max_rules) {
     FILE *fp = fopen(path, "r");
     if (!fp) {
@@ -116,17 +149,24 @@ int main(int argc, char **argv) {
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "--descriptor-log") == 0 && i + 1 < argc) {
             out_path = argv[i + 1];
+        } else if (strcmp(argv[i], "--verbose") == 0) {
+            verbose = 1;
+        } else if (strcmp(argv[i], "--dump-json") == 0 && i + 1 < argc) {
+            dump_json = 1;
+            dump_path = argv[i + 1];
         }
     }
 
     SolveResult res = run_coupled_constraint();
     if (res.count <= 0) {
         fprintf(stderr, "No constraint cases produced\n");
+        dump_failure_json("no_cases", &res);
         return 1;
     }
 
     write_descriptor_csv(out_path, &res);
     if (!validate_schema(out_path)) {
+        dump_failure_json("schema", &res);
         return 1;
     }
 
@@ -135,14 +175,17 @@ int main(int argc, char **argv) {
         if (c->min_pivot <= 0.0 || c->max_pivot <= 0.0 || !isfinite(c->min_pivot) ||
             !isfinite(c->max_pivot)) {
             fprintf(stderr, "Invalid pivot for case %s\n", c->name);
+            dump_failure_json("pivot_invalid", &res);
             return 1;
         }
         if (c->condition_spectral <= 0.0 || !isfinite(c->condition_spectral)) {
             fprintf(stderr, "Invalid condition for case %s\n", c->name);
+            dump_failure_json("cond_invalid", &res);
             return 1;
         }
         if (fabs(c->condition_bound - c->condition_spectral) > 1e-9) {
             fprintf(stderr, "Condition mismatch bound vs spectral for %s\n", c->name);
+            dump_failure_json("cond_mismatch", &res);
             return 1;
         }
     }
@@ -154,6 +197,7 @@ int main(int argc, char **argv) {
     const ConstraintCase *revolute = find_case(&res, "tele_yaw_control");
     if (!revolute || revolute->condition_bound < 0.5 || revolute->condition_bound > 10.0) {
         fprintf(stderr, "Unexpected revolute condition\n");
+        dump_failure_json("revolute_range", &res);
         return 1;
     }
 
@@ -161,22 +205,27 @@ int main(int argc, char **argv) {
     const ConstraintCase *contact_slip = find_case(&res, "hydraulic_lift_sync_slip");
     if (!contact_stick || !contact_slip) {
         fprintf(stderr, "Missing contact cases\n");
+        dump_failure_json("contact_missing", &res);
         return 1;
     }
     if (contact_slip->condition_bound <= contact_stick->condition_bound) {
         fprintf(stderr, "Slip case should have weaker conditioning than stick\n");
+        dump_failure_json("contact_order", &res);
         return 1;
     }
     if (contact_slip->min_pivot >= contact_stick->min_pivot) {
         fprintf(stderr, "Slip pivot should be smaller than stick (more compliant)\n");
+        dump_failure_json("contact_pivot", &res);
         return 1;
     }
     if (contact_stick->stick != 1 || contact_slip->stick != 0) {
         fprintf(stderr, "Stick/slip flags incorrect\n");
+        dump_failure_json("contact_flag", &res);
         return 1;
     }
     if (contact_stick->mu_s <= 0.0 || contact_slip->mu_d <= 0.0) {
         fprintf(stderr, "Friction coefficients missing\n");
+        dump_failure_json("contact_friction", &res);
         return 1;
     }
     /* Apply range rules if available */
@@ -193,6 +242,7 @@ int main(int argc, char **argv) {
         if (contact_slip->condition_bound < slip_range->cond_min ||
             contact_slip->condition_bound > slip_range->cond_max) {
             fprintf(stderr, "Slip condition out of configured range: %.3f\n", contact_slip->condition_bound);
+            dump_failure_json("contact_slip_range", &res);
             return 1;
         }
     }
@@ -201,6 +251,7 @@ int main(int argc, char **argv) {
     SolveResult res2 = run_coupled_constraint();
     if (res.count != res2.count) {
         fprintf(stderr, "Determinism check failed: count mismatch\n");
+        dump_failure_json("determinism_count", &res);
         return 1;
     }
     for (int i = 0; i < res.count; ++i) {
@@ -211,8 +262,13 @@ int main(int argc, char **argv) {
             !almost_equal(a->min_pivot, b->min_pivot, 1e-6) ||
             !almost_equal(a->max_pivot, b->max_pivot, 1e-6)) {
             fprintf(stderr, "Determinism check failed for %s\n", a->name);
+            dump_failure_json("determinism_value", &res);
             return 1;
         }
+    }
+
+    if (verbose) {
+        fprintf(stderr, "All %d cases passed. Output: %s\n", res.count, out_path);
     }
 
     printf("Coupled constraint test passed.\n");
