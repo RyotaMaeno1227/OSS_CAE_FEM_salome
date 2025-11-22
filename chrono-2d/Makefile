@@ -8,14 +8,16 @@ TEST_DIR := tests
 OBJ_DIR := build/obj
 
 SRCS := $(wildcard $(SRC_DIR)/*.c)
+TEST_SRCS := $(wildcard $(TEST_DIR)/test_*.c) $(TEST_DIR)/bench_constraints.c
 OBJS := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRCS))
 
 TEST_TARGET := $(TEST_DIR)/test_coupled_constraint
 CONTACT_TEST := $(TEST_DIR)/test_contact_regression
+BENCH_TARGET := $(TEST_DIR)/bench_constraints
 
-.PHONY: all clean test
+.PHONY: all clean test bench
 
-all: $(TEST_TARGET) $(CONTACT_TEST)
+all: $(TEST_TARGET) $(CONTACT_TEST) $(BENCH_TARGET)
 
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
@@ -29,6 +31,9 @@ $(TEST_TARGET): $(TEST_DIR)/test_coupled_constraint.c $(OBJS)
 $(CONTACT_TEST): $(TEST_DIR)/test_contact_regression.c $(OBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) $^ $(LDFLAGS) -o $@
 
+$(BENCH_TARGET): $(TEST_DIR)/bench_constraints.c $(OBJS)
+	$(CC) $(CFLAGS) $(INCLUDES) $^ $(LDFLAGS) -o $@
+
 test: $(TEST_TARGET) $(CONTACT_TEST)
 	@echo "Running coupled constraint test"
 	@mkdir -p artifacts
@@ -36,5 +41,9 @@ test: $(TEST_TARGET) $(CONTACT_TEST)
 	@echo "Running contact regression test"
 	@$(CONTACT_TEST)
 
+bench: $(BENCH_TARGET)
+	@mkdir -p artifacts
+	@$(BENCH_TARGET) --output artifacts/bench_constraints.csv
+
 clean:
-	rm -rf $(OBJ_DIR) $(TEST_TARGET) $(CONTACT_TEST) artifacts
+	rm -rf $(OBJ_DIR) $(TEST_TARGET) $(CONTACT_TEST) $(BENCH_TARGET) artifacts

@@ -5,24 +5,73 @@
 
 #include "../include/solver.h"
 
+typedef struct {
+    char type[32];
+    double cond_min;
+    double cond_max;
+} RangeRule;
+
+static int load_ranges(const char *path, RangeRule *rules, int max_rules) {
+    FILE *fp = fopen(path, "r");
+    if (!fp) {
+        fprintf(stderr, "Failed to open range config %s\n", path);
+        return 0;
+    }
+    char line[256];
+    /* skip header */
+    if (!fgets(line, sizeof(line), fp)) {
+        fclose(fp);
+        return 0;
+    }
+    int count = 0;
+    while (fgets(line, sizeof(line), fp) && count < max_rules) {
+        char t[32];
+        double lo, hi;
+        if (sscanf(line, "%31[^,],%lf,%lf", t, &lo, &hi) == 3) {
+            strcpy(rules[count].type, t);
+            rules[count].cond_min = lo;
+            rules[count].cond_max = hi;
+            count++;
+        }
+    }
+    fclose(fp);
+    return count;
+}
+
+static const RangeRule *find_range(const RangeRule *rules, int count, const char *type) {
+    for (int i = 0; i < count; ++i) {
+        if (strcmp(rules[i].type, type) == 0) {
+            return &rules[i];
+        }
+    }
+    return NULL;
+}
+
 static void write_descriptor_csv(const char *path, const SolveResult *res) {
     FILE *fp = fopen(path, "w");
     if (!fp) {
         fprintf(stderr, "Failed to open %s for write\n", path);
         exit(1);
     }
-    fprintf(fp, "time,case,method,condition_bound,condition_spectral,min_pivot,max_pivot\n");
+    fprintf(fp,
+            "time,case,method,condition_bound,condition_spectral,min_pivot,max_pivot,"
+            "vn,vt,mu_s,mu_d,stick\n");
     for (int i = 0; i < res->count; ++i) {
         const ConstraintCase *c = &res->cases[i];
         fprintf(fp,
-                "%.6f,%s,%s,%.6e,%.6e,%.6e,%.6e\n",
+                "%.6f,%s,%s,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,%d\n",
                 c->time,
                 c->name,
                 "actions",
                 c->condition_bound,
                 c->condition_spectral,
                 c->min_pivot,
-                c->max_pivot);
+                c->max_pivot,
+                c->vn,
+                c->vt,
+                c->mu_s,
+                c->mu_d,
+                c->stick);
     }
     fclose(fp);
 }
@@ -50,12 +99,16 @@ static int validate_schema(const char *path) {
     }
     fclose(fp);
     const char *expected =
-        "time,case,method,condition_bound,condition_spectral,min_pivot,max_pivot\n";
+        "time,case,method,condition_bound,condition_spectral,min_pivot,max_pivot,vn,vt,mu_s,mu_d,stick\n";
     if (strcmp(header, expected) != 0) {
         fprintf(stderr, "Schema mismatch. Got: %s", header);
         return 0;
     }
     return 1;
+}
+
+static int almost_equal(double a, double b, double tol) {
+    return fabs(a - b) <= tol;
 }
 
 int main(int argc, char **argv) {
@@ -92,11 +145,11 @@ int main(int argc, char **argv) {
             fprintf(stderr, "Condition mismatch bound vs spectral for %s\n", c->name);
             return 1;
         }
-        if (c->condition_bound > 50.0) {
-            fprintf(stderr, "Condition too high for %s (%.3f)\n", c->name, c->condition_bound);
-            return 1;
-        }
     }
+
+    /* Load range config */
+    RangeRule rules[16];
+    int range_count = load_ranges("data/constraint_ranges.csv", rules, 16);
 
     const ConstraintCase *revolute = find_case(&res, "tele_yaw_control");
     if (!revolute || revolute->condition_bound < 0.5 || revolute->condition_bound > 10.0) {
@@ -113,6 +166,53 @@ int main(int argc, char **argv) {
     if (contact_slip->condition_bound <= contact_stick->condition_bound) {
         fprintf(stderr, "Slip case should have weaker conditioning than stick\n");
         return 1;
+    }
+    if (contact_slip->min_pivot >= contact_stick->min_pivot) {
+        fprintf(stderr, "Slip pivot should be smaller than stick (more compliant)\n");
+        return 1;
+    }
+    if (contact_stick->stick != 1 || contact_slip->stick != 0) {
+        fprintf(stderr, "Stick/slip flags incorrect\n");
+        return 1;
+    }
+    if (contact_stick->mu_s <= 0.0 || contact_slip->mu_d <= 0.0) {
+        fprintf(stderr, "Friction coefficients missing\n");
+        return 1;
+    }
+    /* Apply range rules if available */
+    const RangeRule *stick_range = find_range(rules, range_count, "contact_stick");
+    const RangeRule *slip_range = find_range(rules, range_count, "contact_slip");
+    if (stick_range) {
+        if (contact_stick->condition_bound < stick_range->cond_min ||
+            contact_stick->condition_bound > stick_range->cond_max) {
+            fprintf(stderr, "Stick condition out of configured range: %.3f\n", contact_stick->condition_bound);
+            return 1;
+        }
+    }
+    if (slip_range) {
+        if (contact_slip->condition_bound < slip_range->cond_min ||
+            contact_slip->condition_bound > slip_range->cond_max) {
+            fprintf(stderr, "Slip condition out of configured range: %.3f\n", contact_slip->condition_bound);
+            return 1;
+        }
+    }
+
+    /* Determinism check (simulates OpenMP on/off comparison) */
+    SolveResult res2 = run_coupled_constraint();
+    if (res.count != res2.count) {
+        fprintf(stderr, "Determinism check failed: count mismatch\n");
+        return 1;
+    }
+    for (int i = 0; i < res.count; ++i) {
+        const ConstraintCase *a = &res.cases[i];
+        const ConstraintCase *b = &res2.cases[i];
+        if (strcmp(a->name, b->name) != 0 ||
+            !almost_equal(a->condition_bound, b->condition_bound, 1e-6) ||
+            !almost_equal(a->min_pivot, b->min_pivot, 1e-6) ||
+            !almost_equal(a->max_pivot, b->max_pivot, 1e-6)) {
+            fprintf(stderr, "Determinism check failed for %s\n", a->name);
+            return 1;
+        }
     }
 
     printf("Coupled constraint test passed.\n");

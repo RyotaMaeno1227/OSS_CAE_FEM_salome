@@ -47,6 +47,12 @@ typedef struct {
     double min_pivot;
     double max_pivot;
     double time;
+    /* Diagnostics (contact only uses vn/vt/mu/stick) */
+    double vn;
+    double vt;
+    double mu_s;
+    double mu_d;
+    int stick; /* 1=stick, 0=slip */
 } ConstraintCase;
 
 typedef struct {

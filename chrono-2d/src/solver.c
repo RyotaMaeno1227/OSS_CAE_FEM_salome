@@ -9,6 +9,11 @@ typedef struct {
     double max_pivot;
     double condition_bound;
     double condition_spectral;
+    double vn;
+    double vt;
+    double mu_s;
+    double mu_d;
+    int stick;
 } ConstraintStats;
 
 static double dot(const double a[2], const double b[2]) {
@@ -84,6 +89,8 @@ static void accumulate_stats(const double *pivots,
                              ConstraintStats *stats) {
     stats->min_pivot = 1e30;
     stats->max_pivot = 0.0;
+    stats->condition_bound = 0.0;
+    stats->condition_spectral = 0.0;
     for (int i = 0; i < count; ++i) {
         double p = pivots[i];
         if (p <= 0.0 || !isfinite(p)) {
@@ -166,8 +173,13 @@ static ConstraintStats compute_stats(const Constraint2D *c) {
             double rel[2] = {vb[0] - va[0], vb[1] - va[1]};
             double vn = dot(rel, n);
             double vt = dot(rel, t);
+            stats.vn = vn;
+            stats.vt = vt;
+            stats.mu_s = c->friction_static;
+            stats.mu_d = c->friction_dynamic;
             double slip_tol = 1e-4;
             int stick = fabs(vt) <= (c->friction_static * fabs(vn) + slip_tol);
+            stats.stick = stick;
 
             double Jn[6];
             fill_linear_row(c, n, c->contact_point, c->contact_point, Jn);
@@ -177,7 +189,12 @@ static ConstraintStats compute_stats(const Constraint2D *c) {
             fill_linear_row(c, t, c->contact_point, c->contact_point, Jt);
             double pivot_t = row_effective_mass(c, Jt);
             if (!stick) {
-                pivot_t *= fmax(0.1, c->friction_dynamic * 0.5);
+                double scale = c->friction_dynamic * 0.5;
+                if (scale < 0.1)
+                    scale = 0.1;
+                if (scale > 1.0)
+                    scale = 1.0;
+                pivot_t *= scale;
             }
             pivots[pivot_count++] = pivot_t;
             break;
@@ -213,6 +230,11 @@ static void add_case(SolveResult *res,
     cc->condition_spectral = stats->condition_spectral;
     cc->min_pivot = stats->min_pivot;
     cc->max_pivot = stats->max_pivot;
+    cc->vn = stats->vn;
+    cc->vt = stats->vt;
+    cc->mu_s = stats->mu_s;
+    cc->mu_d = stats->mu_d;
+    cc->stick = stats->stick;
 }
 
 static void build_default_bodies(Body2D *anchor, Body2D *bob, Body2D *slider) {

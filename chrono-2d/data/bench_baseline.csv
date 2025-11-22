@@ -1,0 +1,2 @@
+case,threads,time_us
+run_coupled_constraint,20,0.207

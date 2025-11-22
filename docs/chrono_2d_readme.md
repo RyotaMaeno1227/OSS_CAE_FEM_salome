@@ -1,14 +1,19 @@
 # chrono-2d README（学習用 2D ソルバ）
 
-目的: Chrono 2D ソルバ（学習用ミニ実装）のビルドとテスト手順、Run ID 記録ルール、CSV の読み方をまとめる。3D 拡張は行わない前提とし、Chrono C / chrono-main とは別系統として扱う。
+目的: Chrono 2D ソルバ（学習用ミニ実装）のビルド・テスト手順、Run ID 記録ルール、CSV の読み方をまとめる。3D 拡張は行わない前提とし、Chrono C / chrono-main とは別系統として扱う。
+
+### 方針（冒頭チェック）
+- 3D 非対応を明記（本書・チャット・テンプレに「chrono-2d」を含める）。
+- 依存は OpenMP のみ（oneTBB など不要）。
+- 命名ポリシー: プレフィックスに余分な「Chrono」を付けない。生成物は `artifacts/` 配下、CSV は `kkt_descriptor_actions_local.csv` を基本形とする。
+- 月次で Run ID / CSV サンプルを差し替え、`docs/documentation_changelog.md` に記録する。
 
 ## ビルドとテスト
-- 依存: OpenMP のみ（oneTBB なし、外部ライブラリなし）。
 - 手順:
   ```bash
   cd chrono-2d
   make test            # build + test_coupled_constraint
-  # 生成物
+  # 生成物:
   #  - build/obj/*.o
   #  - tests/test_coupled_constraint
   #  - artifacts/kkt_descriptor_actions_local.csv
@@ -16,9 +21,15 @@
 - クリーニング: `make clean`
 
 ## Hands-on / Tutorial 簡易フロー
-1) `make test` を実行して CSV を生成 (`artifacts/kkt_descriptor_actions_local.csv`)  
-2) CSV を開き、各行の `condition_spectral`, `min_pivot`, `max_pivot` を確認  
-3) 判定: `condition_spectral` が 10 前後、`min_pivot` が 1e-3 以上なら安定。異常値があれば `case` / `time` で該当ステップを特定し、Run ID と併せて共有する。
+1) `make test` で CSV 生成（`artifacts/kkt_descriptor_actions_local.csv`）  
+2) `condition_spectral`, `min_pivot`, `max_pivot` を確認  
+3) 判定: `condition_spectral` 10 前後、`min_pivot` ≥ 1e-3 なら安定。異常値は `case` / `time` を特定し Run ID と共有。  
+4) チャット共有: 下記テンプレに従い Run ID / CSV 抜粋を貼る。
+
+### Hands-on ショートカットスクリプト
+`chrono-2d/scripts/run_hands_on.sh <RUN_ID>`  
+`make test` → CSV 生成 → 先頭行表示 → `artifacts/run_id.log` にメモ。  
+例: `./scripts/run_hands_on.sh local-chrono2d-20251117-01`
 
 ## Run ID 記録テンプレ（chrono-2d）
 ```
@@ -27,12 +38,15 @@
 - Log: docs/chrono_2d_readme.md （Run ID を本文に追記）
 - Notes: {condition_spectral, min_pivot, max_pivot, case, time}
 ```
-※ `docs/abc_team_chat_handoff.md` の chrono-2d 行にも同じ Run ID を記録し、Chrono C / chrono-main と区別する。
+※ `docs/abc_team_chat_handoff.md` の chrono-2d テンプレにも同じ Run ID を記録し、Chrono C / chrono-main と区別する。
 
-## 条件数・Pivot の読み方（教育向け）
-- `condition_bound` / `condition_spectral`: 行和 / スペクトル条件数の近似。1 に近いほどよく、10 以上ならパラメータ見直し候補。
-- `min_pivot` / `max_pivot`: KKT ブロックの pivot 範囲。`min_pivot` が 1e-4 未満なら軟化や比率調整を検討。
-- `case` 列: プリセット名（例: `tele_yaw_control`）。学習時は「ケースごとに条件数・pivot がどう変わるか」を比較する。
+## 条件数・Pivot の読み方（表で再現可能に）
+| 項目 | 意味 | 目安 | コマンド例 |
+|------|------|------|-----------|
+| `condition_bound` / `condition_spectral` | 行和 / スペクトル条件数 | 1 に近いほど良い、10 以上で要見直し | `csvstat -H --mean --max artifacts/kkt_descriptor_actions_local.csv -c condition_spectral` |
+| `min_pivot` | KKT pivot 最小値 | 1e-4 未満で要注意 | `csvstat -H --min artifacts/kkt_descriptor_actions_local.csv -c min_pivot` |
+| `max_pivot` | KKT pivot 最大値 | 極端な値は要確認 | `csvstat -H --max artifacts/kkt_descriptor_actions_local.csv -c max_pivot` |
+| `case` | プリセット名 | ケース別の傾向比較 | `csvcut -c case,condition_spectral,min_pivot,max_pivot artifacts/kkt_descriptor_actions_local.csv` |
 
 ## 拘束タイプ（2D 学習用の概要）
 - 距離: 2 点間距離を固定/制御。比率とスプリング剛性をセットで調整。
@@ -42,17 +56,17 @@
 - ギヤ: 回転比率を固定する単純ギヤ結合。
 - 接触: 簡易接触（テスト用）で pivot/条件数への影響を観察。
 
-## CSV サンプル（先頭行）
+## CSV サンプルとスキーマ
 ```
 time,case,method,condition_bound,condition_spectral,min_pivot,max_pivot
 0.000000,tele_yaw_control,actions,1.650000e+00,1.650000e+00,1.100000e+00,1.100000e+00
 ```
-- カラム説明:
-  - `time`: シミュレーション時間 [s]
-  - `case`: プリセット名
-  - `method`: `actions` 固定（descriptor モード）
-  - `condition_bound` / `condition_spectral`: 行和 / スペクトル条件数
-  - `min_pivot` / `max_pivot`: KKT pivot の最小/最大値
+- `time`: シミュレーション時間 [s]
+- `case`: プリセット名
+- `method`: `actions` 固定（descriptor モード）
+- `condition_bound` / `condition_spectral`: 行和 / スペクトル条件数
+- `min_pivot` / `max_pivot`: KKT pivot の最小/最大値  
+スキーマテンプレ: `docs/chrono_2d_cases_template.csv`（更新時は本書とセットで差し替え）。
 
 ## チャット共有テンプレ（chrono-2d）
 ```
@@ -62,9 +76,35 @@ time,case,method,condition_bound,condition_spectral,min_pivot,max_pivot
 - Summary: cond_spectral≈1.65, min_pivot=1.10e+00, case=tele_yaw_control
 - Diff: (必要なら抜粋を貼付)
 ```
-共有時は `git status` と CSV 抜粋（先頭/異常行）を貼り、Chrono C / chrono-main の Run ID と混在させないようにする。
+共有時は `git status` と CSV 抜粋（先頭/異常行）を貼り、Chrono C / chrono-main の Run ID と混在させない。
 
 ## 命名・見出しポリシー
-- プレフィックスに `Chrono` を付けない（既にディレクトリ名で区別）。
-- 見出しは「chrono-2d ...」で開始し、3D には言及しない。
-- 生成物は `artifacts/` 配下に置き、CSV 名は `kkt_descriptor_actions_local.csv` を基本形とする。***
+- 見出しは「chrono-2d ...」で開始、3D には言及しない。
+- 生成物は `artifacts/` 配下、CSV 名は `kkt_descriptor_actions_local.csv` を基本形とする。
+- プレフィックスに余分な「Chrono」を付けない。
+
+## 更新フローとチェック
+- README/Hands-on/チャットテンプレを更新したら同じコミットで Run ID テンプレも整合。
+- リンク・整合チェック: `python scripts/check_doc_links.py docs/chrono_2d_readme.md docs/abc_team_chat_handoff.md` を実行し、結果をチャットに貼る。
+- Changelog 追記トリガー: Run ID 追加、命名ポリシー変更、拘束タイプ説明や CSV サンプルを更新した場合は `docs/documentation_changelog.md` に記録。
+- 表記揺れチェック: 見出しは sentence case、コードブロックは ```bash```/```csv``` のみ。
+- アーカイブ方針: 古い Run ID/CSV を差し替える場合は `artifacts/archive/` に退避し、Changelog に移動日を記載。
+
+## 図版・スクリーンショットルール
+- 保存先: `docs/integration/assets/` または `docs/media/chrono-2d/`（新設可）。
+- 命名: `chrono-2d-<topic>-<yyyymmdd>.svg|png`。キャプションに Run ID を含める。
+- 参照: Markdown から相対パスでリンク。追加時は Changelog に追記。
+
+## 学習ステップチェックリスト（コマンド付き）
+1. `cd chrono-2d && make test`
+2. `head -n 5 artifacts/kkt_descriptor_actions_local.csv`
+3. （任意）`csvstat --mean --min --max artifacts/kkt_descriptor_actions_local.csv -c condition_spectral,min_pivot,max_pivot`
+4. Run ID を本書と `docs/abc_team_chat_handoff.md` に記録
+5. チャットテンプレで共有（上記フォーマット）
+6. `python scripts/check_doc_links.py docs/chrono_2d_readme.md docs/abc_team_chat_handoff.md`
+7. `docs/documentation_changelog.md` に更新履歴を追記
+
+## 新規ドキュメント追加時のルール
+- 見出し先頭に「chrono-2d」を付け、3D や chrono-main と混同しない。
+- Run ID テンプレと命名ポリシーを本文にリンクし、`docs/abc_team_chat_handoff.md` へ参照を追加。
+- 追加直後にリンクチェックを走らせ、結果をチャットに貼る。

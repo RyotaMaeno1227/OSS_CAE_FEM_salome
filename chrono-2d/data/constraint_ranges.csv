@@ -1,0 +1,8 @@
+type,cond_min,cond_max
+distance,0.5,20.0
+revolute,0.5,20.0
+planar,0.5,20.0
+prismatic,0.5,20.0
+gear,0.5,20.0
+contact_stick,1.0,10.0
+contact_slip,3.0,50.0
