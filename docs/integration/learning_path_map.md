@@ -51,6 +51,7 @@
 #### 図版の更新手順（簡易）
 - 編集対象: `docs/integration/assets/learning_path_overview.svg`, `docs/integration/assets/hands_on_ch02_progress.svg`
 - 手順: テキストエディタで直接編集し、進捗バーやステータスラベルを最新 Run ID に合わせて手動更新する（例: `local-20251117-ch02`）。変更後は `git diff` を確認し、`scripts/check_doc_links.py` を再実行。
+- chrono-main も並行で更新する場合は、Run ID のペア（Chrono C / chrono-main）を図版横にコメントし、`docs/logs/kkt_descriptor_poc_e2e_chrono_main.md` へリンクする。
 
 ## 4. リスク / TODO
 - [ ] Pandoc 出力と Hands-on スクリプトが同じ図版を参照できるよう、`docs/media/coupled/` の命名規約を決める。 (Owner: Suzuki)

@@ -84,6 +84,15 @@
 - `python tools/update_descriptor_run_id.py --run-id <ID>` で `docs/logs/kkt_descriptor_poc_e2e.md` と `docs/coupled_island_migration_plan.md` を同期。
 - Evidence 追記後は `python scripts/check_preset_links.py` と `git status` の要約をチャットに貼る。
 
+### chrono-main 用テンプレ
+```
+- Run: [#<GITHUB_RUN_ID>](https://github.com/<owner>/<repo>/actions/runs/<ID>)
+- Artifact: descriptor-e2e-<ID> (pivot CSV / spectral logs)
+- Log: docs/logs/kkt_descriptor_poc_e2e_chrono_main.md
+- Notes: {rank, condition_number_row_sum/spectral, pivot span}
+```
+- `docs/coupled_island_migration_plan.md` の chrono-main 行と同期すること。
+
 ---
 
 ## 7. 代表コマンド集
