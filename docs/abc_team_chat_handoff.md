@@ -71,6 +71,7 @@
 - README/Hands-on/preset を触る場合は `python scripts/check_preset_links.py` の結果を貼る。
 - Run ID 生成後は `git status`、主要差分 (`git diff docs/...`) のスクリーンショット／引用を共有。
 - Evidence 追加前後で `tools/update_multi_omega_assets.py --refresh-report` の結果に差分がないか確認。
+- chrono-2d CI を実行した場合は Run ID と artifacts パス（例: `chrono-2d-ci-<run>`、`artifacts/kkt_descriptor_actions_local.csv`）を共有し、スキーマチェック結果を記録する。
 
 ---
 
@@ -101,6 +102,7 @@
 - Notes: {condition_spectral, min_pivot, max_pivot, case}
 ```
 - Chrono C / chrono-main と混在しないよう、Run ID に `chrono2d` を含める。
+- README/Hands-on/リンクチェックの流れは `docs/chrono_2d_readme.md` を参照し、結果をチャットに貼る。
 
 ---
 

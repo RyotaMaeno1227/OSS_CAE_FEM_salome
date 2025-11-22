@@ -1,0 +1,113 @@
+name: chrono-2d-ci
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 1 * * 0"  # weekly
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    if: |
+      !contains(github.event.head_commit.message, '[skip-ci]')
+      && !contains(github.event.head_commit.message, '[skip-weekly]')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install deps (OpenMP only)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential python3 python3-pip
+
+      - name: Build chrono-2d tests
+        run: |
+          make clean
+          make tests
+
+      - name: Run chrono-2d tests
+        id: run_tests
+        continue-on-error: true
+        run: |
+          rm -f test.log
+          set -o pipefail
+          if make test > test.log 2>&1; then
+            tail -n 200 test.log
+            echo "status=success" >> $GITHUB_OUTPUT
+            exit 0
+          else
+            tail -n 400 test.log
+            echo "status=failure" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: CSV schema check (kkt descriptor)
+        run: |
+          python3 tools/check_chrono2d_csv_schema.py artifacts/kkt_descriptor_actions_local.csv
+
+      - name: Summarize Run ID and artifacts
+        if: always()
+        run: |
+          {
+            echo "- Run: #${GITHUB_RUN_ID} (chrono-2d)"
+            echo "- Artifact: chrono-2d-ci-${GITHUB_RUN_ID}"
+            echo "- CSV: artifacts/kkt_descriptor_actions_local.csv (schema: time,case,method,condition_bound,condition_spectral,min_pivot,max_pivot)"
+            echo "- Logs: test.log (tail uploaded)"
+            echo "- Status: ${{
+              steps.run_tests.outputs.status
+            }}"
+          } > artifacts_ci_summary.md
+
+      - name: Upload minimal artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrono-2d-ci-${{ github.run_id }}
+          path: |
+            test.log
+            artifacts/kkt_descriptor_actions_local.csv
+            artifacts_ci_summary.md
+          retention-days: 30
+
+      - name: Fail if tests failed
+        if: steps.run_tests.outcome == 'failure'
+        run: exit 1
+
+  bench-optional:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: |
+      github.event.inputs.run_bench == 'true'
+      && !contains(github.event.head_commit.message, '[skip-ci]')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install deps (OpenMP only)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential python3 python3-pip
+
+      - name: Run bench (opt-in)
+        run: |
+          make bench > bench.log 2>&1 || true
+          test -f bench_pivots.csv && tail -n 40 bench_pivots.csv || true
+
+      - name: Upload bench artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrono-2d-bench-${{ github.run_id }}
+          path: |
+            bench.log
+            bench_pivots.csv
+          retention-days: 14
