@@ -58,5 +58,6 @@ void body_init(Body2D *b, double mass, double inertia, double x, double y);
 double compute_pivot(const Constraint2D *c);
 double compute_condition(const Constraint2D *c);
 SolveResult run_coupled_constraint(void);
+SolveResult run_contact_regression(void);
 
 #endif  // CHRONO2D_SOLVER_H
