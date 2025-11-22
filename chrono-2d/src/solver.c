@@ -177,7 +177,7 @@ static ConstraintStats compute_stats(const Constraint2D *c) {
             fill_linear_row(c, t, c->contact_point, c->contact_point, Jt);
             double pivot_t = row_effective_mass(c, Jt);
             if (!stick) {
-                pivot_t *= fmax(0.25, c->friction_dynamic);
+                pivot_t *= fmax(0.1, c->friction_dynamic * 0.5);
             }
             pivots[pivot_count++] = pivot_t;
             break;
@@ -308,7 +308,6 @@ SolveResult run_coupled_constraint(void) {
     slider.vel[0] = 0.0;
     slider.vel[1] = 0.0;
     slider.ang_vel = 0.0;
-    build_default_bodies(&anchor, &bob, &slider);
     setup_contact(&contact_stick, &anchor, &slider, contact_point, normal);
     contact_stick.name = "hydraulic_lift_sync";
     push_constraint_case(&res, &contact_stick, 5.0, NULL);
@@ -336,6 +335,9 @@ SolveResult run_contact_regression(void) {
     Constraint2D contact_stick;
     double normal[2] = {0.0, 1.0};
     double point[2] = {0.05, -0.05};
+    slider.vel[0] = 0.0;
+    slider.vel[1] = 0.0;
+    slider.ang_vel = 0.0;
     setup_contact(&contact_stick, &anchor, &slider, point, normal);
     contact_stick.name = "contact_stick";
     push_constraint_case(&res, &contact_stick, 0.0, contact_stick.name);
