@@ -1,4 +1,4 @@
-# chrono-main KKT Descriptor PoC – E2E Log
+# KKT Descriptor PoC – E2E Log (chrono-main)
 
 最新 Run ID: **19595392293**
 

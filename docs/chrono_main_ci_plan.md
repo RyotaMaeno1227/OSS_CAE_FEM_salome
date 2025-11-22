@@ -1,4 +1,4 @@
-# chrono-main CI 設計案（ドラフト・実装前の提案）
+# CI 設計案（chrono-main向けドラフト・実装前の提案）
 
 目的: chrono-main 向けに通知／アーカイブ無しの最小 CI を設計する。現状は chrono-C-all 用 CI のみ存在し、chrono-main 用ビルド・テスト構成は未確認。ここではジョブ構成・依存・スキップ条件・Artifacts 方針を矩形項目でまとめ、実装前のレビュー素材とする。
 

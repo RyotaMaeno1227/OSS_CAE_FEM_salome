@@ -1,4 +1,4 @@
-# chrono-main Hands-on: Descriptor E2E
+# Hands-on: Descriptor E2E（chrono-main）
 
 Chrono main 版の descriptor-e2e を実行し、Run ID と Artifact を記録するためのミニ手順書です。Chrono C 版の Hands-on とは別に管理し、両者の Run ID を並べて比較できるようにします。
 
