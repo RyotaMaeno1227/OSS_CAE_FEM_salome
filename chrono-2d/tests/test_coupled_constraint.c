@@ -14,6 +14,9 @@ typedef struct {
 static int verbose = 0;
 static int dump_json = 0;
 static const char *dump_path = "artifacts/failure_dump.json";
+static int compare_threads = 0;
+static int thread_list[8] = {0};
+static int thread_count = 0;
 
 static void dump_failure_json(const char *reason, const SolveResult *res) {
     if (!dump_json)
@@ -154,6 +157,17 @@ int main(int argc, char **argv) {
         } else if (strcmp(argv[i], "--dump-json") == 0 && i + 1 < argc) {
             dump_json = 1;
             dump_path = argv[i + 1];
+        } else if (strcmp(argv[i], "--threads") == 0 && i + 1 < argc) {
+            compare_threads = 1;
+            const char *arg = argv[i + 1];
+            char buf[128];
+            strncpy(buf, arg, sizeof(buf));
+            buf[sizeof(buf) - 1] = '\0';
+            char *tok = strtok(buf, ",");
+            while (tok && thread_count < 8) {
+                thread_list[thread_count++] = atoi(tok);
+                tok = strtok(NULL, ",");
+            }
         }
     }
 
@@ -247,23 +261,39 @@ int main(int argc, char **argv) {
         }
     }
 
-    /* Determinism check (simulates OpenMP on/off comparison) */
-    SolveResult res2 = run_coupled_constraint();
-    if (res.count != res2.count) {
-        fprintf(stderr, "Determinism check failed: count mismatch\n");
-        dump_failure_json("determinism_count", &res);
-        return 1;
+    /* Determinism / OpenMP thread sweep */
+    int base_threads = compare_threads && thread_count > 0 ? thread_list[0] : 1;
+    int sweep_count = compare_threads ? thread_count : 1;
+    if (sweep_count == 1 && !compare_threads) {
+        thread_list[0] = 1;
+        thread_list[1] = omp_get_max_threads();
+        sweep_count = 2;
     }
-    for (int i = 0; i < res.count; ++i) {
-        const ConstraintCase *a = &res.cases[i];
-        const ConstraintCase *b = &res2.cases[i];
-        if (strcmp(a->name, b->name) != 0 ||
-            !almost_equal(a->condition_bound, b->condition_bound, 1e-6) ||
-            !almost_equal(a->min_pivot, b->min_pivot, 1e-6) ||
-            !almost_equal(a->max_pivot, b->max_pivot, 1e-6)) {
-            fprintf(stderr, "Determinism check failed for %s\n", a->name);
-            dump_failure_json("determinism_value", &res);
+    SolveResult ref_res = res;
+    for (int t = 0; t < sweep_count; ++t) {
+        int th = thread_list[t];
+        if (th <= 0)
+            th = 1;
+        if (th > omp_get_max_threads())
+            th = omp_get_max_threads();
+        omp_set_num_threads(th);
+        SolveResult sweep = run_coupled_constraint();
+        if (sweep.count != ref_res.count) {
+            fprintf(stderr, "Determinism check failed: count mismatch (threads=%d)\n", th);
+            dump_failure_json("determinism_count", &sweep);
             return 1;
+        }
+        for (int i = 0; i < sweep.count; ++i) {
+            const ConstraintCase *a = &ref_res.cases[i];
+            const ConstraintCase *b = &sweep.cases[i];
+            if (strcmp(a->name, b->name) != 0 ||
+                !almost_equal(a->condition_bound, b->condition_bound, 1e-6) ||
+                !almost_equal(a->min_pivot, b->min_pivot, 1e-6) ||
+                !almost_equal(a->max_pivot, b->max_pivot, 1e-6)) {
+                fprintf(stderr, "Determinism check failed for %s (threads=%d)\n", a->name, th);
+                dump_failure_json("determinism_value", &sweep);
+                return 1;
+            }
         }
     }
 
