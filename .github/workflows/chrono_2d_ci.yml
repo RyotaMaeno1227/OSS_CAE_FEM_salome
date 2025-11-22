@@ -30,6 +30,7 @@ jobs:
           python3 --version
 
       - name: Build chrono-2d tests
+        timeout-minutes: 20
         run: |
           make clean
           make tests
@@ -37,6 +38,7 @@ jobs:
       - name: Run chrono-2d tests
         id: run_tests
         continue-on-error: true
+        timeout-minutes: 10
         run: |
           rm -f test.log
           set -o pipefail
@@ -73,7 +75,7 @@ jobs:
             echo "- Run: #${GITHUB_RUN_ID} (chrono-2d)"
             echo "- Artifact: chrono-2d-ci-${GITHUB_RUN_ID}"
             echo "- CSV: artifacts/kkt_descriptor_actions_local.csv (schema: time,case,method,vn,vt,mu_s,mu_d,stick,condition_bound,condition_spectral,min_pivot,max_pivot)"
-            echo "- Logs: test.log (tail uploaded)"
+            echo "- Logs: test.log (tail uploaded), env: artifacts_env.txt"
             echo "- Status: ${{
               steps.run_tests.outputs.status
             }}"

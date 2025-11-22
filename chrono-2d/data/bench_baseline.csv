@@ -1,2 +1,5 @@
 case,threads,time_us
-run_coupled_constraint,20,0.207
+run_coupled_constraint,1,0.207
+run_coupled_constraint,2,0.207
+run_coupled_constraint,4,0.207
+run_coupled_constraint,8,0.207
