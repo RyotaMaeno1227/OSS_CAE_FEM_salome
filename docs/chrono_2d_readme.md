@@ -59,20 +59,25 @@
 
 ## CSV サンプルとスキーマ
 ```
-time,case,method,condition_bound,condition_spectral,min_pivot,max_pivot
-0.000000,tele_yaw_control,actions,1.650000e+00,1.650000e+00,1.100000e+00,1.100000e+00
+time,case,method,vn,vt,mu_s,mu_d,stick,condition_bound,condition_spectral,min_pivot,max_pivot
+0.000000,tele_yaw_control,actions,0.00,0.00,0.50,0.40,1,1.650000e+00,1.650000e+00,1.100000e+00,1.100000e+00
 ```
 - `time`: シミュレーション時間 [s]
 - `case`: プリセット名
 - `method`: `actions` 固定（descriptor モード）
+- `vn` / `vt`: 法線・接線速度
+- `mu_s` / `mu_d`: 静摩擦・動摩擦係数
+- `stick`: スティック判定フラグ
 - `condition_bound` / `condition_spectral`: 行和 / スペクトル条件数
 - `min_pivot` / `max_pivot`: KKT pivot の最小/最大値  
-スキーマテンプレ: `docs/chrono_2d_cases_template.csv`（更新時は本書とセットで差し替え）。
+スキーマテンプレ: `docs/chrono_2d_cases_template.csv`（更新時は本書とセットで差し替え）。  
+生成スクリプト: `python tools/check_chrono2d_csv_schema.py --emit-sample chrono-2d/artifacts/kkt_descriptor_actions_local.csv` でテンプレを再発行可能。  
+例題データセット: `chrono-2d/data/cases_constraints.json`, `chrono-2d/data/cases_contact_extended.csv`（ケース追加時は README とテンプレを同時更新）。
 
 ## チャット共有テンプレ（chrono-2d）
 ```
 [chrono-2d] make test
-- Run: local-chrono2d-20251117-01
+- Run: local-chrono2d-20251118-01
 - Artifact: chrono-2d/artifacts/kkt_descriptor_actions_local.csv
 - Summary: cond_spectral≈1.65, min_pivot=1.10e+00, case=tele_yaw_control
 - Diff: (必要なら抜粋を貼付)
@@ -102,8 +107,9 @@ time,case,method,condition_bound,condition_spectral,min_pivot,max_pivot
 3. （任意）`csvstat --mean --min --max artifacts/kkt_descriptor_actions_local.csv -c condition_spectral,min_pivot,max_pivot`
 4. Run ID を本書と `docs/abc_team_chat_handoff.md` に記録
 5. チャットテンプレで共有（上記フォーマット）
-6. `python scripts/check_doc_links.py docs/chrono_2d_readme.md docs/abc_team_chat_handoff.md`
-7. `docs/documentation_changelog.md` に更新履歴を追記
+6. `python tools/check_chrono2d_csv_schema.py --csv artifacts/kkt_descriptor_actions_local.csv`
+7. （スクリプトがあれば）`python scripts/check_doc_links.py docs/chrono_2d_readme.md docs/abc_team_chat_handoff.md`
+8. `docs/documentation_changelog.md` に更新履歴を追記
 
 ## 新規ドキュメント追加時のルール
 - 見出し先頭に「chrono-2d」を付け、3D や chrono-main と混同しない。

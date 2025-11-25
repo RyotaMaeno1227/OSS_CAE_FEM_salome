@@ -14,7 +14,7 @@ import sys
 
 TEMPLATE = Path("docs/chrono_2d_cases_template.csv")
 EXPECTED_HEADER = (
-    "time,case,method,condition_bound,condition_spectral,min_pivot,max_pivot\n"
+    "time,case,method,vn,vt,mu_s,mu_d,stick,condition_bound,condition_spectral,min_pivot,max_pivot\n"
 )
 
 

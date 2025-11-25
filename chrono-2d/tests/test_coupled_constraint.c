@@ -29,10 +29,14 @@ static void dump_failure_json(const char *reason, const SolveResult *res) {
     for (int i = 0; i < res->count; ++i) {
         const ConstraintCase *c = &res->cases[i];
         fprintf(fp,
-                "    {\"name\":\"%s\",\"time\":%.6f,\"cond\":%.6e,\"pivot_min\":%.6e,"
+                "    {\"name\":\"%s\",\"type\":%d,\"time\":%.6f,\"cond\":%.6e,\"pivot_min\":%.6e,"
                 "\"pivot_max\":%.6e,\"vn\":%.6e,\"vt\":%.6e,\"mu_s\":%.3f,\"mu_d\":%.3f,"
-                "\"stick\":%d}%s\n",
+                "\"stick\":%d,\"axis\":[%.6f,%.6f],\"anchor_a\":[%.6f,%.6f],"
+                "\"anchor_b\":[%.6f,%.6f],\"contact_point\":[%.6f,%.6f],\"normal\":[%.6f,%.6f],"
+                "\"mass_a\":%.6f,\"mass_b\":%.6f,\"inertia_a\":%.6f,\"inertia_b\":%.6f,"
+                "\"j_rows\":[",
                 c->name,
+                c->type,
                 c->time,
                 c->condition_bound,
                 c->min_pivot,
@@ -42,7 +46,32 @@ static void dump_failure_json(const char *reason, const SolveResult *res) {
                 c->mu_s,
                 c->mu_d,
                 c->stick,
-                (i + 1 == res->count) ? "" : ",");
+                c->axis[0],
+                c->axis[1],
+                c->anchor_a[0],
+                c->anchor_a[1],
+                c->anchor_b[0],
+                c->anchor_b[1],
+                c->contact_point[0],
+                c->contact_point[1],
+                c->normal[0],
+                c->normal[1],
+                c->mass_a,
+                c->mass_b,
+                c->inertia_a,
+                c->inertia_b);
+        for (int r = 0; r < c->j_row_count; ++r) {
+            fprintf(fp,
+                    "%s[%.6e,%.6e,%.6e,%.6e,%.6e,%.6e]",
+                    (r == 0 ? "" : ","),
+                    c->j_rows[r][0],
+                    c->j_rows[r][1],
+                    c->j_rows[r][2],
+                    c->j_rows[r][3],
+                    c->j_rows[r][4],
+                    c->j_rows[r][5]);
+        }
+        fprintf(fp, "]}%s\n", (i + 1 == res->count) ? "" : ",");
     }
     fprintf(fp, "  ]\n}\n");
     fclose(fp);
@@ -260,6 +289,23 @@ int main(int argc, char **argv) {
             dump_failure_json("contact_slip_range", &res);
             return 1;
         }
+    }
+
+    const ConstraintCase *mass_ratio = find_case(&res, "mass_ratio_100");
+    if (!mass_ratio) {
+        fprintf(stderr, "Missing mass_ratio_100 case\n");
+        dump_failure_json("mass_ratio_missing", &res);
+        return 1;
+    }
+    if (mass_ratio->condition_bound <= 0.0 || mass_ratio->condition_bound > 50.0) {
+        fprintf(stderr, "Mass ratio cond out of range: %.3f\n", mass_ratio->condition_bound);
+        dump_failure_json("mass_ratio_cond", &res);
+        return 1;
+    }
+    if (mass_ratio->min_pivot <= 0.0) {
+        fprintf(stderr, "Mass ratio pivot invalid\n");
+        dump_failure_json("mass_ratio_pivot", &res);
+        return 1;
     }
 
     /* Determinism / OpenMP thread sweep */

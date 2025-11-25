@@ -15,6 +15,7 @@ TEST_TARGET := $(TEST_DIR)/test_coupled_constraint
 CONTACT_TEST := $(TEST_DIR)/test_contact_regression
 BENCH_TARGET := $(TEST_DIR)/bench_constraints
 SCHEMA_TEST := $(TEST_DIR)/test_schema
+MINI_TEST := $(TEST_DIR)/test_minicase
 
 .PHONY: all clean test bench schema
 
@@ -38,7 +39,10 @@ $(BENCH_TARGET): $(TEST_DIR)/bench_constraints.c $(OBJS)
 $(SCHEMA_TEST): $(TEST_DIR)/test_schema.c
 	$(CC) $(CFLAGS) $(INCLUDES) $^ $(LDFLAGS) -o $@
 
-test: $(TEST_TARGET) $(CONTACT_TEST) $(SCHEMA_TEST)
+$(MINI_TEST): $(TEST_DIR)/test_minicase.c $(OBJS)
+	$(CC) $(CFLAGS) $(INCLUDES) $^ $(LDFLAGS) -o $@
+
+test: $(TEST_TARGET) $(CONTACT_TEST) $(SCHEMA_TEST) $(MINI_TEST)
 	@echo "Running coupled constraint test"
 	@mkdir -p artifacts
 	@$(TEST_TARGET) --descriptor-log artifacts/kkt_descriptor_actions_local.csv
@@ -46,6 +50,8 @@ test: $(TEST_TARGET) $(CONTACT_TEST) $(SCHEMA_TEST)
 	@$(CONTACT_TEST)
 	@echo "Running schema test"
 	@$(SCHEMA_TEST)
+	@echo "Running mini-case test"
+	@$(MINI_TEST)
 
 bench: $(BENCH_TARGET)
 	@mkdir -p artifacts

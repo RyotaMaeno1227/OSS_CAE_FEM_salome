@@ -17,12 +17,16 @@ permissions:
   actions: read
   id-token: write
 
-env:
-  CSV_PATH: artifacts/kkt_descriptor_actions_local.csv
-  BENCH_CSV: bench_pivots.csv
-  BENCH_DRIFT_THRESHOLD: "1.5"  # 1.5x drift triggers warning
-  BUILD_TIMEOUT: 20m
-  TEST_TIMEOUT: 10m
+  env:
+    CSV_PATH: artifacts/kkt_descriptor_actions_local.csv
+    BENCH_CSV: bench_pivots.csv
+    BENCH_DRIFT_THRESHOLD: "1.5"  # 1.5x drift triggers warning
+    BUILD_TIMEOUT: 20m
+    TEST_TIMEOUT: 10m
+    REPORT_PATH: artifacts_ci_report.md
+    SUMMARY_PATH: artifacts_ci_summary.md
+    ENV_PATH: artifacts_env.txt
+    LOG_TAIL: test.log.tail
 
 jobs:
   build-and-test:
@@ -92,7 +96,22 @@ jobs:
             echo "gcc: $(gcc --version | head -n 1)"
             echo "python: $(python3 --version)"
             echo "date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          } > artifacts_env.txt
+          } > "${ENV_PATH}"
+
+      - name: Prepare readable logs
+        if: always()
+        run: |
+          tail -n 200 test.log > "${LOG_TAIL}" || true
+
+      - name: Generate CI report
+        if: always()
+        run: |
+          python3 tools/generate_chrono2d_ci_report.py \
+            --run-id "${GITHUB_RUN_ID}" \
+            --csv "${CSV_PATH}" \
+            --log "${LOG_TAIL}" \
+            --env "${ENV_PATH}" \
+            --out "${REPORT_PATH}"
 
       - name: Summarize Run ID and artifacts
         if: always()
@@ -101,10 +120,10 @@ jobs:
             echo "- Run: #${GITHUB_RUN_ID} (chrono-2d experimental)"
             echo "- Artifact: chrono-2d-ci-exp-${GITHUB_RUN_ID}"
             echo "- CSV: ${CSV_PATH} (schema: time,case,method,vn,vt,mu_s,mu_d,stick,condition_bound,condition_spectral,min_pivot,max_pivot)"
-            echo "- Logs: test.log (tail uploaded), env.txt"
+            echo "- Logs: test.log (tail uploaded), env: ${ENV_PATH}, report: ${REPORT_PATH}"
             echo "- Status: ${{ steps.run_tests.outputs.status }}"
             echo "- Retry: ${{ steps.run_tests.outputs.retry || '0' }}"
-          } > artifacts_ci_summary.md
+          } > "${SUMMARY_PATH}"
 
       - name: Upload minimal artifacts
         if: always()
@@ -113,9 +132,11 @@ jobs:
           name: chrono-2d-ci-exp-${{ github.run_id }}
           path: |
             test.log
+            ${LOG_TAIL}
             ${CSV_PATH}
-            artifacts_ci_summary.md
-            artifacts_env.txt
+            ${SUMMARY_PATH}
+            ${ENV_PATH}
+            ${REPORT_PATH}
           retention-days: 30
 
       - name: Fail if tests failed
