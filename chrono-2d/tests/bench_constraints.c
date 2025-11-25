@@ -11,6 +11,7 @@ int main(int argc, char **argv) {
     const char *out_path = "artifacts/bench_constraints.csv";
     const char *baseline_path = "data/bench_baseline.csv";
     int warn_only = 0;
+    double threshold_scale = 1.5;
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "--iterations") == 0 && i + 1 < argc) {
             iterations = atoi(argv[i + 1]);
@@ -18,6 +19,8 @@ int main(int argc, char **argv) {
             out_path = argv[i + 1];
         } else if (strcmp(argv[i], "--warn-only") == 0) {
             warn_only = 1;
+        } else if (strcmp(argv[i], "--threshold") == 0 && i + 1 < argc) {
+            threshold_scale = atof(argv[i + 1]);
         }
     }
 
@@ -77,7 +80,7 @@ int main(int argc, char **argv) {
 
         for (int b = 0; b < base_count; ++b) {
             if (base_threads[b] == th && base_time[b] > 0.0) {
-                double threshold = base_time[b] * 1.5;
+                double threshold = base_time[b] * threshold_scale;
                 if (time_us > threshold) {
                     fprintf(stderr,
                             "Benchmark regression (threads=%d): %.3f us > 1.5x baseline %.3f us\n",

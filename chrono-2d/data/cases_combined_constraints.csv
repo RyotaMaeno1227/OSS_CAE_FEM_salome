@@ -1,0 +1,3 @@
+name,type,axis_x,axis_y,anchor_ax,anchor_ay,anchor_bx,anchor_by,mass_a,mass_b,inertia_a,inertia_b
+composite_planar_distance,planar,1.0,0.0,0.0,0.0,0.2,-0.05,0.0,100.0,0.0,10.0
+composite_distance,distance,0.0,0.0,0.0,0.0,0.2,-0.05,0.0,100.0,0.0,10.0

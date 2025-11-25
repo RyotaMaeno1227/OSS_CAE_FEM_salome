@@ -308,6 +308,27 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    /* Composite constraint should remain finite but may degrade conditioning */
+    const ConstraintCase *comp_planar = find_case(&res, "composite_planar_distance");
+    const ConstraintCase *comp_dist = find_case(&res, "composite_distance");
+    if (!comp_planar || !comp_dist) {
+        fprintf(stderr, "Composite constraint cases missing\n");
+        dump_failure_json("composite_missing", &res);
+        return 1;
+    }
+    if (comp_planar->condition_bound <= 0.0 || comp_dist->condition_bound <= 0.0) {
+        fprintf(stderr, "Composite cond invalid\n");
+        dump_failure_json("composite_invalid", &res);
+        return 1;
+    }
+    if (comp_planar->condition_bound < 0.5 || comp_planar->condition_bound > 60.0 ||
+        comp_dist->condition_bound < 0.5 || comp_dist->condition_bound > 60.0) {
+        fprintf(stderr, "Composite cond out of range (planar %.3f, dist %.3f)\n",
+                comp_planar->condition_bound, comp_dist->condition_bound);
+        dump_failure_json("composite_range", &res);
+        return 1;
+    }
+
     /* Determinism / OpenMP thread sweep */
     int base_threads = compare_threads && thread_count > 0 ? thread_list[0] : 1;
     int sweep_count = compare_threads ? thread_count : 1;

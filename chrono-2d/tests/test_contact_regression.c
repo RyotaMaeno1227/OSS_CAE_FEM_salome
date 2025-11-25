@@ -50,8 +50,8 @@ static const ConstraintCase *find_case(const SolveResult *res, const char *name)
 }
 
 int main(void) {
-    ContactCaseDef defs[16];
-    int case_count = load_contact_cases("data/cases_contact_extended.csv", defs, 16);
+    ContactCaseDef defs[32];
+    int case_count = load_contact_cases("data/cases_contact_extended.csv", defs, 32);
     if (case_count <= 0) {
         fprintf(stderr, "No contact dataset loaded\n");
         return 1;

@@ -350,6 +350,23 @@ SolveResult run_coupled_constraint(void) {
                                     .axis = {axis_y[0], axis_y[1]}};
     push_constraint_case(&res, &heavy_prismatic, 4.5);
 
+    /* Composite constraint: distance + planar on mixed masses to check interference */
+    Constraint2D composite_planar = {.name = "composite_planar_distance",
+                                     .type = CONSTRAINT_PLANAR,
+                                     .a = &anchor,
+                                     .b = &heavy,
+                                     .anchor_a = {0.0, 0.0},
+                                     .anchor_b = {0.2, -0.05},
+                                     .axis = {axis_x[0], axis_x[1]}};
+    push_constraint_case(&res, &composite_planar, 5.0);
+    Constraint2D composite_distance = {.name = "composite_distance",
+                                       .type = CONSTRAINT_DISTANCE,
+                                       .a = &anchor,
+                                       .b = &heavy,
+                                       .anchor_a = {0.0, 0.0},
+                                       .anchor_b = {0.2, -0.05}};
+    push_constraint_case(&res, &composite_distance, 5.1);
+
     /* Contact stick (low tangential velocity) */
     Constraint2D contact_stick;
     double contact_point[2] = {0.05, -0.05};

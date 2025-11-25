@@ -56,6 +56,11 @@ jobs:
         run: |
           python3 tools/check_chrono2d_csv_schema.py artifacts/kkt_descriptor_actions_local.csv
 
+      - name: Minimal CSV head (for quick view)
+        if: always()
+        run: |
+          head -n 20 artifacts/kkt_descriptor_actions_local.csv > artifacts/kkt_descriptor_actions_head.csv || true
+
       - name: Record environment
         if: always()
         run: |
@@ -83,6 +88,11 @@ jobs:
             --env artifacts_env.txt \
             --out artifacts_ci_report.md
 
+      - name: Weekly report (schedule only)
+        if: github.event_name == 'schedule'
+        run: |
+          cp artifacts_ci_report.md artifacts_ci_report_weekly.md || true
+
       - name: Summarize Run ID and artifacts
         if: always()
         run: |
@@ -105,9 +115,11 @@ jobs:
             test.log
             test.log.tail
             artifacts/kkt_descriptor_actions_local.csv
+            artifacts/kkt_descriptor_actions_head.csv
             artifacts_ci_summary.md
             artifacts_env.txt
             artifacts_ci_report.md
+            artifacts_ci_report_weekly.md
           retention-days: 30
 
       - name: Fail if tests failed
