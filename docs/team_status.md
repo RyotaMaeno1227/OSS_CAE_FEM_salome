@@ -11,6 +11,12 @@
   - A10: 異常系ダンプ/復帰機構として dump-json に診断フィールドを集約。  
   - A12: ベンチ可視化スクリプト雛形 `tools/plot_bench.py` を追加（matplotlib 無でも要約表示）。  
   - 生成物: `artifacts/*.csv` は報告のみでコミットしていません。
+- 実行タスク（今回: A3, A4, A10 再実行）  
+  - Run ID: local-chrono2d-20251118-03（ローカルテストのみ、Artifacts未コミット）  
+  - 内容: 摩擦端点/質量比1:100を含む回帰テスト再実行、スレッドスイープベンチ（warn-only で 1.5x 警告を確認）、dump-json/verbose を用いた異常系ダンプ確認。  
+  - 生成物: `artifacts/bench_constraints.csv`（警告のみ、コミットしない）・`artifacts/kkt_descriptor_actions_local.csv`（schema確認用）。  
+  - リンクチェック: なし（コード側のみ実行）。  
+  - 備考: ベンチ baseline 比は 1.5x 警告を出力。必要に応じて baseline を更新予定。
 
 ## Bチーム
 - 実行タスク: B1, B2, B4, B5, B13, B18
@@ -21,14 +27,21 @@
   - Run ID: 未取得（安定版/実験版ともに cron/dispatch 実行待ち）
   - Artifacts: chrono-2d-ci-${run}, artifacts_env.txt, bench_drift.txt（実験版 opt-in）
   - 備考: 安定版に timeout (20m/10m) と環境ログを追加、拡張スキーマを本番 fail 条件で維持。実験版に fail-on-drift オプションを追加し、compare_bench_csv.py で drift 時に exit 1 可能とした。
+- 実行タスク: B1, B2, B4, B5, B8, B16, B17, B18（安定/実験 両CIのレポート・最小化強化）
+  - Run ID: 未取得（次の cron/dispatch 実行後に記載）
+  - Artifacts: chrono-2d-ci-*（安定: test.log/tail/env/report/head CSV; 実験: fail-on-drift 入力対応、同等のレポート/ログ整形）
+  - 備考: 安定版にログ短縮・Markdownレポート・head CSV を追加し週次レポート用にコピー。Artifacts 最小化と保持 30 日を維持。実験版に env/log/report を揃え、fail-on-drift オプション付きのベンチ drift チェックを実装。週次報告生成ステップを追加（スケジュール時のみ）。スキップタグ運用は既存設定を継続。
 
 ## Cチーム
-- 実行タスク: C1, C3, C6, C9, C16, C17  
+- 実行タスク: C1, C3, C4, C6, C9, C12, C16, C17, C20  
   - C1: chrono-2d README 月次更新手順・ワンライナー共有例を追記、サンプル CSV を最新スキーマ（vn/vt/µs/µd/stick 含む）に差し替え。  
   - C3: chrono-main/chrono-2d/Chrono C 用 Run ID 貼付ワンライナーを `docs/abc_team_chat_handoff.md` に追加。  
+  - C4: 条件数/ピボット解説を表＋コマンド例で再構成し、即実行できる形式へ継続整備（着手待ち）。  
   - C6: リンク/整合チェック手順を README に追記（check_doc_links スクリプトはリポジトリ未収載のため未実行）。  
   - C9: CSV スキーマ説明と生成スクリプト (`tools/check_chrono2d_csv_schema.py --emit-sample ...`) を README に明記し、テンプレ (`docs/chrono_2d_cases_template.csv`) と同期。  
+  - C12: ドキュメントのフォーマット統一と簡易Lintチェック導入（着手待ち）。  
   - C16: 学習ステップチェックリストに反映先・リンクチェック・Changelog 記録までの手順を拡張。  
   - C17: 逸脱/異常時の連絡テンプレをチャット向けに整理。  
+  - C20: Changelog 運用強化（トリガー明文化・遵守）を追加で実施予定。  
 - Run/Artifacts: 実 Run なし（サンプル CSV のみ差し替え）。`python tools/check_chrono2d_csv_schema.py --csv chrono-2d/artifacts/kkt_descriptor_actions_local.csv` → OK。  
 - リンクチェック: `scripts/check_doc_links.py` が存在せず未実行。  
