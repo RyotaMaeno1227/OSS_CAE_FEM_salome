@@ -1,6 +1,16 @@
 # チーム完了報告（A/B/Cそれぞれ自セクションのみ編集）
 
 ## Aチーム
+- 実行タスク: A5, A8, A12, A14, A17（15分自走スプリント 3回目）  
+  - Run ID: local-chrono2d-20251201-05（確認中心、ベンチ drift チェックのみ）  
+  - 内容:  
+    - A5: 外部化候補を再整理（chrono-2d/data/bench_baseline.csv, cases_combined_constraints.csv, cases_constraints.json, cases_contact_extended.csv, constraint_ranges.csv, contact_cases.csv、data/solid2d|solid3d|planar_constraint.csv|prismatic_slider.csv）。移行タスク票は未作成。  
+    - A8: `rg --fixed-strings -- '-W' chrono-2d` で CFLAGS を確認（`-std=c99 -O2 -Wall -Wextra -pedantic -fopenmp`、-Wshadow/-Wconversion なし）。警告ログ取得は未実行。  
+    - A12: `python tools/compare_bench_csv.py --previous chrono-2d/data/bench_baseline.csv chrono-2d/data/bench_baseline.csv` → `current rows: 4` / `no drift detected`（threads=1/2/4/8, time_us=0.207）。previous 不在の状態での baseline 同士比較のみ。  
+    - A14/A17: 閾値は `config/coupled_benchmark_thresholds.yaml` を参照済み。ログ粒度/上限の反映は未着手。  
+  - 生成物: なし（既存 CSV 参照のみ）。  
+  - git status: docs/team_runbook.md / docs/team_status.md / docs/documentation_changelog.md が変更中（コミットなし、Artifactsなし）。  
+  - リンクチェック: 追記後に実施予定。  
 - 実行タスク: A5, A8, A12, A14, A17（15分自走スプリント 2回目）  
   - Run ID: local-chrono2d-20251201-04（warn-only ベンチ＋警告確認）  
   - 内容:  
@@ -88,6 +98,12 @@
   - 実行状況: 実 CI/cron・drift チェック・容量測定は未実施（外部CI不可）。CI 解禁後に Run ID/Artifact/Log パスを記録し、チェックリストに沿って報告予定。
   - 生成物: なし（テンプレ/チェックリストのみ更新）。`git status`: docs のみ変更予定。
   - リンクチェック: `python scripts/check_doc_links.py docs/team_status.md docs/team_runbook.md docs/documentation_changelog.md` → OK。
+- 実行タスク: B3, B6, B8, B10, B15, B16, B17, B18（15分スプリント指示に基づく準備・実行なし）
+  - Run ID: 未取得（外部CI不可、ドキュメント整備のみ）
+  - 内容: 最新 runbook の 15 分スプリント指示を精査し、チャット共有テンプレ 3 例（成功/未実施/失敗）を `team_runbook.md` に沿う形で team_status 用メモとして整備。Artifacts 最小構成と保持 30 日チェックリストを再確認し、容量監視で記録する項目を列挙（使用量 / 保持日数 / クリーンアップ実施可否）。安定/実験ワークフローの YAML 共通化ステップ（共通: env/log tail 集約、安定: lint→test→report→head CSV、実験: fail-on-drift bench→report→head CSV）を適用順で整理。drift チェック結果欄に「外部CI不可で未実施」を明記する運用を追加。
+  - 実行状況: CI/cron 未実施、Run ID 未発行。drift チェック・容量測定も未実行で、次回 CI 解禁時に実測して報告予定。
+  - 生成物: なし（docs 更新のみ）。`git status`: docs 変更予定。
+  - リンクチェック: `python scripts/check_doc_links.py docs/team_status.md docs/team_runbook.md docs/documentation_changelog.md` → OK。
 - 実行タスク: B3, B6, B8, B15, B16（15分自走スプリント、外部CI不可）
   - Run ID: 未取得（外部CI不可のため発行せず）
   - 内容: Run ID 自動反映テンプレとチャット共有フォーマットを確認し、Artifacts 最小構成（head CSV / report.md / env.txt / log tail）と保持 30 日方針を再整理。容量監視項目と drift チェック結果欄を報告枠に含める方針を明記。YAML 共通化の候補ステップを列挙し、CI 解禁後に適用予定とした。
@@ -118,6 +134,12 @@
   - 内容: `docs/chrono_2d_readme.md` に条件数/ピボットの即時チェックワンライナーとフォーマット/Lint 手順を追記し、`docs/team_runbook.md` の長尺バッチ指示に沿って C チームの導線を整備。`docs/documentation_changelog.md` に記録（C20）。  
   - 生成物: なし（リンクチェックログのみ）。  
   - リンクチェック: `python scripts/check_doc_links.py docs/chrono_2d_readme.md docs/abc_team_chat_handoff.md docs/team_runbook.md docs/team_status.md docs/documentation_changelog.md` → OK。  
+- 実行タスク: C3, C4, C6, C9, C12, C15（15分スプリント・PMコメント確認）  
+  - Run ID: なし（ドキュメント確認・リンクチェックのみ）。  
+  - 内容: `docs/team_runbook.md` の 15 分スプリント指示と PM コメントを再確認し、作業量が「指示が少ない」状態ではないことを確認。C3/C4/C6/C9/C12/C15 の導線は既存ドキュメントに反映済みで追加作業不要と判断。  
+  - 生成物: なし。  
+  - `git status`: docs/team_runbook.md, docs/team_status.md, docs/documentation_changelog.md を確認対象とし、コード/CSV 生成なし。  
+  - リンクチェック: `python scripts/check_doc_links.py docs/team_runbook.md docs/team_status.md docs/documentation_changelog.md docs/abc_team_chat_handoff.md docs/chrono_2d_readme.md` → OK。  
 - 実行タスク: C3, C4, C6, C9, C12, C15（15分自走スプリント）  
   - Run ID: なし（ドキュメント更新のみ、テスト/CIは未実施）。  
   - 内容: `docs/abc_team_chat_handoff.md` に 15 分スプリント用の Run ID ワンライナー、条件数/ピボット即時チェック、CSV スキーマ確認、リンク/Lint コマンド、命名ポリシー、報告手順を追記。  
