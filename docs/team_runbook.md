@@ -47,6 +47,15 @@
   Run ID 貼付テンプレ→条件数/ピボット解説刷新→リンク/整合チェック導線→OpenMP/3D 方針強調→CSV スキーマ＆サンプル整備→命名/表記ガイド→Changelog トリガー明文化までを連続実行。更新ごとに `scripts/check_doc_links.py <更新md>` があれば実行し結果を記録。
 - 報告: 長尺バッチの各周で Run ID/Artifact/Log パス、`git status`、生成物有無、リンクチェック結果（実行した場合）を team_status.md に追記し、チャットへも共有。
 
+## 15分自走スプリント指示（短時間でもタスク多め）
+- Aチーム: `@A-team 実行: A5,A8,A12,A14,A17`  
+  例題外部化リストをタスク票化し、警告/リファクタ対象のフラグ一覧を整理。`tools/compare_bench_csv.py` で warn-only 1周を回し CSV head/summary を取得し、ベンチ上限/cond 逸脱を確認。ログ粒度設定の候補をまとめ、報告に Run ID/生成物有無を記載。
+- Bチーム: `@B-team 実行: B3,B6,B8,B15,B16`  
+  Run ID 自動反映テンプレを最新化し、Artifacts 最小構成（head CSV / report.md / env / log tail）を確認。CI 実行不可の場合は「未実施（外部CI不可）」と明記した報告枠を team_status に追記し、容量監視/retention 方針を整理。YAML 共通化の候補ステップを列挙。
+- Cチーム: `@C-team 実行: C3,C4,C6,C9,C12,C15`  
+  Run ID 貼付ワンライナーと条件数/ピボット解説を更新し、リンク/整合チェック導線を README/hand-off に反映。CSV スキーマとサンプルの差分を確認し、フォーマット統一/Lint コマンド（check_doc_links）の結果を team_status に記録。Changelog トリガーを短文化。
+- 報告: 各チームとも 15 分内で実行できる範囲を優先し、`team_status.md` に実行タスク、Run ID（未取得なら理由）、生成物有無、`git status` 概要、リンクチェック結果を追記する。
+
 ## Aチームタスク（実装/検証・長期）
 1. OpenMP on/off 切替オプションをCLI化し、pivot/cond差分を自動比較するテストを追加。  
 2. dump-json/verboseを拡張し、J行・入力パラメータ・異常系(NaN/Inf/pivot≈0)を最小再現JSONに出力。  
