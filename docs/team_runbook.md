@@ -38,6 +38,15 @@
   条件数/ピボット解説再構成→リンク/整合チェック導線→CSV スキーマとサンプル整備→フォーマット統一/Lint→CI/運用導線整備→Changelog トリガー明文化をまとめて実施。更新後は `docs/documentation_changelog.md` に追記し、必要なら `scripts/check_doc_links.py <更新md>` を実行（存在しない場合は未実行と明記）。
 - 実行・報告ルール: 全チームとも周回単位で結果を記録し、Run ID/Artifact/Log パス、`git status`、生成物有無、リンクチェック結果をセットで提出。長尺実行で中断が入る場合は途中経過を team_status.md にメモして継続可とする。
 
+## 次の実行指示（長時間自走モード・多タスク束ね）
+- Aチーム: `@A-team 実行: A3,A5-A10,A12,A13,A14,A17,A18`  
+  warn-only→fail の2周を必須。複合拘束/感度/ログ粒度/ベンチ上限をまとめて回し、cond/pivot と drift をチェック。各周で Run ID を付与し、`artifacts/*.csv` はコミットせず head/summary を報告。
+- Bチーム: `@B-team 実行: B3,B6,B8,B10,B15,B16,B17,B18,B20`  
+  dispatch/cron 両系を連続実行し、Run ID 自動反映・Artifacts 最小化・週次レポート生成・容量監視・fail-on-drift 運用・YAML 共通化まで一気に進める。各周で head CSV + report.md + env/log tail を最小構成で残す。
+- Cチーム: `@C-team 実行: C3,C4,C6,C8,C9,C11,C12,C15,C18,C20`  
+  Run ID 貼付テンプレ→条件数/ピボット解説刷新→リンク/整合チェック導線→OpenMP/3D 方針強調→CSV スキーマ＆サンプル整備→命名/表記ガイド→Changelog トリガー明文化までを連続実行。更新ごとに `scripts/check_doc_links.py <更新md>` があれば実行し結果を記録。
+- 報告: 長尺バッチの各周で Run ID/Artifact/Log パス、`git status`、生成物有無、リンクチェック結果（実行した場合）を team_status.md に追記し、チャットへも共有。
+
 ## Aチームタスク（実装/検証・長期）
 1. OpenMP on/off 切替オプションをCLI化し、pivot/cond差分を自動比較するテストを追加。  
 2. dump-json/verboseを拡張し、J行・入力パラメータ・異常系(NaN/Inf/pivot≈0)を最小再現JSONに出力。  
