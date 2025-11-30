@@ -49,6 +49,18 @@
 | `max_pivot` | KKT pivot 最大値 | 極端な値は要確認 | `csvstat -H --max artifacts/kkt_descriptor_actions_local.csv -c max_pivot` |
 | `case` | プリセット名 | ケース別の傾向比較 | `csvcut -c case,condition_spectral,min_pivot,max_pivot artifacts/kkt_descriptor_actions_local.csv` |
 
+### 条件数・Pivot クイックチェック（即実行）
+```bash
+cd chrono-2d
+# 平均・最小・最大をまとめて確認
+csvstat -H --mean --min --max artifacts/kkt_descriptor_actions_local.csv \
+  -c condition_spectral,min_pivot,max_pivot
+# しきい値に引っかかる行だけ抽出（例: pivot < 1e-3）
+csvsql --query "select case,condition_spectral,min_pivot,max_pivot \
+from stdin where min_pivot < 1e-3 or condition_spectral > 10" \
+  artifacts/kkt_descriptor_actions_local.csv
+```
+
 ## 拘束タイプ（2D 学習用の概要）
 - 距離: 2 点間距離を固定/制御。比率とスプリング剛性をセットで調整。
 - 回転: 角度を固定/制御。ヨー補正など。
@@ -115,3 +127,11 @@ time,case,method,vn,vt,mu_s,mu_d,stick,condition_bound,condition_spectral,min_pi
 - 見出し先頭に「chrono-2d」を付け、3D や chrono-main と混同しない。
 - Run ID テンプレと命名ポリシーを本文にリンクし、`docs/abc_team_chat_handoff.md` へ参照を追加。
 - 追加直後にリンクチェックを走らせ、結果をチャットに貼る。
+
+### フォーマット統一と簡易Lint（C12）
+```bash
+python scripts/check_doc_links.py docs/chrono_2d_readme.md docs/abc_team_chat_handoff.md docs/team_runbook.md
+```
+- Markdown は sentence case の見出し＋`bash`/`csv` のコードフェンスを維持。
+- Run ID と Artifact は「chrono-2d」を含めて chrono-main / Chrono C と混在させない。
+- チェック結果はチャットに貼り、必要なら `docs/documentation_changelog.md` に追記する。
