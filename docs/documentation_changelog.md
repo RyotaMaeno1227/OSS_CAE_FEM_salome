@@ -7,8 +7,11 @@
 | ドキュメント | 主な変更内容 | 担当 | 備考 |
 |--------------|--------------|------|------|
 | `docs/team_runbook.md` | 自動実行キュー（A/B/C）を追加し、長尺バッチの連続実行セットと報告ルールを明文化 | PM | 周回ごとに Run ID/Artifact/Log/`git status`/リンクチェック結果をセットで共有。 |
-| `docs/team_status.md` | 自動実行キューへの対応計画を追記（A5-A12 warn-only→fail 2 周回、C4/C6/C9/C12/C15/C20 のドキュメント整備バッチ） | A/Cチーム | Run ID は準備中（C はドキュメント更新のみ予定）。`scripts/check_doc_links.py` は存在する場合に実行し結果を共有。 |
+| `docs/team_status.md` | 自動実行キューへの対応計画を追記し、C チームの 1 周目（C4/C12/C20 ドキュメント更新）を記録 | A/Cチーム | Run ID なし（ドキュメントのみ）。`python scripts/check_doc_links.py ...` の結果を共有。 |
+| `docs/chrono_2d_readme.md` | 条件数/ピボット即時チェックのワンライナーとフォーマット/Lint 手順を追記（C4/C12） | Cチーム | `python scripts/check_doc_links.py docs/chrono_2d_readme.md docs/abc_team_chat_handoff.md docs/team_runbook.md` 実行済み。 |
 | `docs/team_status.md` | 自動実行キュー（B3,B6,B8,B15,B16,B17,B18）の実施準備と報告ルールを追記 | Bチーム | Run ID は長尺バッチ各周で記録予定。リンクチェックはスクリプト有無で判断。 |
+| `docs/team_status.md`, `docs/team_runbook.md` | 外部CI実行不可環境向けに B3/B6/B15 の報告枠・最小Artifacts構成・未実施注記を追加 | Bチーム | CI/cron 未実行。`python scripts/check_doc_links.py docs/team_status.md docs/team_runbook.md docs/documentation_changelog.md` 実行済み。 |
+| `docs/team_status.md` | A5/A8/A12 の precheck を追記し、A12 は compare_bench_csv.py による head/summary 報告とする PM 指示を明記 | Aチーム | Run ID: local-chrono2d-20251201-02（precheck、生成物なし）。リンクチェックは docs 未更新時は省略。 |
 
 ## 2025-11-14 更新
 

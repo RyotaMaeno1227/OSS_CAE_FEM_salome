@@ -17,7 +17,7 @@
   - 内容:  
     - A5: data/ 直下と solid2d/solid3d/planar_constraint.csv/prismatic_slider.csv を棚卸しし、chrono-2d/artifacts/kkt_descriptor_actions_local.csv との分離状況を確認（外部定義移行候補を収集）。  
     - A8: 警告/リファクタ対象を洗うため、警告フラグ設定の有無と tools 配下の類似スクリプトを探索（plot_bench.py は未発見、plot_coupled_constraint_endurance.py・summarize_coupled_benchmark_history.py 等が現存）。警告ログ取得は未着手。  
-    - A12: ベンチ可視化スクリプトを検索したが tools/plot_bench.py は存在せず。代替/移設先の確認が必要（類似ツールは上記のみ）。  
+    - A12: ベンチ可視化スクリプトを検索したが tools/plot_bench.py は存在せず。PM 指示により現行は tools/compare_bench_csv.py で drift/閾値チェック＋CSV head/summary を報告する方針（可視化追加は別タスク化予定）。  
   - 生成物: なし（確認のみ、実行前）  
   - リンクチェック: なし（docs 未更新のため省略）  
 - 実行タスク: A1, A2, A3, A4, A9, A10, A12（可視化雛形）  
