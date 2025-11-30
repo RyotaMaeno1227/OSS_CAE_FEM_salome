@@ -124,6 +124,16 @@
 
 ---
 
+### 15分自走スプリント（C3/C4/C6/C9/C12/C15 用）
+- Run ID/貼付: `echo "Run local-chrono2d-<date>-<seq> / Artifact chrono-2d/artifacts/kkt_descriptor_actions_local.csv / Log docs/chrono_2d_readme.md"` を流用。取得しない場合は理由を明記して報告枠だけ残す。  
+- 条件数/ピボット即時チェック（C4/C12）: `cd chrono-2d && csvstat -H --mean --min --max artifacts/kkt_descriptor_actions_local.csv -c condition_spectral,min_pivot,max_pivot`  
+- CSVスキーマ/サンプル確認（C9）: `python tools/check_chrono2d_csv_schema.py --csv chrono-2d/artifacts/kkt_descriptor_actions_local.csv --emit-sample /tmp/chrono2d_sample.csv`（生成物は未コミット）  
+- リンク/整合チェック（C6/C12/C15）: `python scripts/check_doc_links.py docs/chrono_2d_readme.md docs/abc_team_chat_handoff.md docs/team_runbook.md docs/team_status.md`  
+- 命名/表記ガイド（C15）: Run ID に chrono2d/chrono-main/Chrono C を含め、見出しは sentence case、コードフェンスは `bash`/`csv`。  
+- 終了報告: `docs/team_status.md` にタスク番号、Run ID（未取得理由可）、生成物有無、`git status` 概要、リンクチェック結果を記録し、`docs/documentation_changelog.md` に更新を追記。
+
+---
+
 ## 7. 代表コマンド集
 | 用途 | コマンド例 | 補足 |
 |------|-----------|------|
