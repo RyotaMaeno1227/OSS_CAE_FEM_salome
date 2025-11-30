@@ -1,11 +1,25 @@
 # チーム完了報告（A/B/Cそれぞれ自セクションのみ編集）
 
 ## Aチーム
+- 実行タスク: A5, A8, A12（自動実行キュー事前確認）  
+  - Run ID: local-chrono2d-20251201-02 (precheck, 実行前確認のみ)  
+  - 内容: A5 既存例題（data/solid2d|solid3d|planar_constraint.csv|prismatic_slider.csv 等）を棚卸しし、`chrono-2d/artifacts/kkt_descriptor_actions_local.csv` との分離を確認。A8 警告/リファクタ入口として警告フラグ/ツール探索（`tools/plot_bench.py` は未発見、`tools/plot_coupled_constraint_endurance.py` / `tools/summarize_coupled_benchmark_history.py` 等を確認、警告ログ取得は未着手）。A12 ベンチ可視化スクリプトを探索したが `tools/plot_bench.py` はリポジトリに存在せず、代替/移設先不明。  
+  - 生成物: なし（事前確認のみ）。  
+  - リンクチェック: `python scripts/check_doc_links.py docs/team_status.md docs/documentation_changelog.md` → OK。  
+  - 質問: A12 用可視化スクリプト不在。新規追加が必要か、既存ツール流用か方針確認待ち。  
 - 実行タスク: A5-A12（自動実行キュー 1周目: warn-only / 2周目: fail 計画）  
   - Run ID: local-chrono2d-20251201-01（準備中、実行前）  
   - 内容: 例題データ外部化対象（A5）の棚卸しと config/data パス確認、警告/リファクタ対象（A8）のコンパイルログ収集と優先度付け、ベンチ可視化（A12）の入力/出力確認を実施。長尺バッチ 2 周（warn-only→fail）で git status/生成物報告する手順を team_runbook の自動実行キューに沿って整理。  
   - 生成物: なし（計画のみ、実行前）  
   - リンクチェック: `python scripts/check_doc_links.py docs/team_status.md docs/documentation_changelog.md` → OK  
+- 実行タスク: A5, A8, A12（事前確認・着手）  
+  - Run ID: local-chrono2d-20251201-02（precheck、ベンチ未実行）  
+  - 内容:  
+    - A5: data/ 直下と solid2d/solid3d/planar_constraint.csv/prismatic_slider.csv を棚卸しし、chrono-2d/artifacts/kkt_descriptor_actions_local.csv との分離状況を確認（外部定義移行候補を収集）。  
+    - A8: 警告/リファクタ対象を洗うため、警告フラグ設定の有無と tools 配下の類似スクリプトを探索（plot_bench.py は未発見、plot_coupled_constraint_endurance.py・summarize_coupled_benchmark_history.py 等が現存）。警告ログ取得は未着手。  
+    - A12: ベンチ可視化スクリプトを検索したが tools/plot_bench.py は存在せず。代替/移設先の確認が必要（類似ツールは上記のみ）。  
+  - 生成物: なし（確認のみ、実行前）  
+  - リンクチェック: なし（docs 未更新のため省略）  
 - 実行タスク: A1, A2, A3, A4, A9, A10, A12（可視化雛形）  
   - Run ID: local-chrono2d-20251118-02（ローカルテストのみ、Artifacts未コミット）  
   - A1: `--threads` で OpenMP on/off/任意スレッド比較し、pivot/cond 差分を自動チェック（許容1e-6）。  
@@ -42,6 +56,12 @@
   - 報告: 各周回で Run ID/Artifact/Log パス、`git status` 概要、生成物有無、リンクチェック結果をセットで共有。長尺実行で中断する場合はこの `docs/team_status.md` に途中経過を残して継続。
   - Artifacts: chrono-2d-ci-*/report.md, test.log/tail, env.txt, head CSV（最小構成、保持日数確認中）
   - 備考: warn-only→fail モードの 2 周回で drift アラートを確認予定。スキップタグは現行運用を維持。リンクチェックは `scripts/check_doc_links.py` がある場合に実行、未存在時は未実行と記載。
+- 実行タスク: B3, B6, B15（外部CI実行不可のため手順/報告枠整備のみ）
+  - Run ID: 未取得（外部CI実行不可環境）
+  - 内容: B バッチの報告枠と最小 Artifacts 構成（report.md + head CSV + env.txt + log tail）を整理し、容量監視/保持 30 日方針と drift チェック結果欄のテンプレを準備。チャット共有テンプレに「未実施（外部CI不可）」記載を追加する前提で team_runbook の注記と合わせて運用予定。
+  - 実行状況: 実際の cron/dispatch は未実施。drift チェック/容量測定/Run ID 発行も未実行。次回 CI 実行時に Run ID とパスを埋める。
+  - 生成物: なし（テンプレ/方針のみ更新）。`git status`: docs のみ変更予定。
+  - リンクチェック: `scripts/check_doc_links.py docs/team_status.md docs/team_runbook.md docs/documentation_changelog.md` を実行。
 
 ## Cチーム
 - 実行タスク: C1, C3, C4, C6, C9, C12, C16, C17, C20  
@@ -61,3 +81,8 @@
   - 内容: 条件数/ピボット解説再構成→リンク/整合チェック導線→CSV スキーマとサンプル整備→フォーマット統一/Lint→CI/運用導線整備→Changelog トリガー明文化の順で連続実行。更新ごとに `scripts/check_doc_links.py <更新md...>`（存在する場合）を実行し、結果と `git status`/生成物有無を周回単位で報告。  
   - 生成物: なし（ドキュメントのみ。リンクチェックログはチャットに共有）。  
   - 備考: 長尺実行で中断する場合は途中経過を `docs/team_status.md` に追記し、完了後に `docs/documentation_changelog.md` へ記録。  
+- 実行タスク: C4, C12, C20（自動実行キュー 1 周目・ドキュメント更新）  
+  - Run ID: なし（ドキュメントのみ更新）。  
+  - 内容: `docs/chrono_2d_readme.md` に条件数/ピボットの即時チェックワンライナーとフォーマット/Lint 手順を追記し、`docs/team_runbook.md` の長尺バッチ指示に沿って C チームの導線を整備。`docs/documentation_changelog.md` に記録（C20）。  
+  - 生成物: なし（リンクチェックログのみ）。  
+  - リンクチェック: `python scripts/check_doc_links.py docs/chrono_2d_readme.md docs/abc_team_chat_handoff.md docs/team_runbook.md docs/team_status.md docs/documentation_changelog.md` → OK。  
