@@ -1,6 +1,11 @@
 # チーム完了報告（A/B/Cそれぞれ自セクションのみ編集）
 
 ## Aチーム
+- 実行タスク: A5-A12（自動実行キュー 1周目: warn-only / 2周目: fail 計画）  
+  - Run ID: local-chrono2d-20251201-01（準備中、実行前）  
+  - 内容: 例題データ外部化対象（A5）の棚卸しと config/data パス確認、警告/リファクタ対象（A8）のコンパイルログ収集と優先度付け、ベンチ可視化（A12）の入力/出力確認を実施。長尺バッチ 2 周（warn-only→fail）で git status/生成物報告する手順を team_runbook の自動実行キューに沿って整理。  
+  - 生成物: なし（計画のみ、実行前）  
+  - リンクチェック: `python scripts/check_doc_links.py docs/team_status.md docs/documentation_changelog.md` → OK  
 - 実行タスク: A1, A2, A3, A4, A9, A10, A12（可視化雛形）  
   - Run ID: local-chrono2d-20251118-02（ローカルテストのみ、Artifacts未コミット）  
   - A1: `--threads` で OpenMP on/off/任意スレッド比較し、pivot/cond 差分を自動チェック（許容1e-6）。  
@@ -31,6 +36,12 @@
   - Run ID: 未取得（次の cron/dispatch 実行後に記載）
   - Artifacts: chrono-2d-ci-*（安定: test.log/tail/env/report/head CSV; 実験: fail-on-drift 入力対応、同等のレポート/ログ整形）
   - 備考: 安定版にログ短縮・Markdownレポート・head CSV を追加し週次レポート用にコピー。Artifacts 最小化と保持 30 日を維持。実験版に env/log/report を揃え、fail-on-drift オプション付きのベンチ drift チェックを実装。週次報告生成ステップを追加（スケジュール時のみ）。スキップタグ運用は既存設定を継続。
+- 実行タスク: B3, B6, B8, B15, B16, B17, B18（自動実行キュー準備/報告ルール適用）
+  - Run ID: `local-chrono2d-YYYYMMDD-XX` / `#<ID> (chrono-main)` / `#<ID> (Chrono C)`（長尺バッチ各周で記録、未取得）
+  - 内容: Run ID 自動反映の本番化、Artifacts 最小化＋保持 30 日確認、週次レポート/チャットテンプレ更新、容量監視、安定/実験ワークフロー整備、ベンチ drift アラート強化を順に実施。cron/dispatch 両系でレポート生成し head CSV を確認。
+  - 報告: 各周回で Run ID/Artifact/Log パス、`git status` 概要、生成物有無、リンクチェック結果をセットで共有。長尺実行で中断する場合はこの `docs/team_status.md` に途中経過を残して継続。
+  - Artifacts: chrono-2d-ci-*/report.md, test.log/tail, env.txt, head CSV（最小構成、保持日数確認中）
+  - 備考: warn-only→fail モードの 2 周回で drift アラートを確認予定。スキップタグは現行運用を維持。リンクチェックは `scripts/check_doc_links.py` がある場合に実行、未存在時は未実行と記載。
 
 ## Cチーム
 - 実行タスク: C1, C3, C4, C6, C9, C12, C16, C17, C20  
@@ -45,3 +56,8 @@
   - C20: Changelog 運用強化（トリガー明文化・遵守）を追加で実施予定。  
 - Run/Artifacts: 実 Run なし（サンプル CSV のみ差し替え）。`python tools/check_chrono2d_csv_schema.py --csv chrono-2d/artifacts/kkt_descriptor_actions_local.csv` → OK。  
 - リンクチェック: `scripts/check_doc_links.py` が存在せず未実行。  
+- 実行タスク: C4, C6, C9, C12, C15, C20（自動実行キュー・長尺バッチ計画）  
+  - Run ID: 未取得（ドキュメント更新のみの想定、必要に応じて付与）。  
+  - 内容: 条件数/ピボット解説再構成→リンク/整合チェック導線→CSV スキーマとサンプル整備→フォーマット統一/Lint→CI/運用導線整備→Changelog トリガー明文化の順で連続実行。更新ごとに `scripts/check_doc_links.py <更新md...>`（存在する場合）を実行し、結果と `git status`/生成物有無を周回単位で報告。  
+  - 生成物: なし（ドキュメントのみ。リンクチェックログはチャットに共有）。  
+  - 備考: 長尺実行で中断する場合は途中経過を `docs/team_status.md` に追記し、完了後に `docs/documentation_changelog.md` へ記録。  
