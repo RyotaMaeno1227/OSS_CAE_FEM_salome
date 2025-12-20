@@ -104,7 +104,7 @@ time,case,method,vn,vt,mu_s,mu_d,stick,condition_bound,condition_spectral,min_pi
 ## 更新フローとチェック
 - README/Hands-on/チャットテンプレを更新したら同じコミットで Run ID テンプレも整合。
 - リンク・整合チェック: `python scripts/check_doc_links.py docs/chrono_2d_readme.md docs/abc_team_chat_handoff.md` を実行し、結果をチャットに貼る。
-- Changelog 追記トリガー: Run ID 追加、命名ポリシー変更、拘束タイプ説明や CSV サンプルを更新した場合は `docs/documentation_changelog.md` に記録。
+- Changelog 追記トリガー: Run ID/命名/拘束説明/CSV/リンク更新時は `docs/documentation_changelog.md` に記録。
 - 表記揺れチェック: 見出しは sentence case、コードブロックは ```bash```/```csv``` のみ。
 - アーカイブ方針: 古い Run ID/CSV を差し替える場合は `artifacts/archive/` に退避し、Changelog に移動日を記載。
 

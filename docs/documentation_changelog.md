@@ -17,6 +17,7 @@
 | `docs/team_status.md` | 15分スプリントでの B3/B6/B8/B15/B16 報告枠（外部CI不可）を追加 | Bチーム | Run ID 未取得（外部CI不可）。`python scripts/check_doc_links.py docs/team_status.md docs/team_runbook.md docs/documentation_changelog.md` 実行済み。 |
 | `docs/team_runbook.md`, `docs/team_status.md` | B 15分スプリント指示を拡張（チャットテンプレ例、保持30日チェックリスト、YAML共通化手順案） | Bチーム | 外部CI未実行。リンクチェック実行済み。 |
 | `docs/team_status.md` | 15分スプリント指示に基づき B3/B6/B8/B10/B15/B16/B17/B18 の報告枠・チェックリストを整理（外部CI未実行） | Bチーム | Run ID 未取得。`python scripts/check_doc_links.py docs/team_status.md docs/team_runbook.md docs/documentation_changelog.md` 実行済み。 |
+| `docs/team_status.md` | 15分スプリント（B3/B6/B8/B15/B16）の実行枠を追記し、未実施理由と最小Artifacts構成の確認を記録 | Bチーム | 外部CI不可のため Run ID 未取得。リンクチェック実行済み。 |
 | `docs/team_status.md` | A5/A8/A12 の precheck を追記し、A12 は compare_bench_csv.py による head/summary 報告とする PM 指示を明記 | Aチーム | Run ID: local-chrono2d-20251201-02（precheck、生成物なし）。リンクチェックは docs 未更新時は省略。 |
 | `docs/team_status.md` | 15分スプリント結果（A5/A8/A12/A14/A17）を追記し、compare_bench_csv warn-only 実行と閾値確認を記録 | Aチーム | Run ID: local-chrono2d-20251201-03（warn-only、生成物なし）。`python scripts/check_doc_links.py docs/team_status.md docs/documentation_changelog.md` 実行済み。 |
 | `docs/team_status.md` | 15分スプリント 2回目（A5/A8/A12/A14/A17）の確認ログを追加し、警告フラグ(-Wall/-Wextra等)とベンチ基準の現状を整理 | Aチーム | Run ID: local-chrono2d-20251201-04（確認のみ、生成物なし）。リンクチェックは追記後に実施予定。 |
@@ -24,6 +25,8 @@
 | `docs/team_status.md` | 15分スプリント 3回目で baseline 同士比較（driftなし）を記録 | Aチーム | Run ID: local-chrono2d-20251201-05（確認のみ、生成物なし）。`python tools/compare_bench_csv.py --previous chrono-2d/data/bench_baseline.csv chrono-2d/data/bench_baseline.csv` の結果を反映。 |
 | `docs/team_status.md` | 15分スプリント 3回目（A5/A8/A12/A14/A17）の確認ログを追記し、baseline 同士の compare_bench_csv 実行と CFLAGS (-Wall/-Wextra/-pedantic/-fopenmp) 現状を記録 | Aチーム | Run ID: local-chrono2d-20251201-05（確認のみ、生成物なし）。リンクチェックは追記後に実施予定。 |
 | `docs/team_status.md` | 15分スプリント（C3/C4/C6/C9/C12/C15）について PM コメントを確認し、追加作業不要で十分な負荷と判断した旨を追記 | Cチーム | Run ID なし（確認のみ）。`python scripts/check_doc_links.py docs/team_runbook.md docs/team_status.md docs/documentation_changelog.md ...` 実行済み。 |
+| `docs/chrono_2d_readme.md` | Changelog トリガー記載を短文化し、15分スプリントの簡潔化方針を反映 | Cチーム | `docs/chrono_2d_cases_template.csv` を確認（差分なし）。 |
+| `docs/team_status.md` | 15分スプリント（C3/C4/C6/C9/C12/C15）での上記変更とリンクチェック結果を追記 | Cチーム | Run ID なし（ドキュメントのみ）。`python scripts/check_doc_links.py ...` 実行済み。 |
 
 ## 2025-11-14 更新
 

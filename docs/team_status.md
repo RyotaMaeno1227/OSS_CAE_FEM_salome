@@ -104,6 +104,12 @@
   - 実行状況: CI/cron 未実施、Run ID 未発行。drift チェック・容量測定も未実行で、次回 CI 解禁時に実測して報告予定。
   - 生成物: なし（docs 更新のみ）。`git status`: docs 変更予定。
   - リンクチェック: `python scripts/check_doc_links.py docs/team_status.md docs/team_runbook.md docs/documentation_changelog.md` → OK。
+- 実行タスク: B3, B6, B8, B15, B16（15分スプリント実行・外部CI不可）
+  - Run ID: 未取得（外部CI不可のため発行せず）
+  - 内容: 15 分スプリント指示に従い、Run ID 自動反映テンプレとチャット共有テンプレを確認し、最小 Artifacts 構成（head CSV / report.md / env.txt / log tail）と保持 30 日チェックリスト、容量監視項目、drift 結果欄の記載を再確認。YAML 共通化の候補ステップは次回 CI 解禁後に適用する前提で整理済み。
+  - 実行状況: CI/cron 未実施、drift/容量測定も未実行（外部CI不可）。次回 Run ID/Artifact/Log を記録して更新予定。
+  - 生成物: なし（ドキュメントのみ）。`git status`: docs のみ変更。
+  - リンクチェック: `python scripts/check_doc_links.py docs/team_status.md docs/team_runbook.md docs/documentation_changelog.md` → OK。
 - 実行タスク: B3, B6, B8, B15, B16（15分自走スプリント、外部CI不可）
   - Run ID: 未取得（外部CI不可のため発行せず）
   - 内容: Run ID 自動反映テンプレとチャット共有フォーマットを確認し、Artifacts 最小構成（head CSV / report.md / env.txt / log tail）と保持 30 日方針を再整理。容量監視項目と drift チェック結果欄を報告枠に含める方針を明記。YAML 共通化の候補ステップを列挙し、CI 解禁後に適用予定とした。
@@ -140,6 +146,12 @@
   - 生成物: なし。  
   - `git status`: docs/team_runbook.md, docs/team_status.md, docs/documentation_changelog.md を確認対象とし、コード/CSV 生成なし。  
   - リンクチェック: `python scripts/check_doc_links.py docs/team_runbook.md docs/team_status.md docs/documentation_changelog.md docs/abc_team_chat_handoff.md docs/chrono_2d_readme.md` → OK。  
+- 実行タスク: C3, C4, C6, C9, C12, C15（15分スプリント）  
+  - Run ID: なし（ドキュメント更新のみ）。  
+  - 内容: `docs/chrono_2d_readme.md` の Changelog トリガーを短文化し、15分スプリント要件の簡潔化を反映。CSV スキーマは `docs/chrono_2d_cases_template.csv` を検証し、差分なし。  
+  - 生成物: なし（サンプル出力は未作成）。  
+  - `git status`: docs/chrono_2d_readme.md, docs/team_status.md, docs/documentation_changelog.md を変更。  
+  - リンクチェック: `python scripts/check_doc_links.py docs/chrono_2d_readme.md docs/abc_team_chat_handoff.md docs/team_runbook.md docs/team_status.md docs/documentation_changelog.md` → OK。  
 - 実行タスク: C3, C4, C6, C9, C12, C15（15分自走スプリント）  
   - Run ID: なし（ドキュメント更新のみ、テスト/CIは未実施）。  
   - 内容: `docs/abc_team_chat_handoff.md` に 15 分スプリント用の Run ID ワンライナー、条件数/ピボット即時チェック、CSV スキーマ確認、リンク/Lint コマンド、命名ポリシー、報告手順を追記。  
