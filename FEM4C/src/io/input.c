@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <limits.h>
+#include <sys/stat.h>
 
 #define MAX_NASTRAN_PROPERTIES 512
 
@@ -33,6 +34,14 @@ static fem_error_t input_parse_nastran_grid_short(input_control_t *input, const 
 static fem_error_t input_nastran_finalize_properties(void);
 static fem_error_t input_nastran_find_pshell_material(int pid, int *material_index);
 static fem_error_t input_ensure_nastran_element_capacity(int required);
+static int input_parser_is_directory(const char *path);
+static int input_parser_has_mesh_root(const char *path);
+static fem_error_t input_read_parser_mesh(const char *mesh_path);
+static fem_error_t input_read_parser_material(const char *material_path);
+static fem_error_t input_read_parser_boundary(const char *boundary_path);
+static void input_parser_trim(char *text);
+static int input_parser_is_label(const char *line, const char *label);
+static int input_parser_split_tokens(const char *line, char tokens[][64], int max_tokens);
 
 /* Utility helpers */
 static int input_is_blank_or_comment(const char *line)
@@ -281,6 +290,13 @@ fem_error_t input_read_data(const char *filename)
 {
     input_control_t input;
     fem_error_t err;
+
+    /* If the argument is a directory that contains parser outputs, shortcut here */
+    if (input_parser_is_directory(filename) && input_parser_has_mesh_root(filename)) {
+        printf("Detected parser output package in directory: %s\n", filename);
+        err = input_read_parser_package(filename);
+        return err;
+    }
     
     /* Open input file */
     err = input_open_file(&input, filename);
@@ -1019,6 +1035,394 @@ fem_error_t input_read_nastran_bulk(input_control_t *input)
     printf("    Nodes: %d\n", g_num_nodes);
     printf("    Elements: %d\n", g_num_elements);
     printf("    Materials: %d\n", g_num_materials);
+    return FEM_SUCCESS;
+}
+
+/* -------- Parser package reader (mesh/material/boundary) -------- */
+static int input_parser_is_directory(const char *path)
+{
+    struct stat st;
+    if (stat(path, &st) != 0) {
+        return 0;
+    }
+    return S_ISDIR(st.st_mode);
+}
+
+static int input_parser_has_mesh_root(const char *path)
+{
+    char test_path[1024];
+    snprintf(test_path, sizeof(test_path), "%s/mesh/mesh.dat", path);
+    struct stat st;
+    return stat(test_path, &st) == 0 && S_ISREG(st.st_mode);
+}
+
+static void input_parser_trim(char *text)
+{
+    if (!text) return;
+    size_t len = strlen(text);
+    while (len > 0 && isspace((unsigned char)text[len - 1])) {
+        text[--len] = '\0';
+    }
+    size_t start = 0;
+    while (text[start] && isspace((unsigned char)text[start])) {
+        start++;
+    }
+    if (start > 0) {
+        memmove(text, text + start, strlen(text + start) + 1);
+    }
+}
+
+static int input_parser_is_label(const char *line, const char *label)
+{
+    if (!line || !label) return 0;
+    size_t n = strlen(label);
+    if (strlen(line) < n) return 0;
+    for (size_t i = 0; i < n; ++i) {
+        char a = (char)tolower((unsigned char)line[i]);
+        char b = (char)tolower((unsigned char)label[i]);
+        if (a != b) return 0;
+    }
+    return 1;
+}
+
+static int input_parser_split_tokens(const char *line, char tokens[][64], int max_tokens)
+{
+    int count = 0;
+    const char *p = line;
+    while (*p && count < max_tokens) {
+        while (*p && (isspace((unsigned char)*p) || *p == ',')) {
+            ++p;
+        }
+        if (!*p) break;
+        const char *start = p;
+        while (*p && !isspace((unsigned char)*p) && *p != ',') {
+            ++p;
+        }
+        size_t len = (size_t)(p - start);
+        if (len >= 64) len = 63;
+        memcpy(tokens[count], start, len);
+        tokens[count][len] = '\0';
+        count++;
+    }
+    return count;
+}
+
+static fem_error_t input_parser_read_int(FILE *fp, const char *context, int *out)
+{
+    char line[256];
+    while (fgets(line, sizeof(line), fp)) {
+        input_parser_trim(line);
+        if (line[0] == '\0') continue;
+        if (sscanf(line, "%d", out) == 1) {
+            return FEM_SUCCESS;
+        }
+        break;
+    }
+    return error_set(FEM_ERROR_FILE_READ, "Failed to read %s", context);
+}
+
+static fem_error_t input_read_parser_mesh(const char *mesh_path)
+{
+    fem_error_t err;
+    FILE *fp = fopen(mesh_path, "r");
+    CHECK_FILE(fp, mesh_path);
+
+    char line[256];
+    int declared_nodes = 0;
+    int declared_elements = 0;
+
+    if (!fgets(line, sizeof(line), fp) ||
+        FEM_SUCCESS != input_parser_read_int(fp, "node count", &declared_nodes) ||
+        !fgets(line, sizeof(line), fp) ||
+        FEM_SUCCESS != input_parser_read_int(fp, "element count", &declared_elements)) {
+        fclose(fp);
+        return error_set(FEM_ERROR_FILE_READ, "Failed to read mesh counts from %s", mesh_path);
+    }
+
+    if (declared_nodes <= 0) {
+        fclose(fp);
+        return error_set(FEM_ERROR_INVALID_INPUT, "Invalid node count in %s", mesh_path);
+    }
+
+    err = globals_reserve_nodes(declared_nodes);
+    CHECK_ERROR_CLEANUP(err, fclose(fp));
+    err = globals_reserve_node_ids(declared_nodes + 1);
+    CHECK_ERROR_CLEANUP(err, fclose(fp));
+    err = globals_reserve_elements(declared_elements > 0 ? declared_elements : 1);
+    CHECK_ERROR_CLEANUP(err, fclose(fp));
+    err = globals_reserve_element_ids(declared_elements + 1);
+    CHECK_ERROR_CLEANUP(err, fclose(fp));
+
+    while (fgets(line, sizeof(line), fp)) {
+        input_parser_trim(line);
+        if (input_parser_is_label(line, "nodes")) {
+            break;
+        }
+    }
+    if (feof(fp)) {
+        fclose(fp);
+        return error_set(FEM_ERROR_FILE_READ, "nodes section not found in %s", mesh_path);
+    }
+
+    g_num_nodes = 0;
+    while (fgets(line, sizeof(line), fp)) {
+        input_parser_trim(line);
+        if (line[0] == '\0') continue;
+        if (input_parser_is_label(line, "elements")) {
+            break;
+        }
+        char tok[8][64];
+        int nt = input_parser_split_tokens(line, tok, 8);
+        if (nt < 4) {
+            fclose(fp);
+            return error_set(FEM_ERROR_FILE_READ, "Malformed node entry in %s", mesh_path);
+        }
+        int node_id = atoi(tok[0]);
+        double x = atof(tok[1]);
+        double y = atof(tok[2]);
+        double z = atof(tok[3]);
+
+        err = globals_reserve_nodes(g_num_nodes + 1);
+        CHECK_ERROR_CLEANUP(err, fclose(fp));
+        globals_initialize_node_entry(g_num_nodes);
+        g_node_coords[g_num_nodes][0] = x;
+        g_node_coords[g_num_nodes][1] = y;
+        g_node_coords[g_num_nodes][2] = z;
+        err = input_validate_map_node(node_id, g_num_nodes);
+        CHECK_ERROR_CLEANUP(err, fclose(fp));
+        g_num_nodes++;
+    }
+
+    if (g_num_nodes <= 0) {
+        fclose(fp);
+        return error_set(FEM_ERROR_INVALID_INPUT, "No nodes parsed from %s", mesh_path);
+    }
+
+    g_num_elements = 0;
+    while (fgets(line, sizeof(line), fp)) {
+        input_parser_trim(line);
+        if (line[0] == '\0') continue;
+        char tok[10][64];
+        int nt = input_parser_split_tokens(line, tok, 10);
+        if (nt < 4) {
+            fclose(fp);
+            return error_set(FEM_ERROR_FILE_READ, "Malformed element entry in %s", mesh_path);
+        }
+        int element_id = atoi(tok[0]);
+        int node_count = nt - 1;
+        int element_type;
+        if (node_count == 3) {
+            element_type = ELEMENT_T3;
+        } else if (node_count == 6) {
+            element_type = ELEMENT_T6;
+        } else {
+            fclose(fp);
+            return error_set(FEM_ERROR_INVALID_ELEMENT_TYPE,
+                             "Unsupported element node count %d in %s", node_count, mesh_path);
+        }
+
+        err = globals_reserve_elements(g_num_elements + 1);
+        CHECK_ERROR_CLEANUP(err, fclose(fp));
+        globals_initialize_element_entry(g_num_elements);
+        err = input_validate_map_element(element_id, g_num_elements);
+        CHECK_ERROR_CLEANUP(err, fclose(fp));
+
+        for (int i = 0; i < node_count; ++i) {
+            int node_id = atoi(tok[i + 1]);
+            int node_index = -1;
+            err = input_get_node_index(node_id, &node_index);
+            CHECK_ERROR_CLEANUP(err, fclose(fp));
+            g_element_nodes[g_num_elements][i] = node_index;
+        }
+        for (int i = node_count; i < MAX_NODES_PER_ELEMENT; ++i) {
+            g_element_nodes[g_num_elements][i] = -1;
+        }
+        g_element_type[g_num_elements] = element_type;
+        g_element_material[g_num_elements] = 0;
+        g_num_elements++;
+    }
+
+    fclose(fp);
+    return FEM_SUCCESS;
+}
+
+static fem_error_t input_read_parser_material(const char *material_path)
+{
+    fem_error_t err;
+    FILE *fp = fopen(material_path, "r");
+    CHECK_FILE(fp, material_path);
+
+    char line[256];
+    double E = 0.0, nu = 0.0, rho = 0.0;
+    int got = 0;
+
+    while (fgets(line, sizeof(line), fp) && got < 3) {
+        input_parser_trim(line);
+        if (line[0] == '\0') continue;
+        double v = 0.0;
+        if (sscanf(line, "%lf", &v) == 1) {
+            if (got == 0) E = v;
+            else if (got == 1) nu = v;
+            else if (got == 2) rho = v;
+            got++;
+        }
+    }
+    fclose(fp);
+
+    if (got < 3) {
+        return error_set(FEM_ERROR_FILE_READ, "material.dat is incomplete at %s", material_path);
+    }
+
+    err = globals_reserve_materials(1);
+    CHECK_ERROR(err);
+    err = globals_reserve_material_ids(2);
+    CHECK_ERROR(err);
+    globals_initialize_material_entry(0);
+    g_material_props[0][0] = E;
+    g_material_props[0][1] = nu;
+    g_material_props[0][2] = 1.0;
+    g_material_props[0][3] = rho;
+    g_material_type[0] = MATERIAL_PLANE_STRESS;
+    g_num_materials = 1;
+    err = input_validate_map_material(1, 0);
+    CHECK_ERROR(err);
+    return FEM_SUCCESS;
+}
+
+static fem_error_t input_read_parser_boundary(const char *boundary_path)
+{
+    fem_error_t err;
+    FILE *fp = fopen(boundary_path, "r");
+    CHECK_FILE(fp, boundary_path);
+
+    char line[512];
+    while (fgets(line, sizeof(line), fp)) {
+        input_parser_trim(line);
+        if (line[0] == '\0') continue;
+
+        if (strncmp(line, "Total number of Boundary Conditions", 35) == 0) {
+            fgets(line, sizeof(line), fp);
+            continue;
+        }
+        if (strncmp(line, "UNITSYS", 7) == 0) {
+            printf("  Info: boundary.dat declares UNITSYS (forces already in N)\n");
+            continue;
+        }
+
+        if (strncmp(line, "SPC", 3) == 0) {
+            char tok[12][64];
+            int nt = input_parser_split_tokens(line, tok, 12);
+            int gid = 0;
+            char comp[32] = "";
+            double disp = 0.0;
+            for (int i = 0; i < nt; ++i) {
+                if (strncmp(tok[i], "G=", 2) == 0) {
+                    gid = atoi(tok[i] + 2);
+                } else if (strncmp(tok[i], "C=", 2) == 0) {
+                    snprintf(comp, sizeof(comp), "%s", tok[i] + 2);
+                } else if (strncmp(tok[i], "D=", 2) == 0) {
+                    disp = atof(tok[i] + 2);
+                }
+            }
+            if (gid <= 0 || comp[0] == '\0') {
+                fclose(fp);
+                return error_set(FEM_ERROR_INVALID_INPUT,
+                                 "Malformed SPC entry in %s", boundary_path);
+            }
+            int node_index = -1;
+            err = input_get_node_index(gid, &node_index);
+            CHECK_ERROR_CLEANUP(err, fclose(fp));
+            for (size_t k = 0; k < strlen(comp); ++k) {
+                int c = comp[k] - '0';
+                if (c == 1 || c == 2) {
+                    g_node_bc_flags[node_index][c - 1] = 1;
+                    g_node_displ[node_index][c - 1] = disp;
+                } else if (c == 3) {
+                    printf("  Warning: SPC with z-direction constraint ignored for G=%d\n", gid);
+                }
+            }
+            continue;
+        }
+
+        if (strncmp(line, "FORCE", 5) == 0) {
+            char tok[12][64];
+            int nt = input_parser_split_tokens(line, tok, 12);
+            int gid = 0;
+            double F = 0.0, n1 = 0.0, n2 = 0.0, n3 = 0.0;
+            for (int i = 0; i < nt; ++i) {
+                if (strncmp(tok[i], "G=", 2) == 0) {
+                    gid = atoi(tok[i] + 2);
+                } else if (strncmp(tok[i], "F=", 2) == 0) {
+                    F = atof(tok[i] + 2);
+                } else if (tok[i][0] == 'N' && tok[i][1] == '=') {
+                    char buf[192];
+                    buf[0] = '\0';
+                    for (int j = i; j < nt && j < i + 3; ++j) {
+                        if (buf[0]) {
+                            strncat(buf, " ", sizeof(buf) - strlen(buf) - 1);
+                        }
+                        strncat(buf, tok[j], sizeof(buf) - strlen(buf) - 1);
+                        if (strchr(tok[j], ')')) {
+                            i = j; /* consume up to j */
+                            break;
+                        }
+                    }
+                    for (char *p = buf; *p; ++p) {
+                        if (*p == ',') *p = ' ';
+                    }
+                    double a = 0.0, b = 0.0, c = 0.0;
+                    if (sscanf(buf, "N=(%lf %lf %lf)", &a, &b, &c) == 3 ||
+                        sscanf(buf, "N=%lf %lf %lf", &a, &b, &c) == 3) {
+                        n1 = a; n2 = b; n3 = c;
+                    }
+                }
+            }
+            if (gid <= 0) {
+                fclose(fp);
+                return error_set(FEM_ERROR_INVALID_INPUT,
+                                 "Malformed FORCE entry in %s", boundary_path);
+            }
+            int node_index = -1;
+            err = input_get_node_index(gid, &node_index);
+            CHECK_ERROR_CLEANUP(err, fclose(fp));
+            g_node_force[node_index][0] += F * n1;
+            g_node_force[node_index][1] += F * n2;
+            g_node_force[node_index][2] += F * n3;
+            continue;
+        }
+    }
+
+    fclose(fp);
+    return FEM_SUCCESS;
+}
+
+fem_error_t input_read_parser_package(const char *directory)
+{
+    fem_error_t err;
+    char mesh_path[1024];
+    char material_path[1024];
+    char boundary_path[1024];
+
+    snprintf(mesh_path, sizeof(mesh_path), "%s/mesh/mesh.dat", directory);
+    snprintf(material_path, sizeof(material_path), "%s/material/material.dat", directory);
+    snprintf(boundary_path, sizeof(boundary_path), "%s/Boundary Conditions/boundary.dat", directory);
+
+    if (!input_parser_has_mesh_root(directory)) {
+        return error_set(FEM_ERROR_FILE_NOT_FOUND, "mesh/mesh.dat not found under %s", directory);
+    }
+
+    err = input_read_parser_mesh(mesh_path);
+    CHECK_ERROR(err);
+    err = input_read_parser_material(material_path);
+    CHECK_ERROR(err);
+    err = input_read_parser_boundary(boundary_path);
+    CHECK_ERROR(err);
+
+    g_analysis.num_nodes = g_num_nodes;
+    g_analysis.num_elements = g_num_elements;
+    g_analysis.num_materials = g_num_materials;
+    g_total_dof = g_num_nodes * 2;
+    snprintf(g_analysis.title, sizeof(g_analysis.title), "Parser package: %s", directory);
     return FEM_SUCCESS;
 }
 

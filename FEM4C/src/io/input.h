@@ -12,6 +12,7 @@
 typedef enum {
     INPUT_FORMAT_NATIVE = 0,    /* Native FEM4C format */
     INPUT_FORMAT_NASTRAN,       /* Nastran bulk format */
+    INPUT_FORMAT_PARSER_PACKAGE,/* Output of parser (mesh/material/boundary dirs) */
     INPUT_FORMAT_AUTO          /* Auto-detect format */
 } input_format_t;
 
@@ -54,6 +55,7 @@ fem_error_t input_parse_nastran_mat1(input_control_t *input, const char *line);
 fem_error_t input_parse_nastran_spc(input_control_t *input, const char *line);
 fem_error_t input_parse_nastran_force(input_control_t *input, const char *line);
 fem_error_t input_parse_nastran_pshell(input_control_t *input, const char *line);
+fem_error_t input_read_parser_package(const char *directory);
 
 /* Nastran utility functions */
 fem_error_t input_nastran_parse_fixed_format(const char *line, char fields[][9], int max_fields);

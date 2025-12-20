@@ -1,0 +1,40 @@
+1
+                                              N A S T R A N    F I L E    A N D    S Y S T E M    P A R A M E T E R    E C H O
+                                                                                                                                                          PAGE    1
+
+
+0                                                               * * * * * * * * * * * * * * * *
+                                                                 *                             *
+                                                                 *        FEM4C SOLUTION      *
+                                                                 *                             *
+                                                                 * * * * * * * * * * * * * * * *
+
+
+0SOLUTION SUMMARY:
+     PROBLEM TITLE........ FEM4C HIGH PERFORMANCE FINITE ELEMENT ANALYSIS
+     SOLUTION TYPE........ STATIC ANALYSIS (SOL 101)
+     ANALYSIS DATE........ Sun Dec  7 01:54:00 2025
+     PROBLEM SIZE......... 3 NODES, 1 ELEMENTS, 6 DOF
+
+1                                                                          D I S P L A C E M E N T   V E C T O R
+                                                                                                                                                          PAGE    2
+0
+      POINT ID.   TYPE          T1             T2             T3             R1             R2             R3
+             1      G       0.000000E+00   0.000000E+00   0.000000E+00   0.000000E+00   0.000000E+00   0.000000E+00
+             2      G      -3.000000E-09   0.000000E+00   0.000000E+00   0.000000E+00   0.000000E+00   0.000000E+00
+             3      G       0.000000E+00   1.000000E-08   0.000000E+00   0.000000E+00   0.000000E+00   0.000000E+00
+
+1                                                            S T R E S S E S   I N   T R I A N G U L A R   E L E M E N T S    ( T R I A 3 )
+                                                                                                                                                          PAGE    3
+0
+  ELEMENT      FIBER               STRESSES IN ELEMENT COORD SYSTEM
+    ID.        DISTANCE           NORMAL-X       NORMAL-Y      SHEAR-XY
+       1  Z1 = 5.000E-01     1.136868E-13   2.000000E+03   0.000000E+00
+
+1                                                            F O R C E S   A N D   M O M E N T S   I N   S P C   F O R C E S
+                                                                                                                                                          PAGE    4
+0
+      POINT ID.   TYPE          T1             T2             T3             R1             R2             R3
+             1      G       0.000000E+00   0.000000E+00   0.000000E+00   0.000000E+00   0.000000E+00   0.000000E+00
+
+1                                         * * * E N D   O F   J O B * * *
