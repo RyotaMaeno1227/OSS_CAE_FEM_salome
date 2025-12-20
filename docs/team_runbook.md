@@ -56,6 +56,18 @@
   Run ID 貼付ワンライナーと条件数/ピボット解説を更新し、リンク/整合チェック導線を README/hand-off に反映。CSV スキーマとサンプルの差分を確認し、フォーマット統一/Lint コマンド（check_doc_links）の結果を team_status に記録。Changelog トリガーを短文化。
 - 報告: 各チームとも 15 分内で実行できる範囲を優先し、`team_status.md` に実行タスク、Run ID（未取得なら理由）、生成物有無、`git status` 概要、リンクチェック結果を追記する。タスクは複数束ねた前提で「指示が少ない」状況ではなく、3 分以内に終わる想定でもない。さらに積み増す場合は具体タスクを明記したうえで PM に相談する。
 
+## 次の実行指示（15分以上・実作業中心）
+- Aチーム: `@A-team 実行: A5,A8,A12,A14,A17`  
+  1) A5 外部化候補をタスク票化（入出力パス/サンプルCSV/JSON/チェック項目まで明記）。  
+  2) A8 警告フラグを反映してビルドし、警告ログを収集して優先度付け（上位3件は修正方針まで）。  
+  3) A12 ベンチを warn-only→fail の2周回し、`compare_bench_csv.py --previous data/bench_baseline.csv artifacts/bench_constraints.csv` の結果と head/summary を記録（Artifactsはコミットしない）。  
+  4) A14/A17 閾値・ログ粒度・時間上限の具体設定案をまとめる。  
+- Bチーム: `@B-team 実行: B3,B6,B8,B15,B16,B17`  
+  外部CI不可なら「未実施（外部CI不可）」を明記しつつ、チャット共有テンプレ（成功/未実施/失敗）を完成形にし、容量監視/retention チェックリストを確定。YAML 共通化の適用順と差分影響を整理し、実行時に埋める Run ID/Artifact/Log 欄を team_status に用意。  
+- Cチーム: `@C-team 実行: C3,C4,C6,C9,C12,C15`  
+  条件数/ピボット解説を本文1節分書き換え、CSV スキーマ/サンプル差分の確認結果を記録。リンク/Lint 手順の実行結果を添付し、命名/表記ガイドの短文化と Changelog 追記まで実施。  
+- 報告: 各チームとも 15 分超の実作業を実施し、`docs/team_status.md` に「実行タスク / Run ID / 生成物有無 / `git status` / リンクチェック結果」を追記する。
+
 ## Aチームタスク（実装/検証・長期）
 1. OpenMP on/off 切替オプションをCLI化し、pivot/cond差分を自動比較するテストを追加。  
 2. dump-json/verboseを拡張し、J行・入力パラメータ・異常系(NaN/Inf/pivot≈0)を最小再現JSONに出力。  
