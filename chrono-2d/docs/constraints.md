@@ -24,6 +24,16 @@
   - distance/revolute/planar/prismatic/gear: cond ∈ [0.5, 20]  
   - contact stick: cond ∈ [1, 10]  
   - contact slip: cond ∈ [3, 50]（stick より悪化していること）
+- パラメータ感度レンジ（`data/parameter_sensitivity_ranges.csv`）  
+  case 単位で cond/pivot の許容レンジを外出しし、テストで範囲判定を行う。
+- 初期レンジの根拠（A14）  
+  - 低レンジ（例: 0.5–10）: revolute/接触 stick の安定域を優先。  
+  - 中レンジ（例: 0.5–60）: 複合/距離系での drift を許容しつつ逸脱を抑制。  
+  - 高レンジ（例: 0.5–80）: 複合 prismatic 系の悪化を許容しつつ範囲内か判定。  
+- 複合拘束の評価観点（A18）  
+  - 対象: `composite_planar_distance`, `composite_distance`, `composite_prismatic_distance`, `composite_prismatic_distance_aux`, `composite_planar_prismatic`, `composite_planar_prismatic_aux`  
+  - 判定: 条件数が範囲内（planar/distance=0.5–60、prismatic/distance=0.5–80）、pivot が正値。  
+  - 期待: 複合ケース間で cond/pivot が極端に乖離しないこと、determinism チェックで許容誤差内に収まること。
 
 - CSV スキーマ  
   `time,case,method,condition_bound,condition_spectral,min_pivot,max_pivot,vn,vt,mu_s,mu_d,stick` を固定し、テストでヘッダと値域を検証。

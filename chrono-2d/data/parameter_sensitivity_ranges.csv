@@ -1,0 +1,11 @@
+case,cond_min,cond_max,pivot_min,pivot_max
+tele_yaw_control,0.5,10.0,1.0e-6,1.0e9
+mass_ratio_100,0.0,50.0,1.0e-6,1.0e9
+composite_planar_distance,0.5,60.0,1.0e-6,1.0e9
+composite_distance,0.5,60.0,1.0e-6,1.0e9
+composite_prismatic_distance,0.5,80.0,1.0e-6,1.0e9
+composite_prismatic_distance_aux,0.5,80.0,1.0e-6,1.0e9
+hydraulic_lift_sync,1.0,20.0,1.0e-6,1.0e9
+hydraulic_lift_sync_slip,3.0,60.0,1.0e-6,1.0e9
+composite_planar_prismatic,0.5,80.0,1.0e-6,1.0e9
+composite_planar_prismatic_aux,0.5,80.0,1.0e-6,1.0e9

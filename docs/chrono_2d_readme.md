@@ -60,6 +60,7 @@ csvsql --query "select case,condition_spectral,min_pivot,max_pivot \
 from stdin where min_pivot < 1e-3 or condition_spectral > 10" \
   artifacts/kkt_descriptor_actions_local.csv
 ```
+- 目安: `condition_spectral` が 10 超ならケースの拘束設定を見直し、`min_pivot` が 1e-4 未満なら数値不安定の兆候として共有する。
 
 ## 拘束タイプ（2D 学習用の概要）
 - 距離: 2 点間距離を固定/制御。比率とスプリング剛性をセットで調整。
@@ -85,6 +86,68 @@ time,case,method,vn,vt,mu_s,mu_d,stick,condition_bound,condition_spectral,min_pi
 スキーマテンプレ: `docs/chrono_2d_cases_template.csv`（更新時は本書とセットで差し替え）。  
 生成スクリプト: `python tools/check_chrono2d_csv_schema.py --emit-sample chrono-2d/artifacts/kkt_descriptor_actions_local.csv` でテンプレを再発行可能。  
 例題データセット: `chrono-2d/data/cases_constraints.json`, `chrono-2d/data/cases_contact_extended.csv`（ケース追加時は README とテンプレを同時更新）。
+
+### CSV スキーマ差分確認（C9）
+```bash
+python tools/check_chrono2d_csv_schema.py --emit-sample /tmp/chrono2d_schema_sample.csv
+diff -u docs/chrono_2d_cases_template.csv /tmp/chrono2d_schema_sample.csv
+```
+- 差分が出た場合はテンプレ/README を同時に更新し、`docs/documentation_changelog.md` に記録する。
+
+## 例題データセットのフォーマット方針（A5）
+- JSON: 拘束ケースの定義（anchor/axis など）を `chrono-2d/data/cases_constraints.json` に集約。  
+- CSV: 接触・レンジ・複合拘束は CSV で外部定義し、読み取り対象を `chrono-2d/data/` に固定する。  
+  - 接触: `chrono-2d/data/cases_contact_extended.csv` / `chrono-2d/data/contact_cases.csv`  
+  - 拘束レンジ: `chrono-2d/data/constraint_ranges.csv`  
+  - 複合拘束: `chrono-2d/data/cases_combined_constraints.csv`  
+- 命名: `case` 名は snake_case を維持し、JSON/CSV 間で同一名を使う。
+- 参照パス: 例題は `chrono-2d/data/` のみを参照し、`chrono-2d/artifacts/` の CSV を入力にしない。  
+- データ一覧: `bench_baseline.csv`, `cases_constraints.json`, `cases_contact_extended.csv`, `contact_cases.csv`, `constraint_ranges.csv`, `cases_combined_constraints.csv` を基準セットとする。
+
+## 近似誤差許容と感度レンジ（A7/A14）
+- 近似誤差許容（determinism 用）: `chrono-2d/data/approx_tolerances.csv`  
+  `case,cond_tol,pivot_tol` で case 別の許容誤差を設定し、テスト側で適用する。  
+- 追加ルール: 新規 case を追加する場合は `approx_tolerances.csv` に同名行を追加し、許容値の根拠（参照ログやスイープ結果）をメモに残す。
+- パラメータ感度レンジ: `chrono-2d/data/parameter_sensitivity_ranges.csv`  
+  `case,cond_min,cond_max,pivot_min,pivot_max` で許容レンジを外出しし、条件数/ピボットの範囲判定に使う。
+  複合拘束は `cases_combined_constraints.csv` と同名で運用する。
+
+## 異常系ダンプ/復帰（A10）
+- `tests/test_coupled_constraint` は `--dump-json <path>` で最小再現 JSON を出力。  
+  失敗理由、`descriptor_log` パス、`approx_tolerances.csv` / `parameter_sensitivity_ranges.csv` の参照、スレッド設定、  
+  各 case の cond/pivot/接触パラメータ/J 行を含める。  
+- 復帰時は JSON と Run ID をセットで共有し、同一入力で再実行できることを確認する。
+  例:
+  ```json
+  {
+    "reason": "composite_planar_prismatic_range",
+    "descriptor_log": "artifacts/kkt_descriptor_actions_local.csv",
+    "tolerance_csv": "data/approx_tolerances.csv",
+    "sensitivity_csv": "data/parameter_sensitivity_ranges.csv",
+    "threads": {"compare": 1, "list": [1, 8]},
+    "cases": [{"name": "composite_planar_prismatic", "cond_bound": 1.234e+00, "pivot_min": 1.000e-03}]
+  }
+  ```
+
+## ケース生成スクリプト（A11）
+`chrono-2d/scripts/gen_constraint_cases.py`  
+- 生成物の配置: `--output-dir chrono-2d/data/generated` を推奨。  
+- 命名ルール:  
+  - `cases_constraints_sweep.json`  
+  - `cases_contact_sweep.csv`  
+- 入力: `chrono-2d/data/cases_constraints.json`, `chrono-2d/data/cases_contact_extended.csv` を読み込む。  
+- 生成物レイアウト（固定パス）:
+  - `chrono-2d/data/generated/README.md`（生成条件・スケール一覧）
+  - `chrono-2d/data/generated/cases_constraints_sweep.json`
+  - `chrono-2d/data/generated/cases_contact_sweep.csv`
+- 運用導線: 生成物は `chrono-2d/data/generated/` に固定し、Aチームは README に生成条件を追記してから共有する。
+- 例:  
+  ```bash
+  python chrono-2d/scripts/gen_constraint_cases.py \
+    --output-dir chrono-2d/data/generated \
+    --emit-constraint-sweep --emit-contact-sweep \
+    --sweep-scales 0.5,1.0,2.0
+  ```
 
 ## チャット共有テンプレ（chrono-2d）
 ```

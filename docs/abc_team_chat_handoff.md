@@ -58,14 +58,17 @@
   - `chrono-C-all/include/chrono_small_matrix.h`, `chrono-C-all/src/chrono_small_matrix.c`
   - `chrono-C-all/include/chrono_island2d_tbb.h`, `chrono-C-all/src/chrono_island2d_tbb.cpp`
 - **C↔C++ 対応表（概念レベル）**:
-  | C 実装 (chrono-C-all) | Chrono C++ (chrono-main) の対応概念 | 備考 |
-  |---|---|---|
-  | `chrono_body2d.*` | `ChBody` | 2D 剛体の姿勢/質量/慣性に相当 |
-  | `chrono_constraint2d.*` | `ChLink` 各種 | 距離/回転/プリズマ/プラナー等の拘束群 |
-  | `chrono_collision2d.*` | `ChCollisionSystem` / `ChCollisionModel` | 2D 接触検出と応答 |
-  | `chrono_island2d.*` | `ChSystem` 内の島/ソルバ実行 | アイランド単位の解法フロー |
-  | `chrono_constraint_kkt_backend.*` | `ChSystemDescriptor` / KKT 診断 | 条件数・ピボット等の診断系 |
-  | `chrono_constraint_common.h` | `ChConstraint` 系の診断情報 | 共通診断構造体 |
+  | C 実装 (chrono-C-all) | Chrono C++ (chrono-main) の対応概念 | 対応状況 | 備考 |
+  |---|---|---|---|
+  | `chrono_body2d.*` | `ChBody` | 対応済み | 2D 剛体の姿勢/質量/慣性に相当 |
+  | `chrono_constraint2d.*` | `ChLink` 各種 | 対応済み | 距離/回転/プリズマ/プラナー等の拘束群 |
+  | `chrono_collision2d.*` | `ChCollisionSystem` / `ChCollisionModel` | 対応済み | 2D 接触検出と応答 |
+  | `chrono_island2d.*` | `ChSystem` 内の島/ソルバ実行 | 対応済み | アイランド単位の解法フロー |
+  | `chrono_constraint_kkt_backend.*` | `ChSystemDescriptor` / KKT 診断 | 一部対応 | 条件数・ピボット等の診断系 |
+  | `chrono_constraint_common.h` | `ChConstraint` 系の診断情報 | 対応済み | 共通診断構造体 |
+  | `chrono_logging.*` | `ChLogger` / ログ基盤 | 対応済み | 収束ログ/診断ログの出力 |
+  | `chrono_small_matrix.*` | `ChMatrix` ヘルパ | 対応済み | 小行列演算ユーティリティ |
+  | `chrono_island2d_tbb.*` | oneTBB スケジューラ連携 | 対応済み(実験) | 2D island の TBB 実験 |
 - **Aチーム向け最小入出力サンプル**:
   - 参照: `chrono-C-all/README.md`（Building the tests / Examples）
   - コマンド例:
@@ -78,6 +81,17 @@
     ./chrono-C-all/tests/test_distance_constraint_stabilization
     ```
   - 入力: ソース同梱（外部入力なし）。出力: stdout の収束ログのみ（生成物なし）。
+  - 成功条件: `Constraint stabilized within tolerance` が表示され、exit code が 0。
+- **ケース生成スクリプト（A11 サポート）**:
+  - 入力: `chrono-2d/data/cases_constraints.json`, `chrono-2d/data/cases_contact_extended.csv`
+  - 出力: `chrono-2d/data/generated/cases_constraints_sweep.json` / `cases_contact_sweep.csv`
+  - 例:
+    ```bash
+    python chrono-2d/scripts/gen_constraint_cases.py \
+      --output-dir chrono-2d/data/generated \
+      --emit-constraint-sweep --emit-contact-sweep \
+      --sweep-scales 0.5,1.0,2.0
+    ```
 
 ---
 

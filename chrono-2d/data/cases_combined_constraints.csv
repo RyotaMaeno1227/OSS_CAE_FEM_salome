@@ -1,3 +1,7 @@
 name,type,axis_x,axis_y,anchor_ax,anchor_ay,anchor_bx,anchor_by,mass_a,mass_b,inertia_a,inertia_b
 composite_planar_distance,planar,1.0,0.0,0.0,0.0,0.2,-0.05,0.0,100.0,0.0,10.0
 composite_distance,distance,0.0,0.0,0.0,0.0,0.2,-0.05,0.0,100.0,0.0,10.0
+composite_prismatic_distance,prismatic,0.0,1.0,0.0,0.0,0.15,0.02,0.0,1.0,0.0,0.2
+composite_prismatic_distance_aux,distance,0.0,0.0,0.0,0.0,0.15,0.02,0.0,1.0,0.0,0.2
+composite_planar_prismatic,planar,1.0,0.0,0.0,0.0,0.12,0.03,0.0,1.1,0.0,0.28
+composite_planar_prismatic_aux,prismatic,0.0,1.0,0.0,0.0,0.12,0.03,0.0,1.1,0.0,0.28

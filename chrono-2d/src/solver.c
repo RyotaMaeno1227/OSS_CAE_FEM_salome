@@ -384,6 +384,24 @@ SolveResult run_coupled_constraint(void) {
                                              .anchor_b = {0.15, 0.02}};
     push_constraint_case(&res, &composite_prismatic_dist, 5.3);
 
+    /* Composite constraint: planar + prismatic on slider for interference check */
+    Constraint2D composite_planar_prismatic = {.name = "composite_planar_prismatic",
+                                               .type = CONSTRAINT_PLANAR,
+                                               .a = &anchor,
+                                               .b = &slider,
+                                               .anchor_a = {0.0, 0.0},
+                                               .anchor_b = {0.12, 0.03},
+                                               .axis = {axis_x[0], axis_x[1]}};
+    push_constraint_case(&res, &composite_planar_prismatic, 5.4);
+    Constraint2D composite_planar_prismatic_aux = {.name = "composite_planar_prismatic_aux",
+                                                   .type = CONSTRAINT_PRISMATIC,
+                                                   .a = &anchor,
+                                                   .b = &slider,
+                                                   .anchor_a = {0.0, 0.0},
+                                                   .anchor_b = {0.12, 0.03},
+                                                   .axis = {axis_y[0], axis_y[1]}};
+    push_constraint_case(&res, &composite_planar_prismatic_aux, 5.5);
+
     /* Contact stick (low tangential velocity) */
     Constraint2D contact_stick;
     double contact_point[2] = {0.05, -0.05};

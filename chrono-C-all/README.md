@@ -49,6 +49,8 @@ gcc -std=c99 -Iinclude src/chrono_body2d.c src/chrono_constraint2d.c \
 The test connects a dynamic body to a static anchor and verifies that the solver
 converges to the target rest length within a tolerance of 1 mm while reporting
 intermediate constraint distances.
+Success criteria: the output includes `Constraint stabilized within tolerance`
+and the process exits with code 0.
 
 Additional regression tests are available via `make test` (see the top-level `Makefile`).  Notable examples:
 

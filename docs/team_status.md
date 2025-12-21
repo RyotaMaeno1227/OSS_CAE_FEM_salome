@@ -1,6 +1,38 @@
 # チーム完了報告（A/B/Cそれぞれ自セクションのみ編集）
 
 ## Aチーム
+- 実行タスク: A10, A14, A18（タスク表更新・追加対応）  
+  - Run ID: local-chrono2d-20251201-14  
+  - 内容:  
+    - A10: README に dump-json の出力例を追加し、最小再現 JSON の項目を確定。  
+    - A14: 感度レンジの初期値レビューを `chrono-2d/docs/constraints.md` に追記（低/中/高レンジの根拠メモ）。  
+    - A18: 複合拘束の追加候補を 1 組追加（planar+prismatic）。`cases_combined_constraints.csv` に追記し、評価観点を `chrono-2d/docs/constraints.md` に追記。  
+  - テスト: `make -C chrono-2d test` → PASS。  
+  - 生成物: なし（build/artifacts は clean 済み）。  
+  - リンクチェック: `python scripts/check_doc_links.py docs/team_status.md docs/documentation_changelog.md` → OK  
+  - git status: chrono-2d/src/solver.c, chrono-2d/tests/test_coupled_constraint.c, chrono-2d/data/cases_combined_constraints.csv, chrono-2d/data/parameter_sensitivity_ranges.csv, chrono-2d/docs/constraints.md, docs/chrono_2d_readme.md, docs/documentation_changelog.md, docs/team_status.md が変更中。  
+- 実行タスク: A10, A14, A18（タスク表更新分）  
+  - Run ID: local-chrono2d-20251201-13  
+  - 内容:  
+    - A10: dump-json に `parameter_sensitivity_ranges.csv` の参照を追加し、README に項目を明記。  
+    - A14: 感度レンジを更新（接触ケースの範囲を追加）し、複合拘束も同名で運用する旨を README に追記。  
+    - A18: 複合拘束の候補/評価観点を `chrono-2d/docs/constraints.md` に明文化し、`cases_combined_constraints.csv` に prismatic+distance の候補を追加。  
+  - テスト: `make -C chrono-2d test` → PASS。  
+  - 生成物: なし（build/artifacts は clean 済み）。  
+  - リンクチェック: `python scripts/check_doc_links.py docs/team_status.md docs/documentation_changelog.md` → OK  
+  - git status: chrono-2d/tests/test_coupled_constraint.c, chrono-2d/data/parameter_sensitivity_ranges.csv, chrono-2d/data/cases_combined_constraints.csv, chrono-2d/docs/constraints.md, docs/chrono_2d_readme.md, docs/documentation_changelog.md, docs/team_status.md が変更中。  
+- 実行タスク: A5, A7, A10, A11, A14（タスク表更新分）  
+  - Run ID: local-chrono2d-20251201-12  
+  - 内容:  
+    - A5: 例題データセットの JSON/CSV 方針と読み込みパスを `docs/chrono_2d_readme.md` に明文化。  
+    - A7: 近似誤差許容の適用範囲を `chrono-2d/data/approx_tolerances.csv` と README に整理し、determinism チェックの粒度を明記。  
+    - A10: dump-json の仕様（reason/descriptor_log/tolerance_csv/threads/cases）を README に追記。  
+    - A11: `gen_constraint_cases.py` の生成物命名/配置ルールを README に追記。  
+    - A14: 感度レンジを `chrono-2d/data/parameter_sensitivity_ranges.csv` に外出しし、テストで範囲判定。`chrono-2d/docs/constraints.md` にも追記。  
+  - テスト: `make -C chrono-2d test` → PASS。  
+  - 生成物: なし（build/artifacts は clean 済み）。  
+  - リンクチェック: `python scripts/check_doc_links.py docs/team_status.md docs/documentation_changelog.md` → OK  
+  - git status: chrono-2d/docs/constraints.md, chrono-2d/tests/test_coupled_constraint.c, chrono-2d/data/parameter_sensitivity_ranges.csv, docs/chrono_2d_readme.md, docs/documentation_changelog.md, docs/team_status.md が変更中。  
 - 実行タスク: A7, A9, A10, A11, A18（直近タスク一括実施）  
   - Run ID: local-chrono2d-20251201-11  
   - 内容:  
@@ -196,10 +228,22 @@
   - リンクチェック: `python scripts/check_doc_links.py docs/team_status.md docs/team_runbook.md docs/documentation_changelog.md` → OK。
 - 実行タスク: B1, B2, B3（移植棚卸し・対応表・最小サンプル整備）
   - Run ID: 未取得（ドキュメント整備のみ）
-  - 内容: `docs/abc_team_chat_handoff.md` に移植対象ファイル棚卸し、C↔C++ 対応表（概念レベル）、Aチーム向け最小入出力サンプル（`chrono-C-all/README.md` のテストコマンド）を追加。Aチームが即テストできる導線として同手順を handoff に集約。
+  - 内容: `docs/abc_team_chat_handoff.md` に移植対象ファイル棚卸し、C↔C++ 対応表（概念レベル）、Aチーム向け最小入出力サンプル（`chrono-C-all/README.md` のテストコマンドと成功条件）を追加。Aチームが即テストできる導線として同手順を handoff に集約し、`chrono-C-all/README.md` にも成功条件を明記。
   - 実行状況: 外部CI/実行は未実施。Run ID/Artifacts は未発行。
   - 生成物: なし。`git status`: docs のみ変更。
   - リンクチェック: `python scripts/check_doc_links.py docs/abc_team_chat_handoff.md docs/team_status.md docs/documentation_changelog.md` → OK。
+- 実行タスク: A5, A7, A11, B1（Bチーム支援）
+  - Run ID: 未取得（ドキュメント整備のみ）
+  - 内容: `docs/chrono_2d_readme.md` の A5/A7/A11 を更新し、外部定義データの参照パスと基準セット、近似誤差許容の追加ルール、ケース生成スクリプトの入力元を明記。`docs/abc_team_chat_handoff.md` に A11 の生成例を追記して Aチーム導線を補強。
+  - 実行状況: 外部CI/実行は未実施。Run ID/Artifacts は未発行。
+  - 生成物: なし。`git status`: docs のみ変更。
+  - リンクチェック: `python scripts/check_doc_links.py docs/chrono_2d_readme.md docs/abc_team_chat_handoff.md docs/team_status.md docs/documentation_changelog.md` を実行。
+- 実行タスク: A5, A7, A11, B1（タスク表更新分）
+  - Run ID: 未取得（ドキュメント整備のみ）
+  - 内容: `docs/chrono_2d_readme.md` に `chrono-2d/data/generated` の固定パス・生成物レイアウトと運用導線を追記。`docs/abc_team_chat_handoff.md` の C↔C++ 対応表に対応状況列（対応済み/一部対応/実験）を追加し可視化。
+  - 実行状況: 外部CI/実行は未実施。Run ID/Artifacts は未発行。
+  - 生成物: なし。`git status`: docs のみ変更。
+  - リンクチェック: `python scripts/check_doc_links.py docs/chrono_2d_readme.md docs/abc_team_chat_handoff.md docs/team_status.md docs/documentation_changelog.md` を実行。
 - 実行タスク: B3, B6, B8, B15, B16（15分自走スプリント、外部CI不可）
   - Run ID: 未取得（外部CI不可のため発行せず）
   - 内容: Run ID 自動反映テンプレとチャット共有フォーマットを確認し、Artifacts 最小構成（head CSV / report.md / env.txt / log tail）と保持 30 日方針を再整理。容量監視項目と drift チェック結果欄を報告枠に含める方針を明記。YAML 共通化の候補ステップを列挙し、CI 解禁後に適用予定とした。
@@ -257,6 +301,24 @@
 - 実行タスク: C8, C11, C18（全タスク消化の一環）  
   - Run ID: なし（ドキュメント更新のみ）。  
   - 内容: `docs/chrono_2d_readme.md` に Run ID 同期先（git_setup）と用語/表記ガイドを追記し、OpenMP/3D 方針の表記を統一（C8/C11/C18）。  
+  - 生成物: なし。  
+  - `git status`: docs/chrono_2d_readme.md, docs/team_status.md, docs/documentation_changelog.md を変更。  
+  - リンクチェック: `python scripts/check_doc_links.py docs/chrono_2d_readme.md docs/abc_team_chat_handoff.md docs/team_runbook.md docs/team_status.md docs/documentation_changelog.md` → OK。  
+- 実行タスク: C4, C6, C9, C12（直近で実施すべきタスク）  
+  - Run ID: なし（ドキュメント更新のみ）。  
+  - 内容: 条件数/ピボット解説は `docs/chrono_2d_readme.md` に即時チェック手順として反映済み（C4）。リンク/整合チェック（C6）と CSV スキーマ確認（C9）を再実行し、フォーマット/Lint（C12）は `check_doc_links.py` の結果で記録。  
+  - 生成物: なし。  
+  - `git status`: docs/team_status.md, docs/documentation_changelog.md を変更。  
+  - リンクチェック: `python scripts/check_doc_links.py docs/chrono_2d_readme.md docs/abc_team_chat_handoff.md docs/team_runbook.md docs/team_status.md docs/documentation_changelog.md` → OK。  
+- 実行タスク: C4, C6, C9, C12（タスク更新分の再実行）  
+  - Run ID: なし（ドキュメント確認のみ）。  
+  - 内容: 条件数/ピボット解説は現行手順を維持（C4）。リンク/整合チェック（C6）と CSV スキーマ確認（C9）を再実施し、フォーマット/Lint（C12）はリンクチェック結果で記録。  
+  - 生成物: なし。  
+  - `git status`: docs/team_status.md, docs/documentation_changelog.md を変更。  
+  - リンクチェック: `python scripts/check_doc_links.py docs/chrono_2d_readme.md docs/abc_team_chat_handoff.md docs/team_runbook.md docs/team_status.md docs/documentation_changelog.md` → OK。  
+- 実行タスク: C4, C6, C9, C12（タスク更新分の実作業）  
+  - Run ID: なし（ドキュメント更新のみ）。  
+  - 内容: `docs/chrono_2d_readme.md` に cond/pivot の目安補足と CSV スキーマ差分確認手順を追記（C4/C9）。C6/C12 はリンクチェックで記録。  
   - 生成物: なし。  
   - `git status`: docs/chrono_2d_readme.md, docs/team_status.md, docs/documentation_changelog.md を変更。  
   - リンクチェック: `python scripts/check_doc_links.py docs/chrono_2d_readme.md docs/abc_team_chat_handoff.md docs/team_runbook.md docs/team_status.md docs/documentation_changelog.md` → OK。  

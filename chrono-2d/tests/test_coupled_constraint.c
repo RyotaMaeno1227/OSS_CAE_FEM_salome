@@ -18,11 +18,20 @@ typedef struct {
     double pivot_tol;
 } ToleranceRule;
 
+typedef struct {
+    char name[64];
+    double cond_min;
+    double cond_max;
+    double pivot_min;
+    double pivot_max;
+} SensitivityRule;
+
 static int verbose = 0;
 static int dump_json = 0;
 static const char *dump_path = "artifacts/failure_dump.json";
 static const char *descriptor_log_path = "artifacts/kkt_descriptor_actions_local.csv";
 static const char *tolerance_path = "data/approx_tolerances.csv";
+static const char *sensitivity_path = "data/parameter_sensitivity_ranges.csv";
 static int compare_threads = 0;
 static int thread_list[8] = {0};
 static int thread_count = 0;
@@ -38,10 +47,12 @@ static void dump_failure_json(const char *reason, const SolveResult *res) {
             "  \"reason\": \"%s\",\n"
             "  \"descriptor_log\": \"%s\",\n"
             "  \"tolerance_csv\": \"%s\",\n"
+            "  \"sensitivity_csv\": \"%s\",\n"
             "  \"threads\": {\"compare\": %d, \"list\": [",
             reason,
             descriptor_log_path,
             tolerance_path,
+            sensitivity_path,
             compare_threads);
     for (int i = 0; i < thread_count; ++i) {
         fprintf(fp, "%s%d", (i == 0 ? "" : ","), thread_list[i]);
@@ -166,6 +177,43 @@ static int load_tolerances(const char *path, ToleranceRule *rules, int max_rules
 }
 
 static const ToleranceRule *find_tolerance(const ToleranceRule *rules, int count, const char *name) {
+    for (int i = 0; i < count; ++i) {
+        if (strcmp(rules[i].name, name) == 0) {
+            return &rules[i];
+        }
+    }
+    return NULL;
+}
+
+static int load_sensitivity(const char *path, SensitivityRule *rules, int max_rules) {
+    FILE *fp = fopen(path, "r");
+    if (!fp) {
+        return 0;
+    }
+    char line[256];
+    if (!fgets(line, sizeof(line), fp)) {
+        fclose(fp);
+        return 0;
+    }
+    int count = 0;
+    while (fgets(line, sizeof(line), fp) && count < max_rules) {
+        char name[64];
+        double cond_min, cond_max, pivot_min, pivot_max;
+        if (sscanf(line, "%63[^,],%lf,%lf,%lf,%lf",
+                   name, &cond_min, &cond_max, &pivot_min, &pivot_max) == 5) {
+            strcpy(rules[count].name, name);
+            rules[count].cond_min = cond_min;
+            rules[count].cond_max = cond_max;
+            rules[count].pivot_min = pivot_min;
+            rules[count].pivot_max = pivot_max;
+            count++;
+        }
+    }
+    fclose(fp);
+    return count;
+}
+
+static const SensitivityRule *find_sensitivity(const SensitivityRule *rules, int count, const char *name) {
     for (int i = 0; i < count; ++i) {
         if (strcmp(rules[i].name, name) == 0) {
             return &rules[i];
@@ -301,6 +349,8 @@ int main(int argc, char **argv) {
     int range_count = load_ranges("data/constraint_ranges.csv", rules, 16);
     ToleranceRule tolerances[32];
     int tol_count = load_tolerances(tolerance_path, tolerances, 32);
+    SensitivityRule sensitivity[32];
+    int sensitivity_count = load_sensitivity(sensitivity_path, sensitivity, 32);
 
     const ConstraintCase *revolute = find_case(&res, "tele_yaw_control");
     if (!revolute || revolute->condition_bound < 0.5 || revolute->condition_bound > 10.0) {
@@ -411,6 +461,45 @@ int main(int argc, char **argv) {
                 comp_prismatic->condition_bound, comp_prismatic_aux->condition_bound);
         dump_failure_json("composite_prismatic_range", &res);
         return 1;
+    }
+
+    const ConstraintCase *comp_planar_prismatic = find_case(&res, "composite_planar_prismatic");
+    const ConstraintCase *comp_planar_prismatic_aux = find_case(&res, "composite_planar_prismatic_aux");
+    if (!comp_planar_prismatic || !comp_planar_prismatic_aux) {
+        fprintf(stderr, "Composite planar/prismatic cases missing\n");
+        dump_failure_json("composite_planar_prismatic_missing", &res);
+        return 1;
+    }
+    if (comp_planar_prismatic->condition_bound <= 0.0 ||
+        comp_planar_prismatic_aux->condition_bound <= 0.0) {
+        fprintf(stderr, "Composite planar/prismatic cond invalid\n");
+        dump_failure_json("composite_planar_prismatic_invalid", &res);
+        return 1;
+    }
+    if (comp_planar_prismatic->condition_bound < 0.5 || comp_planar_prismatic->condition_bound > 80.0 ||
+        comp_planar_prismatic_aux->condition_bound < 0.5 || comp_planar_prismatic_aux->condition_bound > 80.0) {
+        fprintf(stderr, "Composite planar/prismatic cond out of range (planar %.3f, prismatic %.3f)\n",
+                comp_planar_prismatic->condition_bound, comp_planar_prismatic_aux->condition_bound);
+        dump_failure_json("composite_planar_prismatic_range", &res);
+        return 1;
+    }
+
+    for (int i = 0; i < res.count; ++i) {
+        const ConstraintCase *c = &res.cases[i];
+        const SensitivityRule *rule = find_sensitivity(sensitivity, sensitivity_count, c->name);
+        if (!rule)
+            continue;
+        if (c->condition_bound < rule->cond_min || c->condition_bound > rule->cond_max) {
+            fprintf(stderr, "Sensitivity cond out of range for %s: %.3f\n", c->name, c->condition_bound);
+            dump_failure_json("sensitivity_cond_range", &res);
+            return 1;
+        }
+        if (c->min_pivot < rule->pivot_min || c->max_pivot > rule->pivot_max) {
+            fprintf(stderr, "Sensitivity pivot out of range for %s: %.6e/%.6e\n",
+                    c->name, c->min_pivot, c->max_pivot);
+            dump_failure_json("sensitivity_pivot_range", &res);
+            return 1;
+        }
     }
 
     /* Determinism / OpenMP thread sweep */
