@@ -32,6 +32,8 @@ static const char *dump_path = "artifacts/failure_dump.json";
 static const char *descriptor_log_path = "artifacts/kkt_descriptor_actions_local.csv";
 static const char *tolerance_path = "data/approx_tolerances.csv";
 static const char *sensitivity_path = "data/parameter_sensitivity_ranges.csv";
+static const char *dataset_version_path = "data/dataset_version.txt";
+static char dataset_version[64] = "unknown";
 static int compare_threads = 0;
 static int thread_list[8] = {0};
 static int thread_count = 0;
@@ -48,11 +50,15 @@ static void dump_failure_json(const char *reason, const SolveResult *res) {
             "  \"descriptor_log\": \"%s\",\n"
             "  \"tolerance_csv\": \"%s\",\n"
             "  \"sensitivity_csv\": \"%s\",\n"
+            "  \"dataset_version\": \"%s\",\n"
+            "  \"dataset_version_path\": \"%s\",\n"
             "  \"threads\": {\"compare\": %d, \"list\": [",
             reason,
             descriptor_log_path,
             tolerance_path,
             sensitivity_path,
+            dataset_version,
+            dataset_version_path,
             compare_threads);
     for (int i = 0; i < thread_count; ++i) {
         fprintf(fp, "%s%d", (i == 0 ? "" : ","), thread_list[i]);
@@ -149,6 +155,24 @@ static const RangeRule *find_range(const RangeRule *rules, int count, const char
         }
     }
     return NULL;
+}
+
+static int load_dataset_version(void) {
+    FILE *fp = fopen(dataset_version_path, "r");
+    if (!fp) {
+        return 0;
+    }
+    if (!fgets(dataset_version, sizeof(dataset_version), fp)) {
+        fclose(fp);
+        return 0;
+    }
+    fclose(fp);
+    size_t len = strlen(dataset_version);
+    while (len > 0 && (dataset_version[len - 1] == '\n' || dataset_version[len - 1] == '\r')) {
+        dataset_version[len - 1] = '\0';
+        len--;
+    }
+    return len > 0;
 }
 
 static int load_tolerances(const char *path, ToleranceRule *rules, int max_rules) {
@@ -315,6 +339,12 @@ int main(int argc, char **argv) {
     if (res.count <= 0) {
         fprintf(stderr, "No constraint cases produced\n");
         dump_failure_json("no_cases", &res);
+        return 1;
+    }
+
+    if (!load_dataset_version()) {
+        fprintf(stderr, "Missing dataset version file\n");
+        dump_failure_json("dataset_version_missing", &res);
         return 1;
     }
 

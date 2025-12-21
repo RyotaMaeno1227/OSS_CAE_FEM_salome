@@ -111,6 +111,8 @@ diff -u docs/chrono_2d_cases_template.csv /tmp/chrono2d_schema_sample.csv
 - パラメータ感度レンジ: `chrono-2d/data/parameter_sensitivity_ranges.csv`  
   `case,cond_min,cond_max,pivot_min,pivot_max` で許容レンジを外出しし、条件数/ピボットの範囲判定に使う。
   複合拘束は `cases_combined_constraints.csv` と同名で運用する。
+- データセット版: `chrono-2d/data/dataset_version.txt`  
+  データセット更新時に日付ベースで更新し、テスト側で存在確認する（欠落時は fail）。
 
 ## 異常系ダンプ/復帰（A10）
 - `tests/test_coupled_constraint` は `--dump-json <path>` で最小再現 JSON を出力。  
@@ -124,10 +126,17 @@ diff -u docs/chrono_2d_cases_template.csv /tmp/chrono2d_schema_sample.csv
     "descriptor_log": "artifacts/kkt_descriptor_actions_local.csv",
     "tolerance_csv": "data/approx_tolerances.csv",
     "sensitivity_csv": "data/parameter_sensitivity_ranges.csv",
+    "dataset_version": "2025-12-01",
+    "dataset_version_path": "data/dataset_version.txt",
     "threads": {"compare": 1, "list": [1, 8]},
     "cases": [{"name": "composite_planar_prismatic", "cond_bound": 1.234e+00, "pivot_min": 1.000e-03}]
   }
   ```
+
+## ログ粒度ポリシー（A15）
+- 最小ログ: `--verbose` なしで `make test` を実行し、Run ID と CSV head のみを記録。  
+- 詳細ログ: 失敗時のみ `--verbose` と `--dump-json` を付与し、`failure_dump.json` を添付。  
+- 報告ルール: Run ID / Artifact / git status / リンクチェック結果を `docs/team_status.md` に記載。
 
 ## ケース生成スクリプト（A11）
 `chrono-2d/scripts/gen_constraint_cases.py`  
@@ -182,6 +191,8 @@ diff -u docs/chrono_2d_cases_template.csv /tmp/chrono2d_schema_sample.csv
 - 参照: Markdown から相対パスでリンク。追加時は Changelog に追記。
 
 ## 学習ステップチェックリスト（コマンド付き）
+1ページ版: `docs/chrono_2d_glossary_checklist.md` を参照（用語/表記ガイド＋チェックリスト）。
+
 1. `cd chrono-2d && make test`
 2. `head -n 5 artifacts/kkt_descriptor_actions_local.csv`
 3. （任意）`csvstat --mean --min --max artifacts/kkt_descriptor_actions_local.csv -c condition_spectral,min_pivot,max_pivot`

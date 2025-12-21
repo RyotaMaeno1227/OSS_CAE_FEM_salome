@@ -51,6 +51,8 @@ converges to the target rest length within a tolerance of 1 mm while reporting
 intermediate constraint distances.
 Success criteria: the output includes `Constraint stabilized within tolerance`
 and the process exits with code 0.
+Repro notes: run from the repo root, capture stdout if needed (`./tests/test_distance_constraint_stabilization > /tmp/constraint_log.txt`).
+No artifacts are generated; only stdout is produced.
 
 Additional regression tests are available via `make test` (see the top-level `Makefile`).  Notable examples:
 
