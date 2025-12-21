@@ -367,6 +367,23 @@ SolveResult run_coupled_constraint(void) {
                                        .anchor_b = {0.2, -0.05}};
     push_constraint_case(&res, &composite_distance, 5.1);
 
+    /* Composite constraint: prismatic + distance on bob to surface interference */
+    Constraint2D composite_prismatic = {.name = "composite_prismatic_distance",
+                                        .type = CONSTRAINT_PRISMATIC,
+                                        .a = &anchor,
+                                        .b = &bob,
+                                        .anchor_a = {0.0, 0.0},
+                                        .anchor_b = {0.15, 0.02},
+                                        .axis = {axis_y[0], axis_y[1]}};
+    push_constraint_case(&res, &composite_prismatic, 5.2);
+    Constraint2D composite_prismatic_dist = {.name = "composite_prismatic_distance_aux",
+                                             .type = CONSTRAINT_DISTANCE,
+                                             .a = &anchor,
+                                             .b = &bob,
+                                             .anchor_a = {0.0, 0.0},
+                                             .anchor_b = {0.15, 0.02}};
+    push_constraint_case(&res, &composite_prismatic_dist, 5.3);
+
     /* Contact stick (low tangential velocity) */
     Constraint2D contact_stick;
     double contact_point[2] = {0.05, -0.05};

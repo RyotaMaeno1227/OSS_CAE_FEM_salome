@@ -46,6 +46,39 @@
   - `data/coupled_constraint_endurance.csv` の Run ID 欄を最新の #19376054987 系に更新し、差分を `docs/documentation_changelog.md` へ記載。
   - `data/endurance_archive/` に残った ZIP を削除し、`git status` の結果をチャットで共有。
 
+### B1/B2/B3: 移植前捌き（棚卸し・対応表・最小サンプル）
+- **移植対象ファイル棚卸し（コア）**:
+  - `chrono-C-all/include/chrono_body2d.h`, `chrono-C-all/src/chrono_body2d.c`
+  - `chrono-C-all/include/chrono_constraint2d.h`, `chrono-C-all/src/chrono_constraint2d.c`
+  - `chrono-C-all/include/chrono_collision2d.h`, `chrono-C-all/src/chrono_collision2d.c`
+  - `chrono-C-all/include/chrono_island2d.h`, `chrono-C-all/src/chrono_island2d.c`
+  - `chrono-C-all/include/chrono_constraint_kkt_backend.h`, `chrono-C-all/src/chrono_constraint_kkt_backend.c`
+  - `chrono-C-all/include/chrono_constraint_common.h`
+  - `chrono-C-all/include/chrono_logging.h`, `chrono-C-all/src/chrono_logging.c`
+  - `chrono-C-all/include/chrono_small_matrix.h`, `chrono-C-all/src/chrono_small_matrix.c`
+  - `chrono-C-all/include/chrono_island2d_tbb.h`, `chrono-C-all/src/chrono_island2d_tbb.cpp`
+- **C↔C++ 対応表（概念レベル）**:
+  | C 実装 (chrono-C-all) | Chrono C++ (chrono-main) の対応概念 | 備考 |
+  |---|---|---|
+  | `chrono_body2d.*` | `ChBody` | 2D 剛体の姿勢/質量/慣性に相当 |
+  | `chrono_constraint2d.*` | `ChLink` 各種 | 距離/回転/プリズマ/プラナー等の拘束群 |
+  | `chrono_collision2d.*` | `ChCollisionSystem` / `ChCollisionModel` | 2D 接触検出と応答 |
+  | `chrono_island2d.*` | `ChSystem` 内の島/ソルバ実行 | アイランド単位の解法フロー |
+  | `chrono_constraint_kkt_backend.*` | `ChSystemDescriptor` / KKT 診断 | 条件数・ピボット等の診断系 |
+  | `chrono_constraint_common.h` | `ChConstraint` 系の診断情報 | 共通診断構造体 |
+- **Aチーム向け最小入出力サンプル**:
+  - 参照: `chrono-C-all/README.md`（Building the tests / Examples）
+  - コマンド例:
+    ```bash
+    gcc -std=c99 -Ichrono-C-all/include \
+      chrono-C-all/src/chrono_body2d.c \
+      chrono-C-all/src/chrono_constraint2d.c \
+      chrono-C-all/tests/test_distance_constraint_stabilization.c \
+      -lm -o chrono-C-all/tests/test_distance_constraint_stabilization
+    ./chrono-C-all/tests/test_distance_constraint_stabilization
+    ```
+  - 入力: ソース同梱（外部入力なし）。出力: stdout の収束ログのみ（生成物なし）。
+
 ---
 
 ## 4. Cチーム（Tutorials／Docs／Education）

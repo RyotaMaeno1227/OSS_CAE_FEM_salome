@@ -1,6 +1,38 @@
 # チーム完了報告（A/B/Cそれぞれ自セクションのみ編集）
 
 ## Aチーム
+- 実行タスク: A7, A9, A10, A11, A18（直近タスク一括実施）  
+  - Run ID: local-chrono2d-20251201-11  
+  - 内容:  
+    - A7: ケース別の近似誤差許容を `chrono-2d/data/approx_tolerances.csv` に定義し、determinism チェックで cond/pivot の許容誤差をケース別に適用。  
+    - A9: `chrono-2d/tests/test_minicase.c` を追加（gear の pivot=0.5/cond=1 を厳密比較）。  
+    - A10: `test_coupled_constraint` の dump-json を拡張（cond_spectral/pivot/cond の妥当性、descriptor_log/tolerance_csv/threads を含む最小再現 JSON）。  
+    - A11: `chrono-2d/scripts/gen_constraint_cases.py` を拡張し、パラメータスイープの JSON/CSV 生成オプションを追加（output-dir 指定時のみ生成）。  
+    - A18: `composite_prismatic_distance` / `composite_prismatic_distance_aux` を追加し、cond 範囲チェックをテストに追加。  
+  - テスト: `make -C chrono-2d test` → 全テスト PASS（mini-case 含む）。  
+  - 生成物: `artifacts/*` は生成後に削除（コミットなし）。  
+  - リンクチェック: `python scripts/check_doc_links.py docs/team_status.md docs/documentation_changelog.md` → OK  
+- 実行タスク: A5, A8, A12, A14, A17（15分自走スプリント・全実施）  
+  - Run ID: local-chrono2d-20251201-10  
+  - 内容:  
+    - A5: 外部化候補タスク票を整理済み（優先度/対象データ/移行先想定を記録）。  
+    - A8: 警告フラグ現状は `-Wall -Wextra -pedantic -fopenmp`（-Wshadow/-Wconversion 追加は別途対応済み）。  
+    - A12: `make -C chrono-2d bench` を warn-only で実行。threads=1 で baseline 比 1.5x 超の警告（0.44–0.58us vs 0.21us）。  
+      `python tools/compare_bench_csv.py chrono-2d/artifacts/bench_constraints.csv --previous chrono-2d/data/bench_baseline.csv` → drift 検出。  
+    - A14: `config/coupled_benchmark_thresholds.yaml` を確認（warn: solve_time_us 20us/condition 1e9/pending 1200、fail: 10us/1e6/800/unrecovered_drops 4）。  
+    - A17: ログ粒度/上限の候補は「warn-only でCSV head/summary＋失敗時のみ詳細ログ」に整理（実装は未着手）。  
+  - 生成物: `chrono-2d/artifacts/bench_constraints.csv`（報告後に削除、コミットなし）。  
+  - git status: clean。  
+  - リンクチェック: `python scripts/check_doc_links.py docs/team_status.md docs/documentation_changelog.md` → OK  
+- 実行タスク: A5（例題外部化タスク票化）  
+  - Run ID: local-chrono2d-20251201-09  
+  - 内容: 外部定義移行の候補をタスク票として整理。優先順と移行先の想定を明記。  
+    - 高優先: `chrono-2d/data/cases_constraints.json`（JSON定義の中心）、`chrono-2d/data/cases_combined_constraints.csv`（複合拘束）、`chrono-2d/data/cases_contact_extended.csv`（接触拡張）、`chrono-2d/data/contact_cases.csv`（接触基本）  
+    - 中優先: `chrono-2d/data/constraint_ranges.csv`（レンジ/許容帯）、`chrono-2d/data/bench_baseline.csv`（ベンチ基準、baseline更新手順とセット）  
+    - 低優先: `data/planar_constraint.csv`, `data/prismatic_slider.csv`, `data/solid2d/*.dat`, `data/solid3d/*.dat`（外部データ由来のため移行時に出典/更新手順を併記）  
+    - 次ステップ: 移行先のフォーマット統一（JSON/CSV）、読み込みパスの切替点、サンプルCSV更新手順を整理。  
+  - 生成物: なし（タスク票のみ）。  
+  - リンクチェック: `python scripts/check_doc_links.py docs/team_status.md docs/documentation_changelog.md` → OK  
 - 実行タスク: A8（警告対応・自動実行キュー補完）  
   - Run ID: local-chrono2d-20251201-08  
   - 内容: `-Wshadow -Wconversion` を有効にしたビルドで出ていた警告3件を解消。  
@@ -150,6 +182,24 @@
   - 実行状況: 外部CI未実行。PMから情報共有が来次第、該当欄を更新する。
   - 生成物: なし。`git status`: docs のみ変更。
   - リンクチェック: 未実行（追記のみ）。必要になれば再実行する。
+- 実行タスク: B3, B6, B8, B15, B16（15分スプリント完了・外部CI不可）
+  - Run ID: 未取得（外部CI不可）
+  - 内容: 15分スプリント指示の全タスクをドキュメント整備で消化。Run ID 自動反映テンプレ/チャット共有テンプレ/最小 Artifacts 構成/保持 30 日チェックリスト/容量監視項目/YAML 共通化手順案/ drift 結果欄の明記を確認し、報告枠が不足なく整備されていることを確認。
+  - 実行状況: CI/cron 未実施。drift/容量測定は未実施（外部CI不可）。PMから Run ID とパス共有後に更新予定。
+  - 生成物: なし（docs のみ）。`git status`: docs のみ変更。
+  - リンクチェック: `python scripts/check_doc_links.py docs/team_status.md docs/team_runbook.md docs/documentation_changelog.md` → OK。
+- 実行タスク: B3, B6, B15（次の実行指示・外部CI不可）
+  - Run ID: 未取得（外部CI不可）
+  - 内容: Run ID 自動反映の本番化方針、Artifacts 最小化ポリシー、チャット共有テンプレの更新方針を確認し、報告枠の記載項目（Run ID/Artifact/Log/`git status`/生成物有無/リンクチェック）を点検。外部CI実行不可のため実測は未実施と明記。
+  - 実行状況: CI/cron 未実施。drift/容量測定も未実施（外部CI不可）。PMから Run ID とパス共有後に更新予定。
+  - 生成物: なし（docs のみ）。`git status`: docs のみ変更。
+  - リンクチェック: `python scripts/check_doc_links.py docs/team_status.md docs/team_runbook.md docs/documentation_changelog.md` → OK。
+- 実行タスク: B1, B2, B3（移植棚卸し・対応表・最小サンプル整備）
+  - Run ID: 未取得（ドキュメント整備のみ）
+  - 内容: `docs/abc_team_chat_handoff.md` に移植対象ファイル棚卸し、C↔C++ 対応表（概念レベル）、Aチーム向け最小入出力サンプル（`chrono-C-all/README.md` のテストコマンド）を追加。Aチームが即テストできる導線として同手順を handoff に集約。
+  - 実行状況: 外部CI/実行は未実施。Run ID/Artifacts は未発行。
+  - 生成物: なし。`git status`: docs のみ変更。
+  - リンクチェック: `python scripts/check_doc_links.py docs/abc_team_chat_handoff.md docs/team_status.md docs/documentation_changelog.md` → OK。
 - 実行タスク: B3, B6, B8, B15, B16（15分自走スプリント、外部CI不可）
   - Run ID: 未取得（外部CI不可のため発行せず）
   - 内容: Run ID 自動反映テンプレとチャット共有フォーマットを確認し、Artifacts 最小構成（head CSV / report.md / env.txt / log tail）と保持 30 日方針を再整理。容量監視項目と drift チェック結果欄を報告枠に含める方針を明記。YAML 共通化の候補ステップを列挙し、CI 解禁後に適用予定とした。
@@ -197,6 +247,18 @@
   - 内容: `docs/abc_team_chat_handoff.md` に CSV スキーマ確認と CI/運用導線のトピックを追記し、`docs/chrono_2d_readme.md` に CI/運用導線（team_runbook/team_status の参照）を追加。C9 のスキーマ確認は `docs/chrono_2d_cases_template.csv` で実行。  
   - 生成物: なし。  
   - `git status`: docs/abc_team_chat_handoff.md, docs/chrono_2d_readme.md, docs/team_status.md, docs/documentation_changelog.md を変更。  
+  - リンクチェック: `python scripts/check_doc_links.py docs/chrono_2d_readme.md docs/abc_team_chat_handoff.md docs/team_runbook.md docs/team_status.md docs/documentation_changelog.md` → OK。  
+- 実行タスク: C4, C12, C20（PM 発出済み分の消化）  
+  - Run ID: なし（ドキュメント更新のみ）。  
+  - 内容: C4 条件数/ピボット解説は `docs/chrono_2d_readme.md` に即時チェックを整備済み。C12 フォーマット/Lint は `check_doc_links.py` 実行で運用に固定。C20 は `docs/documentation_changelog.md` に反映済みのため追加作業なし。  
+  - 生成物: なし。  
+  - `git status`: docs/chrono_2d_readme.md, docs/documentation_changelog.md, docs/team_status.md を確認対象。  
+  - リンクチェック: `python scripts/check_doc_links.py docs/chrono_2d_readme.md docs/abc_team_chat_handoff.md docs/team_runbook.md docs/team_status.md docs/documentation_changelog.md` → OK。  
+- 実行タスク: C8, C11, C18（全タスク消化の一環）  
+  - Run ID: なし（ドキュメント更新のみ）。  
+  - 内容: `docs/chrono_2d_readme.md` に Run ID 同期先（git_setup）と用語/表記ガイドを追記し、OpenMP/3D 方針の表記を統一（C8/C11/C18）。  
+  - 生成物: なし。  
+  - `git status`: docs/chrono_2d_readme.md, docs/team_status.md, docs/documentation_changelog.md を変更。  
   - リンクチェック: `python scripts/check_doc_links.py docs/chrono_2d_readme.md docs/abc_team_chat_handoff.md docs/team_runbook.md docs/team_status.md docs/documentation_changelog.md` → OK。  
 - 実行タスク: C3, C4, C6, C9, C12, C15（15分自走スプリント）  
   - Run ID: なし（ドキュメント更新のみ、テスト/CIは未実施）。  

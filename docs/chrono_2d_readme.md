@@ -39,7 +39,7 @@
 - Log: docs/chrono_2d_readme.md （Run ID を本文に追記）
 - Notes: {condition_spectral, min_pivot, max_pivot, case, time}
 ```
-※ `docs/abc_team_chat_handoff.md` の chrono-2d テンプレにも同じ Run ID を記録し、Chrono C / chrono-main と区別する。
+※ `docs/abc_team_chat_handoff.md` と `docs/git_setup.md` の chrono-2d テンプレにも同じ Run ID を記録し、Chrono C / chrono-main と区別する。
 
 ## 条件数・Pivot の読み方（表で再現可能に）
 | 項目 | 意味 | 目安 | コマンド例 |
@@ -100,6 +100,7 @@ time,case,method,vn,vt,mu_s,mu_d,stick,condition_bound,condition_spectral,min_pi
 - 見出しは「chrono-2d ...」で開始、3D には言及しない。
 - 生成物は `artifacts/` 配下、CSV 名は `kkt_descriptor_actions_local.csv` を基本形とする。
 - プレフィックスに余分な「Chrono」を付けない。
+- 用語/表記ガイド: `Run ID` / `Artifact` / `Log` を固定表記とし、`OpenMP`/`3D` の表記は統一する。
 
 ## 更新フローとチェック
 - README/Hands-on/チャットテンプレを更新したら同じコミットで Run ID テンプレも整合。

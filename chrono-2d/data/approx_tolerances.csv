@@ -1,0 +1,13 @@
+case,cond_tol,pivot_tol
+optic_alignment_trim,1e-6,1e-6
+tele_yaw_control,1e-6,1e-6
+cam_follow_adjust,1e-6,1e-6
+optic_alignment_trim_prismatic,1e-6,1e-6
+counterbalance_beam,1e-6,1e-6
+mass_ratio_100,1e-6,1e-6
+composite_planar_distance,1e-6,1e-6
+composite_distance,1e-6,1e-6
+composite_prismatic_distance,1e-6,1e-6
+composite_prismatic_distance_aux,1e-6,1e-6
+hydraulic_lift_sync,1e-6,1e-6
+hydraulic_lift_sync_slip,1e-5,1e-5

@@ -12,9 +12,17 @@ typedef struct {
     double cond_max;
 } RangeRule;
 
+typedef struct {
+    char name[64];
+    double cond_tol;
+    double pivot_tol;
+} ToleranceRule;
+
 static int verbose = 0;
 static int dump_json = 0;
 static const char *dump_path = "artifacts/failure_dump.json";
+static const char *descriptor_log_path = "artifacts/kkt_descriptor_actions_local.csv";
+static const char *tolerance_path = "data/approx_tolerances.csv";
 static int compare_threads = 0;
 static int thread_list[8] = {0};
 static int thread_count = 0;
@@ -25,20 +33,36 @@ static void dump_failure_json(const char *reason, const SolveResult *res) {
     FILE *fp = fopen(dump_path, "w");
     if (!fp)
         return;
-    fprintf(fp, "{\n  \"reason\": \"%s\",\n  \"cases\": [\n", reason);
+    fprintf(fp,
+            "{\n"
+            "  \"reason\": \"%s\",\n"
+            "  \"descriptor_log\": \"%s\",\n"
+            "  \"tolerance_csv\": \"%s\",\n"
+            "  \"threads\": {\"compare\": %d, \"list\": [",
+            reason,
+            descriptor_log_path,
+            tolerance_path,
+            compare_threads);
+    for (int i = 0; i < thread_count; ++i) {
+        fprintf(fp, "%s%d", (i == 0 ? "" : ","), thread_list[i]);
+    }
+    fprintf(fp, "]},\n  \"cases\": [\n");
     for (int i = 0; i < res->count; ++i) {
         const ConstraintCase *c = &res->cases[i];
         fprintf(fp,
-                "    {\"name\":\"%s\",\"type\":%d,\"time\":%.6f,\"cond\":%.6e,\"pivot_min\":%.6e,"
-                "\"pivot_max\":%.6e,\"vn\":%.6e,\"vt\":%.6e,\"mu_s\":%.3f,\"mu_d\":%.3f,"
+                "    {\"name\":\"%s\",\"type\":%d,\"time\":%.6f,"
+                "\"cond_bound\":%.6e,\"cond_spectral\":%.6e,"
+                "\"pivot_min\":%.6e,\"pivot_max\":%.6e,"
+                "\"vn\":%.6e,\"vt\":%.6e,\"mu_s\":%.3f,\"mu_d\":%.3f,"
                 "\"stick\":%d,\"axis\":[%.6f,%.6f],\"anchor_a\":[%.6f,%.6f],"
                 "\"anchor_b\":[%.6f,%.6f],\"contact_point\":[%.6f,%.6f],\"normal\":[%.6f,%.6f],"
                 "\"mass_a\":%.6f,\"mass_b\":%.6f,\"inertia_a\":%.6f,\"inertia_b\":%.6f,"
-                "\"j_rows\":[",
+                "\"pivot_valid\":%d,\"cond_valid\":%d,\"j_rows\":[",
                 c->name,
                 c->type,
                 c->time,
                 c->condition_bound,
+                c->condition_spectral,
                 c->min_pivot,
                 c->max_pivot,
                 c->vn,
@@ -59,7 +83,10 @@ static void dump_failure_json(const char *reason, const SolveResult *res) {
                 c->mass_a,
                 c->mass_b,
                 c->inertia_a,
-                c->inertia_b);
+                c->inertia_b,
+                (c->min_pivot > 0.0 && c->max_pivot > 0.0 &&
+                 isfinite(c->min_pivot) && isfinite(c->max_pivot)),
+                (c->condition_spectral > 0.0 && isfinite(c->condition_spectral)));
         for (int r = 0; r < c->j_row_count; ++r) {
             fprintf(fp,
                     "%s[%.6e,%.6e,%.6e,%.6e,%.6e,%.6e]",
@@ -107,6 +134,40 @@ static int load_ranges(const char *path, RangeRule *rules, int max_rules) {
 static const RangeRule *find_range(const RangeRule *rules, int count, const char *type) {
     for (int i = 0; i < count; ++i) {
         if (strcmp(rules[i].type, type) == 0) {
+            return &rules[i];
+        }
+    }
+    return NULL;
+}
+
+static int load_tolerances(const char *path, ToleranceRule *rules, int max_rules) {
+    FILE *fp = fopen(path, "r");
+    if (!fp) {
+        return 0;
+    }
+    char line[256];
+    if (!fgets(line, sizeof(line), fp)) {
+        fclose(fp);
+        return 0;
+    }
+    int count = 0;
+    while (fgets(line, sizeof(line), fp) && count < max_rules) {
+        char name[64];
+        double cond_tol, pivot_tol;
+        if (sscanf(line, "%63[^,],%lf,%lf", name, &cond_tol, &pivot_tol) == 3) {
+            strcpy(rules[count].name, name);
+            rules[count].cond_tol = cond_tol;
+            rules[count].pivot_tol = pivot_tol;
+            count++;
+        }
+    }
+    fclose(fp);
+    return count;
+}
+
+static const ToleranceRule *find_tolerance(const ToleranceRule *rules, int count, const char *name) {
+    for (int i = 0; i < count; ++i) {
+        if (strcmp(rules[i].name, name) == 0) {
             return &rules[i];
         }
     }
@@ -182,6 +243,7 @@ int main(int argc, char **argv) {
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "--descriptor-log") == 0 && i + 1 < argc) {
             out_path = argv[i + 1];
+            descriptor_log_path = out_path;
         } else if (strcmp(argv[i], "--verbose") == 0) {
             verbose = 1;
         } else if (strcmp(argv[i], "--dump-json") == 0 && i + 1 < argc) {
@@ -237,6 +299,8 @@ int main(int argc, char **argv) {
     /* Load range config */
     RangeRule rules[16];
     int range_count = load_ranges("data/constraint_ranges.csv", rules, 16);
+    ToleranceRule tolerances[32];
+    int tol_count = load_tolerances(tolerance_path, tolerances, 32);
 
     const ConstraintCase *revolute = find_case(&res, "tele_yaw_control");
     if (!revolute || revolute->condition_bound < 0.5 || revolute->condition_bound > 10.0) {
@@ -329,6 +393,26 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    const ConstraintCase *comp_prismatic = find_case(&res, "composite_prismatic_distance");
+    const ConstraintCase *comp_prismatic_aux = find_case(&res, "composite_prismatic_distance_aux");
+    if (!comp_prismatic || !comp_prismatic_aux) {
+        fprintf(stderr, "Composite prismatic cases missing\n");
+        dump_failure_json("composite_prismatic_missing", &res);
+        return 1;
+    }
+    if (comp_prismatic->condition_bound <= 0.0 || comp_prismatic_aux->condition_bound <= 0.0) {
+        fprintf(stderr, "Composite prismatic cond invalid\n");
+        dump_failure_json("composite_prismatic_invalid", &res);
+        return 1;
+    }
+    if (comp_prismatic->condition_bound < 0.5 || comp_prismatic->condition_bound > 80.0 ||
+        comp_prismatic_aux->condition_bound < 0.5 || comp_prismatic_aux->condition_bound > 80.0) {
+        fprintf(stderr, "Composite prismatic cond out of range (prismatic %.3f, dist %.3f)\n",
+                comp_prismatic->condition_bound, comp_prismatic_aux->condition_bound);
+        dump_failure_json("composite_prismatic_range", &res);
+        return 1;
+    }
+
     /* Determinism / OpenMP thread sweep */
     int sweep_count = compare_threads ? thread_count : 1;
     if (sweep_count == 1 && !compare_threads) {
@@ -353,10 +437,19 @@ int main(int argc, char **argv) {
         for (int i = 0; i < sweep.count; ++i) {
             const ConstraintCase *a = &ref_res.cases[i];
             const ConstraintCase *b = &sweep.cases[i];
+            double cond_tol = 1e-6;
+            double pivot_tol = 1e-6;
+            const ToleranceRule *tol = find_tolerance(tolerances, tol_count, a->name);
+            if (tol) {
+                if (tol->cond_tol > 0.0)
+                    cond_tol = tol->cond_tol;
+                if (tol->pivot_tol > 0.0)
+                    pivot_tol = tol->pivot_tol;
+            }
             if (strcmp(a->name, b->name) != 0 ||
-                !almost_equal(a->condition_bound, b->condition_bound, 1e-6) ||
-                !almost_equal(a->min_pivot, b->min_pivot, 1e-6) ||
-                !almost_equal(a->max_pivot, b->max_pivot, 1e-6)) {
+                !almost_equal(a->condition_bound, b->condition_bound, cond_tol) ||
+                !almost_equal(a->min_pivot, b->min_pivot, pivot_tol) ||
+                !almost_equal(a->max_pivot, b->max_pivot, pivot_tol)) {
                 fprintf(stderr, "Determinism check failed for %s (threads=%d)\n", a->name, th);
                 dump_failure_json("determinism_value", &sweep);
                 return 1;
