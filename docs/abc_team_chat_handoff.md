@@ -60,6 +60,8 @@
   2. preset 更新時の diff と `scripts/check_preset_links.py` の結果共有。
   3. README / Hands-on / preset YAML の同時編集計画（Aチームとの同期点を列挙）。
   4. Appendix 撤廃後のリンク切れ把握と軽量化状況。
+  5. CSV スキーマ確認の結果共有（`python tools/check_chrono2d_csv_schema.py --csv docs/chrono_2d_cases_template.csv`）。
+  6. CI/運用導線の確認（`docs/team_runbook.md` の報告ルールに沿って `docs/team_status.md` を更新）。
 - **Pending (2025-11-14)**:
   - Hands-on Chapter 02, 03 のスクリーンショットを `docs/integration/learning_path_map.md` の該当箇所に追加。
   - `docs/documentation_changelog.md` へ Appendix 撤廃と本資料追加のエントリを投稿。

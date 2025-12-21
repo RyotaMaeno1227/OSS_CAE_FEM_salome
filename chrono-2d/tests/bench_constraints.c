@@ -38,7 +38,11 @@ int main(int argc, char **argv) {
     FILE *base = fopen(baseline_path, "r");
     if (base) {
         char line[256];
-        fgets(line, sizeof(line), base); /* header */
+        if (!fgets(line, sizeof(line), base)) {
+            fclose(base);
+            fclose(fp);
+            return 1;
+        }
         while (fgets(line, sizeof(line), base) && base_count < 16) {
             char casename[64];
             int th = 0;

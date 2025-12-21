@@ -108,6 +108,10 @@ time,case,method,vn,vt,mu_s,mu_d,stick,condition_bound,condition_spectral,min_pi
 - 表記揺れチェック: 見出しは sentence case、コードブロックは ```bash```/```csv``` のみ。
 - アーカイブ方針: 古い Run ID/CSV を差し替える場合は `artifacts/archive/` に退避し、Changelog に移動日を記載。
 
+### CI/運用導線（C15）
+- 実行・報告ルールは `docs/team_runbook.md` を参照し、15分スプリント/長尺バッチの区分に沿って報告する。
+- 実行ログは `docs/team_status.md` の C チーム欄に追記し、Run ID/生成物/リンクチェック結果を残す。
+
 ## 図版・スクリーンショットルール
 - 保存先: `docs/integration/assets/` または `docs/media/chrono-2d/`（新設可）。
 - 命名: `chrono-2d-<topic>-<yyyymmdd>.svg|png`。キャプションに Run ID を含める。

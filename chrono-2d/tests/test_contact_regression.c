@@ -40,15 +40,6 @@ static int load_contact_cases(const char *path, ContactCaseDef *defs, int max_de
     return count;
 }
 
-static const ConstraintCase *find_case(const SolveResult *res, const char *name) {
-    for (int i = 0; i < res->count; ++i) {
-        if (strcmp(res->cases[i].name, name) == 0) {
-            return &res->cases[i];
-        }
-    }
-    return NULL;
-}
-
 int main(void) {
     ContactCaseDef defs[32];
     int case_count = load_contact_cases("data/cases_contact_extended.csv", defs, 32);

@@ -330,7 +330,6 @@ int main(int argc, char **argv) {
     }
 
     /* Determinism / OpenMP thread sweep */
-    int base_threads = compare_threads && thread_count > 0 ? thread_list[0] : 1;
     int sweep_count = compare_threads ? thread_count : 1;
     if (sweep_count == 1 && !compare_threads) {
         thread_list[0] = 1;

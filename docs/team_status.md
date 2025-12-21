@@ -1,6 +1,34 @@
 # チーム完了報告（A/B/Cそれぞれ自セクションのみ編集）
 
 ## Aチーム
+- 実行タスク: A8（警告対応・自動実行キュー補完）  
+  - Run ID: local-chrono2d-20251201-08  
+  - 内容: `-Wshadow -Wconversion` を有効にしたビルドで出ていた警告3件を解消。  
+    - `chrono-2d/tests/test_coupled_constraint.c`: 未使用変数 `base_threads` を削除。  
+    - `chrono-2d/tests/test_contact_regression.c`: 未使用関数 `find_case` を削除。  
+    - `chrono-2d/tests/bench_constraints.c`: `fgets` の戻り値未使用を修正（失敗時に early return）。  
+    - `make -C chrono-2d CFLAGS="... -Wshadow -Wconversion ..."` で再ビルドし警告なしを確認。  
+  - 生成物: なし（ビルド成果物は clean 済み）。  
+  - リンクチェック: `python scripts/check_doc_links.py docs/team_status.md docs/documentation_changelog.md` → OK  
+- 実行タスク: A5-A12（自動実行キュー 1周目: warn-only）  
+  - Run ID: local-chrono2d-20251201-06  
+  - 内容:  
+    - A8: `make -C chrono-2d CFLAGS="-std=c99 -O2 -Wall -Wextra -pedantic -Wshadow -Wconversion -fopenmp"` を実行し警告3件（unused variable `base_threads`, unused function `find_case`, `fgets` warn_unused_result）を確認。修正は未実施。  
+    - A12: `make -C chrono-2d bench` で warn-only ベンチを実行し `artifacts/bench_constraints.csv` を生成。threads=1 で baseline 比 1.5x 超の警告（0.47–0.75us vs 0.21us）。  
+    - A12: `python tools/compare_bench_csv.py chrono-2d/artifacts/bench_constraints.csv --previous chrono-2d/data/bench_baseline.csv` → drift 検出。  
+    - A5/A6/A7/A9/A10/A11: 未着手（タスク票化/テスト追加は次ステップ）。  
+  - 生成物: `chrono-2d/artifacts/bench_constraints.csv`（報告後に削除、コミットなし）。  
+  - git status: clean。  
+  - リンクチェック: `python scripts/check_doc_links.py docs/team_status.md docs/documentation_changelog.md` → OK  
+- 実行タスク: A5-A12（自動実行キュー 2周目: fail）  
+  - Run ID: local-chrono2d-20251201-07  
+  - 内容:  
+    - A12: `./tests/bench_constraints --output artifacts/bench_constraints_fail.csv`（chrono-2d 直下で実行）→ threads=1 で regression 検出し exit 1。  
+    - A12: `python tools/compare_bench_csv.py chrono-2d/artifacts/bench_constraints_fail.csv --previous chrono-2d/data/bench_baseline.csv` → drift 検出。  
+    - A5/A6/A7/A8/A9/A10/A11: 未着手（警告修正・外部化・テスト追加は次ステップ）。  
+  - 生成物: `chrono-2d/artifacts/bench_constraints_fail.csv`（報告後に削除、コミットなし）。  
+  - git status: clean。  
+  - リンクチェック: `python scripts/check_doc_links.py docs/team_status.md docs/documentation_changelog.md` → OK  
 - 実行タスク: A5, A8, A12, A14, A17（15分自走スプリント 3回目）  
   - Run ID: local-chrono2d-20251201-05（確認中心、ベンチ drift チェックのみ）  
   - 内容:  
@@ -110,6 +138,18 @@
   - 実行状況: CI/cron 未実施、drift/容量測定も未実行（外部CI不可）。次回 Run ID/Artifact/Log を記録して更新予定。
   - 生成物: なし（ドキュメントのみ）。`git status`: docs のみ変更。
   - リンクチェック: `python scripts/check_doc_links.py docs/team_status.md docs/team_runbook.md docs/documentation_changelog.md` → OK。
+- 実行タスク: B3, B6, B8, B15, B16（15分スプリント確認・外部CI不可）
+  - Run ID: 未取得（外部CI不可）
+  - 内容: 15 分スプリント指示（B3/B6/B8/B15/B16）を再確認し、報告枠の記載項目（Run ID未取得理由、最小 Artifacts 構成、容量監視/retention、drift 結果欄、`git status` 概要）を点検。チャット共有テンプレの文面が runbook と整合していることを確認。
+  - 実行状況: CI/cron・drift・容量測定は未実施（外部CI不可）。次回 CI 解禁後に実測結果を追記予定。
+  - 生成物: なし（ドキュメントのみ）。`git status`: docs のみ変更。
+  - リンクチェック: `python scripts/check_doc_links.py docs/team_status.md docs/team_runbook.md docs/documentation_changelog.md` → OK。
+- 実行タスク: B3, B6, B8, B15, B16（Run ID/Artifact/Log 追記依頼）
+  - Run ID: 未取得（外部CI不可のため取得不可）
+  - 内容: Run ID/Artifact/Log の追記が必要だが、外部CIにアクセスできないため未記載。PMへ Run ID とパスの共有を依頼する。
+  - 実行状況: 外部CI未実行。PMから情報共有が来次第、該当欄を更新する。
+  - 生成物: なし。`git status`: docs のみ変更。
+  - リンクチェック: 未実行（追記のみ）。必要になれば再実行する。
 - 実行タスク: B3, B6, B8, B15, B16（15分自走スプリント、外部CI不可）
   - Run ID: 未取得（外部CI不可のため発行せず）
   - 内容: Run ID 自動反映テンプレとチャット共有フォーマットを確認し、Artifacts 最小構成（head CSV / report.md / env.txt / log tail）と保持 30 日方針を再整理。容量監視項目と drift チェック結果欄を報告枠に含める方針を明記。YAML 共通化の候補ステップを列挙し、CI 解禁後に適用予定とした。
@@ -151,6 +191,12 @@
   - 内容: `docs/chrono_2d_readme.md` の Changelog トリガーを短文化し、15分スプリント要件の簡潔化を反映。CSV スキーマは `docs/chrono_2d_cases_template.csv` を検証し、差分なし。  
   - 生成物: なし（サンプル出力は未作成）。  
   - `git status`: docs/chrono_2d_readme.md, docs/team_status.md, docs/documentation_changelog.md を変更。  
+  - リンクチェック: `python scripts/check_doc_links.py docs/chrono_2d_readme.md docs/abc_team_chat_handoff.md docs/team_runbook.md docs/team_status.md docs/documentation_changelog.md` → OK。  
+- 実行タスク: C3, C4, C6, C9, C12, C15（15分スプリント）  
+  - Run ID: なし（ドキュメント更新のみ）。  
+  - 内容: `docs/abc_team_chat_handoff.md` に CSV スキーマ確認と CI/運用導線のトピックを追記し、`docs/chrono_2d_readme.md` に CI/運用導線（team_runbook/team_status の参照）を追加。C9 のスキーマ確認は `docs/chrono_2d_cases_template.csv` で実行。  
+  - 生成物: なし。  
+  - `git status`: docs/abc_team_chat_handoff.md, docs/chrono_2d_readme.md, docs/team_status.md, docs/documentation_changelog.md を変更。  
   - リンクチェック: `python scripts/check_doc_links.py docs/chrono_2d_readme.md docs/abc_team_chat_handoff.md docs/team_runbook.md docs/team_status.md docs/documentation_changelog.md` → OK。  
 - 実行タスク: C3, C4, C6, C9, C12, C15（15分自走スプリント）  
   - Run ID: なし（ドキュメント更新のみ、テスト/CIは未実施）。  
