@@ -27,6 +27,7 @@
 | `docs/chrono_2d_readme.md`, `docs/abc_team_chat_handoff.md`, `docs/team_status.md` | A5/A7/A11/B1 の支援として外部定義パス整理、許容誤差の追記ルール、ケース生成例を追加 | Bチーム | Run ID なし（ドキュメントのみ）。 |
 | `docs/chrono_2d_readme.md`, `docs/abc_team_chat_handoff.md`, `docs/team_status.md` | A5/A7/A11/B1 の更新として生成物レイアウト/運用導線と C↔C++ 対応状況を追記 | Bチーム | Run ID なし（ドキュメントのみ）。 |
 | `docs/abc_team_chat_handoff.md`, `chrono-C-all/README.md`, `docs/team_status.md` | B1/B2 の対応として対応表の未対応理由/次対応先と最小サンプル再現性メモを追記 | Bチーム | Run ID なし（ドキュメントのみ）。 |
+| `docs/abc_team_chat_handoff.md`, `docs/team_status.md` | B2/B3 対応として API 境界の補足と差分ポイント整理、最小再現手順を追記 | Bチーム | Run ID なし（ドキュメントのみ）。 |
 | `docs/team_status.md` | A5/A8/A12 の precheck を追記し、A12 は compare_bench_csv.py による head/summary 報告とする PM 指示を明記 | Aチーム | Run ID: local-chrono2d-20251201-02（precheck、生成物なし）。リンクチェックは docs 未更新時は省略。 |
 | `docs/team_status.md` | 15分スプリント結果（A5/A8/A12/A14/A17）を追記し、compare_bench_csv warn-only 実行と閾値確認を記録 | Aチーム | Run ID: local-chrono2d-20251201-03（warn-only、生成物なし）。`python scripts/check_doc_links.py docs/team_status.md docs/documentation_changelog.md` 実行済み。 |
 | `docs/team_status.md` | 15分スプリント 2回目（A5/A8/A12/A14/A17）の確認ログを追加し、警告フラグ(-Wall/-Wextra等)とベンチ基準の現状を整理 | Aチーム | Run ID: local-chrono2d-20251201-04（確認のみ、生成物なし）。リンクチェックは追記後に実施予定。 |
@@ -42,6 +43,8 @@
 | `chrono-2d/data/parameter_sensitivity_ranges.csv`, `chrono-2d/data/cases_combined_constraints.csv`, `chrono-2d/tests/test_coupled_constraint.c`, `chrono-2d/docs/constraints.md`, `docs/chrono_2d_readme.md`, `docs/team_status.md` | A10/A14/A18 の更新（dump-json 参照項目拡張、感度レンジ見直し、複合拘束の評価観点と候補追加） | Aチーム | Run ID: local-chrono2d-20251201-13。`make -C chrono-2d test` PASS。`python scripts/check_doc_links.py docs/team_status.md docs/documentation_changelog.md` 実行済み。 |
 | `chrono-2d/src/solver.c`, `chrono-2d/data/cases_combined_constraints.csv`, `chrono-2d/data/parameter_sensitivity_ranges.csv`, `chrono-2d/tests/test_coupled_constraint.c`, `chrono-2d/docs/constraints.md`, `docs/chrono_2d_readme.md`, `docs/team_status.md` | A10/A14/A18 追加対応（dump-json 例、感度レンジ根拠メモ、複合拘束候補の追加） | Aチーム | Run ID: local-chrono2d-20251201-14。`make -C chrono-2d test` PASS。`python scripts/check_doc_links.py docs/team_status.md docs/documentation_changelog.md` 実行済み。 |
 | `chrono-2d/tests/test_coupled_constraint.c`, `chrono-2d/data/dataset_version.txt`, `chrono-2d/docs/constraints.md`, `docs/chrono_2d_readme.md`, `docs/team_status.md` | A15/A19/A20 の更新（ログ粒度ポリシー、データセット版管理、拘束仕様の整合） | Aチーム | Run ID: local-chrono2d-20251201-15。`make -C chrono-2d test` PASS。`python scripts/check_doc_links.py docs/team_status.md docs/documentation_changelog.md` 実行済み。 |
+| `chrono-2d/Makefile`, `chrono-2d/scripts/run_timed.py`, `chrono-2d/include/solver.h`, `chrono-2d/tests/bench_constraints.c`, `chrono-2d/tests/test_contact_regression.c`, `chrono-2d/tests/test_coupled_constraint.c`, `docs/chrono_2d_readme.md`, `docs/team_status.md` | A16/A17/A5 の更新（ターゲット分離、実行時間記録と上限警告、データ参照パス統一） | Aチーム | Run ID: local-chrono2d-20251201-16。`make -C chrono-2d test` / `make -C chrono-2d schema` PASS。`python scripts/check_doc_links.py docs/team_status.md docs/documentation_changelog.md` 実行済み。 |
+| `docs/chrono_2d_dataset_guide.md`, `README.md`, `docs/team_status.md` | C13/C5: 例題データセットの更新手順と図版/スクショ運用ルールを整理し、README から参照 | Cチーム | Run ID なし。`python scripts/check_doc_links.py docs/chrono_2d_dataset_guide.md README.md docs/team_status.md` 実行済み。 |
 | `docs/team_status.md` | 15分スプリント（C3/C4/C6/C9/C12/C15）について PM コメントを確認し、追加作業不要で十分な負荷と判断した旨を追記 | Cチーム | Run ID なし（確認のみ）。`python scripts/check_doc_links.py docs/team_runbook.md docs/team_status.md docs/documentation_changelog.md ...` 実行済み。 |
 | `docs/chrono_2d_readme.md` | Changelog トリガー記載を短文化し、15分スプリントの簡潔化方針を反映 | Cチーム | `docs/chrono_2d_cases_template.csv` を確認（差分なし）。 |
 | `docs/team_status.md` | 15分スプリント（C3/C4/C6/C9/C12/C15）での上記変更とリンクチェック結果を追記 | Cチーム | Run ID なし（ドキュメントのみ）。`python scripts/check_doc_links.py ...` 実行済み。 |
@@ -58,6 +61,9 @@
 | `docs/chrono_2d_glossary_checklist.md` | 用語・表記ガイドと学習ステップを 1 ページに統合 | Cチーム | C10/C7 の要件を反映。 |
 | `docs/chrono_2d_readme.md` | 1ページ版チェックリストへの導線を追加 | Cチーム | `docs/chrono_2d_glossary_checklist.md` を参照。 |
 | `docs/team_status.md` | C10/C7 の実施ログを追記 | Cチーム | Run ID なし（ドキュメントのみ）。`python scripts/check_doc_links.py ...` 実行済み。 |
+| `docs/chrono_2d_readme.md` | 例題データセットの概要と更新手順を追記 | Cチーム | C13 を明文化。 |
+| `docs/chrono_2d_media_rules.md` | 図版/スクリーンショットの命名・保存・参照ルールを整理 | Cチーム | C5 を明文化。 |
+| `docs/team_status.md` | C13/C5 の実施ログを追記 | Cチーム | Run ID なし（ドキュメントのみ）。`python scripts/check_doc_links.py ...` 実行済み。 |
 
 ## 2025-11-14 更新
 

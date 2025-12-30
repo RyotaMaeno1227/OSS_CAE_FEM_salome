@@ -1,6 +1,16 @@
 # チーム完了報告（A/B/Cそれぞれ自セクションのみ編集）
 
 ## Aチーム
+- 実行タスク: A16, A17, A5（タスク表更新分）  
+  - Run ID: local-chrono2d-20251201-16  
+  - 内容:  
+    - A16: Makefile を整理し、`test`/`schema`/`bench` を分離。`minicase` ターゲットを追加し依存列挙を更新。  
+    - A17: `scripts/run_timed.py` を追加し、実行時間を記録（上限超過は WARN）。Makefile で `MAX_TEST_TIME_SEC`/`MAX_SCHEMA_TIME_SEC`/`MAX_BENCH_TIME_SEC` を運用。  
+    - A5: データ参照パスを `CHRONO2D_DATA_DIR`/`CHRONO2D_DATA_PATH()` に統一し、README に方針を追記。  
+  - テスト: `make -C chrono-2d test` / `make -C chrono-2d schema` → PASS。  
+  - 生成物: なし（build/artifacts は clean 済み）。  
+  - リンクチェック: `python scripts/check_doc_links.py docs/team_status.md docs/documentation_changelog.md` → OK  
+  - git status: chrono-2d/Makefile, chrono-2d/scripts/run_timed.py, chrono-2d/include/solver.h, chrono-2d/tests/bench_constraints.c, chrono-2d/tests/test_contact_regression.c, chrono-2d/tests/test_coupled_constraint.c, docs/chrono_2d_readme.md, docs/documentation_changelog.md, docs/team_status.md が変更中。  
 - 実行タスク: A15, A19, A20（タスク表更新分）  
   - Run ID: local-chrono2d-20251201-15  
   - 内容:  
@@ -260,6 +270,12 @@
   - 実行状況: 外部CI/実行は未実施。Run ID/Artifacts は未発行。
   - 生成物: なし。`git status`: docs のみ変更。
   - リンクチェック: `python scripts/check_doc_links.py docs/abc_team_chat_handoff.md docs/team_status.md docs/documentation_changelog.md` を実行。
+- 実行タスク: B2, B3（タスク表更新分）
+  - Run ID: 未取得（ドキュメント整備のみ）
+  - 内容: `docs/abc_team_chat_handoff.md` の対応表に API 境界（構造体/関数/I/O）列を追加し、差分ポイントを整理。最小入出力サンプルに「失敗時の最小再現」手順を追記。
+  - 実行状況: 外部CI/実行は未実施。Run ID/Artifacts は未発行。
+  - 生成物: なし。`git status`: docs のみ変更。
+  - リンクチェック: `python scripts/check_doc_links.py docs/abc_team_chat_handoff.md docs/team_status.md docs/documentation_changelog.md` を実行。
 - 実行タスク: B3, B6, B8, B15, B16（15分自走スプリント、外部CI不可）
   - Run ID: 未取得（外部CI不可のため発行せず）
   - 内容: Run ID 自動反映テンプレとチャット共有フォーマットを確認し、Artifacts 最小構成（head CSV / report.md / env.txt / log tail）と保持 30 日方針を再整理。容量監視項目と drift チェック結果欄を報告枠に含める方針を明記。YAML 共通化の候補ステップを列挙し、CI 解禁後に適用予定とした。
@@ -268,6 +284,11 @@
   - リンクチェック: `python scripts/check_doc_links.py docs/team_status.md docs/team_runbook.md docs/documentation_changelog.md` → OK。
 
 ## Cチーム
+- 実行タスク: C13, C5  
+  - Run ID: なし（ドキュメント更新のみ）  
+  - 内容: 例題データセットの説明/更新手順と図版/スクショ運用ルールを `docs/chrono_2d_dataset_guide.md` に整理し、`README.md` から参照。  
+  - 生成物: なし。  
+  - リンクチェック: `python scripts/check_doc_links.py docs/chrono_2d_dataset_guide.md README.md docs/team_status.md` → 実行済み  
 - 実行タスク: C1, C3, C4, C6, C9, C12, C16, C17, C20  
   - C1: chrono-2d README 月次更新手順・ワンライナー共有例を追記、サンプル CSV を最新スキーマ（vn/vt/µs/µd/stick 含む）に差し替え。  
   - C3: chrono-main/chrono-2d/Chrono C 用 Run ID 貼付ワンライナーを `docs/abc_team_chat_handoff.md` に追加。  
@@ -344,6 +365,12 @@
   - 生成物: なし。  
   - `git status`: docs/chrono_2d_glossary_checklist.md, docs/chrono_2d_readme.md, docs/team_status.md, docs/documentation_changelog.md を変更。  
   - リンクチェック: `python scripts/check_doc_links.py docs/chrono_2d_glossary_checklist.md docs/chrono_2d_readme.md docs/abc_team_chat_handoff.md docs/team_runbook.md docs/team_status.md docs/documentation_changelog.md` → OK。  
+- 実行タスク: C13, C5（直近で実施すべきタスク）  
+  - Run ID: なし（ドキュメント更新のみ）。  
+  - 内容: `docs/chrono_2d_readme.md` に例題データセットの概要と更新手順を追加し、図版/スクショのルールを `docs/chrono_2d_media_rules.md` に整理して README から参照。  
+  - 生成物: なし。  
+  - `git status`: docs/chrono_2d_readme.md, docs/chrono_2d_media_rules.md, docs/team_status.md, docs/documentation_changelog.md を変更。  
+  - リンクチェック: `python scripts/check_doc_links.py docs/chrono_2d_readme.md docs/chrono_2d_media_rules.md docs/abc_team_chat_handoff.md docs/team_runbook.md docs/team_status.md docs/documentation_changelog.md` → OK。  
 - 実行タスク: C3, C4, C6, C9, C12, C15（15分自走スプリント）  
   - Run ID: なし（ドキュメント更新のみ、テスト/CIは未実施）。  
   - 内容: `docs/abc_team_chat_handoff.md` に 15 分スプリント用の Run ID ワンライナー、条件数/ピボット即時チェック、CSV スキーマ確認、リンク/Lint コマンド、命名ポリシー、報告手順を追記。  

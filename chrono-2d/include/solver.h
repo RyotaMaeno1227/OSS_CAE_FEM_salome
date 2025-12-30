@@ -4,6 +4,8 @@
 #include <stddef.h>
 
 #define MAX_CASES 32
+#define CHRONO2D_DATA_DIR "data"
+#define CHRONO2D_DATA_PATH(name) CHRONO2D_DATA_DIR "/" name
 
 typedef struct {
     double mass;

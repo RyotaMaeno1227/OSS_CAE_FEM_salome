@@ -17,9 +17,14 @@ BENCH_TARGET := $(TEST_DIR)/bench_constraints
 SCHEMA_TEST := $(TEST_DIR)/test_schema
 MINI_TEST := $(TEST_DIR)/test_minicase
 
-.PHONY: all clean test bench schema
+RUN_TIMED := python scripts/run_timed.py
+MAX_TEST_TIME_SEC ?= 30
+MAX_BENCH_TIME_SEC ?= 10
+MAX_SCHEMA_TIME_SEC ?= 10
 
-all: $(TEST_TARGET) $(CONTACT_TEST) $(BENCH_TARGET) $(SCHEMA_TEST)
+.PHONY: all clean test bench schema minicase
+
+all: $(TEST_TARGET) $(CONTACT_TEST) $(BENCH_TARGET) $(SCHEMA_TEST) $(MINI_TEST)
 
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
@@ -42,20 +47,32 @@ $(SCHEMA_TEST): $(TEST_DIR)/test_schema.c
 $(MINI_TEST): $(TEST_DIR)/test_minicase.c $(OBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) $^ $(LDFLAGS) -o $@
 
-test: $(TEST_TARGET) $(CONTACT_TEST) $(SCHEMA_TEST) $(MINI_TEST)
+test: $(TEST_TARGET) $(CONTACT_TEST) $(MINI_TEST)
 	@echo "Running coupled constraint test"
 	@mkdir -p artifacts
-	@$(TEST_TARGET) --descriptor-log artifacts/kkt_descriptor_actions_local.csv
+	@$(RUN_TIMED) --label test_coupled --max-seconds $(MAX_TEST_TIME_SEC) -- \
+		$(TEST_TARGET) --descriptor-log artifacts/kkt_descriptor_actions_local.csv
 	@echo "Running contact regression test"
-	@$(CONTACT_TEST)
-	@echo "Running schema test"
-	@$(SCHEMA_TEST)
+	@$(RUN_TIMED) --label test_contact --max-seconds $(MAX_TEST_TIME_SEC) -- \
+		$(CONTACT_TEST)
 	@echo "Running mini-case test"
-	@$(MINI_TEST)
+	@$(RUN_TIMED) --label test_minicase --max-seconds $(MAX_TEST_TIME_SEC) -- \
+		$(MINI_TEST)
 
 bench: $(BENCH_TARGET)
 	@mkdir -p artifacts
-	@$(BENCH_TARGET) --output artifacts/bench_constraints.csv --warn-only
+	@$(RUN_TIMED) --label bench --max-seconds $(MAX_BENCH_TIME_SEC) -- \
+		$(BENCH_TARGET) --output artifacts/bench_constraints.csv --warn-only
+
+schema: $(SCHEMA_TEST)
+	@echo "Running schema test"
+	@$(RUN_TIMED) --label test_schema --max-seconds $(MAX_SCHEMA_TIME_SEC) -- \
+		$(SCHEMA_TEST)
+
+minicase: $(MINI_TEST)
+	@echo "Running mini-case test"
+	@$(RUN_TIMED) --label test_minicase --max-seconds $(MAX_TEST_TIME_SEC) -- \
+		$(MINI_TEST)
 
 clean:
 	rm -rf $(OBJ_DIR) $(TEST_TARGET) $(CONTACT_TEST) $(BENCH_TARGET) artifacts

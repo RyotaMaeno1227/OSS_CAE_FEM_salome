@@ -9,7 +9,7 @@
 int main(int argc, char **argv) {
     int iterations = 10000;
     const char *out_path = "artifacts/bench_constraints.csv";
-    const char *baseline_path = "data/bench_baseline.csv";
+    const char *baseline_path = CHRONO2D_DATA_PATH("bench_baseline.csv");
     int warn_only = 0;
     double threshold_scale = 1.5;
     for (int i = 1; i < argc; ++i) {

@@ -58,17 +58,17 @@
   - `chrono-C-all/include/chrono_small_matrix.h`, `chrono-C-all/src/chrono_small_matrix.c`
   - `chrono-C-all/include/chrono_island2d_tbb.h`, `chrono-C-all/src/chrono_island2d_tbb.cpp`
 - **C↔C++ 対応表（概念レベル）**:
-  | C 実装 (chrono-C-all) | Chrono C++ (chrono-main) の対応概念 | 対応状況 | 未対応/理由/次の対応先 |
-  |---|---|---|---|
-  | `chrono_body2d.*` | `ChBody` | 対応済み | 未対応なし |
-  | `chrono_constraint2d.*` | `ChLink` 各種 | 対応済み | 未対応なし |
-  | `chrono_collision2d.*` | `ChCollisionSystem` / `ChCollisionModel` | 対応済み | 未対応なし |
-  | `chrono_island2d.*` | `ChSystem` 内の島/ソルバ実行 | 対応済み | 未対応なし |
-  | `chrono_constraint_kkt_backend.*` | `ChSystemDescriptor` / KKT 診断 | 一部対応 | C++ 側の診断ログ完全一致は未対応。次: chrono-main の KKT ログ整合と diff フロー定義 |
-  | `chrono_constraint_common.h` | `ChConstraint` 系の診断情報 | 対応済み | 未対応なし |
-  | `chrono_logging.*` | `ChLogger` / ログ基盤 | 対応済み | 未対応なし |
-  | `chrono_small_matrix.*` | `ChMatrix` ヘルパ | 対応済み | 未対応なし |
-  | `chrono_island2d_tbb.*` | oneTBB スケジューラ連携 | 対応済み(実験) | 本番検証は未実施。次: `bench_island_solver --scheduler tbb` で計測 |
+  | C 実装 (chrono-C-all) | Chrono C++ (chrono-main) の対応概念 | API 境界（構造体/関数/I/O） | 対応状況 | 差分ポイント / 未対応・理由・次の対応先 |
+  |---|---|---|---|---|
+  | `chrono_body2d.*` | `ChBody` | Struct: `ChronoBody2D_C` / Func: `chrono_body2d_*` / I/O: 直接初期化 | 対応済み | 2D 専用。C++ 側の 3D/可視化属性は対象外 |
+  | `chrono_constraint2d.*` | `ChLink` 各種 | Struct: `Chrono*Constraint2D_C` / Func: `chrono_*_constraint2d_*` / I/O: コードで設定 | 対応済み | 2D 制約のみ。リンクタイプの 3D 差分は対象外 |
+  | `chrono_collision2d.*` | `ChCollisionSystem` / `ChCollisionModel` | Struct: `ChronoContact2D_C` / Func: `chrono_collision2d_*` / I/O: 直接呼び出し | 対応済み | 2D GJK/EPA に限定。3D モデルは対象外 |
+  | `chrono_island2d.*` | `ChSystem` 内の島/ソルバ実行 | Struct: `ChronoIsland2D_C` / Func: `chrono_island2d_*` / I/O: 直接呼び出し | 対応済み | 並列化は OpenMP 中心。タスク並列は実験段階 |
+  | `chrono_constraint_kkt_backend.*` | `ChSystemDescriptor` / KKT 診断 | Struct: `ChronoConstraintDiagnostics_C` / Func: `chrono_constraint_kkt_backend_*` / I/O: CSV/ログ出力 | 一部対応 | C++ 側の診断ログ完全一致は未対応。次: chrono-main の KKT ログ整合と diff フロー定義 |
+  | `chrono_constraint_common.h` | `ChConstraint` 系の診断情報 | Struct: `ChronoConstraintDiagnostics_C` / Func: 共有ヘッダ / I/O: ログ出力 | 対応済み | 未対応なし |
+  | `chrono_logging.*` | `ChLogger` / ログ基盤 | Struct: `ChronoLogBuffer_C` / Func: `chrono_log_*` / I/O: stdout/ファイル | 対応済み | ログレベルの粒度差は今後整理 |
+  | `chrono_small_matrix.*` | `ChMatrix` ヘルパ | Struct: `ChronoSmallMatrix_C` / Func: `chrono_small_matrix_*` / I/O: 直接呼び出し | 対応済み | 未対応なし |
+  | `chrono_island2d_tbb.*` | oneTBB スケジューラ連携 | Struct: `ChronoIsland2D_TBB` / Func: `chrono_island2d_tbb_*` / I/O: ベンチ出力 | 対応済み(実験) | 本番検証は未実施。次: `bench_island_solver --scheduler tbb` で計測 |
 - **Aチーム向け最小入出力サンプル**:
   - 参照: `chrono-C-all/README.md`（Building the tests / Examples）
   - コマンド例:
@@ -83,6 +83,10 @@
   - 入力: ソース同梱（外部入力なし）。出力: stdout の収束ログのみ（生成物なし）。
   - 成功条件: `Constraint stabilized within tolerance` が表示され、exit code が 0。
   - 再現性メモ: リポジトリルートで実行し、必要なら stdout を保存（例: `> /tmp/constraint_log.txt`）。実行で生成物は増えない。
+  - 失敗時の最小再現:
+    1. 実行コマンドと stdout（先頭/最後の 20 行）を保存。
+    2. `chrono-C-all/tests/test_distance_constraint_stabilization.c` の変更有無を確認し、差分があれば添付。
+    3. 失敗時の最小情報として「コマンド」「stdout 抜粋」「`git status` 要約」を PM/担当へ共有。
 - **ケース生成スクリプト（A11 サポート）**:
   - 入力: `chrono-2d/data/cases_constraints.json`, `chrono-2d/data/cases_contact_extended.csv`
   - 出力: `chrono-2d/data/generated/cases_constraints_sweep.json` / `cases_contact_sweep.csv`

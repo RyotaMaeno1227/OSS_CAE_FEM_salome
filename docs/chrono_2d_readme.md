@@ -103,6 +103,7 @@ diff -u docs/chrono_2d_cases_template.csv /tmp/chrono2d_schema_sample.csv
 - 命名: `case` 名は snake_case を維持し、JSON/CSV 間で同一名を使う。
 - 参照パス: 例題は `chrono-2d/data/` のみを参照し、`chrono-2d/artifacts/` の CSV を入力にしない。  
 - データ一覧: `bench_baseline.csv`, `cases_constraints.json`, `cases_contact_extended.csv`, `contact_cases.csv`, `constraint_ranges.csv`, `cases_combined_constraints.csv` を基準セットとする。
+- コード側は `CHRONO2D_DATA_DIR` / `CHRONO2D_DATA_PATH()` で参照パスを統一する。
 
 ## 近似誤差許容と感度レンジ（A7/A14）
 - 近似誤差許容（determinism 用）: `chrono-2d/data/approx_tolerances.csv`  
@@ -137,6 +138,8 @@ diff -u docs/chrono_2d_cases_template.csv /tmp/chrono2d_schema_sample.csv
 - 最小ログ: `--verbose` なしで `make test` を実行し、Run ID と CSV head のみを記録。  
 - 詳細ログ: 失敗時のみ `--verbose` と `--dump-json` を付与し、`failure_dump.json` を添付。  
 - 報告ルール: Run ID / Artifact / git status / リンクチェック結果を `docs/team_status.md` に記載。
+- 実行時間の記録: `scripts/run_timed.py` が所要時間を出力し、上限超過は WARN として表示。  
+  既定値: `MAX_TEST_TIME_SEC=30`, `MAX_SCHEMA_TIME_SEC=10`, `MAX_BENCH_TIME_SEC=10`（必要に応じて調整）。
 
 ## ケース生成スクリプト（A11）
 `chrono-2d/scripts/gen_constraint_cases.py`  
@@ -189,6 +192,20 @@ diff -u docs/chrono_2d_cases_template.csv /tmp/chrono2d_schema_sample.csv
 - 保存先: `docs/integration/assets/` または `docs/media/chrono-2d/`（新設可）。
 - 命名: `chrono-2d-<topic>-<yyyymmdd>.svg|png`。キャプションに Run ID を含める。
 - 参照: Markdown から相対パスでリンク。追加時は Changelog に追記。
+詳細: `docs/chrono_2d_media_rules.md`
+
+## 例題データセット（概要と更新手順）
+### 収録データ
+- `chrono-2d/data/cases_constraints.json`: 拘束系の例題（基本ケース）。
+- `chrono-2d/data/cases_contact_extended.csv`: 接触系の拡張ケース。
+- `chrono-2d/data/cases_combined_constraints.csv`: 複合拘束の例題。
+
+### 更新手順（C13）
+1. 変更対象ファイルと目的を明記する（例: `cases_constraints.json` にケース追加）。
+2. 変更内容が README/テンプレに影響する場合は同時更新する。
+3. Run ID/Artifact 共有が必要な場合は `docs/abc_team_chat_handoff.md` と合わせて記録する。
+4. リンク/整合チェック: `python scripts/check_doc_links.py docs/chrono_2d_readme.md docs/abc_team_chat_handoff.md`
+5. `docs/documentation_changelog.md` に更新内容を追記する。
 
 ## 学習ステップチェックリスト（コマンド付き）
 1ページ版: `docs/chrono_2d_glossary_checklist.md` を参照（用語/表記ガイド＋チェックリスト）。

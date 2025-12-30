@@ -42,7 +42,7 @@ static int load_contact_cases(const char *path, ContactCaseDef *defs, int max_de
 
 int main(void) {
     ContactCaseDef defs[32];
-    int case_count = load_contact_cases("data/cases_contact_extended.csv", defs, 32);
+    int case_count = load_contact_cases(CHRONO2D_DATA_PATH("cases_contact_extended.csv"), defs, 32);
     if (case_count <= 0) {
         fprintf(stderr, "No contact dataset loaded\n");
         return 1;

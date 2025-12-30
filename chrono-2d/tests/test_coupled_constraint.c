@@ -30,9 +30,9 @@ static int verbose = 0;
 static int dump_json = 0;
 static const char *dump_path = "artifacts/failure_dump.json";
 static const char *descriptor_log_path = "artifacts/kkt_descriptor_actions_local.csv";
-static const char *tolerance_path = "data/approx_tolerances.csv";
-static const char *sensitivity_path = "data/parameter_sensitivity_ranges.csv";
-static const char *dataset_version_path = "data/dataset_version.txt";
+static const char *tolerance_path = CHRONO2D_DATA_PATH("approx_tolerances.csv");
+static const char *sensitivity_path = CHRONO2D_DATA_PATH("parameter_sensitivity_ranges.csv");
+static const char *dataset_version_path = CHRONO2D_DATA_PATH("dataset_version.txt");
 static char dataset_version[64] = "unknown";
 static int compare_threads = 0;
 static int thread_list[8] = {0};
@@ -376,7 +376,7 @@ int main(int argc, char **argv) {
 
     /* Load range config */
     RangeRule rules[16];
-    int range_count = load_ranges("data/constraint_ranges.csv", rules, 16);
+    int range_count = load_ranges(CHRONO2D_DATA_PATH("constraint_ranges.csv"), rules, 16);
     ToleranceRule tolerances[32];
     int tol_count = load_tolerances(tolerance_path, tolerances, 32);
     SensitivityRule sensitivity[32];

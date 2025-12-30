@@ -46,6 +46,7 @@ provide learning material for engineers picking up the solver stack. すべて�
 - **Preset cheat sheet** – `docs/coupled_constraint_presets_cheatsheet.md` と
   `data/coupled_constraint_presets.yaml` を同期し、Multi-ω 設定や演習条件を共有。
 - **Practice sources** – `practice/README.md` と `practice/coupled/ch0x_*` を Hands-on 手順に従って更新し、Run ID/Evidence を `docs/abc_team_chat_handoff.md` のテンプレへ記録。
+- **chrono-2d dataset guide** – `docs/chrono_2d_dataset_guide.md` に例題データセット更新手順と図版/スクショ運用ルールをまとめています。
 
 研修で利用するプリセットは `data/coupled_constraint_presets.yaml` に集約し、
 `docs/coupled_constraint_presets_cheatsheet.md` で図表化しています。
