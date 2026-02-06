@@ -11,10 +11,20 @@
 - リンクチェック: `python scripts/check_doc_links.py <対象md...>` を実行し結果を共有。
 - Changelog: ドキュメント更新があれば `docs/documentation_changelog.md` に記録。
 
+## コンテクスト継続ルール（必須）
+- 注意: チャットのコンテクスト長により途中でトークン切れが発生する可能性がある。
+- そのため、PM/各チームは毎回の作業終了時に `docs/session_continuity_log.md` を更新し、以下を必ず記録する。
+- 記録項目:
+  - `Current Plan`（次に実行する計画）
+  - `Completed This Session`（今回実施した内容）
+  - `Next Actions`（次アクションを3件以内）
+  - `Open Risks/Blockers`（未解決リスク・阻害要因）
+- 途中中断時も同様に記録し、次チャット担当は `docs/session_continuity_log.md` を最初に確認してから再開する。
+
 ## 直近で実施すべきタスク
-- Aチーム: `@A-team 実行: A16,A17,A19`  
-  A16 Makefile のターゲット整理（test/schema/bench 分離）と依存列挙の更新。A17 ベンチ/テスト実行時間の記録と上限警告の運用を確定。A19 データセット版管理の運用（更新タイミングとテスト参照）を明文化する。
-- Bチーム: `@B-team 実行: B2,B3`  
-  C↔C++ 対応表に API 境界（構造体/関数/I/O）を補足し、対応の差分ポイントを整理する。最小入出力サンプルの検証手順に「失敗時の最小再現」節を追加する。
-- Cチーム: `@C-team 実行: C10,C7`  
-  用語・表記ガイドの本文化（用語表＋統一ルール）と、学習ステップのチェックリスト化（コマンド＋期待出力）を 1 ページにまとめる。
+- Aチーム: `@A-team 実行: A6,A13,A3`  
+  A6 新拘束タイプの実装テンプレを実コードに落とし込む（構造体/ヤコビアン/J組立/最小テストケース/constraints.md 追記まで）。A13 接触モデルに静摩擦緩衝帯と速度減衰パラメータを追加し、A3 で端点ケース（低法線・高速・ゼロ摩擦）を回して回帰を記録する。
+- Bチーム: `@B-team 実行: B2,B3,A6支援`  
+  Aチーム負荷分散として、A6/A13 で必要な C↔C++ 対応表を API 境界（構造体/関数/I/O）レベルで補完し、最小入出力サンプル（成功系1件・失敗系1件）と期待ログを用意して `docs/abc_team_chat_handoff.md` に引き継ぐ。
+- Cチーム: `@C-team 実行: C10,C13,C5`  
+  A/B の変更を受けて、`docs/chrono_2d_glossary_checklist.md` の用語統一、`docs/chrono_2d_dataset_guide.md` の更新手順、`docs/chrono_2d_media_rules.md` の命名規約を同期し、`docs/chrono_2d_readme.md` から一貫して辿れる導線に整理する。
