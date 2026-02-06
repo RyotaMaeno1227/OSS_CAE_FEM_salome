@@ -119,6 +119,7 @@ fem_error_t t6_integrate_stiffness(int element_id,
     double thickness;
     int material_id;
     int gp, i, j, k;
+    static int gauss_debug_printed = 0;
     fem_error_t err;
     
     /* Initialize stiffness matrix */
@@ -148,12 +149,13 @@ fem_error_t t6_integrate_stiffness(int element_id,
         err = t6_jacobian_matrix(element_id, xi, eta, J, &det_J);
         CHECK_ERROR(err);
 
-        /* Debug output for first Gauss point */
-        if (gp == 0) {
+        /* Print one representative Gauss-point log only once per process. */
+        if (gp == 0 && !gauss_debug_printed) {
             printf("  Debug: Gauss point 1 (xi=%.3f, eta=%.3f):\n", xi, eta);
             printf("    Jacobian det = %.6e\n", det_J);
             printf("    B-matrix sample: B[0][0]=%.6e, B[1][1]=%.6e, B[2][0]=%.6e\n",
                    B[0][0], B[1][1], B[2][0]);
+            gauss_debug_printed = 1;
         }
         
         /* Calculate B^T * D */

@@ -83,6 +83,7 @@ make help           # 全ビルドターゲット表示
 - ドキュメント入口: `docs/README.md`
 - 主教材: `docs/tutorial_manual.md`
 - 実装ガイド: `docs/implementation_guide.md`
+- 実装計画: `docs/solver_reorg_mbd_migration_plan.md`
 
 ## プロジェクト構成
 ```

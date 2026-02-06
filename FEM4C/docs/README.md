@@ -15,6 +15,8 @@ FEM4C のドキュメントは、このページを入口に参照してくだ�
   チュートリアル設計の到達目標と学習スコープ。
 - `FEM_LEARNING_GUIDE.md`
   理論寄りの補助資料（要素/行列の背景説明）。
+- `solver_reorg_mbd_migration_plan.md`
+  FEMソルバー整理とMBD移植の実装計画。
 
 ## Operation Rules
 - 新規資料を作る前に、上記の既存ファイルへ追記できないか確認する。

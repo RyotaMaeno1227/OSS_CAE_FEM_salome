@@ -1,12 +1,13 @@
-下記コードのレビューをお願いします。
-なお、長文なので、順番にお送りします。完了したら「完了しました」とコメントします。
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <math.h>      // INFINITY など
 #include <ctype.h>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 #if defined(_WIN32) && !defined(__MINGW32__) && !defined(__MINGW64__)
   #include <direct.h>
@@ -20,6 +21,14 @@
     #define MKDIR(path) mkdir(path, 0755)
   #endif
 #endif
+
+static char* xstrdup(const char *s){
+  size_t n = strlen(s) + 1;
+  char *p = (char*)malloc(n);
+  if(!p){ perror("malloc"); exit(1); }
+  memcpy(p, s, n);
+  return p;
+}
 
 // ------------------------------ 型定義 ------------------------------
 typedef struct { int id; double x, y, z; } Node;
@@ -63,6 +72,35 @@ typedef struct {
 
 typedef struct { SPCEntry   *data; size_t size, cap; } SPCVec;
 typedef struct { ForceEntry *data; size_t size, cap; } ForceVec;
+
+typedef struct {
+  int eid;
+  int n[3];       // internal node indices (0-based)
+  double normal[3];
+  int surface_id;
+} SurfElem;
+
+typedef struct { SurfElem *data; size_t size, cap; } SurfElemVec;
+
+typedef struct {
+  int n1, n2;      // internal node indices (0-based, sorted)
+  int e1, e2;      // element indices in SurfElemVec
+  int count;
+} EdgeRec;
+
+typedef struct { EdgeRec *data; size_t size, cap; } EdgeVec;
+
+typedef struct {
+  int n1, n2;
+  int e1, e2;      // element indices (e2=-1 if boundary)
+  int s1, s2;      // surface ids
+  double dir[3];
+  int rid;
+} RidgeEdge;
+
+typedef struct { RidgeEdge *data; size_t size, cap; } RidgeVec;
+
+typedef struct { int *data; size_t size, cap; } IntVec;
 
 // ------------------------------ ベクタ操作 ------------------------------
 static void nodevec_init (NodeVec  *v){ v->data=NULL; v->size=0; v->cap=0; }
@@ -124,6 +162,64 @@ static void forcevec_push(ForceVec *v, ForceEntry e){
   v->data[v->size++] = e;
 }
 
+static void surfelemvec_init(SurfElemVec *v){ v->data=NULL; v->size=0; v->cap=0; }
+static void surfelemvec_push(SurfElemVec *v, SurfElem e){
+  if(v->size==v->cap){
+    v->cap = (v->cap ? v->cap*2 : 256);
+    v->data = (SurfElem*)realloc(v->data, v->cap*sizeof(SurfElem));
+    if(!v->data){ perror("realloc"); exit(1); }
+  }
+  v->data[v->size++] = e;
+}
+
+static void edgevec_init(EdgeVec *v){ v->data=NULL; v->size=0; v->cap=0; }
+static int edgevec_find(EdgeVec *v, int n1, int n2){
+  for(size_t i=0;i<v->size;i++){
+    if(v->data[i].n1==n1 && v->data[i].n2==n2){
+      return (int)i;
+    }
+  }
+  return -1;
+}
+static void edgevec_add(EdgeVec *v, int n1, int n2, int elem){
+  if(n1>n2){ int tmp=n1; n1=n2; n2=tmp; }
+  int idx=edgevec_find(v,n1,n2);
+  if(idx>=0){
+    EdgeRec *e=&v->data[idx];
+    if(e->count==1){ e->e2=elem; }
+    e->count++;
+    return;
+  }
+  if(v->size==v->cap){
+    v->cap = (v->cap ? v->cap*2 : 512);
+    v->data = (EdgeRec*)realloc(v->data, v->cap*sizeof(EdgeRec));
+    if(!v->data){ perror("realloc"); exit(1); }
+  }
+  EdgeRec rec;
+  rec.n1=n1; rec.n2=n2; rec.e1=elem; rec.e2=-1; rec.count=1;
+  v->data[v->size++] = rec;
+}
+
+static void ridgevec_init(RidgeVec *v){ v->data=NULL; v->size=0; v->cap=0; }
+static void ridgevec_push(RidgeVec *v, RidgeEdge e){
+  if(v->size==v->cap){
+    v->cap = (v->cap ? v->cap*2 : 512);
+    v->data = (RidgeEdge*)realloc(v->data, v->cap*sizeof(RidgeEdge));
+    if(!v->data){ perror("realloc"); exit(1); }
+  }
+  v->data[v->size++] = e;
+}
+
+static void intvec_init(IntVec *v){ v->data=NULL; v->size=0; v->cap=0; }
+static void intvec_push(IntVec *v, int x){
+  if(v->size==v->cap){
+    v->cap = (v->cap ? v->cap*2 : 8);
+    v->data = (int*)realloc(v->data, v->cap*sizeof(int));
+    if(!v->data){ perror("realloc"); exit(1); }
+  }
+  v->data[v->size++] = x;
+}
+
 // ------------------------------ ソート（ID昇順） ------------------------------
 static int cmp_node_id (const void *a, const void *b){ const Node  *x=a, *y=b; return (x->id - y->id); }
 static int cmp_tria3_id(const void *a, const void *b){ const Tria3 *x=a, *y=b; return (x->id - y->id); }
@@ -171,8 +267,7 @@ static char* normalize_number_stream(const char *src){
 
 // 自由書式の行から数値のみ抽出
 static int extract_numbers(const char *line, double *vals, int max){
-  char *tmp=strdup(line);
-  if(!tmp){ perror("strdup"); exit(1); }
+  char *tmp=xstrdup(line);
   replace_nbsp_tabs(tmp);
   rstrip(tmp);
   strip_trailing_plus(tmp);
@@ -211,8 +306,7 @@ static const char* after_head(const char *line){
 // 行先頭のカード名文字列を取り出す
 static void head_token(const char *line, char out[32]){
   out[0]=0;
-  char *tmp=strdup(line);
-  if(!tmp){ perror("strdup"); exit(1); }
+  char *tmp=xstrdup(line);
   replace_nbsp_tabs(tmp);
   char *p=tmp;
   while(*p==' '){ p++; }
@@ -445,6 +539,13 @@ static double tri_area_signed(const Node *a, const Node *b, const Node *c){
   return 0.5 * (ax*by - ay*bx);
 }
 
+static void normalize_vec3(double v[3]){
+  double n = sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+  if(n>0.0){
+    v[0]/=n; v[1]/=n; v[2]/=n;
+  }
+}
+
 static int split_fields_simple(const char *s, char fields[][64], int max){
   int count=0;
   const char *p=s;
@@ -616,14 +717,20 @@ static int parse_mat1_line(const char *line, Mat1 *out){
     if(vc>=3){ out->rho = vals[2]; out->hasRho= 1; }
   }
 
-  // UNITSYS=MN-MM → E(mN/mm^2) を Pa に（×1000）
-  if(out->hasE && unitsys_mnmm){
-    out->E *= 1000.0;
+  // E を N/mm^2 に統一
+  // UNITSYS=MN-MM の場合: mN/mm^2 → N/mm^2（÷1000）
+  // それ以外は Pa とみなし: Pa → N/mm^2（×1e-6）
+  if(out->hasE){
+    if(unitsys_mnmm){
+      out->E *= 1e-3;
+    }else{
+      out->E *= 1e-6;
+    }
   }
 
   // 非有限値はユーザー指定の既定値（SteelLike）にフォールバック
   if(!is_finite(out->E) || !is_finite(out->nu) || !is_finite(out->rho)){
-    out->E   = 220694.0 * 1e6;  // 220694 MPa → 2.20694e11 Pa
+    out->E   = 220694.0;        // 220694 MPa → 220694 N/mm^2
     out->nu  = 0.288;
     out->rho = 7.83e-6;         // kg/mm^3
     out->hasE=1;
@@ -688,19 +795,126 @@ static int parse_spc_line(const char *line, SPCEntry *spc){
 
 // FORCE（自由書式）
 static int parse_force_line(const char *line, ForceEntry *fc){
-  char f[12][64];
-  int nf=split_fields_simple(line, f, 12);
-  if(nf<8){
-    return 0;
+  char *tmp=xstrdup(line);
+  replace_nbsp_tabs(tmp);
+
+  // 固定幅（8桁）FORCE を優先して解釈
+  {
+    char line80[81];
+    memset(line80,' ',80);
+    line80[80]='\0';
+    size_t L=strlen(tmp);
+    if(L>80){ L=80; }
+    memcpy(line80,tmp,L);
+
+    const char *f2=line80+ 8; // SID
+    const char *f3=line80+16; // G
+    const char *f4=line80+24; // CID
+    const char *f5=line80+32; // F
+    const char *f6=line80+40; // N1
+    const char *f7=line80+48; // N2
+    const char *f8=line80+56; // N3
+
+    int sid = field_to_int(f2,8);
+    int gid = field_to_int(f3,8);
+    if(sid>0 && gid>0){
+      fc->sid = sid;
+      fc->gid = gid;
+      fc->cid = field_to_int(f4,8);
+      fc->F   = field_to_double(f5,8);
+      fc->n1  = field_to_double(f6,8);
+      fc->n2  = field_to_double(f7,8);
+      fc->n3  = field_to_double(f8,8);
+      free(tmp);
+      return 1;
+    }
   }
-  fc->sid = atoi(f[1]);
-  fc->gid = atoi(f[2]);
-  fc->cid = atoi(f[3]);
-  fc->F   = atof(f[4]);
-  fc->n1  = atof(f[5]);
-  fc->n2  = atof(f[6]);
-  fc->n3  = atof(f[7]);
-  return 1;
+
+  char f[12][64];
+  int nf=split_fields_simple(tmp, f, 12);
+  if(nf>=8){
+    fc->sid = atoi(f[1]);
+    fc->gid = atoi(f[2]);
+    fc->cid = atoi(f[3]);
+    fc->F   = atof(f[4]);
+    fc->n1  = atof(f[5]);
+    fc->n2  = atof(f[6]);
+    fc->n3  = atof(f[7]);
+    free(tmp);
+    return 1;
+  }
+
+  // "FORCE sid gid F n1n2 n3" 形式（n1/n2が連結）のフォールバック
+  if(nf==6){
+    fc->sid = atoi(f[1]);
+    fc->gid = atoi(f[2]);
+    fc->cid = 0;
+    fc->F   = atof(f[3]);
+
+    char left_tok[64]={0};
+    char right_tok[64]={0};
+    int split_pos = -1;
+    size_t len=strlen(f[4]);
+    for(size_t i=1;i<len;i++){
+      if(f[4][i]=='+' || f[4][i]=='-'){
+        split_pos=(int)i;
+        break;
+      }
+    }
+    if(split_pos>0){
+      size_t L=(size_t)split_pos;
+      if(L>=sizeof(left_tok)){ L=sizeof(left_tok)-1; }
+      memcpy(left_tok, f[4], L);
+      left_tok[L]='\0';
+      snprintf(right_tok, sizeof(right_tok), "%s", f[4]+split_pos);
+    }else{
+      int sp=split_concatenated_two_numbers(f[4], left_tok, right_tok);
+      if(sp!=2){
+        left_tok[0]=0;
+        right_tok[0]=0;
+      }
+    }
+
+    if(left_tok[0] && right_tok[0]){
+      char *fixL=normalize_number_stream(left_tok);
+      char *fixR=normalize_number_stream(right_tok);
+      fc->n1 = strtod(fixL,NULL);
+      fc->n2 = strtod(fixR,NULL);
+      free(fixL);
+      free(fixR);
+    }else{
+      fc->n1 = atof(f[4]);
+      fc->n2 = 0.0;
+    }
+    fc->n3 = atof(f[5]);
+    free(tmp);
+    return 1;
+  }
+
+  // 固定幅や連結数値に備えたフォールバック
+  double vals[16];
+  int n=extract_numbers(after_head(tmp), vals, 16);
+  if(n>=6){
+    fc->sid = (int)vals[0];
+    fc->gid = (int)vals[1];
+    if(n>=7){
+      fc->cid = (int)vals[2];
+      fc->F   = vals[3];
+      fc->n1  = vals[4];
+      fc->n2  = vals[5];
+      fc->n3  = vals[6];
+    }else{
+      fc->cid = 0;
+      fc->F   = vals[2];
+      fc->n1  = vals[3];
+      fc->n2  = vals[4];
+      fc->n3  = vals[5];
+    }
+    free(tmp);
+    return 1;
+  }
+  free(tmp);
+  return 0;
 }
 
 // ------------------------------ 品質チェック ------------------------------
@@ -1123,6 +1337,11 @@ int main(int argc, char **argv){
   fprintf(fmesh, "elements\n");
   size_t ecount=0;
 
+  // surface/ridgeline 準備
+  SurfElemVec se; surfelemvec_init(&se);
+  EdgeVec edges; edgevec_init(&edges);
+  int is2d = !z_nonzero_detected;
+
   // CTRIA3（退化はスキップ）
   for(size_t i=0;i<t3s.size;i++){
     int ids[3] = {t3s.data[i].n1, t3s.data[i].n2, t3s.data[i].n3};
@@ -1146,6 +1365,32 @@ int main(int argc, char **argv){
         t3s.data[i].id, t3s.data[i].pid, ids[0], ids[1], ids[2], in[0], in[1], in[2]);
     }
     fprintf(fmesh, "%zu, %d, %d, %d\n", internal_eid, in[0], in[1], in[2]);
+
+    if(in[0]>0 && in[1]>0 && in[2]>0){
+      SurfElem e;
+      e.eid = (int)internal_eid;
+      e.n[0] = in[0]-1;
+      e.n[1] = in[1]-1;
+      e.n[2] = in[2]-1;
+      if(is2d){
+        e.normal[0]=0.0; e.normal[1]=0.0; e.normal[2]=1.0;
+      }else{
+        const Node *A=&nodes.data[e.n[0]];
+        const Node *B=&nodes.data[e.n[1]];
+        const Node *C=&nodes.data[e.n[2]];
+        double ab[3]={B->x-A->x, B->y-A->y, B->z-A->z};
+        double ac[3]={C->x-A->x, C->y-A->y, C->z-A->z};
+        e.normal[0]=ab[1]*ac[2]-ab[2]*ac[1];
+        e.normal[1]=ab[2]*ac[0]-ab[0]*ac[2];
+        e.normal[2]=ab[0]*ac[1]-ab[1]*ac[0];
+        normalize_vec3(e.normal);
+      }
+      e.surface_id = 0;
+      surfelemvec_push(&se, e);
+      edgevec_add(&edges, e.n[0], e.n[1], (int)se.size-1);
+      edgevec_add(&edges, e.n[1], e.n[2], (int)se.size-1);
+      edgevec_add(&edges, e.n[2], e.n[0], (int)se.size-1);
+    }
   }
 
   // CTRIA6（簡易：接続だけ出力。面積/慣性は将来拡張）
@@ -1160,8 +1405,201 @@ int main(int argc, char **argv){
     size_t internal_eid = ++ecount;
     fprintf(fmesh, "%zu, %d, %d, %d, %d, %d, %d\n",
             internal_eid, in[0], in[1], in[2], in[3], in[4], in[5]);
+
+    if(in[0]>0 && in[1]>0 && in[2]>0){
+      SurfElem e;
+      e.eid = (int)internal_eid;
+      e.n[0] = in[0]-1;
+      e.n[1] = in[1]-1;
+      e.n[2] = in[2]-1;
+      if(is2d){
+        e.normal[0]=0.0; e.normal[1]=0.0; e.normal[2]=1.0;
+      }else{
+        const Node *A=&nodes.data[e.n[0]];
+        const Node *B=&nodes.data[e.n[1]];
+        const Node *C=&nodes.data[e.n[2]];
+        double ab[3]={B->x-A->x, B->y-A->y, B->z-A->z};
+        double ac[3]={C->x-A->x, C->y-A->y, C->z-A->z};
+        e.normal[0]=ab[1]*ac[2]-ab[2]*ac[1];
+        e.normal[1]=ab[2]*ac[0]-ab[0]*ac[2];
+        e.normal[2]=ab[0]*ac[1]-ab[1]*ac[0];
+        normalize_vec3(e.normal);
+      }
+      e.surface_id = 0;
+      surfelemvec_push(&se, e);
+      edgevec_add(&edges, e.n[0], e.n[1], (int)se.size-1);
+      edgevec_add(&edges, e.n[1], e.n[2], (int)se.size-1);
+      edgevec_add(&edges, e.n[2], e.n[0], (int)se.size-1);
+    }
   }
   fclose(fmesh);
+
+  // -------- surface/ridgeline 分類 --------
+  const double angle_deg = 60.0;
+  const double cos_thresh = cos(angle_deg * (M_PI/180.0));
+
+  if(se.size>0){
+    if(is2d){
+      for(size_t i=0;i<se.size;i++){
+        se.data[i].surface_id = 1;
+      }
+    }else{
+      int *parent = (int*)malloc(se.size*sizeof(int));
+      if(!parent){ perror("malloc"); exit(1); }
+      for(size_t i=0;i<se.size;i++){ parent[i]=(int)i; }
+      #define FIND(x) ({int r=(x); while(parent[r]!=r) r=parent[r]; r;})
+      #define UNION(a,b) do{int ra=FIND(a), rb=FIND(b); if(ra!=rb) parent[rb]=ra;}while(0)
+
+      for(size_t i=0;i<edges.size;i++){
+        EdgeRec *er=&edges.data[i];
+        if(er->count==2 && er->e2>=0){
+          SurfElem *a=&se.data[er->e1];
+          SurfElem *b=&se.data[er->e2];
+          double dot = a->normal[0]*b->normal[0]
+                     + a->normal[1]*b->normal[1]
+                     + a->normal[2]*b->normal[2];
+          if(dot >= cos_thresh){
+            UNION(er->e1, er->e2);
+          }
+        }
+      }
+      int *root_to_id = (int*)calloc(se.size, sizeof(int));
+      if(!root_to_id){ perror("calloc"); exit(1); }
+      int sid=0;
+      for(size_t i=0;i<se.size;i++){
+        int r=FIND((int)i);
+        if(root_to_id[r]==0){
+          root_to_id[r]=++sid;
+        }
+        se.data[i].surface_id = root_to_id[r];
+      }
+      free(root_to_id);
+      free(parent);
+      #undef FIND
+      #undef UNION
+    }
+  }
+
+  RidgeVec ridges; ridgevec_init(&ridges);
+  for(size_t i=0;i<edges.size;i++){
+    EdgeRec *er=&edges.data[i];
+    int e1=er->e1;
+    int e2=(er->count==2 ? er->e2 : -1);
+    int s1 = (e1>=0 ? se.data[e1].surface_id : 0);
+    int s2 = (e2>=0 ? se.data[e2].surface_id : 0);
+    if(er->count==1 || (er->count==2 && s1!=s2)){
+      RidgeEdge re;
+      re.n1 = er->n1;
+      re.n2 = er->n2;
+      re.e1 = e1;
+      re.e2 = e2;
+      re.s1 = s1;
+      re.s2 = s2;
+      const Node *A=&nodes.data[re.n1];
+      const Node *B=&nodes.data[re.n2];
+      re.dir[0]=B->x-A->x;
+      re.dir[1]=B->y-A->y;
+      re.dir[2]=B->z-A->z;
+      normalize_vec3(re.dir);
+      re.rid = 0;
+      ridgevec_push(&ridges, re);
+    }
+  }
+
+  if(ridges.size>0){
+    int *rparent = (int*)malloc(ridges.size*sizeof(int));
+    if(!rparent){ perror("malloc"); exit(1); }
+    for(size_t i=0;i<ridges.size;i++){ rparent[i]=(int)i; }
+    #define RFIND(x) ({int r=(x); while(rparent[r]!=r) r=rparent[r]; r;})
+    #define RUNION(a,b) do{int ra=RFIND(a), rb=RFIND(b); if(ra!=rb) rparent[rb]=ra;}while(0)
+
+    IntVec *node_edges = (IntVec*)calloc(nodes.size, sizeof(IntVec));
+    if(!node_edges){ perror("calloc"); exit(1); }
+    for(size_t i=0;i<ridges.size;i++){
+      intvec_push(&node_edges[ridges.data[i].n1], (int)i);
+      intvec_push(&node_edges[ridges.data[i].n2], (int)i);
+    }
+    for(size_t n=0;n<nodes.size;n++){
+      IntVec *lst=&node_edges[n];
+      for(size_t i=0;i<lst->size;i++){
+        for(size_t j=i+1;j<lst->size;j++){
+          int a=lst->data[i];
+          int b=lst->data[j];
+          RidgeEdge *ea=&ridges.data[a];
+          RidgeEdge *eb=&ridges.data[b];
+          int pa1 = ea->s1<ea->s2 ? ea->s1 : ea->s2;
+          int pa2 = ea->s1<ea->s2 ? ea->s2 : ea->s1;
+          int pb1 = eb->s1<eb->s2 ? eb->s1 : eb->s2;
+          int pb2 = eb->s1<eb->s2 ? eb->s2 : eb->s1;
+          if(pa1!=pb1 || pa2!=pb2){
+            continue;
+          }
+          double dot = fabs(ea->dir[0]*eb->dir[0]
+                           +ea->dir[1]*eb->dir[1]
+                           +ea->dir[2]*eb->dir[2]);
+          if(dot >= cos_thresh){
+            RUNION(a,b);
+          }
+        }
+      }
+    }
+    int *root_to_id = (int*)calloc(ridges.size, sizeof(int));
+    if(!root_to_id){ perror("calloc"); exit(1); }
+    int rid=0;
+    for(size_t i=0;i<ridges.size;i++){
+      int r=RFIND((int)i);
+      if(root_to_id[r]==0){
+        root_to_id[r]=++rid;
+      }
+      ridges.data[i].rid = root_to_id[r];
+    }
+    for(size_t n=0;n<nodes.size;n++){
+      free(node_edges[n].data);
+    }
+    free(node_edges);
+    free(root_to_id);
+    free(rparent);
+    #undef RFIND
+    #undef RUNION
+  }
+
+  // -------- mesh/surface.dat --------
+  {
+    char path_surface[1024];
+    snprintf(path_surface, sizeof(path_surface), "%s/%s/mesh/surface.dat", outroot, part);
+    FILE *fs=fopen(path_surface, "wb");
+    if(fs){
+      fprintf(fs, "angle=60\n");
+      for(size_t i=0;i<se.size;i++){
+        fprintf(fs, "%d %d\n", se.data[i].surface_id, se.data[i].eid);
+      }
+      fclose(fs);
+    }else{
+      perror("fopen(surface.dat)");
+    }
+  }
+
+  // -------- mesh/ridgeline.dat --------
+  {
+    char path_ridge[1024];
+    snprintf(path_ridge, sizeof(path_ridge), "%s/%s/mesh/ridgeline.dat", outroot, part);
+    FILE *fr=fopen(path_ridge, "wb");
+    if(fr){
+      fprintf(fr, "angle=60\n");
+      for(size_t i=0;i<ridges.size;i++){
+        RidgeEdge *re=&ridges.data[i];
+        if(re->e1>=0){
+          fprintf(fr, "%d %d\n", re->rid, se.data[re->e1].eid);
+        }
+        if(re->e2>=0){
+          fprintf(fr, "%d %d\n", re->rid, se.data[re->e2].eid);
+        }
+      }
+      fclose(fr);
+    }else{
+      perror("fopen(ridgeline.dat)");
+    }
+  }
 
   // -------- material/material.dat --------
   char path_mat[1024];
@@ -1171,7 +1609,7 @@ int main(int argc, char **argv){
     perror("fopen(material.dat)");
     return 1;
   }
-  fprintf(fmat, "Young's modulus [Pa]\n%.10g\n", mat_found ? mat.E : 0.0);
+  fprintf(fmat, "Young's modulus [N/mm^2]\n%.10g\n", mat_found ? mat.E : 0.0);
   fprintf(fmat, "Poisson's ratio [–]\n%.10g\n", (mat_found && mat.hasNu) ? mat.nu : 0.0);
   fprintf(fmat, "density [kg/mm^3]\n%.10g\n",   (mat_found && mat.hasRho)? mat.rho: 0.0);
   fclose(fmat);
@@ -1300,7 +1738,134 @@ int main(int argc, char **argv){
     return 1;
   }
 
-  size_t total_bc = spcs.size + forces.size;
+  int *node_surface = (int*)calloc(nodes.size, sizeof(int));
+  int *node_ridge   = (int*)calloc(nodes.size, sizeof(int));
+  IntVec *node_ridges = NULL;
+  if(is2d){
+    node_ridges = (IntVec*)calloc(nodes.size, sizeof(IntVec));
+  }
+  if(!node_surface || !node_ridge || (is2d && !node_ridges)){
+    perror("calloc");
+    exit(1);
+  }
+  for(size_t i=0;i<se.size;i++){
+    for(int k=0;k<3;k++){
+      int n=se.data[i].n[k];
+      if(n<0 || n>=(int)nodes.size){ continue; }
+      if(node_surface[n]==0){
+        node_surface[n]=se.data[i].surface_id;
+      }else if(node_surface[n]!=se.data[i].surface_id){
+        node_surface[n]=-1;
+      }
+    }
+  }
+  for(size_t i=0;i<ridges.size;i++){
+    int rid=ridges.data[i].rid;
+    int nn[2]={ridges.data[i].n1, ridges.data[i].n2};
+    for(int k=0;k<2;k++){
+      int n=nn[k];
+      if(n<0 || n>=(int)nodes.size){ continue; }
+      if(is2d){
+        IntVec *lst=&node_ridges[n];
+        int exists=0;
+        for(size_t j=0;j<lst->size;j++){
+          if(lst->data[j]==rid){ exists=1; break; }
+        }
+        if(!exists){
+          intvec_push(lst, rid);
+        }
+      }else{
+        if(node_ridge[n]==0){
+          node_ridge[n]=rid;
+        }else if(node_ridge[n]!=rid){
+          node_ridge[n]=-1;
+        }
+      }
+    }
+  }
+  for(size_t i=0;i<nodes.size;i++){
+    if(node_surface[i]<0){ node_surface[i]=0; }
+    if(node_ridge[i]<0){ node_ridge[i]=0; }
+    if(is2d && node_ridges){
+      if(node_ridges[i].size==1){
+        node_ridge[i]=node_ridges[i].data[0];
+      }else{
+        node_ridge[i]=0;
+      }
+    }
+  }
+
+  typedef struct {
+    int target_type; /* 1=node, 2=surface, 3=ridgeline */
+    int id;
+    char comp[8];
+    double d;
+  } FixLine;
+  FixLine *fix_lines = NULL;
+  size_t fix_lines_count = 0;
+  size_t fix_lines_cap = 0;
+
+  for(size_t i=0;i<spcs.size;i++){
+    const SPCEntry *s=&spcs.data[i];
+    if(s->gid<=0 || s->comp[0]==0){
+      continue;
+    }
+    int nidx=find_node_index_by_id(&nodes, s->gid);
+    const char *target="node";
+    int tid=s->gid;
+    if(nidx>=0){
+      if(is2d){
+        if(node_ridges && node_ridges[nidx].size==1){
+          target="ridgeline";
+          tid=node_ridges[nidx].data[0];
+        }
+      }else if(node_surface[nidx]>0){
+        target="surface";
+        tid=node_surface[nidx];
+      }
+    }
+    int target_type = 1;
+    if(strcmp(target, "surface") == 0){
+      target_type = 2;
+    }else if(strcmp(target, "ridgeline") == 0){
+      target_type = 3;
+    }
+    int duplicate = 0;
+    for(size_t j=0;j<fix_lines_count;j++){
+      if(fix_lines[j].target_type == target_type &&
+         fix_lines[j].id == tid &&
+         strcmp(fix_lines[j].comp, s->comp) == 0 &&
+         fabs(fix_lines[j].d - s->d) < 1e-12){
+        duplicate = 1;
+        break;
+      }
+    }
+    if(duplicate){
+      continue;
+    }
+    if(fix_lines_count == fix_lines_cap){
+      size_t new_cap = fix_lines_cap ? fix_lines_cap * 2 : 32;
+      FixLine *tmp = (FixLine*)realloc(fix_lines, new_cap * sizeof(FixLine));
+      if(!tmp){
+        perror("realloc");
+        exit(1);
+      }
+      fix_lines = tmp;
+      fix_lines_cap = new_cap;
+    }
+    fix_lines[fix_lines_count].target_type = target_type;
+    fix_lines[fix_lines_count].id = tid;
+    strncpy(fix_lines[fix_lines_count].comp, s->comp, sizeof(fix_lines[fix_lines_count].comp) - 1);
+    fix_lines[fix_lines_count].comp[sizeof(fix_lines[fix_lines_count].comp) - 1] = '\0';
+    fix_lines[fix_lines_count].d = s->d;
+    fix_lines_count++;
+  }
+  size_t total_bc = fix_lines_count;
+  for(size_t i=0;i<forces.size;i++){
+    if(forces.data[i].gid>0){
+      total_bc++;
+    }
+  }
   fprintf(fbc, "Total number of Boundary Conditions [–]\n%zu\n", total_bc);
   if(unitsys_mnmm){
     fprintf(fbc, "UNITSYS\nMN-MM\n");
@@ -1312,32 +1877,19 @@ int main(int argc, char **argv){
   }else{
     fprintf(fbc, "Constraint: SPC set\n");
   }
-
-  for(size_t i=0;i<spcs.size;i++){
-    const SPCEntry *s=&spcs.data[i];
-    if(opt_dofnames){
-      char dofnames[128]={0};
-      const char *map[10]={"","UX","UY","UZ","RX","RY","RZ","","",""};
-      for(size_t k=0;k<strlen(s->comp); ++k){
-        int d=s->comp[k]-'0';
-        if(d>=1 && d<=6){
-          if(dofnames[0]){
-            strncat(dofnames, "/", sizeof(dofnames)-1);
-          }
-          strncat(dofnames, map[d], sizeof(dofnames)-1);
-        }
-      }
-      if(dofnames[0]){
-        fprintf(fbc, "SPC SID=%d G=%d C=%s D=%.6f (%s)\n",
-                s->sid, s->gid, s->comp, s->d, dofnames);
-      }else{
-        fprintf(fbc, "SPC SID=%d G=%d C=%s D=%.6f\n",
-                s->sid, s->gid, s->comp, s->d);
-      }
-    }else{
-      fprintf(fbc, "SPC SID=%d G=%d C=%s D=%.6f\n",
-              s->sid, s->gid, s->comp, s->d);
+  fprintf(fbc, "Fix\n");
+  for(size_t i=0;i<fix_lines_count;i++){
+    const char *target = "node";
+    if(fix_lines[i].target_type == 2){
+      target = "surface";
+    }else if(fix_lines[i].target_type == 3){
+      target = "ridgeline";
     }
+    fprintf(fbc, "%s %d %s %.6f\n",
+            target,
+            fix_lines[i].id,
+            fix_lines[i].comp,
+            fix_lines[i].d);
   }
 
   // FORCE 見出し
@@ -1346,12 +1898,53 @@ int main(int argc, char **argv){
   }else{
     fprintf(fbc, "Load: FORCE set\n");
   }
+  fprintf(fbc, "Force\n");
 
   for(size_t i=0;i<forces.size;i++){
     const ForceEntry *fc=&forces.data[i];
+    if(fc->gid<=0){
+      continue;
+    }
     double F_out_N = unitsys_mnmm ? (fc->F / 1000.0) : fc->F; // mN -> N
-    fprintf(fbc, "FORCE SID=%d G=%d CID=%d F=%.6g [N] N=(%.6g,%.6g,%.6g)\n",
-            fc->sid, fc->gid, fc->cid, F_out_N, fc->n1, fc->n2, fc->n3);
+    double fx = F_out_N * fc->n1;
+    double fy = F_out_N * fc->n2;
+    double fz = F_out_N * fc->n3;
+    int axis = 0;
+    double val = 0.0;
+    double ax=fabs(fx), ay=fabs(fy), az=fabs(fz);
+    if(ax>=ay && ax>=az){ axis=1; val=fx; }
+    else if(ay>=ax && ay>=az){ axis=2; val=fy; }
+    else if(az>=ax && az>=ay){ axis=3; val=fz; }
+
+    int nidx=find_node_index_by_id(&nodes, fc->gid);
+    const char *target="node";
+    int tid=fc->gid;
+    if(nidx>=0){
+      if(is2d){
+        if(node_ridges && node_ridges[nidx].size==1){
+          target="ridgeline";
+          tid=node_ridges[nidx].data[0];
+        }
+      }else{
+        if(node_ridge[nidx]>0){
+          target="ridgeline";
+          tid=node_ridge[nidx];
+        }else if(node_surface[nidx]>0){
+          target="surface";
+          tid=node_surface[nidx];
+        }
+      }
+    }
+    fprintf(fbc, "%s %d 123456 %d %.6g\n", target, tid, axis, val);
+  }
+  free(fix_lines);
+  free(node_surface);
+  free(node_ridge);
+  if(node_ridges){
+    for(size_t i=0;i<nodes.size;i++){
+      free(node_ridges[i].data);
+    }
+    free(node_ridges);
   }
   fclose(fbc);
 

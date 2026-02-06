@@ -51,9 +51,14 @@ FEM4C/output.dat
 FEM4C/output.csv
 FEM4C/output.vtk
 FEM4C/output.f06
+FEM4C/output_*.dat
+FEM4C/output_*.csv
+FEM4C/output_*.vtk
+FEM4C/output_*.f06
 FEM4C/examples/*_results.dat
 FEM4C/examples/*_results.vtk
 FEM4C/examples/*_results.f06
 FEM4C/run_out/
 FEM4C/result/
+FEM4C/parser/parser
 FEM4C/parser/parser.exe

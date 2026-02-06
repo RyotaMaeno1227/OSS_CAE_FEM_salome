@@ -1,5 +1,5 @@
 # FEM4C - High Performance Finite Element Method in C
-# Makefile for building the FEM solver
+# Makefile for building the FEM solver (+ parser)
 
 # Compiler settings
 CC = gcc
@@ -13,9 +13,16 @@ SRCDIR = src
 BUILDDIR = build
 TESTDIR = test
 BINDIR = bin
+PARSERDIR = parser
+
+ifeq ($(OS),Windows_NT)
+PARSER_EXE_SUFFIX = .exe
+else
+PARSER_EXE_SUFFIX =
+endif
 
 # Create directories if they don't exist
-$(shell mkdir -p $(BUILDDIR) $(BINDIR))
+$(shell mkdir -p $(BUILDDIR) $(BINDIR) $(PARSERDIR))
 
 # Source files
 COMMON_SRCS = $(SRCDIR)/common/globals.c $(SRCDIR)/common/error.c
@@ -39,25 +46,37 @@ OBJS = $(SRCS:$(SRCDIR)/%.c=$(BUILDDIR)/%.o)
 # Target executable
 TARGET = $(BINDIR)/fem4c
 
-# Default target
-all: $(TARGET)
+# Parser target (parser.exe on Windows, parser on POSIX)
+PARSER_SRC = $(PARSERDIR)/parser.c
+PARSER_TARGET = $(PARSERDIR)/parser$(PARSER_EXE_SUFFIX)
+PARSER_CFLAGS = -Wall -Wextra -O3 -std=c99
+# If parser needs any project headers, keep INCLUDES here as well.
+PARSER_INCLUDES = $(INCLUDES)
+
+# Default target (build solver + parser)
+all: $(TARGET) $(PARSER_TARGET)
 
 # Release build
 release: CFLAGS += $(OPENMP_FLAGS)
-release: $(TARGET)
+release: $(TARGET) $(PARSER_TARGET)
 
 # Debug build
 debug: CFLAGS += $(DEBUG_FLAGS)
-debug: $(TARGET)
+debug: $(TARGET) $(PARSER_TARGET)
 
 # OpenMP build
 openmp: CFLAGS += $(OPENMP_FLAGS)
-openmp: $(TARGET)
+openmp: $(TARGET) $(PARSER_TARGET)
 
 # Main target
 $(TARGET): $(OBJS)
 	@echo "Linking $@"
 	$(CC) $(CFLAGS) -o $@ $^ -lm
+
+# Build parser executable
+$(PARSER_TARGET): $(PARSER_SRC)
+	@echo "Building $@"
+	$(CC) $(PARSER_CFLAGS) $(PARSER_INCLUDES) -o $@ $< -lm
 
 # Object file compilation
 $(BUILDDIR)/%.o: $(SRCDIR)/%.c
@@ -66,7 +85,7 @@ $(BUILDDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 # Test targets
-test: $(TARGET)
+test: $(TARGET) $(PARSER_TARGET)
 	@echo "Running tests..."
 	@if [ -f $(TESTDIR)/run_tests.sh ]; then \
 		cd $(TESTDIR) && ./run_tests.sh; \
@@ -80,8 +99,10 @@ unit_test:
 	@$(MAKE) -C $(TESTDIR)/unit
 
 # Clean targets
+# Clean targets
 clean:
 	rm -rf $(BUILDDIR) $(BINDIR)
+	rm -f $(PARSERDIR)/parser $(PARSERDIR)/parser.exe
 	@echo "Clean complete"
 
 clean_all: clean
@@ -142,10 +163,10 @@ help:
 	@echo "FEM4C Build System"
 	@echo "=================="
 	@echo "Available targets:"
-	@echo "  all       - Build the main executable (default)"
-	@echo "  release   - Build optimized version with OpenMP"
-	@echo "  debug     - Build debug version"
-	@echo "  openmp    - Build with OpenMP support"
+	@echo "  all       - Build the main executable + parser (default)"
+	@echo "  release   - Build optimized version with OpenMP (+ parser)"
+	@echo "  debug     - Build debug version (+ parser)"
+	@echo "  openmp    - Build with OpenMP support (+ parser)"
 	@echo "  test      - Run tests"
 	@echo "  unit_test - Build and run unit tests"
 	@echo "  clean     - Remove build files"
