@@ -77,7 +77,7 @@ To surface progress in status reports, embed either Markdown-style progress bars
 ```
 - The `progress-bar.dev` badge renders in GitHub issues/PRs. For offline docs, replace with inline SVG hosted under `docs/media/badges/`.
 
-These values mirror `docs/coupled_island_migration_plan.md` §5.1 and `docs/pm_status_2024-11-08.md` の KPI Snapshots (2025-11-10 担当: Mori). 旧 Appendix B.5.1 の運用枠は削除されたため、同じ週次レビューで必ず 3 か所を同時更新する。
+These values mirror `docs/archive/legacy_chrono/coupled_island_migration_plan.md` §5.1 and `docs/archive/legacy_chrono/pm_status_2024-11-08.md` の KPI Snapshots (2025-11-10 担当: Mori). 旧 Appendix B.5.1 の運用枠は削除されたため、同じ週次レビューで必ず 3 か所を同時更新する。
 
 **ASCII Gantt snippet (monthly granularity)**
 ```markdown
@@ -149,7 +149,7 @@ Both templates should reference the same KPI values (工数 / リスク). Update
 
 ### 共有事項
 - Coupled 3D ベンチ仕様案は 11/01 技術定例でレビュー予定（担当: Mori）。
-- 進捗テンプレートは `docs/coupled_island_migration_plan.md` のセクション 6 と連携する。
+- 進捗テンプレートは `docs/archive/legacy_chrono/coupled_island_migration_plan.md` のセクション 6 と連携する。
 ```
 
 上記テンプレートは `docs/chrono_3d_progress_template.md` として共有予定。KPI はテーブルの数値と一致するよう週次で見直してください。
@@ -175,7 +175,7 @@ Both templates should reference the same KPI values (工数 / リスク). Update
 - リスクスコアは 1（低）～5（高）で統一し、変更があれば根拠（条件数悪化、性能退行など）をコメント欄へ明記する。
 
 ### 10.4 Calculus-Core Outstanding Tasks
-- **KKT Descriptor Integration** – `docs/coupled_island_migration_plan.md` の KKT PoC を E2E テストに昇格させる（Owner: Mori）。  
+- **KKT Descriptor Integration** – `docs/archive/legacy_chrono/coupled_island_migration_plan.md` の KKT PoC を E2E テストに昇格させる（Owner: Mori）。  
 - **Iterative Solver Migration** – `ChIterativeSolverVI` パラメータの写経と Coupled ベンチ比較（Owner: Kobayashi）。  
 - **Contact Jacobian 3DOF** – Rolling/Torsional 成分を含む Manifold 拡張（Owner: Ito）。  
 - **Diagnostics Commonization** – 2D/3D 共通の condition gap / rank ログを `docs/coupled_constraint_solver_math.md` に揃える（Owner: Suzuki）。

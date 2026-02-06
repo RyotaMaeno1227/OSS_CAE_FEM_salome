@@ -144,12 +144,12 @@ codex --profile handsfree
 ## 10. 教育資料と Run ID の整合チェック
 
 - README / Hands-on / Tutorial / Cheat Sheet を同時に更新した場合は、コミット前に `python scripts/check_preset_links.py` を実行してプリセット参照がずれていないか確認してください（CI でも同スクリプトが実行されます）。
-- Run ID を記録したら `python tools/update_descriptor_run_id.py --run-id <GITHUB_RUN_ID>` を走らせ、`docs/logs/kkt_descriptor_poc_e2e.md` と `docs/coupled_island_migration_plan.md`、および `docs/abc_team_chat_handoff.md` の Evidence テンプレを同期します。
+- Run ID を記録したら `python tools/update_descriptor_run_id.py --run-id <GITHUB_RUN_ID>` を走らせ、`docs/logs/kkt_descriptor_poc_e2e.md` と `docs/archive/legacy_chrono/coupled_island_migration_plan.md`、および `docs/abc_team_chat_handoff.md` の Evidence テンプレを同期します。
 - 教育資料系ドキュメントを更新したときは `docs/documentation_changelog.md` にエントリを追加し、必要に応じて `docs/abc_team_chat_handoff.md` のタスク表にも結果を反映します。
 
 ## 11. Bチーム向け Git 差分確認チートシート
 
-Nightly / Diagnostics で `data/coupled_constraint_endurance.csv` や `docs/pm_status_2024-11-08.md` を更新した直後は、以下の流れでコミット対象を確認してください。
+Nightly / Diagnostics で `data/coupled_constraint_endurance.csv` や `docs/archive/legacy_chrono/pm_status_2024-11-08.md` を更新した直後は、以下の流れでコミット対象を確認してください。
 
 ```bash
 # 1. 代表差分を確認（長尺 CSV は tail/head でポイント確認）
@@ -160,7 +160,7 @@ git diff data/coupled_constraint_endurance.csv | tail
 # 2. 必須ファイルをステージング
 git add data/coupled_constraint_endurance.csv \
         data/latest.endurance.json \
-        docs/pm_status_2024-11-08.md \
+        docs/archive/legacy_chrono/pm_status_2024-11-08.md \
         docs/abc_team_chat_handoff.md \
         docs/documentation_changelog.md
 

@@ -118,8 +118,8 @@ chrono_coupled_constraint2d_solve_position(&coupled);
 | Hands-on guide | `docs/coupled_constraint_hands_on.md` | FEM4C 形式のステップバイステップ課題。 |
 | Minimal API (JP/EN) | `docs/coupled_contact_api_minimal.md`, `docs/coupled_contact_api_minimal_en.md` | Init / Solve / Diagnostics をフェーズ別に整理。 |
 | Coupled + Contact notes | `docs/coupled_contact_test_notes.md` | 島テストの判定基準。 |
-| 3D migration | `docs/coupled_island_migration_plan.md`, `docs/chrono_3d_abstraction_note.md` | KPI とガントを確認。 |
+| 3D migration | `docs/archive/legacy_chrono/coupled_island_migration_plan.md`, `docs/archive/legacy_chrono/chrono_3d_abstraction_note.md` | KPI とガントを確認。 |
 | Learning path map | `docs/integration/learning_path_map.md` | Hands-on ↔ Tutorial の統合ロードマップ。 |
 
-> ここで扱った内容は 3D 版 Coupled 拡張の基礎でもあるため、診断・島ソルバ・条件数ログの観点を押さえておくと移行計画（`docs/coupled_island_migration_plan.md`）にもスムーズに参加できます。  
+> ここで扱った内容は 3D 版 Coupled 拡張の基礎でもあるため、診断・島ソルバ・条件数ログの観点を押さえておくと移行計画（`docs/archive/legacy_chrono/coupled_island_migration_plan.md`）にもスムーズに参加できます。  
 > 2025-11-08 時点で Hands-on / Solver Math / Contact Notes へのリンクを Appendix B.7 のチェックリストで検証済み。次回は同チェックリストに沿って更新してください。

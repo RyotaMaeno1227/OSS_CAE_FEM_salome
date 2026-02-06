@@ -1,30 +1,56 @@
-# チーム別 Runbook
+# チーム別 Runbook（現行運用）
 
-本書は Chrono の C 移植を進めるための方針と、直近の実行タスクのみをまとめます。
+最終更新: 2026-02-06  
+対象: PM-3 / Aチーム / Bチーム / Cチーム
 
-## 方針とマイルストーン
-- 目的: Chrono の C 移植を最優先で進め、検証の再現性と記録を最小限の運用で担保する。
-- マイルストーン: Aチーム=移植本体と検証、Bチーム=移植前捌き（棚卸し/差分整理/最小サンプル）、Cチーム=ドキュメント導線整備。
-- Run ID 書式: `local-chrono2d-YYYYMMDD-XX` / `#<ID> (chrono-main)` / `#<ID> (Chrono C)` を厳守。
-- 報告: `docs/team_status.md` の自チーム欄のみ更新（Run ID/Artifact/Log/`git status`/リンクチェック結果）。
-- 生成物: `artifacts/*.csv` やテストバイナリはコミットしない。
-- リンクチェック: `python scripts/check_doc_links.py <対象md...>` を実行し結果を共有。
-- Changelog: ドキュメント更新があれば `docs/documentation_changelog.md` に記録。
+## 1. 目的
+- 現在のプロジェクト目標（`docs/long_term_target_definition.md`）に沿って、A/B/C の日次運用を統一する。
+- 実装対象を `FEM4C` の現行スプリントへ限定し、旧 Chrono 運用の誤参照を防ぐ。
 
-## コンテクスト継続ルール（必須）
-- 注意: チャットのコンテクスト長により途中でトークン切れが発生する可能性がある。
-- そのため、PM/各チームは毎回の作業終了時に `docs/session_continuity_log.md` を更新し、以下を必ず記録する。
-- 記録項目:
-  - `Current Plan`（次に実行する計画）
-  - `Completed This Session`（今回実施した内容）
-  - `Next Actions`（次アクションを3件以内）
-  - `Open Risks/Blockers`（未解決リスク・阻害要因）
-- 途中中断時も同様に記録し、次チャット担当は `docs/session_continuity_log.md` を最初に確認してから再開する。
+## 2. 参照優先順位（必須）
+1. 長期目標: `docs/long_term_target_definition.md`
+2. 現行ディスパッチ: `docs/abc_team_chat_handoff.md`（Section 0 のみ）
+3. 次タスクキュー: `docs/fem4c_team_next_queue.md`
+4. 進捗報告: `docs/team_status.md`
+5. 継続ログ: `docs/session_continuity_log.md`
 
-## 直近で実施すべきタスク
-- Aチーム: `@A-team 実行: A6,A13,A3`  
-  A6 新拘束タイプの実装テンプレを実コードに落とし込む（構造体/ヤコビアン/J組立/最小テストケース/constraints.md 追記まで）。A13 接触モデルに静摩擦緩衝帯と速度減衰パラメータを追加し、A3 で端点ケース（低法線・高速・ゼロ摩擦）を回して回帰を記録する。
-- Bチーム: `@B-team 実行: B2,B3,A6支援`  
-  Aチーム負荷分散として、A6/A13 で必要な C↔C++ 対応表を API 境界（構造体/関数/I/O）レベルで補完し、最小入出力サンプル（成功系1件・失敗系1件）と期待ログを用意して `docs/abc_team_chat_handoff.md` に引き継ぐ。
-- Cチーム: `@C-team 実行: C10,C13,C5`  
-  A/B の変更を受けて、`docs/chrono_2d_glossary_checklist.md` の用語統一、`docs/chrono_2d_dataset_guide.md` の更新手順、`docs/chrono_2d_media_rules.md` の命名規約を同期し、`docs/chrono_2d_readme.md` から一貫して辿れる導線に整理する。
+## 3. スコープ
+- In Scope:
+  - FEM ソルバー維持・補強（FEM4C）
+  - 2D MBD コア移植（Project Chrono コア）
+  - 共通 parser 契約の整備
+  - 学習用ドキュメント強化
+- Out of Scope（当面）:
+  - FEM-MBD 連成本実装
+  - 3D MBD 本実装
+  - 通知運用・Nightly 周辺オペレーション
+
+## 4. チーム運用ルール
+- チャット指示が「作業を継続してください」のみの場合:
+  - 各チームは `docs/fem4c_team_next_queue.md` の自チーム先頭 `Todo` / `In Progress` から着手する。
+- 作業終了時は必ず以下を更新する:
+  - `docs/team_status.md`
+  - `docs/session_continuity_log.md`（4項目: `Current Plan`, `Completed This Session`, `Next Actions`, `Open Risks/Blockers`）
+- コミット時の制約:
+  - 担当外ファイルをステージしない。
+  - 生成物（`*.dat`, `*.csv`, `*.vtk`, `*.f06`）をコミットしない。
+  - `FEM4C` と `chrono-2d` の混在コミットを禁止する。
+
+## 5. A/B/C の責務（現行スプリント）
+- Aチーム（実装）:
+  - `FEM4C/src/analysis/runner.*` と `FEM4C/src/mbd/*` を中心に、`mbd` 実行経路を段階実装する。
+- Bチーム（検証）:
+  - `practice/ch09` の拘束検証ハーネスと有限差分照合を維持・拡張する。
+- Cチーム（差分整理）:
+  - dirty 差分の 3分類（残す/除外/保留）と安全ステージング手順を維持する。
+
+## 6. 受入・検証
+- 各タスクの受入条件は `docs/fem4c_team_next_queue.md` の `Acceptance` を一次基準とする。
+- 受入に使うコマンド・結果（pass/fail）は `docs/team_status.md` へ記録する。
+
+## 7. アーカイブ方針
+- 旧 Chrono 運用・旧 PM 司令文書は以下へ退避済み（参照のみ）:
+  - `docs/archive/legacy_chrono/`
+- 実装前ドラフトは以下へ退避済み:
+  - `docs/archive/drafts/`
+- 現行運用では、上記アーカイブ配下をタスク指示の一次参照に使わない。

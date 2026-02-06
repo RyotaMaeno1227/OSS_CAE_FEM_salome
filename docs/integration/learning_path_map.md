@@ -2,7 +2,7 @@
 
 このメモは `docs/coupled_constraint_tutorial_draft.md`（説明主体）と `docs/coupled_constraint_hands_on.md`（演習主体）を統合して学習パスを一本化するためのロードマップです。旧 Appendix E は撤去済みのため、本メモを唯一の参照として章単位のマッピングと実装タスクを可視化します。
 
-> 3D 拡張を検討する場合は `docs/chrono_3d_abstraction_note.md` の「学習パス向けサマリ」を先に読み、段階的に参照するようにしてください。
+> 3D 拡張を検討する場合は `docs/archive/legacy_chrono/chrono_3d_abstraction_note.md` の「学習パス向けサマリ」を先に読み、段階的に参照するようにしてください。
 
 ## 1. 章対応表
 

@@ -66,7 +66,7 @@ watch -n 60 'tail -n 20 data/coupled_constraint_endurance.csv'
 - Run: #<RUN_ID> (Actions link above)
 - Attached: data/latest.endurance.json (hash <commit>)
 - Scope: κ/diagnostics summary only。個人情報・環境依存のログは含まれません。
-- Please confirm column schema matches docs/pm_status_2024-11-08.md (Nightly/B-section).
+- Please confirm column schema matches docs/archive/legacy_chrono/pm_status_2024-11-08.md (Nightly/B-section).
 ```
 
 ## 7. κ/RANK 異常の最短共有（3行版）

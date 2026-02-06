@@ -29,7 +29,7 @@ Chrono main 版の descriptor-e2e を実行し、Run ID と Artifact を記録�
 
 ## Evidence の反映先
 - `docs/logs/kkt_descriptor_poc_e2e_chrono_main.md` に追記
-- `docs/coupled_island_migration_plan.md` の chrono-main 行に Run ID を転記
+- `docs/archive/legacy_chrono/coupled_island_migration_plan.md` の chrono-main 行に Run ID を転記
 - `docs/abc_team_chat_handoff.md` の chrono-main テンプレに Run ID/Artifact を共有
 
 ## 週次同期

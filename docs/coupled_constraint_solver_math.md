@@ -71,7 +71,7 @@ else:
 - chrono-main では KKT 行列を `ChSystemDescriptor` で組み上げ、グローバル反復ソルバに渡す (`third_party/chrono/chrono-main/src/chrono/solver/ChSystemDescriptor.cpp:98`-`third_party/chrono/chrono-main/src/chrono/solver/ChSystemDescriptor.cpp:182`)。
 - 反復ソルバの違反履歴管理やオーバーリラクゼーション制御は `ChIterativeSolverVI` が担う (`third_party/chrono/chrono-main/src/chrono/solver/ChIterativeSolverVI.cpp:24`-`third_party/chrono/chrono-main/src/chrono/solver/ChIterativeSolverVI.cpp:62`)。
 
-今後はガウス消去から反復解法へ移行するため、ここで整理した式を KKT ブロック構築の基礎として利用する。詳細は `docs/coupled_island_migration_plan.md` と `docs/chrono_3d_abstraction_note.md` の KPI / ガントを参照。
+今後はガウス消去から反復解法へ移行するため、ここで整理した式を KKT ブロック構築の基礎として利用する。詳細は `docs/archive/legacy_chrono/coupled_island_migration_plan.md` と `docs/archive/legacy_chrono/chrono_3d_abstraction_note.md` の KPI / ガントを参照。
 
 ## 6. 数値サンプル
 

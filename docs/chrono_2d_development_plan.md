@@ -104,7 +104,7 @@
   - アイランド分割を Union-Find＋ハッシュマップベースに刷新し、大規模拘束でも高速にグルーピング可能にした。
 - **チュートリアル／教育コンテンツ（計算コア向け）**
   - `FEM4C/docs/FEM_LEARNING_GUIDE.md` と `FEM4C/docs/tutorial_manual.md` を参照し、Coupled 拘束・接触ソルバの基本計算フローを学べる最小教材を整備する。
-  - 導出メモ (`docs/coupled_constraint_solver_math.md`) や移行計画 (`docs/coupled_island_migration_plan.md`) と連携し、数式・サンプルコード・テストケースへの導線をまとめる。
+  - 導出メモ (`docs/coupled_constraint_solver_math.md`) や移行計画 (`docs/archive/legacy_chrono/coupled_island_migration_plan.md`) と連携し、数式・サンプルコード・テストケースへの導線をまとめる。
   - 教材は Markdown ベースで管理し、通知や可視化など計算に直結しない話題はリポジトリ外に任せる（以前の Appendix 領域は削除済み）。
 - **次のアクション候補（計算コア限定）**
   1. 摩擦付き接触での複数接触点・マンifold拡張（複数点、永続性）を検討し、継続接触の安定化を図る。

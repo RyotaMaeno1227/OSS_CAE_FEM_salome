@@ -57,7 +57,7 @@ Slack テンプレ（placeholder → 実データ差し替え時）:
 ## 5. 参考リンク
 - `docs/coupled_constraint_tutorial_draft.md` §3 Verification  
 - `docs/coupled_constraint_solver_math.md` §3 条件数評価  
-- `docs/coupled_island_migration_plan.md` §6 進捗テンプレート  
+- `docs/archive/legacy_chrono/coupled_island_migration_plan.md` §6 進捗テンプレート  
 - 運用系ドキュメントはすべて削除済み（ログ解析や Wiki 差し替えは各チーム運用の責任で実施）。
 
 ## 6. 3DOF Jacobian 統合メモ

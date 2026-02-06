@@ -33,8 +33,8 @@ Reference CSV: `data/diagnostics/bench_island_scheduler.csv`
 
 ### Escalation rules
 
-- **Fallback persists after providing `TBB_INCLUDE_DIR` / `TBB_LIBS`** – Collect the bench output, `make bench` log, and `ldd chrono-C-all/tests/bench_island_solver` result, then escalate to the parallelization lead (Tanaka) via the Aチームチャット。`docs/a_team_handoff.md` の「島 scheduler（oneTBB）」タスク ID を引用する。
-- **Bench crash or NaN timings** – Stop editing CSVs, move the raw log to `data/diagnostics/island_scheduler/tbb_<date>.csv`, and open an issue referencing this memo plus `docs/coupled_island_migration_plan.md` §6.1 の "島ワークスペース 3D 拡張" 行。
+- **Fallback persists after providing `TBB_INCLUDE_DIR` / `TBB_LIBS`** – Collect the bench output, `make bench` log, and `ldd chrono-C-all/tests/bench_island_solver` result, then escalate to the parallelization lead (Tanaka) via the Aチームチャット。`docs/archive/legacy_chrono/a_team_handoff.md` の「島 scheduler（oneTBB）」タスク ID を引用する。
+- **Bench crash or NaN timings** – Stop editing CSVs, move the raw log to `data/diagnostics/island_scheduler/tbb_<date>.csv`, and open an issue referencing this memo plus `docs/archive/legacy_chrono/coupled_island_migration_plan.md` §6.1 の "島ワークスペース 3D 拡張" 行。
 - **CI fallback regressions** – If Actions logs show repeated WARN without local repro, file it under `docs/documentation_changelog.md` (tag `island_scheduler`) and notify PM in the weekly chat. Keep `tbb_fallback` row unchanged until root cause is verified.
 
 ## Risks & next steps
@@ -87,5 +87,5 @@ oneTBB 側 (`chrono_island2d_tbb.cpp`) もこのヘルパを呼び出すだけ�
 
 1. **ライブラリとヘッダ** – `sudo apt install libtbb-dev` もしくは社内の Code_Aster 環境にある `libtbb.so.*` / `include/tbb/` を参照する。
 2. **ビルド時フラグ** – `TBB_INCLUDE_DIR=/path/to/include TBB_LIBS="-L/path/to/lib -ltbb" make bench` のように環境変数を与える (`LD_LIBRARY_PATH` に lib を入れておく)。
-3. **計測と CSV 更新** – `./chrono-C-all/tests/bench_island_solver --scheduler tbb --csv data/diagnostics/island_scheduler/tbb_$(date +%Y%m%d).csv` のように raw ログを残しつつ、代表値を `data/diagnostics/bench_island_scheduler.csv` へ転記して `docs/island_scheduler_poc.md` / `docs/coupled_island_migration_plan.md` に追記する。Fallback が出る場合は WARN が 1 回だけ記録されるので、lib が見えているか確認する。
+3. **計測と CSV 更新** – `./chrono-C-all/tests/bench_island_solver --scheduler tbb --csv data/diagnostics/island_scheduler/tbb_$(date +%Y%m%d).csv` のように raw ログを残しつつ、代表値を `data/diagnostics/bench_island_scheduler.csv` へ転記して `docs/island_scheduler_poc.md` / `docs/archive/legacy_chrono/coupled_island_migration_plan.md` に追記する。Fallback が出る場合は WARN が 1 回だけ記録されるので、lib が見えているか確認する。
 4. **CI での扱い** – Actions では TBB を入れていないため OpenMP fallback になる。実測値を共有する場合は上記手順でローカル測定し、CSV/ドキュメントを同じコミットに含める。

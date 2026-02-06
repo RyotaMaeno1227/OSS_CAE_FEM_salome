@@ -174,7 +174,7 @@ sudo apt-get install pandoc texlive-latex-extra texlive-fonts-recommended
 - [ ] `scripts/check_doc_links.py docs/coupled_constraint_tutorial_draft.md docs/coupled_constraint_hands_on.md docs/coupled_contact_test_notes.md` を実行し、リンク整合性を確認。  
 - [ ] `scripts/check_preset_links.py` を実行し、README / Hands-on / Wiki で `docs/coupled_constraint_presets_cheatsheet.md` が参照されていることを確認。  
 - [ ] README、Hands-on Chapter 02、Wiki（本編＋サンプル）のプリセット説明を更新し、必要に応じて Slack `#chrono-docs` / `#chrono-constraints` へ共有（自動通知は行わない）。  
-- [ ] `docs/documentation_changelog.md` に更新日・担当を記録し、Migration Plan（`docs/coupled_island_migration_plan.md`）と整合させる。
+- [ ] `docs/documentation_changelog.md` に更新日・担当を記録し、Migration Plan（`docs/archive/legacy_chrono/coupled_island_migration_plan.md`）と整合させる。
 
 ### 更新記録テンプレ
 ```

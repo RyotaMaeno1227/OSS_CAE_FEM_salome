@@ -26,6 +26,6 @@
   - optic_alignment_trim: κ_s=1.0, pivot=1.18
 
 ## Next steps
-- 同一 Run ID を `docs/coupled_island_migration_plan.md` の chrono-main 行と `docs/abc_team_chat_handoff.md` の chrono-main テンプレに記載する。  
+- 同一 Run ID を `docs/archive/legacy_chrono/coupled_island_migration_plan.md` の chrono-main 行と `docs/abc_team_chat_handoff.md` の chrono-main テンプレに記載する。  
 - pivot/diagnostics を取得する場合は次回 Actions で `run-<ID>` ディレクトリも artifacts に含める。  
 - 新しい Run を追加する際は本ファイルを追記し、古い Run はアーカイブ扱いとして残す。  

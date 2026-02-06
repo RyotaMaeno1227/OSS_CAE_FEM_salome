@@ -79,7 +79,7 @@ practice/
 - Next steps / questions:
 ```
 
-このハンズオンの成果は `docs/coupled_constraint_tutorial_draft.md` の演習や `docs/coupled_island_migration_plan.md` の移行計画にフィードバックできるよう、レポートをリポジトリ内で共有してください。
+このハンズオンの成果は `docs/coupled_constraint_tutorial_draft.md` の演習や `docs/archive/legacy_chrono/coupled_island_migration_plan.md` の移行計画にフィードバックできるよう、レポートをリポジトリ内で共有してください。
 
 ### 付録 C. Multi-ω ベンチ更新手順
 1. `./chrono-C-all/tests/bench_coupled_constraint --omega 0.85 --omega 1 --omega 1.15 --output data/diagnostics/bench_coupled_constraint_multi.csv --result-json data/diagnostics/bench_coupled_constraint_multi.json` を実行して CSV/JSON を更新する。必要なら `--stats-json data/diagnostics/kkt_backend_stats.json` も併せて出力。
