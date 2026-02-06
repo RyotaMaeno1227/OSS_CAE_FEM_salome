@@ -1,10 +1,10 @@
 # FEM4C - 高性能有限要素法（C言語版）
 
 ## 概要
-FEM4Cは、山田貴博氏著「高性能有限要素法」に基づく有限要素解析ソルバーをFortranからC言語に変換したものです。構造解析における線形静的問題の高速求解を目的としています。
+FEM4Cは、山田貴博氏著「高性能有限要素法」に基づく有限要素解析ソルバーをFortranからC言語に変換したものです。本リポジトリのFEM4Cは「研究者(初心者)が自分でFEMを実装できるようになる」ための練習用マテリアルであり、実装の流れを追体験できる構成を重視しています。
 
 ## 特徴
-- **線形静解析**: 2次元・3次元構造の静的解析に対応
+- **線形静解析**: 現状は2次元構造の静的解析に対応
 - **要素タイプ**: T6（6節点三角形要素）を中心とした実装、将来的にQ4、H8、T4、T10等に対応予定
 - **OpenMP対応**: 並列処理による高速化（準備完了）
 - **スカイライン行列格納**: 全体剛性をバンド構造で保持しメモリ使用量を削減
@@ -17,6 +17,8 @@ FEM4Cは、山田貴博氏著「高性能有限要素法」に基づく有限要
 - ✅ 共通モジュール（定数、型定義、グローバル変数）
 - ✅ エラーハンドリングシステム
 - ✅ 入出力モジュール（ネイティブ形式対応）
+- ✅ 入出力モジュール（Nastran Bulk入力の一部対応）
+- ✅ parser出力パッケージ入力対応（mesh/material/boundary）
 - ✅ T6要素完全実装
 - ✅ 剛性行列組み立て
 - ✅ 共役勾配法ソルバー
@@ -24,7 +26,6 @@ FEM4Cは、山田貴博氏著「高性能有限要素法」に基づく有限要
 - ✅ 統合解析ドライバー
 
 ### 次期実装予定
-- 🔄 Nastranファイル形式対応
 - 🔄 2D要素拡張（Q4、T3、Q9等）
 - 🔄 3D要素対応（H8、T4、T10等）
 - 🔄 OpenMP並列化
@@ -47,7 +48,6 @@ make debug          # デバッグビルド
 ```bash
 make openmp         # OpenMP対応ビルド
 make clean          # ビルドファイル削除
-make test           # テスト実行（利用可能時）
 make help           # 全ビルドターゲット表示
 ```
 
@@ -59,11 +59,30 @@ make help           # 全ビルドターゲット表示
 ### 実行例
 ```bash
 # テストケース実行
-./bin/fem4c test/data/t6_simple.dat results.dat
+./bin/fem4c examples/t6_cantilever_beam.dat results.dat
 
 # ファイル指定なしの場合
 ./bin/fem4c  # input.dat → output.dat
 ```
+
+### parser一体実行（Nastran入力 → parser → solver）
+```bash
+./bin/fem4c NastranBalkFile/3Dtria_example.dat run_out part_0001 output.dat
+```
+
+### parser出力パッケージの実行例
+```bash
+./bin/fem4c <parser出力ディレクトリ>
+```
+
+詳細な操作手順は `USAGE_PARSER.md` を参照してください。
+
+## ドキュメント案内
+- 参考書: `FEM4C_Reference_Manual.md`
+- parser手順: `USAGE_PARSER.md`
+- ドキュメント入口: `docs/README.md`
+- 主教材: `docs/tutorial_manual.md`
+- 実装ガイド: `docs/implementation_guide.md`
 
 ## プロジェクト構成
 ```
@@ -76,11 +95,11 @@ FEM4C/
 │   ├── io/             # 入出力処理
 │   ├── analysis/       # 解析ドライバー
 │   └── fem4c.c         # メインプログラム
-├── test/               # テストケース
-│   ├── data/           # テストデータ
-│   └── unit/           # 単体テスト
+├── parser/             # Nastran Bulk -> parser出力パッケージ変換
 ├── docs/               # ドキュメント
 ├── examples/           # 使用例
+├── practice/           # 学習用ハンズオン
+├── USAGE_PARSER.md     # parser一体実行の手順
 └── README.md           # このファイル
 ```
 
@@ -126,23 +145,15 @@ end
 
 これらの制限は `src/common/constants.h` で変更可能です。
 
-## 実行例とテスト
+## 実行例
 
 ### 基本テスト
 ```bash
-# T6要素単体テスト
-make && ./bin/fem4c test/data/t6_simple.dat output.dat
+# T6要素の実行
+make && ./bin/fem4c examples/t6_cantilever_beam.dat output.dat
 
 # 結果確認
 cat output.dat
-```
-
-### 単体テストの実行
-```bash
-# T6要素単体テスト（利用可能時）
-cd test/unit
-gcc -I../../src test_t6_element.c ../../bin/fem4c -o test_t6
-./test_t6
 ```
 
 ## 性能特性
@@ -182,7 +193,7 @@ make clean
 ### 実行時エラー
 ```bash
 # ファイルが見つからない場合
-ls test/data/  # テストデータの確認
+ls examples/  # 入力データの確認
 ```
 
 ## ライセンス

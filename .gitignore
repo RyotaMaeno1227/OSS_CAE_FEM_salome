@@ -45,3 +45,15 @@ test.log
 
 # Keep test source files tracked
 !chrono-C-all/tests/*.c
+
+# FEM4C generated outputs
+FEM4C/output.dat
+FEM4C/output.csv
+FEM4C/output.vtk
+FEM4C/output.f06
+FEM4C/examples/*_results.dat
+FEM4C/examples/*_results.vtk
+FEM4C/examples/*_results.f06
+FEM4C/run_out/
+FEM4C/result/
+FEM4C/parser/parser.exe
