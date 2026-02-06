@@ -95,6 +95,7 @@ FEM4C/
 │   ├── solver/         # 線形ソルバー
 │   ├── io/             # 入出力処理
 │   ├── analysis/       # 解析ドライバー
+│   ├── mbd/            # 2D MBD 移植モジュール（段階導入）
 │   └── fem4c.c         # メインプログラム
 ├── parser/             # Nastran Bulk -> parser出力パッケージ変換
 ├── docs/               # ドキュメント

@@ -6,7 +6,7 @@ CC = gcc
 CFLAGS = -Wall -Wextra -O3 -std=c99 -mcmodel=large
 OPENMP_FLAGS = -fopenmp
 DEBUG_FLAGS = -g -DDEBUG
-INCLUDES = -Isrc/common -Isrc/elements -Isrc/solver -Isrc/io -Isrc/mesh -Isrc/material -Isrc/analysis
+INCLUDES = -Isrc/common -Isrc/elements -Isrc/solver -Isrc/io -Isrc/mesh -Isrc/material -Isrc/analysis -Isrc/mbd
 
 # Directories
 SRCDIR = src
@@ -35,10 +35,11 @@ ELEMENT_SRCS = $(SRCDIR)/elements/element_base.c $(SRCDIR)/elements/elements.c \
                $(SRCDIR)/elements/t3/t3_element.c
 SOLVER_SRCS = $(SRCDIR)/solver/assembly.c $(SRCDIR)/solver/cg_solver.c
 ANALYSIS_SRCS = $(SRCDIR)/analysis/static.c
+MBD_SRCS = $(SRCDIR)/mbd/constraint2d.c $(SRCDIR)/mbd/kkt2d.c
 MAIN_SRCS = $(SRCDIR)/fem4c.c
 
 # All source files
-SRCS = $(COMMON_SRCS) $(IO_SRCS) $(MESH_SRCS) $(MATERIAL_SRCS) $(ELEMENT_SRCS) $(SOLVER_SRCS) $(ANALYSIS_SRCS) $(MAIN_SRCS)
+SRCS = $(COMMON_SRCS) $(IO_SRCS) $(MESH_SRCS) $(MATERIAL_SRCS) $(ELEMENT_SRCS) $(SOLVER_SRCS) $(ANALYSIS_SRCS) $(MBD_SRCS) $(MAIN_SRCS)
 
 # Object files
 OBJS = $(SRCS:$(SRCDIR)/%.c=$(BUILDDIR)/%.o)

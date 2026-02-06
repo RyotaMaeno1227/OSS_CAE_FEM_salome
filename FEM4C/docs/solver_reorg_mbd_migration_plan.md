@@ -96,3 +96,12 @@
 1. Keep Phase 0 green while reducing default log noise.
 2. Add Phase 1 API boundary notes to `src/solver` and `src/analysis`.
 3. Create `src/mbd/` with placeholder interfaces and first constraint test skeleton.
+
+## Current Baseline (2026-02-06)
+- Build path stabilized for parser binary naming:
+  - POSIX: `parser/parser`
+  - Windows: `parser/parser.exe`
+- Native FEM run and parser one-shot run (3Dtria sample) are passing.
+- `src/mbd/` initial files added:
+  - `constraint2d.h/.c`
+  - `kkt2d.h/.c`
