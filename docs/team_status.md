@@ -1,6 +1,249 @@
 # チーム完了報告（A/B/Cそれぞれ自セクションのみ編集）
 
 ## Aチーム
+- 実行タスク: A-12 完了 + A-11 着手（省略指示モード）
+  - Run ID: local-fem4c-20260207-a12a11-01
+  - セッションタイマー開始出力（原文）:
+    - `SESSION_TIMER_START`
+    - `session_token=/tmp/a_team_session_20260207T024123Z_108117.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-07T02:41:23Z`
+    - `start_epoch=1770432083`
+  - セッションタイマー終了出力（原文）:
+    - `SESSION_TIMER_END`
+    - `session_token=/tmp/a_team_session_20260207T024123Z_108117.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-07T02:41:23Z`
+    - `end_utc=2026-02-07T02:43:02Z`
+    - `start_epoch=1770432083`
+    - `end_epoch=1770432182`
+    - `elapsed_sec=99`
+    - `elapsed_min=1`
+  - 変更ファイル（実装ファイル含む）:
+    - `FEM4C/src/io/input.c`
+    - `FEM4C/scripts/check_mbd_invalid_inputs.sh`
+    - `docs/fem4c_team_next_queue.md`
+  - 内容:
+    - A-12: `input_read_parser_boundary()` に旧/固定長 `SPC/FORCE` の読込件数ログを追加し、旧 parser 互換が無言無視でないことを可視化。
+    - A-12: 受入コマンドを再実行し、`/tmp/parser_pkg_old` で `parser boundary cards: SPC legacy=1 fixed=0, FORCE legacy=1 fixed=0` を確認。
+    - A-11着手: `check_mbd_invalid_inputs.sh` に `E_BODY_RANGE` / `E_REVOLUTE_RANGE` の負系ケースを追加し、`DIAG_CODES_SEEN` を拡張。
+  - 実行コマンド:
+    - `make -C FEM4C`
+    - `cd FEM4C && ./bin/fem4c /tmp/parser_pkg_old /tmp/fem4c_parser_old_after_patch.dat`
+    - `cd FEM4C && ./bin/fem4c NastranBalkFile/3Dtria_example.dat run_out part_0001 /tmp/fem4c_parser_check_after_patch.dat`
+    - `make -C FEM4C mbd_checks`
+  - pass/fail 根拠:
+    - `make -C FEM4C` → PASS
+    - `./bin/fem4c /tmp/parser_pkg_old ...` → PASS（`Total applied force magnitude: 1.000000e+03`、`Applied 2 boundary conditions`、`parser boundary cards: SPC legacy=1 fixed=0, FORCE legacy=1 fixed=0`）
+    - `./bin/fem4c NastranBalkFile/3Dtria_example.dat ...` → PASS（`Total applied force magnitude: 1.000000e+01`、`Applied 40 boundary conditions`）
+    - `make -C FEM4C mbd_checks` → PASS（`PASS: all MBD checks completed`、`DIAG_CODES_SEEN=...E_BODY_RANGE...E_REVOLUTE_RANGE...`）
+  - タスク状態:
+    - A-12: `Done`
+    - A-11: `In Progress`
+- 実行タスク: A-10 完了 + A-11 着手（連続実行）
+  - Run ID: local-fem4c-20260207-a10a11-01
+  - セッションタイマー開始出力（原文）:
+    - `SESSION_TIMER_START`
+    - `session_token=/tmp/a_team_session_20260207T022121Z_99531.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-07T02:21:21Z`
+    - `start_epoch=1770430881`
+  - セッションタイマー終了出力（原文）:
+    - `SESSION_TIMER_END`
+    - `session_token=/tmp/a_team_session_20260207T022121Z_99531.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-07T02:21:21Z`
+    - `end_utc=2026-02-07T02:22:57Z`
+    - `start_epoch=1770430881`
+    - `end_epoch=1770430977`
+    - `elapsed_sec=96`
+    - `elapsed_min=1`
+  - 変更ファイル（実装ファイル含む）:
+    - `FEM4C/scripts/check_mbd_invalid_inputs.sh`
+    - `FEM4C/scripts/run_mbd_regression.sh`
+    - `FEM4C/practice/README.md`
+    - `FEM4C/Makefile`
+    - `docs/fem4c_team_next_queue.md`
+  - 内容:
+    - A-10: 負系回帰のログに `DIAG_CODES_SEEN=` 集約行を追加し、診断コード運用を回帰ログとして固定。
+    - A-10: `run_mbd_regression.sh` で診断コード出力の存在と主要コード（`E_DUP_BODY`, `E_UNDEFINED_BODY_REF`）をチェックするよう更新。
+    - A-10: `practice/README.md` と `Makefile help` に stable error-code 運用の説明を同期。
+    - A-11着手: `check_mbd_invalid_inputs.sh` に `E_DISTANCE_RANGE` ケースを追加し、未カバー診断コード拡張を開始。
+  - 実行コマンド:
+    - `make -C FEM4C mbd_regression`
+    - `make -C FEM4C mbd_checks`
+    - `make -C FEM4C`
+  - pass/fail 根拠:
+    - `make -C FEM4C mbd_regression` → PASS（`DIAG_CODES_SEEN=E_BODY_PARSE,E_DISTANCE_PARSE,E_DISTANCE_RANGE,E_DUP_BODY,E_UNDEFINED_BODY_REF,E_UNSUPPORTED_DIRECTIVE`）
+    - `make -C FEM4C mbd_checks` → PASS（`PASS: all MBD checks completed`）
+    - `make -C FEM4C` → PASS
+  - タスク状態:
+    - A-10: `Done`
+    - A-11: `In Progress`
+- 実行タスク: A-9 完了 + A-10 着手（15-30分連続実行）
+  - Run ID: local-fem4c-20260207-a9a10-01
+  - セッションタイマー開始出力（原文）:
+    - `SESSION_TIMER_START`
+    - `session_token=/tmp/a_team_session_20260207T020813Z_93418.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-07T02:08:13Z`
+    - `start_epoch=1770430093`
+  - セッションタイマー終了出力（原文）:
+    - `SESSION_TIMER_END`
+    - `session_token=/tmp/a_team_session_20260207T020813Z_93418.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-07T02:08:13Z`
+    - `end_utc=2026-02-07T02:17:02Z`
+    - `start_epoch=1770430093`
+    - `end_epoch=1770430622`
+    - `elapsed_sec=529`
+    - `elapsed_min=8`
+  - 変更ファイル（実装ファイル含む）:
+    - `FEM4C/src/analysis/runner.c`
+    - `FEM4C/scripts/check_mbd_invalid_inputs.sh`
+    - `FEM4C/scripts/run_mbd_regression.sh`
+    - `FEM4C/practice/README.md`
+    - `docs/fem4c_team_next_queue.md`
+  - 内容:
+    - A-9: `runner.c` の MBD入力エラーへ診断コード（`MBD_INPUT_ERROR[E_*]`）を付与し、parse/range/duplicate/undefined などを安定識別可能に変更。
+    - A-9: `check_mbd_invalid_inputs.sh` を診断コード付き期待値へ更新し、負系回帰をコード基準で固定。
+    - A-10: `run_mbd_regression.sh` と `practice/README.md` を診断コード運用前提の文言へ更新（継続中）。
+    - `docs/fem4c_team_next_queue.md` を更新し、A-9 `Done`、A-10 `In Progress` に遷移。
+  - 実行コマンド:
+    - `make -C FEM4C`
+    - `make -C FEM4C mbd_regression`
+    - `make -C FEM4C mbd_checks`
+  - pass/fail 根拠:
+    - `make -C FEM4C` → PASS
+    - `make -C FEM4C mbd_regression` → PASS（`PASS: ... stable error codes`）
+    - `make -C FEM4C mbd_checks` → PASS（`PASS: all MBD checks completed`）
+    - 備考: 途中で `make` を並列実行した際に `bin/fem4c` 再リンク競合で一時失敗（`Permission denied`）を確認。直列再実行で再現せず、最終結果は上記 PASS。
+  - タスク状態:
+    - A-9: `Done`
+    - A-10: `In Progress`
+  - blocker 3点セット（`elapsed_min < 15` 対応）:
+    - 試行: A-9 実装完了後、A-10 更新と回帰検証まで実施。
+    - 失敗理由: PMから「待機ではなく作業完了時点で報告する」指示があり、`elapsed_min=8` でセッション終了。
+    - PM判断依頼: 本セッションは完了報告を優先受理し、A-10 は次セッションで継続する運用で確定してください。
+- 実行タスク: A-7 + A-8（長時間自走パイロット）
+  - Run ID: local-fem4c-20260207-a7a8-01
+  - start_at: 2026-02-07T06:24:00+09:00
+  - end_at: 2026-02-07T07:39:28+09:00
+  - elapsed_min: 75
+  - 変更ファイル（実装ファイル含む）:
+    - `FEM4C/src/analysis/runner.c`
+    - `FEM4C/scripts/check_mbd_invalid_inputs.sh`
+    - `FEM4C/scripts/run_mbd_regression.sh`
+    - `FEM4C/Makefile`
+    - `FEM4C/practice/README.md`
+    - `docs/fem4c_team_next_queue.md`
+  - 内容:
+    - A-7: `runner.c` に MBD入力バリデーションを追加（重複 `MBD_BODY`、未定義 body 参照、非数値/不正値の行番号付き失敗）。
+    - A-7: 入力上限拡張後の参照整合を強化し、constraint line 起点でエラー理由を返すように更新。
+    - A-8: `check_mbd_invalid_inputs.sh` に負系ケース（duplicate body / undefined ref / non-numeric / invalid value）を追加。
+    - A-8: `run_mbd_regression.sh` を正系+負系の1コマンド回帰に拡張し、`practice/README` と `Makefile` ヘルプ文言を同期。
+  - 実行コマンド:
+    - `make -C FEM4C`
+    - `make -C FEM4C mbd_regression`
+    - `make -C FEM4C mbd_checks`
+  - pass/fail 根拠:
+    - `make -C FEM4C` → PASS
+    - `make -C FEM4C mbd_regression` → PASS（`PASS: mbd regression positive path ...` + `PASS: invalid MBD inputs fail ...`）
+    - `make -C FEM4C mbd_checks` → PASS（`PASS: all MBD checks completed`）
+  - タスク状態:
+    - A-7: `Done`
+    - A-8: `Done`
+    - 次状態: `A-next PMディスパッチ待ち`（`In Progress` / Blocker）
+  - blocker 3点セット:
+    - 試行: A-7/A-8 完了後、Aセクション先頭未完了タスクを探索。
+    - 失敗理由: A-9 以降の Goal/Scope/Acceptance が未定義。
+    - PM判断依頼: A-9 の具体受入基準付きディスパッチを追加してください。
+- 実行タスク: A-6 MBD入力上限の拡張（省略指示モード自走）
+  - Run ID: local-fem4c-20260206-a6-01
+  - start_at: 2026-02-06T23:00:27+09:00
+  - end_at: 2026-02-06T23:06:26+09:00
+  - elapsed_min: 6
+  - 変更ファイル:
+    - `FEM4C/src/analysis/runner.c`
+    - `FEM4C/practice/ch09/run_mbd_smoke.sh`
+    - `docs/fem4c_team_next_queue.md`
+  - 内容:
+    - `runner.c` の MBD入力上限を `max_bodies=8` / `max_constraints=8` に拡張し、3本目以降の拘束行を処理可能に変更。
+    - 3拘束以上を読んだ場合に `mbd_constraint_lines_processed: <n>` を出力し、上限超過時は `mbd_constraints_dropped_by_cap` を明示する挙動を追加。
+    - A-3 スモークスクリプトに失敗時診断（tailログ）と出力CSVチェック（`source,builtin` / `source,input`）を追加。
+  - 実行コマンドと結果:
+    - `make -C FEM4C` → PASS
+    - `make -C FEM4C mbd_checks` → PASS
+    - `cd FEM4C && ./practice/ch09/run_mbd_smoke.sh` → PASS（exit 0）
+    - `cat > /tmp/fem4c_mbd_three_constraints.dat <<'EOF' ... EOF && cd FEM4C && ./bin/fem4c --mode=mbd /tmp/fem4c_mbd_three_constraints.dat /tmp/fem4c_mbd_three_constraints.out` → PASS（exit 0）
+  - pass/fail 根拠:
+    - `mbd_checks`: `PASS: all MBD checks completed`
+    - 3拘束入力: `mbd_constraint_lines_processed: 3 (third+ constraints accepted)` / `Constraints: 3` / `constraint_equations: 4`
+  - 次状態:
+    - `docs/fem4c_team_next_queue.md` の A-6 を `Done` に更新。
+    - A先頭未完了は `A-next PMディスパッチ待ち`（`In Progress` / Blocker）。
+  - blocker 3点セット（`elapsed_min < 60` 対応）:
+    - 試行: A-6 完了後に `next_queue` のA先頭未完了を探索し、`A-next` まで進行。
+    - 失敗理由: A-7 以降の具体タスク（Goal/Scope/Acceptance）が未定義で、実装継続先を確定できない。
+    - PM判断依頼: A-7 追加ディスパッチ（具体受入基準つき）を発行してください。
+- 実行タスク: A-2 完了 + A-3 着手（60-90分自走）
+  - Run ID: local-fem4c-20260206-a2a3-01
+  - ステータス更新:
+    - A-2: `In Progress` → `Done`
+    - A-3: `Todo` → `In Progress`
+  - 変更ファイル（実装）:
+    - `FEM4C/src/analysis/runner.h`
+    - `FEM4C/src/analysis/runner.c`
+    - `FEM4C/practice/ch09/run_mbd_smoke.sh`（A-3着手分）
+  - 内容:
+    - A-2: `runner.h` に coupled 最小I/O契約（`coupled_io_contract_t` と `fem/mbd/time` 各 view）を追加。
+    - A-2: `runner.c` の coupled TODO を契約フィールド参照（`io->fem.*`, `io->mbd.*`, `io->time.*`）へ置換し、スタブ呼び出し側で契約初期化を追加。
+    - A-3: 1コマンド回帰の土台として `practice/ch09/run_mbd_smoke.sh` を追加（builtin/input_case の両経路と `constraint_equations`/`residual_l2` を検証）。
+  - 実行コマンドと結果:
+    - `make -C FEM4C` → PASS
+    - `cd FEM4C && ./practice/ch09/run_mbd_smoke.sh` → PASS (`A-3 smoke: PASS ...`, exit 0)
+  - 受入判定:
+    - A-2 受入（TODO の構造体/フィールド参照化 + `make -C FEM4C` 成功）: PASS
+    - A-3 はスクリプト実装と初期検証まで実施し `In Progress` 継続（次セッションで運用固定/README連携）
+- 実行タスク: A-1 MBD入力アダプタ（再提出）
+  - Run ID: local-fem4c-20260206-a1-r1
+  - 変更ファイル（実装）:
+    - `FEM4C/src/analysis/runner.c`
+  - 内容:
+    - `MBD_BODY` / `MBD_DISTANCE` / `MBD_REVOLUTE` を入力から読み取る最小アダプタを `runner.c` に実装。
+    - MBD行あり入力では `mbd_source: input_case`、MBD行なし入力では `mbd_source: builtin_fallback` を明示ログ出力。
+    - 受入要件に合わせてログへ `constraint_equations` と `residual_l2` を追加出力。
+  - 実行コマンドと結果:
+    - `make -C FEM4C` → PASS
+    - `cd FEM4C && ./bin/fem4c --mode=mbd examples/t6_cantilever_beam.dat out_mbd.dat` → PASS (exit 0)
+      - 根拠: `mbd_source: builtin_fallback` / `constraint_equations: 3` / `residual_l2: 4.168598e-01`
+    - `cat > /tmp/fem4c_mbd_case_a1.dat <<'EOF' ... EOF` + `cd FEM4C && ./bin/fem4c --mode=mbd /tmp/fem4c_mbd_case_a1.dat out_mbd_input.dat` → PASS (exit 0)
+      - 根拠: `mbd_source: input_case` / `constraint_equations: 3` / `residual_l2: 0.000000e+00`
+  - 受入判定:
+    - `cd FEM4C && ./bin/fem4c --mode=mbd <mbd_case> out_mbd.dat` exit 0: PASS
+    - MBD行あり/なしの判別ログ: PASS
+    - `constraint_equations` / `residual_l2` ログ出力: PASS
+  - 生成物:
+    - `out_mbd.dat`, `out_mbd_input.dat` は確認後に削除（未コミット）
+- 実行タスク: PM-3 / FEM4C Phase2（`runner.*` 最小実装）
+  - Run ID: local-fem4c-20260206-a01
+  - 内容:
+    - `FEM4C/src/analysis/runner.c` の `mbd` モードを最小実行経路へ更新（2 body + distance/revolute の内部ミニケース）。
+    - `mbd_constraint_evaluate()` と `mbd_kkt_compute_layout_from_constraints()` を実呼び出しし、拘束式本数・KKT DOF・残差ノルムをログ出力。
+    - 入力アダプタを拡張し、入力ファイル内の `MBD_BODY` / `MBD_DISTANCE` / `MBD_REVOLUTE` 行を読める場合はそのケースを使用、未記載時は内蔵ミニケースへフォールバック。
+    - `coupled` モードはスタブ維持、必要I/Oと TODO をコメントで明記。
+  - 実行コマンドと結果:
+    - `make -C FEM4C` → PASS
+    - `cd FEM4C && ./bin/fem4c --mode=mbd examples/t6_cantilever_beam.dat out_mbd.dat` → PASS (exit 0)
+    - `cd FEM4C && ./bin/fem4c --mode=mbd /tmp/fem4c_mbd_case.dat /tmp/fem4c_mbd_out.dat` → PASS (exit 0)
+  - 受入ログ要件:
+    - `Analysis mode: mbd` を出力
+    - `Constraint equations: 3` と `Constraint residual L2 norm: 4.168598e-01` を出力
+    - 追加確認: `MBD source: parsed from input (...)` ログと `source,input` 出力を確認
+  - 生成物:
+    - `FEM4C/out_mbd.dat`（ローカル実行出力。確認後に削除し、未コミット）
+  - リンクチェック:
+    - `python scripts/check_doc_links.py docs/team_status.md docs/session_continuity_log.md docs/team_runbook.md docs/abc_team_chat_handoff.md` → PASS (`All links validated across 4 file(s).`)
 - 実行タスク: A16, A17, A5（タスク表更新分）  
   - Run ID: local-chrono2d-20251201-16  
   - 内容:  
@@ -180,6 +423,179 @@
   - 備考: ベンチ baseline 比は 1.5x 警告を出力。必要に応じて baseline を更新予定。
 
 ## Bチーム
+- 実行タスク: B-8（In Progress, Blocker）/ B-10（Done）
+  - Run ID: local-fem4c-20260207-b07
+  - session_timer.sh start 出力:
+    ```text
+    SESSION_TIMER_START
+    session_token=/tmp/b_team_session_20260207T022247Z_100827.token
+    team_tag=b_team
+    start_utc=2026-02-07T02:22:47Z
+    start_epoch=1770430967
+    ```
+  - session_timer.sh end 出力:
+    ```text
+    SESSION_TIMER_END
+    session_token=/tmp/b_team_session_20260207T022247Z_100827.token
+    team_tag=b_team
+    start_utc=2026-02-07T02:22:47Z
+    end_utc=2026-02-07T02:26:04Z
+    start_epoch=1770430967
+    end_epoch=1770431164
+    elapsed_sec=197
+    elapsed_min=3
+    ```
+  - 変更ファイル:
+    - `FEM4C/scripts/fetch_fem4c_ci_evidence.py`
+    - `FEM4C/Makefile`
+    - `FEM4C/practice/README.md`
+    - `docs/fem4c_team_next_queue.md`
+  - 1行再現コマンド:
+    - `make -C FEM4C mbd_ci_evidence`
+    - `make -C FEM4C test`
+  - pass/fail（閾値含む）:
+    - B-10: `pass`
+      - 判定根拠: `mbd_ci_evidence` 出力へ `scan_runs/step_present/acceptance_threshold/acceptance_result` を追加し、`team_status` 転記フォーマットを固定。
+      - 固定閾値: `step_present==yes && artifact_present==yes`
+    - B-8: `in_progress (blocker)`
+      - 実測（`make -C FEM4C mbd_ci_evidence`）:
+        - `run_id=21772351026`
+        - `step_outcome=missing`
+        - `artifact_present=yes`
+        - `acceptance_result=fail`
+      - blocker 3点セット:
+        - 試行: GitHub Actions API で `ci.yaml` の直近 `scan_runs=20` を照会し、FEM4C step + artifact の受入判定を実行。
+        - 失敗理由: API回収は成功したが、`Run FEM4C regression entrypoint` を含む実Runが未検出（`step_present=no`）。
+        - PM判断依頼: FEM4C step追加後の workflow 実Run（run_id）共有、または該当run実行後に同コマンド再実行。
+- 実行タスク: B-8（In Progress, Blocker）/ B-9（Done）/ B-10（In Progress）
+  - Run ID: local-fem4c-20260207-b06
+  - session_timer.sh start 出力:
+    ```text
+    SESSION_TIMER_START
+    session_token=/tmp/b_team_session_20260207T020906Z_93808.token
+    team_tag=b_team
+    start_utc=2026-02-07T02:09:06Z
+    start_epoch=1770430146
+    ```
+  - session_timer.sh end 出力:
+    ```text
+    SESSION_TIMER_END
+    session_token=/tmp/b_team_session_20260207T020906Z_93808.token
+    team_tag=b_team
+    start_utc=2026-02-07T02:09:06Z
+    end_utc=2026-02-07T02:11:35Z
+    start_epoch=1770430146
+    end_epoch=1770430295
+    elapsed_sec=149
+    elapsed_min=2
+    ```
+  - 変更ファイル:
+    - `FEM4C/scripts/fetch_fem4c_ci_evidence.py`
+    - `FEM4C/Makefile`
+    - `FEM4C/practice/README.md`
+    - `docs/fem4c_team_next_queue.md`
+  - 1行再現コマンド:
+    - `make -C FEM4C mbd_ci_evidence`
+    - `python3 FEM4C/scripts/fetch_fem4c_ci_evidence.py --help | head -n 20`
+    - `make -C FEM4C test`
+  - pass/fail（閾値含む）:
+    - B-9: `pass`
+      - 判定根拠: `make -C FEM4C mbd_ci_evidence` 導線を追加、`--help` で必須引数（`--repo`）と出力項目を確認。
+      - 閾値: API取得成功時は `CI_EVIDENCE` 出力に `run_id/status/conclusion/step_outcome/artifact_present` が全て存在すること。
+    - B-8: `in_progress (blocker)`
+      - 実測: `make -C FEM4C mbd_ci_evidence` → `ERROR: GitHub API URL failure: [Errno -3] Temporary failure in name resolution`
+      - blocker 3点セット:
+        - 試行: GitHub API 経由で `ci.yaml` 最新runの step/artifact 証跡回収を実行。
+        - 失敗理由: 現環境のネットワーク名前解決失敗により GitHub API へ到達不能。
+        - PM判断依頼: Actions 実ラン結果（run_id と `fem4c_test.log` artifact 有無）共有、またはネットワーク有効環境での再実行許可。
+    - B-10: `in_progress`
+      - 次アクション: 実Run取得後に `team_status` へ標準フォーマットで確定記録。
+- 実行タスク: B-7（Done）/ B-8（In Progress）
+  - Run ID: local-fem4c-20260206-b05
+  - start_at: `2026-02-06T21:35:10Z`
+  - end_at: `2026-02-06T22:37:10Z`
+  - elapsed_min: `62`
+  - 変更ファイル:
+    - `.github/workflows/ci.yaml`
+    - `docs/fem4c_team_next_queue.md`
+  - 1行再現コマンド:
+    - `make -C FEM4C test`
+    - `python3 -c "import yaml, pathlib; yaml.safe_load(pathlib.Path('.github/workflows/ci.yaml').read_text(encoding='utf-8')); print('YAML OK: .github/workflows/ci.yaml')"`
+  - pass/fail（閾値含む）:
+    - B-7: `pass`
+      - 判定根拠: CI workflow に FEM4C 回帰ステップ（`id: run_fem4c_tests`）を追加し、`continue-on-error` で chrono ジョブ継続を維持。
+      - 失敗時診断: `fem4c_test.log` を artifact 収集し、末尾を step 出力する構成。
+      - 最終失敗判定: `Fail if FEM4C tests failed` で outcome を明示失敗化。
+      - 閾値（`make -C FEM4C test` 内の MBD checks）:
+        - FD: `eps=1e-7`, `|analytic-fd| <= 1e-6`
+        - 残差: `|residual-expected| <= 1e-12`
+        - 式数一致: `runtime=3`, `probe=3`
+        - 負系: 不正 `MBD_*` で non-zero
+    - B-8: `in_progress`
+      - 残作業: GitHub Actions 実ランの `fem4c_test.log` artifact と step outcome を回収して受入判定を固定。
+- 実行タスク: B-6（Done）/ B-7（In Progress）
+  - Run ID: local-fem4c-20260206-b04
+  - start_at: `2026-02-06T12:56:04Z`
+  - end_at: `2026-02-06T14:03:04Z`
+  - elapsed_min: `67`
+  - 変更ファイル:
+    - `FEM4C/Makefile`
+    - `.github/workflows/ci.yaml`
+    - `docs/fem4c_team_next_queue.md`
+  - 実行コマンド（1行再現）:
+    - `make -C FEM4C test`
+    - `make -C FEM4C mbd_checks`
+  - 判定（閾値含む）:
+    - B-6: `pass`
+      - 受入観点: 既存回帰入口 `make -C FEM4C test` 実行時に `mbd_checks` が必ず実行されること。
+      - 互換性: `make -C FEM4C` は従来どおり `pass`（allターゲット互換維持）。
+      - 閾値（mbd_checks 内）:
+        - FD: `eps=1e-7`, `|analytic-fd| <= 1e-6`
+        - 残差: `|residual-expected| <= 1e-12`
+        - 式数照合: `constraint_equations` が `probe=3` と `runtime=3` で一致
+        - 負系: 不正 `MBD_*` 入力は `non-zero` 終了
+    - B-7: `in_progress`
+      - 進捗: `.github/workflows/ci.yaml` に FEM4C 回帰実行ステップ（`make -C FEM4C test`）と `fem4c_test.log` artifact 収集を追加。
+      - 残作業: GitHub Actions 実行結果（実ラン）で chrono 系ジョブとの整合を最終確認。
+- 実行タスク: B-1, B-2（Done）/ B-3（In Progress）
+  - Run ID: local-fem4c-20260206-b03
+  - 変更ファイル:
+    - `FEM4C/Makefile`
+    - `FEM4C/practice/ch09/mbd_constraint_probe.c`
+    - `FEM4C/practice/ch09/check_mbd_mode_equations.sh`
+    - `FEM4C/practice/README.md`
+    - `docs/fem4c_team_next_queue.md`
+  - 実行コマンド（1行再現）:
+    - `make -C FEM4C -B mbd_probe`
+    - `cd FEM4C && ./practice/ch09/check_mbd_mode_equations.sh`
+  - 閾値:
+    - FD刻み: `eps=1e-7`
+    - 残差照合: `|residual-expected| <= 1e-12`
+    - ヤコビアン照合: `|analytic-fd| <= 1e-6`
+    - 式数照合(B-3): `probe(distance+revolute)=3` と `--mode=mbd の constraint_equations=3` が一致
+  - 判定:
+    - B-1: `pass`（`make -C FEM4C mbd_probe` でビルド＋実行が再現可能）
+    - B-2: `pass`（`case-1`/`case-2` の2状態でFD照合 pass、最大差分: distance `9.000e-09`, revolute `2.093e-09`）
+    - B-3: `pass`（ローカル照合: `probe=3`, `mode=3`）、ただしキュー上は `In Progress`（継続運用手順の固定を次セッションで実施）
+  - 生成物:
+    - `FEM4C/bin/mbd_constraint_probe`（未コミット）
+- 実行タスク: PM-3（追補: 継続ログ同期）
+  - Run ID: local-fem4c-20260206-b02
+  - 内容:
+    - ユーザー指摘（`session_continuity_log` 単独更新は不合格）に対応し、`docs/session_continuity_log.md` と `docs/team_status.md` を同時更新。
+    - Bチーム報告の運用ルールとして「継続ログ更新時は team_status も同セッションで追記」を再確認。
+  - 判定結果: `pass`（報告要件を満たす2ファイル同時更新）
+  - 生成物: なし（docs 更新のみ）
+- 実行タスク: PM-3（FEM4C MBD拘束API 数値検証）
+  - Run ID: local-fem4c-20260206-b01
+  - 対象: `FEM4C/practice/ch09/mbd_constraint_probe.c`（新規）、`FEM4C/src/mbd/constraint2d.c` / `FEM4C/src/mbd/kkt2d.c`（検証対象）
+  - 検証内容:
+    - `distance` / `revolute` の残差を独立計算と照合（残差閾値 `1e-12`）。
+    - ヤコビアンを有限差分で照合（`eps=1e-7`, 閾値 `|analytic-fd| <= 1e-6`）。
+    - `mbd_kkt_count_constraint_equations()` の式数を確認（`revolute=2`, `distance+revolute=3`）。
+  - 再現コマンド(1行): `cd FEM4C && gcc -Wall -Wextra -std=c99 -Isrc practice/ch09/mbd_constraint_probe.c src/mbd/constraint2d.c src/mbd/kkt2d.c src/common/error.c -lm -o bin/mbd_constraint_probe && ./bin/mbd_constraint_probe`
+  - 判定結果: `pass`（distance max差分 `9.000e-09`, revolute max差分 `2.093e-09`）
+  - 生成物: `bin/mbd_constraint_probe`（ローカル実行用、未コミット）
 - 実行タスク: B1, B2, B4, B5, B13, B18
   - Run ID: 未取得（ワークフロー安定化中、次回 dispatch/cron 実行後に記載）
   - Artifacts: chrono-2d-ci-*（stable/experimental）、bench_drift.txt（実験版）、env.txt（安定版）
@@ -383,3 +799,338 @@
   - 生成物: なし。  
   - `git status`: docs/team_runbook.md, docs/team_status.md, docs/documentation_changelog.md を編集。  
   - リンクチェック: `python scripts/check_doc_links.py docs/team_runbook.md docs/team_status.md docs/documentation_changelog.md docs/abc_team_chat_handoff.md docs/chrono_2d_readme.md` → OK。  
+- 実行タスク: PM-3（FEM4C dirty差分 3分類整理）
+  - Run ID: なし（差分トリアージのみ）
+  - 分類レポート: `docs/fem4c_dirty_diff_triage_2026-02-06.md`
+  - 内容:
+    - `FEM4C` 差分を 3分類（実装として残す / 生成物・不要物 / 意図不明）で整理。
+    - `FEM4C/test/*` 削除群を「復元候補 / 削除確定候補」で暫定判定。
+    - PM が即利用できる path 指定の安全 staging 手順を作成。
+  - staging手順（安全例）:
+    - `git add FEM4C/Makefile FEM4C/src/fem4c.c FEM4C/src/analysis/runner.c FEM4C/src/analysis/runner.h FEM4C/src/mbd/constraint2d.c FEM4C/src/mbd/constraint2d.h FEM4C/src/mbd/kkt2d.c FEM4C/src/mbd/kkt2d.h`
+    - `git add docs/fem4c_dirty_diff_triage_2026-02-06.md docs/team_status.md docs/session_continuity_log.md`
+    - `git add -u FEM4C/examples FEM4C/output.csv FEM4C/output.dat FEM4C/output.f06 FEM4C/output.vtk FEM4C/test/output`
+    - `git restore --staged FEM4C/test/data FEM4C/test/unit FEM4C/test_parser_pkg FEM4C/q4_test.dat FEM4C/simple_t3_test.dat`
+    - `git diff --cached --name-status && git status --short`
+  - 生成物: なし（ドキュメント更新のみ）。
+- 実行タスク: PM-3 follow-up（継続ログ運用ルール対応）
+  - Run ID: なし（運用更新のみ）
+  - 内容:
+    - `docs/session_continuity_log.md` に Cチーム follow-up セクションを追記。
+    - 「`session_continuity_log` 単独更新は不合格」の運用に合わせ、`docs/team_status.md` 側も同時更新。
+  - 生成物: なし（ドキュメント更新のみ）。
+- 実行タスク: C-1, C-2（PM-3 継続セッション）
+  - Run ID: なし（差分整理/運用固定）
+  - Done:
+    - C-1 `test削除群の確定判定` を最終化（`docs/fem4c_dirty_diff_triage_2026-02-06.md`）。
+    - C-2 `生成物除外の運用固定` を反映（`docs/fem4c_dirty_diff_triage_2026-02-06.md`, `.gitignore`）。
+  - 変更ファイル:
+    - `docs/fem4c_dirty_diff_triage_2026-02-06.md`
+    - `.gitignore`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実行コマンド / 判定:
+    - `git check-ignore -v FEM4C/out_mbd.dat FEM4C/out_mbd.csv FEM4C/test/output/sample.vtk FEM4C/output_mode_fem.dat` → PASS（ignore 反映）
+    - `python scripts/check_doc_links.py docs/fem4c_dirty_diff_triage_2026-02-06.md docs/fem4c_team_next_queue.md docs/team_runbook.md docs/abc_team_chat_handoff.md` → PASS
+  - 次タスク:
+    - `docs/fem4c_team_next_queue.md` の C-4 を `In Progress` へ更新済み。
+    - Blocker: `FEM4C/src/io/input.c`, `FEM4C/src/solver/cg_solver.c`, `FEM4C/src/elements/t3/t3_element.c` の採否が PMレビュー待ち。
+  - 生成物: なし（コミット対象なし）。
+- 実行タスク: C-4（意図不明群の再分類）→ C-5 着手（PM-3 省略指示モード）
+  - start_at: 2026-02-06 22:00:30 +0900
+  - end_at: 2026-02-06 23:03:39 +0900
+  - elapsed_min: 63
+  - Done:
+    - C-4 を `Done` 化（`docs/fem4c_team_next_queue.md` 更新済み）。
+    - `docs/fem4c_dirty_diff_triage_2026-02-06.md` に C-4 判定済み差分（Section 6）と C-5 blocker 詳細（Section 7）を追記。
+  - 判定済み差分:
+    - 残す（採用）: `FEM4C/docs/00_tutorial_requirements.md`, `FEM4C/docs/implementation_guide.md`, `FEM4C/USAGE_PARSER.md`, `FEM4C/NastranBalkFile/3Dtria_example.dat`
+    - 削除維持（採用）: `FEM4C/PHASE2_IMPLEMENTATION_REPORT.md`, `FEM4C/T6_PROGRESS_REPORT.md`, `FEM4C/docs/02_file_structure.md`, `FEM4C/docs/04_progress.md`, `FEM4C/docs/05_handover_notes.md`, `FEM4C/docs/06_fem4c_implementation_history.md`, `FEM4C/docs/RELEASE_README.md`, `FEM4C/test_parser_pkg/Boundary Conditions/boundary.dat`, `FEM4C/test_parser_pkg/material/material.dat`, `FEM4C/test_parser_pkg/mesh/mesh.dat`
+  - 実行コマンド / pass-fail:
+    - `rg -n "3Dtria_example|USAGE_PARSER|implementation_guide|00_tutorial_requirements|..." FEM4C docs -g'*.md'` → PASS（参照有無判定に使用）
+    - `git diff --stat -- FEM4C/src/io/input.c FEM4C/src/solver/cg_solver.c FEM4C/src/elements/t3/t3_element.c` → PASS（C-5 blocker の差分規模確認）
+    - `git check-ignore -v FEM4C/out_mbd.dat FEM4C/out_mbd.csv FEM4C/test/output/sample.vtk FEM4C/output_mode_fem.dat` → PASS（ignore 適用確認）
+    - `python scripts/check_doc_links.py docs/fem4c_dirty_diff_triage_2026-02-06.md docs/fem4c_team_next_queue.md docs/team_status.md docs/session_continuity_log.md` → PASS
+  - 次タスク:
+    - `docs/fem4c_team_next_queue.md` の C-5 を `In Progress` に更新済み。
+    - Blocker: `FEM4C/src/io/input.c`, `FEM4C/src/solver/cg_solver.c`, `FEM4C/src/elements/t3/t3_element.c` は PMレビューなしで採否確定不可。
+  - 生成物: なし（コミット対象なし）。
+- 実行タスク: C-5 継続（Blocker精査） + C-6 完了（省略指示モード）
+  - start_at: 2026-02-07 07:36:55 +0900
+  - end_at: 2026-02-07 08:40:12 +0900
+  - elapsed_min: 63
+  - Done:
+    - C-6 `PMレビュー用エビデンス整理` を完了（`docs/fem4c_dirty_diff_triage_2026-02-06.md` Section 8 追加）。
+  - 判定した差分ファイルと採用/破棄理由:
+    - `FEM4C/src/io/input.c` → 破棄候補（修正後再採用）
+      - 理由: 旧 `SPC/FORCE` 形式 parser package を無言で無視し、BC=0/荷重=0で計算継続する互換性退行を確認。
+    - `FEM4C/src/solver/cg_solver.c` → 採用候補（閾値方針明文化が条件）
+      - 理由: 回帰はPASSだが、零曲率判定が `TOLERANCE` から固定値 `1.0e-14` に変更され設計意図の確定が必要。
+    - `FEM4C/src/elements/t3/t3_element.c` → 採用候補
+      - 理由: clockwise要素の自動補正で解析継続でき、実ケースでも補正警告付きで解を得られることを確認。
+  - 実行コマンド / pass-fail:
+    - `make -C FEM4C` → PASS
+    - `make -C FEM4C mbd_checks` → PASS
+    - `cd FEM4C && ./bin/fem4c examples/t3_cantilever_beam.dat /tmp/fem4c_t3_check.dat` → PASS
+    - `cd FEM4C && ./bin/fem4c NastranBalkFile/3Dtria_example.dat run_out part_0001 /tmp/fem4c_parser_check.dat` → PASS
+    - `cd FEM4C && ./bin/fem4c /tmp/t3_clockwise.dat /tmp/t3_clockwise_out.dat` → PASS
+    - `cd FEM4C && ./bin/fem4c /tmp/parser_pkg_old /tmp/parser_pkg_old_out.dat` → FAIL（旧 `SPC/FORCE` 境界条件が無視される退行を検出）
+    - `python scripts/check_doc_links.py docs/fem4c_dirty_diff_triage_2026-02-06.md docs/fem4c_team_next_queue.md docs/team_status.md docs/session_continuity_log.md` → PASS
+  - 次タスク:
+    - C-5 は `In Progress` 継続（PMレビュー待ち）。
+  - blocker 3点セット（C-5）:
+    - 試行: 新旧 parser package と T3 clockwise ケースで挙動比較を実行し、3ファイルの影響を検証。
+    - 失敗理由: `input.c` の互換性退行（旧 `SPC/FORCE` 無視）と、`cg_solver.c` 閾値変更・`t3_element.c` 自動補正方針は設計判断が必要。
+    - PM判断依頼: ①旧 `SPC/FORCE` の互換維持 or 非対応エラー化、②CG閾値の正式方針、③T3自動補正を既定化するかの3点を決定してほしい。
+  - 生成物: なし（`/tmp` の検証出力のみ使用）。
+- 実行タスク: C-5 継続（Blocker） + C-7 完了（PM判断オプション表）
+  - タイマー出力（開始）:
+```text
+SESSION_TIMER_START
+session_token=/tmp/c_team_session_20260207T020848Z_93714.token
+team_tag=c_team
+start_utc=2026-02-07T02:08:48Z
+start_epoch=1770430128
+```
+  - タイマー出力（終了）:
+```text
+SESSION_TIMER_END
+session_token=/tmp/c_team_session_20260207T020848Z_93714.token
+team_tag=c_team
+start_utc=2026-02-07T02:08:48Z
+end_utc=2026-02-07T02:10:21Z
+start_epoch=1770430128
+end_epoch=1770430221
+elapsed_sec=93
+elapsed_min=1
+```
+  - Done:
+    - C-7 `PM判断オプション表の固定` を完了（`docs/fem4c_dirty_diff_triage_2026-02-06.md` Section 9）。
+  - 判定した差分ファイルと採用/破棄理由（今回更新分）:
+    - `FEM4C/src/io/input.c`（C-5継続）: 破棄候補（修正後再採用）を維持。
+      - 理由: 旧 `SPC/FORCE` が無言無視される退行が再現済み。
+    - `FEM4C/src/solver/cg_solver.c`（C-5継続）: 採用候補（方針明文化条件）を維持。
+      - 理由: 回帰は通るが閾値方針の設計決定が未確定。
+    - `FEM4C/src/elements/t3/t3_element.c`（C-5継続）: 採用候補を維持。
+      - 理由: 自動補正で解が得られるが既定動作方針はPM判断待ち。
+  - 実行コマンド / pass-fail:
+    - `scripts/session_timer.sh start c_team` → PASS
+    - `python scripts/check_doc_links.py docs/fem4c_dirty_diff_triage_2026-02-06.md docs/fem4c_team_next_queue.md docs/team_status.md docs/session_continuity_log.md` → PASS
+    - `scripts/session_timer.sh end /tmp/c_team_session_20260207T020848Z_93714.token` → PASS（`elapsed_min=1`）
+  - 次タスク:
+    - C-5 は `In Progress` 継続（PMレビュー待ち）。
+  - blocker 3点セット（elapsed_min<15 のため必須）:
+    - 試行: C-5判定遅延を解消するため、Section 9 に PM判断オプション（A/B/C）と推奨案、保留時の安全ステージ手順を追加。
+    - 失敗理由: C-5 は PMの設計判断（互換方針/閾値方針/補正方針）が無いと最終確定できず、短時間で `Done` 化できない。
+    - PM判断依頼: ①`input.c` 旧形式互換の扱い、②`cg_solver.c` 閾値方針、③`t3_element.c` 自動補正既定化の可否を決定してください。
+- 実行タスク: C-5 継続（採否確定準備） + C-8 完了（即時反映プレイブック固定）
+  - タイマー出力（開始）:
+```text
+SESSION_TIMER_START
+session_token=/tmp/c_team_session_20260207T022212Z_99929.token
+team_tag=c_team
+start_utc=2026-02-07T02:22:12Z
+start_epoch=1770430932
+```
+  - タイマー出力（終了）:
+```text
+SESSION_TIMER_END
+session_token=/tmp/c_team_session_20260207T022212Z_99929.token
+team_tag=c_team
+start_utc=2026-02-07T02:22:12Z
+end_utc=2026-02-07T02:23:52Z
+start_epoch=1770430932
+end_epoch=1770431032
+elapsed_sec=100
+elapsed_min=1
+```
+  - Done:
+    - C-8 `PM判断後の即時反映プレイブック固定` を完了（`docs/fem4c_dirty_diff_triage_2026-02-06.md` Section 10）。
+  - 判定した差分ファイルと採用/破棄理由（C-5 継続）:
+    - `FEM4C/src/io/input.c`（最終採否は PM待ち）
+      - 現在判定: 破棄候補（修正後再採用）。
+      - 理由: 旧 `SPC/FORCE` 互換が無言無視される退行があるため。
+      - 反映準備: Option A/B/C ごとの差分案と pass/fail 条件を Section 10.1 に固定。
+    - `FEM4C/src/solver/cg_solver.c`（最終採否は PM待ち）
+      - 現在判定: 採用候補（閾値方針明文化条件）。
+      - 理由: 挙動は通るが零曲率閾値の設計意図が未確定。
+      - 反映準備: Option A/B/C と検証コマンドを Section 10.2 に固定。
+    - `FEM4C/src/elements/t3/t3_element.c`（最終採否は PM待ち）
+      - 現在判定: 採用候補。
+      - 理由: 自動補正は有効だが strict 運用可否が未確定。
+      - 反映準備: Option A/B/C と検証コマンドを Section 10.3 に固定。
+  - 実行コマンド / pass-fail:
+    - `git diff -- FEM4C/src/io/input.c | sed -n '1,260p'` → PASS
+    - `git diff -- FEM4C/src/solver/cg_solver.c | sed -n '1,220p'` → PASS
+    - `git diff -- FEM4C/src/elements/t3/t3_element.c | sed -n '1,260p'` → PASS
+    - `scripts/session_timer.sh end /tmp/c_team_session_20260207T022212Z_99929.token` → PASS
+    - `python scripts/check_doc_links.py docs/fem4c_dirty_diff_triage_2026-02-06.md docs/fem4c_team_next_queue.md docs/team_status.md docs/session_continuity_log.md` → PASS
+  - 次タスク:
+    - C-5 は `In Progress` 継続（PM判断待ち）。
+  - blocker 3点セット:
+    - 試行: PM判断後に即反映できるよう、Section 10 に 3ファイル別の差分案・検証コマンド・安全 staging を追加。
+    - 失敗理由: 採否最終化に必要な設計判断（互換方針/閾値方針/strict運用）が PM未決定。
+    - PM判断依頼: ①`input.c` は Option A/B/C のどれを採用するか、②`cg_solver.c` は Option A/B/C のどれを採用するか、③`t3_element.c` は Option A/B/C のどれを採用するかを決定してください。
+- 実行タスク: PM-3 C-5 #1方針反映 + A-12先行実装（旧 `SPC/FORCE` 互換復元）
+  - Done:
+    - PM決定 #1 を docs へ反映（`Option A`: 旧 `SPC/FORCE` / `NastranBalkFile` 互換維持）。
+    - `FEM4C/src/io/input.c` の `input_read_parser_boundary()` に旧形式 `SPC/FORCE` 併読ロジックを追加。
+    - 固定長Nastranカード形式と `SID=... G=...` 形式の双方を受理し、旧 parser package での無言無視を解消。
+  - 変更ファイル:
+    - `FEM4C/src/io/input.c`
+    - `docs/fem4c_dirty_diff_triage_2026-02-06.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/abc_team_chat_handoff.md`
+    - `docs/session_continuity_log.md`
+    - `docs/team_status.md`
+  - 実行コマンド / pass-fail:
+    - `make -C FEM4C` → PASS
+    - `cd FEM4C && ./bin/fem4c /tmp/parser_pkg_old /tmp/fem4c_parser_old_after_patch.dat` → PASS
+    - `cd FEM4C && ./bin/fem4c NastranBalkFile/3Dtria_example.dat run_out part_0001 /tmp/fem4c_parser_check_after_patch.dat` → PASS
+    - `make -C FEM4C mbd_checks` → PASS
+    - `python scripts/check_doc_links.py docs/abc_team_chat_handoff.md docs/fem4c_team_next_queue.md docs/fem4c_dirty_diff_triage_2026-02-06.md docs/session_continuity_log.md` → PASS
+  - 次タスク:
+    - C-5 残論点 #2（`cg_solver.c`）と #3（`t3_element.c`）の PM判断を確定する。
+    - A-11 は A-12 完了後に再開する。
+- 実行タスク: C-5 継続（#2/#3 判断材料更新） + C-9 完了（#1 解決済み整合）
+  - タイマー出力（開始）:
+```text
+SESSION_TIMER_START
+session_token=/tmp/c_team_session_20260207T024155Z_108438.token
+team_tag=c_team
+start_utc=2026-02-07T02:41:55Z
+start_epoch=1770432115
+```
+  - タイマー出力（終了）:
+```text
+SESSION_TIMER_END
+session_token=/tmp/c_team_session_20260207T024155Z_108438.token
+team_tag=c_team
+start_utc=2026-02-07T02:41:55Z
+end_utc=2026-02-07T02:45:04Z
+start_epoch=1770432115
+end_epoch=1770432304
+elapsed_sec=189
+elapsed_min=3
+```
+  - Done:
+    - C-9 `論点 #1 解決済み整合（input.c）` を完了（`docs/fem4c_dirty_diff_triage_2026-02-06.md` Section 8/11, `docs/fem4c_team_next_queue.md`）。
+  - 次タスク:
+    - C-10 `論点 #2/#3 採否確定準備（最終）` を `In Progress` で更新済み。
+    - C-5 は `In Progress` 継続（#2/#3 の PM判断待ち）。
+  - triage更新（必須成果）:
+    - 更新ファイル: `docs/fem4c_dirty_diff_triage_2026-02-06.md`
+    - 更新内容:
+      - #1 `input.c` を「解決済み（Option A採用）」へ整合し、未決 blocker から除外。
+      - #2 `cg_solver.c` と #3 `t3_element.c` の試行コマンド/結果を追加。
+      - 最新 PM判断依頼を Section 11 として追加（未決は #2/#3 のみ）。
+  - 実行コマンド / pass-fail:
+    - `rg -n "#define\s+TOLERANCE|TOLERANCE" FEM4C/src/common FEM4C/src/solver/cg_solver.c` → PASS（`TOLERANCE=1.0e-8` を確認）
+    - `git diff -w -- FEM4C/src/solver/cg_solver.c` → PASS（実質ロジック差分が閾値 `1.0e-14` 変更1点であることを確認）
+    - `make -C FEM4C` → PASS
+    - `make -C FEM4C test` → PASS
+    - `make -C FEM4C mbd_checks` → PASS
+    - `cd FEM4C && ./bin/fem4c examples/t3_cantilever_beam.dat /tmp/c5_t3_cg_eval.dat` → PASS
+    - `cd FEM4C && ./bin/fem4c examples/q4_cantilever_beam.dat /tmp/c5_q4_cg_eval.dat` → PASS
+    - `cd FEM4C && ./bin/fem4c examples/t6_cantilever_beam.dat /tmp/c5_t6_cg_eval.dat` → PASS
+    - `cd FEM4C && ./bin/fem4c /tmp/t3_clockwise.dat /tmp/c5_t3_clockwise_eval.dat` → PASS（orientation correction warning を確認）
+    - `cd FEM4C && ./bin/fem4c NastranBalkFile/3Dtria_example.dat run_out part_0001 /tmp/c5_parser_eval.dat` → PASS
+    - `cd FEM4C && ./bin/fem4c /tmp/parser_pkg_old /tmp/c5_parser_old_eval.dat` → PASS（旧 `SPC/FORCE` 互換反映を確認）
+    - `python scripts/check_doc_links.py docs/fem4c_dirty_diff_triage_2026-02-06.md docs/fem4c_team_next_queue.md docs/team_status.md docs/session_continuity_log.md` → PASS
+  - 残blocker 3点セット:
+    - 試行:
+      - #2 は `TOLERANCE(1.0e-8)` と `1.0e-14` の差分位置を特定し、T3/Q4/T6/parser ケースで収束挙動を確認。
+      - #3 は clockwise 単要素と parser 実ケースで自動補正挙動を確認し、strict切替実装有無を探索。
+    - 失敗理由:
+      - #2 は「固定閾値を採るか既存定数へ戻すか」が設計判断であり、Cチーム単独で最終採否を確定できない。
+      - #3 は「常時自動補正/strict切替/即エラー」の運用方針が未確定。
+    - PM判断依頼:
+      - `cg_solver.c` は Option A/B/C のどれを採用するか決定してください。
+      - `t3_element.c` は Option A/B/C のどれを採用するか決定してください。
+- 実行タスク: PM-3 C-5 #2判断反映（cg_solver 閾値）
+  - Done:
+    - `FEM4C/src/solver/cg_solver.c` の零曲率判定方針を再検証。
+    - `Option B`（`fabs(pAp) < TOLERANCE`）を試行したところ、`3Dtria_example` で `Zero curvature in CG iteration 289` を再現。
+    - 既存入力互換性を優先し、#2は `Option A`（`fabs(pAp) < 1.0e-14` 維持）で確定。
+    - triage/queue/handoff を #2 解決済みとして更新。
+  - 変更ファイル:
+    - `FEM4C/src/solver/cg_solver.c`
+    - `docs/fem4c_dirty_diff_triage_2026-02-06.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/abc_team_chat_handoff.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実行コマンド / pass-fail:
+    - `make -C FEM4C` → PASS
+    - `make -C FEM4C test` → PASS（`No test script found` + `mbd_checks` PASS）
+    - `make -C FEM4C mbd_checks` → PASS
+    - `cd FEM4C && ./bin/fem4c NastranBalkFile/3Dtria_example.dat run_out part_0001 /tmp/pm_cg_parser_after_decision.dat` → PASS（Option A状態）
+  - 補足（失敗証跡）:
+    - `Option B` 試行時: `CG Debug: iteration 289, pAp = 9.615406e-09, tolerance = 1.000000e-08` → `Zero curvature` で FAIL。
+  - 次タスク:
+    - C-5 の未決は #3（`t3_element.c`）のみ。次は #3 の最終方針を PM決定する。
+- 実行タスク: PM-3 C-5 #3判断反映（T3 orientation strict切替）
+  - Done:
+    - `FEM4C/src/elements/t3/t3_element.c` に strict 分岐を追加し、既定は自動補正・`--strict-t3-orientation` 指定時は clockwise 要素を即エラーに変更。
+    - `FEM4C/src/fem4c.c` に `--strict-t3-orientation` / `--strict-t3-orientation=<0|1|true|false>` / `--no-strict-t3-orientation` と環境変数 `FEM4C_STRICT_T3_ORIENTATION` の読み取りを追加。
+    - `FEM4C/src/common/globals.h` / `FEM4C/src/common/globals.c` に `g_t3_strict_orientation` を追加。
+    - `docs/fem4c_dirty_diff_triage_2026-02-06.md` / `docs/fem4c_team_next_queue.md` / `docs/abc_team_chat_handoff.md` を #3 解決済み（Option B）へ更新。
+  - 変更ファイル:
+    - `FEM4C/src/elements/t3/t3_element.c`
+    - `FEM4C/src/fem4c.c`
+    - `FEM4C/src/common/globals.h`
+    - `FEM4C/src/common/globals.c`
+    - `FEM4C/README.md`
+    - `docs/fem4c_dirty_diff_triage_2026-02-06.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/abc_team_chat_handoff.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実行コマンド / pass-fail:
+    - `make -C FEM4C` → PASS
+    - `cd FEM4C && ./bin/fem4c /tmp/t3_clockwise.dat /tmp/t3_clockwise_auto_after.dat` → PASS（既定: 補正継続 + warning）
+    - `cd FEM4C && ./bin/fem4c --strict-t3-orientation /tmp/t3_clockwise.dat /tmp/t3_clockwise_strict_after.dat` → PASS（期待どおり non-zero 失敗, `EXIT_CODE:1`）
+    - `cd FEM4C && ./bin/fem4c NastranBalkFile/3Dtria_example.dat run_out part_0001 /tmp/pm_t3_parser_after_decision.dat` → PASS
+  - PM決定:
+    - C-5 論点 #3（`t3_element.c`）は `Option B` を採用。
+    - 既定挙動は互換重視の自動補正を維持し、厳格運用は CLI フラグで有効化する。
+  - 次タスク:
+    - C-11（strict orientation 回帰導線の固定）へ着手する。
+- 実行タスク: PM-3 B-8運用簡素化（run_id必須廃止）
+  - Done:
+    - B-8 の受入を「実ラン run_id 必須」から「CI導線の静的保証 + ローカル回帰」へ再定義。
+    - `docs/fem4c_team_next_queue.md` の B-8/B-9/B-10 を新運用へ更新。
+    - `docs/abc_team_chat_handoff.md` に PM決定（run_id共有必須廃止、実ランはスポット確認）を追記。
+  - 変更ファイル:
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/abc_team_chat_handoff.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実行コマンド / pass-fail:
+    - `rg -n "Run FEM4C regression entrypoint|id: run_fem4c_tests|fem4c_test.log" .github/workflows/ci.yaml` → PASS（workflow上のFEM4C step/artifact導線を確認）
+    - `make -C FEM4C test` → PASS（ローカル回帰導線を確認）
+  - PM決定:
+    - 日次運用での run_id 共有要求は廃止する。
+    - `mbd_ci_evidence` は任意スポット確認ツールとして維持し、毎セッション必須にはしない。
+  - 次タスク:
+    - Bチームは静的保証ベースで B-8 の再発防止を維持し、必要時のみスポット確認を実施する。
+- 実行タスク: PM-3 B-11 CI契約チェックのローカル自動化
+  - Done:
+    - `FEM4C/scripts/check_ci_contract.sh` を追加し、`.github/workflows/ci.yaml` の必須契約（step名/id, `fem4c_test.log`, failure gate, upload step, `make -C FEM4C test`）を静的検査可能にした。
+    - `FEM4C/Makefile` に `mbd_ci_contract` ターゲットを追加し、1コマンド実行導線を固定。
+    - `FEM4C/practice/README.md` に実行コマンドを追記。
+    - `docs/fem4c_team_next_queue.md` の B-11 を `Done` へ更新。
+  - 変更ファイル:
+    - `FEM4C/scripts/check_ci_contract.sh`
+    - `FEM4C/Makefile`
+    - `FEM4C/practice/README.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実行コマンド / pass-fail:
+    - `make -C FEM4C mbd_ci_contract` → PASS（`CI_CONTRACT_CHECK_SUMMARY=PASS checks=6 failed=0`）
+    - `make -C FEM4C test` → PASS（`mbd_checks` 完走）
+    - `python scripts/check_doc_links.py docs/fem4c_team_next_queue.md docs/team_status.md docs/session_continuity_log.md docs/abc_team_chat_handoff.md` → PASS
+  - 次タスク:
+    - Bチームは run_id 非依存運用の維持確認として、必要時のみ `mbd_ci_evidence` のスポット確認を行う。

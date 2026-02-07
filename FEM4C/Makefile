@@ -34,7 +34,7 @@ ELEMENT_SRCS = $(SRCDIR)/elements/element_base.c $(SRCDIR)/elements/elements.c \
                $(SRCDIR)/elements/q4/q4_element.c $(SRCDIR)/elements/q4/q4_stiffness.c \
                $(SRCDIR)/elements/t3/t3_element.c
 SOLVER_SRCS = $(SRCDIR)/solver/assembly.c $(SRCDIR)/solver/cg_solver.c
-ANALYSIS_SRCS = $(SRCDIR)/analysis/static.c
+ANALYSIS_SRCS = $(SRCDIR)/analysis/static.c $(SRCDIR)/analysis/runner.c
 MBD_SRCS = $(SRCDIR)/mbd/constraint2d.c $(SRCDIR)/mbd/kkt2d.c
 MAIN_SRCS = $(SRCDIR)/fem4c.c
 
@@ -46,6 +46,14 @@ OBJS = $(SRCS:$(SRCDIR)/%.c=$(BUILDDIR)/%.o)
 
 # Target executable
 TARGET = $(BINDIR)/fem4c
+MBD_PROBE_SRC = practice/ch09/mbd_constraint_probe.c
+MBD_PROBE_TARGET = $(BINDIR)/mbd_constraint_probe
+MBD_PROBE_SRCS = $(SRCDIR)/mbd/constraint2d.c $(SRCDIR)/mbd/kkt2d.c $(SRCDIR)/common/error.c
+MBD_REGRESSION_SCRIPT = scripts/run_mbd_regression.sh
+MBD_CONSISTENCY_SCRIPT = scripts/check_mbd_equation_consistency.sh
+MBD_NEGATIVE_SCRIPT = scripts/check_mbd_invalid_inputs.sh
+MBD_CI_EVIDENCE_SCRIPT = scripts/fetch_fem4c_ci_evidence.py
+MBD_CI_CONTRACT_SCRIPT = scripts/check_ci_contract.sh
 
 # Parser target (parser.exe on Windows, parser on POSIX)
 PARSER_SRC = $(PARSERDIR)/parser.c
@@ -79,6 +87,47 @@ $(PARSER_TARGET): $(PARSER_SRC)
 	@echo "Building $@"
 	$(CC) $(PARSER_CFLAGS) $(PARSER_INCLUDES) -o $@ $< -lm
 
+# Build MBD probe harness
+$(MBD_PROBE_TARGET): $(MBD_PROBE_SRC) $(MBD_PROBE_SRCS)
+	@echo "Building $@"
+	$(CC) -Wall -Wextra -O3 -std=c99 -Isrc -o $@ $(MBD_PROBE_SRC) $(MBD_PROBE_SRCS) -lm
+
+# Build + run MBD probe in one command
+mbd_probe: $(MBD_PROBE_TARGET)
+	@echo "Running $(MBD_PROBE_TARGET)"
+	@./$(MBD_PROBE_TARGET)
+
+# One-command regression for MBD mode input adapter path
+mbd_regression: $(TARGET)
+	@echo "Running MBD mode regression script"
+	@bash $(MBD_REGRESSION_SCRIPT)
+
+# Consistency check between mbd runtime log and probe equation count
+mbd_consistency: $(TARGET) $(MBD_PROBE_TARGET)
+	@echo "Running MBD equation consistency check"
+	@bash $(MBD_CONSISTENCY_SCRIPT)
+
+# Negative-path check for invalid MBD_* inputs
+mbd_negative: $(TARGET)
+	@echo "Running invalid-input diagnostics check"
+	@bash $(MBD_NEGATIVE_SCRIPT)
+
+# Run all MBD checks in one command
+mbd_checks: mbd_probe mbd_regression mbd_consistency mbd_negative
+	@echo "PASS: all MBD checks completed"
+
+# Fetch latest GitHub Actions CI evidence for FEM4C step
+mbd_ci_evidence:
+	@python3 $(MBD_CI_EVIDENCE_SCRIPT) \
+		--repo RyotaMaeno1227/OSS_CAE_FEM_salome \
+		--workflow ci.yaml \
+		--scan-runs 20 \
+		--strict-acceptance
+
+# Check CI workflow contract locally (no run_id dependency)
+mbd_ci_contract:
+	@bash $(MBD_CI_CONTRACT_SCRIPT)
+
 # Object file compilation
 $(BUILDDIR)/%.o: $(SRCDIR)/%.c
 	@mkdir -p $(dir $@)
@@ -93,6 +142,8 @@ test: $(TARGET) $(PARSER_TARGET)
 	else \
 		echo "No test script found"; \
 	fi
+	@echo "Running MBD validation checks (mbd_checks)..."
+	@$(MAKE) mbd_checks
 
 # Unit test target
 unit_test:
@@ -178,6 +229,13 @@ help:
 	@echo "  analyze   - Run static analysis (requires cppcheck)"
 	@echo "  memcheck  - Run memory leak detection (requires valgrind)"
 	@echo "  profile   - Build for performance profiling"
+	@echo "  mbd_probe - Build and run MBD constraint probe"
+	@echo "  mbd_regression - Run one-command MBD regression (positive + negative, stable error-code check)"
+	@echo "  mbd_consistency - Compare runtime and probe equation counts"
+	@echo "  mbd_negative - Verify invalid-input failures with line diagnostics + DIAG_CODES_SEEN"
+	@echo "  mbd_checks - Run all MBD checks (probe/regression/consistency/negative)"
+	@echo "  mbd_ci_evidence - Fetch CI run evidence with strict acceptance (step+artifact)"
+	@echo "  mbd_ci_contract - Validate required FEM4C CI contract in .github/workflows/ci.yaml"
 	@echo "  help      - Show this help message"
 
 # Dependencies
@@ -185,7 +243,7 @@ $(BUILDDIR)/common/globals.o: $(SRCDIR)/common/globals.c $(SRCDIR)/common/global
 $(BUILDDIR)/common/error.o: $(SRCDIR)/common/error.c $(SRCDIR)/common/error.h $(SRCDIR)/common/types.h
 
 # Phony targets
-.PHONY: all release debug openmp test unit_test clean clean_all install docs format analyze memcheck profile help
+.PHONY: all release debug openmp test unit_test clean clean_all install docs format analyze memcheck profile mbd_probe mbd_regression mbd_consistency mbd_negative mbd_checks mbd_ci_evidence mbd_ci_contract help
 
 # Print variables for debugging
 print-%:
