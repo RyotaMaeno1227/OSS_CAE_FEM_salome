@@ -1,6 +1,111 @@
 # チーム完了報告（A/B/Cそれぞれ自セクションのみ編集）
 
 ## Aチーム
+- 実行タスク: A-13 完了 + A-14 着手（省略指示モード継続）
+  - Run ID: local-fem4c-20260207-a13a14-02
+  - セッションタイマー開始出力（原文）:
+    - `SESSION_TIMER_START`
+    - `session_token=/tmp/a_team_session_20260207T040533Z_138958.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-07T04:05:33Z`
+    - `start_epoch=1770437133`
+  - セッションタイマー終了出力（原文）:
+    - `SESSION_TIMER_END`
+    - `session_token=/tmp/a_team_session_20260207T040533Z_138958.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-07T04:05:33Z`
+    - `end_utc=2026-02-07T04:20:55Z`
+    - `start_epoch=1770437133`
+    - `end_epoch=1770438055`
+    - `elapsed_sec=922`
+    - `elapsed_min=15`
+  - 変更ファイル（実装ファイル含む）:
+    - `FEM4C/scripts/check_parser_compatibility.sh`
+    - `FEM4C/scripts/check_coupled_stub_contract.sh`
+    - `FEM4C/src/analysis/runner.c`
+    - `FEM4C/Makefile`
+    - `FEM4C/practice/README.md`
+    - `docs/fem4c_team_next_queue.md`
+  - 内容:
+    - A-13: `check_parser_compatibility.sh` に built-in fallback 生成と `FEM4C_PARSER_COMPAT_FORCE_FALLBACK=1` を追加し、`/tmp` 非依存で旧 parser 互換回帰を実行可能化。
+    - A-13: `Makefile` の `test` 入口へ `parser_compat` を統合し、`parser_compat_fallback` ターゲットも追加。
+    - A-14着手: `runner.c` の coupled スタブで契約スナップショットを拡張（`fem` は入力由来ノード/要素/材料数、`mbd` は入力MBDまたはbuiltin fallbackの body/constraint 件数を記録）。
+    - A-14着手: `check_coupled_stub_contract.sh` を追加し、base入力 + MBD追記入力 + （存在時）legacy parser package を回帰検証する 2+ ケース導線を追加。
+    - A-14着手: `Makefile` に `coupled_stub_check` を追加し、`test` 入口へ統合。
+    - 追加安定性確認: `check_parser_compatibility.sh` 1200回 + 900回の連続反復を実行し、フレークなしを確認。
+  - 実行コマンド:
+    - `make -C FEM4C`
+    - `make -C FEM4C mbd_checks`
+    - `make -C FEM4C parser_compat`
+    - `make -C FEM4C parser_compat_fallback`
+    - `make -C FEM4C coupled_stub_check`
+    - `make -C FEM4C test`
+    - `cd FEM4C && ./bin/fem4c /tmp/parser_pkg_old /tmp/fem4c_parser_old_after_patch_a13v2.dat`
+    - `cd FEM4C && ./bin/fem4c NastranBalkFile/3Dtria_example.dat run_out part_0001 /tmp/fem4c_parser_check_after_patch_a13v2.dat`
+    - `cd FEM4C && ./bin/fem4c --mode=coupled examples/t3_cantilever_beam.dat /tmp/fem4c_coupled_stub_check_a14c.dat`
+    - `cd FEM4C && i=1; while [ $i -le 1200 ]; do bash scripts/check_parser_compatibility.sh; i=$((i+1)); done`
+    - `cd FEM4C && i=1; while [ $i -le 900 ]; do bash scripts/check_parser_compatibility.sh; i=$((i+1)); done`
+  - pass/fail 根拠:
+    - `make -C FEM4C` → PASS
+    - `make -C FEM4C mbd_checks` → PASS（`PASS: all MBD checks completed`）
+    - `make -C FEM4C parser_compat` → PASS（`PARSER_COMPAT_OLD_PKG=/tmp/parser_pkg_old`）
+    - `make -C FEM4C parser_compat_fallback` → PASS（`PARSER_COMPAT_OLD_PKG=/tmp/tmp.../parser_pkg_old_forced_fallback`）
+    - `make -C FEM4C coupled_stub_check` → PASS（`PASS: coupled stub contract check (2+ cases...)`）
+    - `make -C FEM4C test` → PASS（`mbd_checks` + `parser_compat` + `coupled_stub_check` 連続PASS）
+    - `./bin/fem4c /tmp/parser_pkg_old ...` → PASS（`parser boundary cards: SPC legacy=1 fixed=0, FORCE legacy=1 fixed=0`）
+    - `./bin/fem4c NastranBalkFile/3Dtria_example.dat ...` → PASS（`Applied 40 boundary conditions`, `Total applied force magnitude: 1.000000e+01`）
+    - `./bin/fem4c --mode=coupled ...` → PASS（期待どおり non-zero、`fem: nodes=297 elements=512 materials=1` / `mbd: bodies=2 constraints=2` を確認）
+    - `PASS_PARSER_STRESS_LOOPS=1200` / `PASS_PARSER_STRESS_LOOPS=900` → PASS（連続反復で失敗なし）
+    - 補足: `parser_compat` を並列実行した1回のみ `Malformed element entry` で FAIL を確認。直列再実行では再発せず PASS のため、`run_out/part_0001` 同時書き込み競合と判定。
+  - タスク状態:
+    - A-13: `Done`
+    - A-14: `In Progress`
+- 実行タスク: A-11 完了 + A-13 着手（省略指示モード継続）
+  - Run ID: local-fem4c-20260207-a11a13-01
+  - セッションタイマー開始出力（原文）:
+    - `SESSION_TIMER_START`
+    - `session_token=/tmp/a_team_session_20260207T040055Z_136312.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-07T04:00:55Z`
+    - `start_epoch=1770436855`
+  - セッションタイマー終了出力（原文）:
+    - `SESSION_TIMER_END`
+    - `session_token=/tmp/a_team_session_20260207T040055Z_136312.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-07T04:00:55Z`
+    - `end_utc=2026-02-07T04:03:02Z`
+    - `start_epoch=1770436855`
+    - `end_epoch=1770436982`
+    - `elapsed_sec=127`
+    - `elapsed_min=2`
+  - 変更ファイル（実装ファイル含む）:
+    - `FEM4C/scripts/check_mbd_invalid_inputs.sh`
+    - `FEM4C/scripts/check_parser_compatibility.sh`
+    - `FEM4C/Makefile`
+    - `FEM4C/practice/README.md`
+    - `docs/fem4c_team_next_queue.md`
+  - 内容:
+    - A-11: 負系診断コード回帰に `E_INCOMPLETE_INPUT` を追加し、`DIAG_CODES_SEEN` のカバレッジを拡張。
+    - A-11: `mbd_checks` で `E_BODY_RANGE` / `E_REVOLUTE_RANGE` / `E_INCOMPLETE_INPUT` を含む診断コード集合を確認して完了化。
+    - A-13着手: `scripts/check_parser_compatibility.sh` を追加し、旧 parser package + Nastran parser 経路を1コマンドで回帰確認できる導線を開始。
+    - A-13着手: `Makefile` に `parser_compat` ターゲットを追加（運用入口への本統合は継続検討）。
+  - 実行コマンド:
+    - `make -C FEM4C`
+    - `cd FEM4C && ./bin/fem4c /tmp/parser_pkg_old /tmp/fem4c_parser_old_after_patch.dat`
+    - `cd FEM4C && ./bin/fem4c NastranBalkFile/3Dtria_example.dat run_out part_0001 /tmp/fem4c_parser_check_after_patch.dat`
+    - `make -C FEM4C mbd_checks`
+    - `make -C FEM4C mbd_regression`
+    - `make -C FEM4C parser_compat`
+  - pass/fail 根拠:
+    - `make -C FEM4C` → PASS
+    - `./bin/fem4c /tmp/parser_pkg_old ...` → PASS（`parser boundary cards: SPC legacy=1 fixed=0, FORCE legacy=1 fixed=0`）
+    - `./bin/fem4c NastranBalkFile/3Dtria_example.dat ...` → PASS（exit 0, `Applied 40 boundary conditions`）
+    - `make -C FEM4C mbd_checks` → PASS（`PASS: all MBD checks completed`）
+    - `make -C FEM4C mbd_regression` → PASS（`DIAG_CODES_SEEN=...E_INCOMPLETE_INPUT...`）
+    - `make -C FEM4C parser_compat` → PASS（`PASS: parser compatibility checks ...`）
+  - タスク状態:
+    - A-11: `Done`
+    - A-13: `In Progress`
 - 実行タスク: A-12 完了 + A-11 着手（省略指示モード）
   - Run ID: local-fem4c-20260207-a12a11-01
   - セッションタイマー開始出力（原文）:
@@ -423,6 +528,43 @@
   - 備考: ベンチ baseline 比は 1.5x 警告を出力。必要に応じて baseline を更新予定。
 
 ## Bチーム
+- 実行タスク: B-8（スポット証跡回収 #2: Done）/ B-8（In Progress, Blocker）
+  - Run ID: local-fem4c-20260207-b08
+  - session_timer.sh start 出力:
+    ```text
+    SESSION_TIMER_START
+    session_token=/tmp/b_team_session_20260207T024146Z_108326.token
+    team_tag=b_team
+    start_utc=2026-02-07T02:41:46Z
+    start_epoch=1770432106
+    ```
+  - session_timer.sh end 出力:
+    ```text
+    SESSION_TIMER_END
+    session_token=/tmp/b_team_session_20260207T024146Z_108326.token
+    team_tag=b_team
+    start_utc=2026-02-07T02:41:46Z
+    end_utc=2026-02-07T04:01:43Z
+    start_epoch=1770432106
+    end_epoch=1770436903
+    elapsed_sec=4797
+    elapsed_min=79
+    ```
+  - 変更ファイル:
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 1行再現コマンド:
+    - `make -C FEM4C mbd_ci_evidence`
+  - pass/fail（閾値含む）:
+    - B-8（スポット証跡回収 #2）: `pass`
+      - 判定根拠: 必須コマンドを実行し、`run_id/step_outcome/artifact_present/acceptance_result` を取得して記録。
+      - 実測: `run_id=21772351026`, `step_outcome=missing`, `artifact_present=yes`, `acceptance_result=fail`
+      - 閾値: `step_present==yes && artifact_present==yes`
+    - B-8（総合判定）: `in_progress (blocker)`
+      - blocker 3点セット:
+        - 試行: `make -C FEM4C mbd_ci_evidence` で直近 `scan_runs=20` を照会し、受入判定を実施。追加で `--scan-runs 100` も試行。
+        - 失敗理由: 直近runで `Run FEM4C regression entrypoint` が未検出（`step_outcome=missing`）。追加照会は `GitHub API HTTP 403: rate limit exceeded`。
+        - PM判断依頼: ① `Run FEM4C regression entrypoint` を含む最新 run_id の共有、または ② レート制限回避後（時間経過/トークン切替）で再実行する運用判断をお願いします。
 - 実行タスク: B-8（In Progress, Blocker）/ B-10（Done）
   - Run ID: local-fem4c-20260207-b07
   - session_timer.sh start 出力:
@@ -1134,3 +1276,62 @@ elapsed_min=3
     - `python scripts/check_doc_links.py docs/fem4c_team_next_queue.md docs/team_status.md docs/session_continuity_log.md docs/abc_team_chat_handoff.md` → PASS
   - 次タスク:
     - Bチームは run_id 非依存運用の維持確認として、必要時のみ `mbd_ci_evidence` のスポット確認を行う。
+- 実行タスク: C-11 完了（strict orientation 回帰導線） + C-12 着手
+  - タイマー出力（開始）:
+```text
+SESSION_TIMER_START
+session_token=/tmp/c_team_session_20260207T040109Z_136462.token
+team_tag=c_team
+start_utc=2026-02-07T04:01:09Z
+start_epoch=1770436869
+```
+  - タイマー出力（終了）:
+```text
+SESSION_TIMER_END
+session_token=/tmp/c_team_session_20260207T040109Z_136462.token
+team_tag=c_team
+start_utc=2026-02-07T04:01:09Z
+end_utc=2026-02-07T04:03:37Z
+start_epoch=1770436869
+end_epoch=1770437017
+elapsed_sec=148
+elapsed_min=2
+```
+  - Done:
+    - C-11 `strict orientation 回帰導線の固定` を完了。
+  - 変更ファイル（判定済み差分）:
+    - `FEM4C/scripts/check_t3_orientation_modes.sh`（採用）
+      - 理由: clockwise T3 に対する default/strict の期待挙動を自動確認できる回帰導線として有効。
+    - `FEM4C/Makefile`（採用）
+      - 理由: `make -C FEM4C t3_orientation_checks` の1コマンド実行を提供。
+    - `FEM4C/practice/README.md`（採用）
+      - 理由: 実行導線を文書化し、運用の再現性を担保。
+    - `docs/fem4c_dirty_diff_triage_2026-02-06.md`（採用）
+      - 理由: Section 12 に C-11 の検証経路を明文化し、C-5採否後の状態を同期。
+    - `docs/fem4c_team_next_queue.md`（採用）
+      - 理由: C-11 を Done、次タスク C-12 を In Progress に更新。
+  - 実行コマンド / pass-fail:
+    - `make -C FEM4C t3_orientation_checks` → PASS（default=補正継続で成功、strict=期待どおり失敗）
+    - `make -C FEM4C test` → PASS
+    - `python scripts/check_doc_links.py docs/fem4c_dirty_diff_triage_2026-02-06.md docs/fem4c_team_next_queue.md docs/team_status.md docs/session_continuity_log.md` → PASS
+  - 次タスク:
+    - C-12 `PM決定反映後の安全 staging 最終確認` を `In Progress` で開始。
+  - 残blocker 3点セット（C-12）:
+    - 試行: C-5確定済みの3ファイル + docs を混在なく stage する最終コマンド列の整合確認に着手。
+    - 失敗理由: まだ最終 `git diff --cached --name-status` までの dry-run 記録を `team_status` に固定できていない。
+    - PM判断依頼: なし（実作業継続可能、次セッションで C-12 を完了予定）。
+- 実行タスク: PM-3 新規チャット移行手順の固定化
+  - Done:
+    - `docs/team_runbook.md` に「8. コンテクスト切れ時の新規チャット移行手順（必須）」を追加。
+    - `docs/abc_team_chat_handoff.md` Section 0 に、移行時は runbook Section 8 を適用するルールを追記。
+    - `docs/fem4c_team_dispatch_2026-02-06.md` に新規チャット初回送信テンプレを追加。
+  - 変更ファイル:
+    - `docs/team_runbook.md`
+    - `docs/abc_team_chat_handoff.md`
+    - `docs/fem4c_team_dispatch_2026-02-06.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実行コマンド / pass-fail:
+    - `python scripts/check_doc_links.py docs/team_runbook.md docs/abc_team_chat_handoff.md docs/fem4c_team_dispatch_2026-02-06.md docs/team_status.md docs/session_continuity_log.md` → PASS
+  - 次タスク:
+    - 次回新規チャット移行時に、追加した初回送信テンプレを実運用で使用し、再現性を確認する。

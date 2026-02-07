@@ -687,6 +687,24 @@
   - `elapsed_min` は短いが、今回は人工待機なしで実装差分と受入コマンド証跡を優先している。
   - リポジトリ全体の dirty 差分が大きく、コミット時の混在防止（パス限定 stage）は継続必須。
 
+## 2026-02-07 / A-team (A-11 Done, A-13 In Progress)
+- Current Plan:
+  - A-11 を完了し、同セッションで次タスクを `In Progress` に遷移する。
+  - A-12で復元した parser 互換を1コマンド回帰へ切り出す着手を行う。
+- Completed This Session:
+  - `FEM4C/scripts/check_mbd_invalid_inputs.sh` に `E_INCOMPLETE_INPUT` ケースを追加し、`DIAG_CODES_SEEN` の診断コード集合を拡張。
+  - `make -C FEM4C mbd_regression` / `make -C FEM4C mbd_checks` を実行し、`E_BODY_RANGE` / `E_REVOLUTE_RANGE` / `E_INCOMPLETE_INPUT` を含むコード集合で PASS を確認。
+  - `FEM4C/scripts/check_parser_compatibility.sh` を追加し、旧 parser package と Nastran parser 経路の互換を1コマンド検証できるようにした。
+  - `FEM4C/Makefile` に `parser_compat` ターゲットを追加し、`make -C FEM4C parser_compat` PASS を確認。
+  - `docs/fem4c_team_next_queue.md` を更新し、A-11 を `Done`、A-13 を `In Progress` に更新。
+- Next Actions:
+  - A-13 を継続し、`parser_compat` を既存運用入口（`test` 連携可否）へどう接続するか方針を確定する。
+  - 必要なら `FEM4C/practice/README.md` に parser互換回帰の運用注意（前提データ配置）を追記する。
+  - 方針確定後、A-13 を `Done` 化して次タスクへ遷移する。
+- Open Risks/Blockers:
+  - `parser_compat` は `/tmp/parser_pkg_old` 前提のため、環境差異で失敗し得る（環境変数で上書き可能）。
+  - リポジトリ全体の dirty 差分が大きく、コミット時は対象ファイル限定 stage を継続する必要がある。
+
 ## 2026-02-07 / PM-3 (Anti-Idle Rule Fix)
 - Current Plan:
   - 15分運用で発生した逆インセンティブ（待機して elapsed を満たす）を除去し、実作業中心の受入へ修正する。
@@ -887,3 +905,53 @@
 - Open Risks/Blockers:
   - CI 契約の静的検査は実行時障害を直接検知しないため、スポット実ラン確認のタイミング管理は継続して必要。
   - リポジトリ全体の dirty 差分が大きく、コミット時のパス限定 stage は引き続き必須。
+
+## 2026-02-07 / B-team (B-8 Spot Evidence #2)
+- Current Plan:
+  - B-8 のスポット証跡回収を継続し、必須コマンド `make -C FEM4C mbd_ci_evidence` の結果を `team_status` へ固定する。
+  - 取得不能時は blocker 3点セット（試行・失敗理由・PM依頼）を明記する。
+- Completed This Session:
+  - `scripts/session_timer.sh start b_team` / `scripts/session_timer.sh end <token>` を実行し、生出力を `team_status` へ転記。
+  - 必須コマンド `make -C FEM4C mbd_ci_evidence` を実行し、`run_id=21772351026` / `step_outcome=missing` / `artifact_present=yes` / `acceptance_result=fail` を記録。
+  - 追加確認として `python3 FEM4C/scripts/fetch_fem4c_ci_evidence.py --repo RyotaMaeno1227/OSS_CAE_FEM_salome --workflow ci.yaml --scan-runs 100` を試行し、`HTTP 403 rate limit exceeded` を確認。
+- Next Actions:
+  - B-8 は `In Progress` を維持し、`Run FEM4C regression entrypoint` を含む最新runで `mbd_ci_evidence` を再実行する。
+  - 再実行時に `step_outcome` が `missing` 以外へ遷移するかを確認し、`team_status` の受入判定を更新する。
+  - レート制限再発時はトークン切替または時間経過後に再試行する。
+- Open Risks/Blockers:
+  - blocker 3点セット:
+    - 試行: `make -C FEM4C mbd_ci_evidence`（必須）と `--scan-runs 100` の追試を実施。
+    - 失敗理由: 直近runで対象step未検出（`step_outcome=missing`）かつ追試で GitHub API rate limit (`HTTP 403`) に到達。
+    - PM判断依頼: 対象stepを含む run_id の共有、またはレート制限回避後の再実行タイミングを指定してください。
+
+## 2026-02-07 / C-team (C-11 Done, C-12 In Progress)
+- Current Plan:
+  - C先頭未完了の C-11 を完了し、strict orientation の回帰導線を1コマンドで固定する。
+  - 同セッションで次タスク C-12 を `In Progress` にして継続状態を維持する。
+- Completed This Session:
+  - `FEM4C/scripts/check_t3_orientation_modes.sh` を追加し、clockwise T3 入力で default/strict の期待挙動を自動検証できるようにした。
+  - `FEM4C/Makefile` に `t3_orientation_checks` ターゲットを追加し、`FEM4C/practice/README.md` に実行導線を追記。
+  - `docs/fem4c_dirty_diff_triage_2026-02-06.md` Section 12 に C-11 回帰導線を反映。
+  - `make -C FEM4C t3_orientation_checks` と `make -C FEM4C test` を PASS。
+  - `docs/fem4c_team_next_queue.md` を更新し、C-11 `Done` / C-12 `In Progress` に遷移。
+- Next Actions:
+  - C-12 として、C-5確定済みファイル（`input.c`, `cg_solver.c`, `t3_element.c`）+ docs の安全 staging 最終手順を `team_status` に固定する。
+  - `git diff --cached --name-status` を含む最終確認フローを dry-run で記録する。
+  - C-12完了後、Cチーム次タスクを `In Progress` へ更新する。
+- Open Risks/Blockers:
+  - C-12 は最終 staging 手順の記録が未完了のため継続中。
+  - 本セッションの `elapsed_min=2` は参考値で、受入は実作業証跡（変更ファイル・コマンド・pass/fail）を優先する。
+
+## 2026-02-07 / PM-3 (New Chat Migration Procedure Fixed)
+- Current Plan:
+  - コンテクスト切れで新規チャットへ移る場合の運用を手順書へ固定し、再現可能にする。
+- Completed This Session:
+  - `docs/team_runbook.md` に新規チャット移行の必須手順（移行前更新、初回再開手順、差し戻し基準）を追加。
+  - `docs/abc_team_chat_handoff.md` Section 0 に runbook Section 8 適用ルールを追記。
+  - `docs/fem4c_team_dispatch_2026-02-06.md` に新規チャット初回送信テンプレを追加。
+- Next Actions:
+  - 次回の新規チャット開始時にテンプレを使用し、手順どおり再開できるかを確認する。
+  - 15分ルール未達報告の差し戻し文面をテンプレ運用へ統一する。
+- Open Risks/Blockers:
+  - 旧テンプレのコピペが残ると新手順が適用されない可能性がある。
+  - 長大な `team_status` で最新 PMエントリが埋もれるため、受入時の末尾確認を継続する。

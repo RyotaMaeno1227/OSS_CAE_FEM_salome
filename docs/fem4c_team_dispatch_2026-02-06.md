@@ -87,3 +87,154 @@ PM-3 依頼です。今回スプリントは FEM4C の巨大 dirty 差分の整�
 - 全チーム共通で、まず `docs/abc_team_chat_handoff.md` の Section 0 を読む。
 - 進捗は `docs/team_status.md`、セッション引継ぎは `docs/session_continuity_log.md`。
 - 混在コミット回避のため、担当範囲外ファイルはステージしない。
+
+---
+
+## 15分連続実行モード（次回以降の推奨文面）
+
+以下をそのまま送ると、短時間終了を避けて自走しやすくなります。
+
+### A/B/C 共通文面
+
+```
+作業を継続してください。今回は15分連続実行モードです。
+
+[参照先]
+- docs/abc_team_chat_handoff.md Section 0
+- docs/fem4c_team_next_queue.md
+- docs/team_runbook.md
+
+[実行ルール]
+- 15分以上を必須とし、15-30分を推奨レンジとして連続実行する。
+- 先頭タスクが終わったら同セッション内で次タスクへ着手する。
+- 進捗報告はセッション末尾に1回のみ（小分け報告しない）。
+- session_continuity_log だけ更新した報告は不合格。
+- 開始時に `scripts/session_timer.sh start <team_tag>`、終了時に `scripts/session_timer.sh end <session_token>` を実行し、出力を team_status に貼る。
+- 手入力の `start_at/end_at/elapsed_min` だけの報告は不合格。
+- `sleep` 等の人工待機で elapsed を満たす行為は禁止（不合格）。
+- `elapsed_min >= 15` を満たさない終了報告は原則不合格（PM事前承認の緊急停止のみ例外）。
+
+[終了条件]
+- `elapsed_min >= 15` を満たす。
+- Doneタスクを1件以上作る。
+- 変更ファイル・実行コマンド・pass/fail根拠を team_status に記録する。
+- 次タスクを In Progress にするか、blocker を明記して終了する。
+```
+
+## 最小チャット運用（固定文面）
+
+次回以降は、以下の 1 行だけ送れば運用可能です。
+
+```
+作業を継続してください
+```
+
+解釈ルール:
+- この 1 行は「省略指示モード」の開始を意味する。
+- 各チームは `docs/abc_team_chat_handoff.md` Section 0 と `docs/fem4c_team_next_queue.md` を自動参照し、先頭未完了タスクへ着手する。
+- PM への追加確認は blocker 発生時のみ許可する。
+- 受入判定は `scripts/session_timer.sh` 出力を含む報告のみ有効とする。
+- `elapsed_min >= 15` を満たさない報告は原則差し戻す。
+- 人工待機（`sleep` 等）を含む報告は無効とする。
+
+## 新規チャット移行時のPM初回送信テンプレ（コピペ用）
+
+```
+新規チャットへ移行します。まず以下を確認してから再開してください。
+
+[必読]
+1) docs/long_term_target_definition.md
+2) docs/abc_team_chat_handoff.md の Section 0
+3) docs/fem4c_team_next_queue.md
+4) docs/team_runbook.md の「8. コンテクスト切れ時の新規チャット移行手順」
+
+[運用]
+- 以降は省略指示モードです。「作業を継続してください」で進めます。
+- elapsed_min < 15、または session_timer 証跡なしは不受理です。
+- 不受理時は同一タスクを継続し、再提出してください。
+```
+
+---
+
+## PMレビュー後の次ラウンド指示（2026-02-06, コピペ用）
+
+### Team A
+
+```
+@A-team
+作業を継続してください（15分以上、推奨15-30分の連続実行）。
+
+[今回の着手タスク]
+- docs/fem4c_team_next_queue.md の Aチーム先頭 `Todo` / `In Progress` から開始
+- 先頭タスク完了後、同セッション内で次タスクを `In Progress` にして継続
+
+[時間証跡コマンド]
+- 開始: `scripts/session_timer.sh start a_team`
+- 終了: `scripts/session_timer.sh end <session_token>`
+
+[必須成果]
+- 実装差分ファイル（docsのみは不可）
+- 実行コマンド
+- 受入判定 pass/fail
+- `scripts/session_timer.sh` の出力一式（`session_token/start_utc/end_utc/start_epoch/end_epoch/elapsed_min`）
+- `elapsed_min >= 15`（未満は原則差し戻し）
+
+[報告先]
+- docs/team_status.md
+- docs/session_continuity_log.md（4項目）
+```
+
+### Team B
+
+```
+@B-team
+作業を継続してください（15分以上、推奨15-30分の連続実行）。
+
+[今回の着手タスク]
+- docs/fem4c_team_next_queue.md の Bチーム先頭 `Todo` / `In Progress` から開始
+- 先頭タスク完了後、同セッション内で次タスクを `In Progress` にして継続
+
+[時間証跡コマンド]
+- 開始: `scripts/session_timer.sh start b_team`
+- 終了: `scripts/session_timer.sh end <session_token>`
+
+[注意]
+- docs更新のみで終了しないこと（無効報告）
+
+[必須成果]
+- 変更ファイル（Makefile/README/probe など）
+- 1行再現コマンド
+- pass/fail と閾値
+- `scripts/session_timer.sh` の出力一式（`session_token/start_utc/end_utc/start_epoch/end_epoch/elapsed_min`）
+- `elapsed_min >= 15`（未満は原則差し戻し）
+
+[報告先]
+- docs/team_status.md
+- docs/session_continuity_log.md（4項目）
+```
+
+### Team C
+
+```
+@C-team
+作業を継続してください（15分以上、推奨15-30分の連続実行）。
+
+[今回の着手タスク]
+- docs/fem4c_team_next_queue.md の Cチーム先頭 `Todo` / `In Progress` から開始
+- 先頭タスク完了後、同セッション内で次タスクを `In Progress` にして継続
+
+[時間証跡コマンド]
+- 開始: `scripts/session_timer.sh start c_team`
+- 終了: `scripts/session_timer.sh end <session_token>`
+
+[必須成果]
+- 最終判定が入った triage 文書差分
+- 具体的コマンド（必要なら .gitignore 更新）
+- pass/fail 判定
+- `scripts/session_timer.sh` の出力一式（`session_token/start_utc/end_utc/start_epoch/end_epoch/elapsed_min`）
+- `elapsed_min >= 15`（未満は原則差し戻し）
+
+[報告先]
+- docs/team_status.md
+- docs/session_continuity_log.md（4項目）
+```
