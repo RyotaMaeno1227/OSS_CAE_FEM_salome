@@ -1769,3 +1769,16 @@ elapsed_min=23
     - `python scripts/check_doc_links.py docs/team_runbook.md docs/abc_team_chat_handoff.md docs/fem4c_team_next_queue.md docs/fem4c_team_dispatch_2026-02-06.md docs/team_status.md docs/session_continuity_log.md` → PASS
   - 次タスク:
     - 各チームへ更新済みテンプレを送信し、30分開発モードで A-16/B-12/C-18 を進行、完了時は A-17/B-14/C-19 へ即遷移させる。
+
+- 実行タスク: PM-3 各チーム再ディスパッチ文面の更新（2026-02-08）
+  - Done:
+    - `docs/fem4c_team_dispatch_2026-02-06.md` の「PMレビュー後の次ラウンド指示」を最新版へ更新（A/B/C共通で30分開発モード、長時間反復ソーク禁止、短時間スモーク上限を明記）。
+    - A/B/C 各チームの「今回のゴール」と「禁止事項」を明文化し、反復検証のみで時間消費する運用を抑止した。
+    - `docs/abc_team_chat_handoff.md` に、個別チャット送信時は dispatch の「最新コピペ用」節を使う導線を追記した。
+  - 変更ファイル:
+    - `docs/fem4c_team_dispatch_2026-02-06.md`
+    - `docs/abc_team_chat_handoff.md`
+  - 実行コマンド / pass-fail:
+    - `python scripts/check_doc_links.py docs/abc_team_chat_handoff.md docs/fem4c_team_dispatch_2026-02-06.md` → PASS
+  - 次タスク:
+    - 各チームへ最新版チャット文面を送信し、次回以降は「作業を継続してください」の省略指示モードで継続する。

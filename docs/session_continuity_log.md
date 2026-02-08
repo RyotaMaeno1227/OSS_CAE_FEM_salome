@@ -1202,3 +1202,18 @@
 - Open Risks/Blockers:
   - 既存の習慣で「安定性証跡=長時間反復」と解釈される可能性があるため、初回数ラウンドは差し戻し頻度が高い見込み。
   - B-12/C-18 完了後の遷移が徹底されない場合、再びタスク選定待ちで停滞する可能性がある。
+
+## 2026-02-08 / PM-3 (Team Dispatch Messages Refreshed)
+- Current Plan:
+  - 各チームの再開指示を「30分開発モードで実装前進」を明確化した文面へ更新する。
+  - 次回以降の省略指示モード（「作業を継続してください」）へ安全に戻せるよう、参照導線を固定する。
+- Completed This Session:
+  - `docs/fem4c_team_dispatch_2026-02-06.md` の「PMレビュー後の次ラウンド指示」を最新版へ更新し、A/B/Cそれぞれのゴール・禁止事項・必須成果を明文化。
+  - `docs/abc_team_chat_handoff.md` に「個別チャット送信時は dispatch の最新コピペ用節を使う」ルールを追記。
+  - `python scripts/check_doc_links.py docs/abc_team_chat_handoff.md docs/fem4c_team_dispatch_2026-02-06.md` を実行して PASS。
+- Next Actions:
+  - A/B/Cへ最新版チャット文面を送信し、A-16/B-12/C-18 の前進を確認する。
+  - 次ラウンドからは原則「作業を継続してください」の1行運用へ戻し、逸脱時のみ個別差し戻し文面を送る。
+- Open Risks/Blockers:
+  - 旧テンプレを手元で再利用されると、長時間反復中心の運用へ戻るリスクがある。
+  - 初回数ラウンドは「検証上限（最大3コマンド）」の運用定着に差し戻しが必要になる可能性がある。

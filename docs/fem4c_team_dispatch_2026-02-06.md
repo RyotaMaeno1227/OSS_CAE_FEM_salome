@@ -165,25 +165,38 @@ PM-3 依頼です。今回スプリントは FEM4C の巨大 dirty 差分の整�
 
 ---
 
-## PMレビュー後の次ラウンド指示（2026-02-06, コピペ用）
+## PMレビュー後の次ラウンド指示（2026-02-08, 最新コピペ用）
+
+以下の3本をそのまま送信してください。  
+次回以降は原則「作業を継続してください」の1行運用に戻して構いません（省略指示モード）。
 
 ### Team A
 
 ```
 @A-team
-作業を継続してください（30分以上、推奨30-45分の連続実行。長時間反復ソークは禁止）。
+作業を継続してください（30分以上、推奨30-45分の連続実行）。
+
+[今回のゴール]
+- A-16（HHT-α積分器の導入と切替固定）を実装で前進させる。
+- 先頭完了後は同セッションで A-17 を `In Progress` にして継続する。
 
 [今回の着手タスク]
 - docs/fem4c_team_next_queue.md の Aチーム先頭 `Todo` / `In Progress` から開始
-- A-16 完了後は同セッション内で A-17 を `In Progress` にして継続
+- A-16 の完了条件を満たす差分を優先（`runner.c` / `runner.h` / 必要時回帰スクリプト）
 
 [時間証跡コマンド]
 - 開始: `scripts/session_timer.sh start a_team`
 - 終了: `scripts/session_timer.sh end <session_token>`
 
+[禁止事項]
+- 長時間反復ソーク/耐久ループで時間を消費しない。
+- `sleep` 等の人工待機をしない。
+- 反復検証のみで終了しない。
+
 [必須成果]
 - 実装差分ファイル（docsのみは不可）
-- A-16 は HHT-α 方式の実装差分を前進させること（反復検証だけで終了しない）。
+- A-16 は HHT-α 方式の実装差分を前進させること。
+- 検証は短時間スモーク（最大3コマンド）で行うこと。
 - 実行コマンド
 - 受入判定 pass/fail
 - `scripts/session_timer.sh` の出力一式（`session_token/start_utc/end_utc/start_epoch/end_epoch/elapsed_min`）
@@ -198,22 +211,32 @@ PM-3 依頼です。今回スプリントは FEM4C の巨大 dirty 差分の整�
 
 ```
 @B-team
-作業を継続してください（30分以上、推奨30-45分の連続実行。長時間反復ソークは禁止）。
+作業を継続してください（30分以上、推奨30-45分の連続実行）。
+
+[今回のゴール]
+- B-12（積分法切替回帰の固定化）を実装で前進させる。
+- 先頭完了後は同セッションで B-14 を `In Progress` にして継続する。
 
 [今回の着手タスク]
 - docs/fem4c_team_next_queue.md の Bチーム先頭 `Todo` / `In Progress` から開始
-- B-12 完了後は同セッション内で B-14 を `In Progress` にして継続
+- B-12 の完了条件を満たす差分を優先（切替回帰スクリプト / Makefile / README）
 
 [時間証跡コマンド]
 - 開始: `scripts/session_timer.sh start b_team`
 - 終了: `scripts/session_timer.sh end <session_token>`
+
+[禁止事項]
+- 長時間反復ソーク/耐久ループで時間を消費しない。
+- `sleep` 等の人工待機をしない。
+- B-8系の耐久反復だけで終了しない。
 
 [注意]
 - docs更新のみで終了しないこと（無効報告）
 
 [必須成果]
 - 変更ファイル（Makefile/README/probe など実装差分を含む）
-- B-12（積分法切替回帰）を前進させること。B-8の耐久反復のみで終了しない。
+- B-12（積分法切替回帰）を前進させること。
+- 検証は短時間スモーク（最大3コマンド）で行うこと。
 - 1行再現コマンド
 - pass/fail と閾値
 - `scripts/session_timer.sh` の出力一式（`session_token/start_utc/end_utc/start_epoch/end_epoch/elapsed_min`）
@@ -228,19 +251,28 @@ PM-3 依頼です。今回スプリントは FEM4C の巨大 dirty 差分の整�
 
 ```
 @C-team
-作業を継続してください（30分以上、推奨30-45分の連続実行。長時間反復ソークは禁止）。
+作業を継続してください（30分以上、推奨30-45分の連続実行）。
+
+[今回のゴール]
+- C-18（短時間スモーク + staging運用整備）を前進させる。
+- 先頭完了後は同セッションで C-19 を `In Progress` にして継続する。
 
 [今回の着手タスク]
 - docs/fem4c_team_next_queue.md の Cチーム先頭 `Todo` / `In Progress` から開始
-- C-18 完了後は同セッション内で C-19 を `In Progress` にして継続
+- C-18 の完了条件を満たす差分を優先（`scripts/c_stage_dryrun.sh` 活用を必須）
 
 [時間証跡コマンド]
 - 開始: `scripts/session_timer.sh start c_team`
 - 終了: `scripts/session_timer.sh end <session_token>`
 
+[禁止事項]
+- 長時間反復ソーク/耐久ループで時間を消費しない。
+- `sleep` 等の人工待機をしない。
+
 [必須成果]
 - 最終判定が入った triage 文書差分
-- C-18 は短時間スモーク + `scripts/c_stage_dryrun.sh` の実行結果を必須とする（長時間ループ禁止）。
+- C-18 は短時間スモーク + `scripts/c_stage_dryrun.sh` の実行結果を必須とする。
+- 検証は短時間スモーク（最大3コマンド）で行うこと。
 - 具体的コマンド（必要なら .gitignore 更新）
 - pass/fail 判定
 - `scripts/c_stage_dryrun.sh` の結果（`dryrun_result`）

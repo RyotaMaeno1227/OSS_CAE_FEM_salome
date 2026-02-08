@@ -16,6 +16,7 @@ FEM4C スプリント中は **この Section 0 と `docs/fem4c_team_next_queue.m
   - 生成物（`*.dat`, `*.csv`, `*.vtk`, `*.f06`）はコミットしない。
   - 作業終了時に `docs/team_status.md` と `docs/session_continuity_log.md` を更新する。
   - 連絡テンプレは `docs/fem4c_team_dispatch_2026-02-06.md` を使用する。
+  - 個別チャットを送る場合は `docs/fem4c_team_dispatch_2026-02-06.md` の「PMレビュー後の次ラウンド指示（最新コピペ用）」を使う。
   - 継続運用（省略指示モード）: PMチャットが「作業を継続してください」のみの場合、追加指示待ちはせず、`docs/fem4c_team_next_queue.md` の自チーム先頭タスクから即時着手する。
   - 省略指示モードでは、タスク選定の問い合わせを禁止する（問い合わせ可能なのは blocker 発生時のみ）。
   - 無効報告ルール: `session_continuity_log` のみ更新して実装/検証差分がない報告は完了扱いにしない。
