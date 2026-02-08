@@ -21,12 +21,20 @@ FEM4C スプリント中は **この Section 0 と `docs/fem4c_team_next_queue.m
   - 無効報告ルール: `session_continuity_log` のみ更新して実装/検証差分がない報告は完了扱いにしない。
   - セッション時間の証跡として、`scripts/session_timer.sh start <team_tag>` と `scripts/session_timer.sh end <session_token>` の出力を `team_status` に必ず記載する（手入力時刻のみは無効）。
   - 受入には `elapsed_min >= 30` を必須とし、実作業証跡（変更ファイル・実行コマンド・pass/fail）を同時に満たすこと。
+  - 30分は「開発前進」に使う。実装系ファイル差分（コード差分）を毎セッション必須とする。
+  - 長時間の反復ソーク/耐久ループで時間を消費する運用は禁止（PM明示指示時のみ例外）。
+  - 検証は短時間スモークに限定し、最大3コマンド程度で受入を確認する。
   - 30分未満で先頭タスクが完了した場合は、待機せず次タスクへ継続する（早期終了は原則不合格）。
   - `sleep` 等の人工待機で elapsed を満たす行為は禁止し、不合格とする。
   - 完了報告の必須セット:
     - 変更ファイル（実装ファイルを含む）
     - 実行コマンド
     - 受入基準に対応した pass/fail 根拠
+  - Cチーム staging 検証は `scripts/c_stage_dryrun.sh` を優先使用し、`dryrun_result` を `team_status` に記録する。
+  - 次タスク遷移は固定する（先頭完了後の迷い防止）:
+    - A: A-16 完了後は A-17 へ遷移
+    - B: B-12 完了後は B-14 へ遷移
+    - C: C-18 完了後は C-19 へ遷移
   - PM決定（2026-02-07）:
     - `FEM4C/src/io/input.c` の旧 `SPC/FORCE` / `NastranBalkFile` 互換は維持する（Option A）。
     - 「旧形式を明示エラー化（Option B）」は現スプリントでは採用しない。

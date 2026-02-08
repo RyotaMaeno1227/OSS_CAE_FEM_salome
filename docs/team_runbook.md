@@ -35,6 +35,10 @@
   - PM への確認は blocker 発生時のみ許可する（「次に何をやるか」の確認は不要）。
 - 自走セッション（短時間・連続運転）:
   - 1回の指示で 30分以上を必須とし、30-45分を推奨レンジとして連続実行する。
+  - 本運用は「30分開発モード」とし、30分は実装前進（コード差分作成）に使う。
+  - 1セッションで少なくとも1つの実装系ファイル差分を必須とする（docs単独更新での完了は禁止）。
+  - 検証は短時間スモークを基本とし、長時間の反復ソーク/耐久ループは PM 明示指示がない限り禁止する。
+  - 目安: 実装20分以上、検証10分以下。検証は最大3コマンド程度に抑える。
   - 進捗連絡は原則セッション末尾に 1 回のみ（小分け報告をしない）。
   - 先頭タスクが早く終わった場合は、同じセッション内で次タスクへ連続着手する。
   - PM 判断が必要な blocker が出ても、30分未満の時点では終了せず、同一セッション内で次の実行可能タスクへ継続する。
@@ -50,6 +54,9 @@
 - 作業終了時は必ず以下を更新する:
   - `docs/team_status.md`
   - `docs/session_continuity_log.md`（4項目: `Current Plan`, `Completed This Session`, `Next Actions`, `Open Risks/Blockers`）
+- `docs/team_status.md` の記録位置:
+  - A/B/Cチームは自チーム見出し配下（`## Aチーム` / `## Bチーム` / `## Cチーム`）にのみ追記する。
+  - PM記録は `## PMチーム` 見出し配下へ追記し、A/B/Cセクションへ混在させない。
 - コミット時の制約:
   - 担当外ファイルをステージしない。
   - 生成物（`*.dat`, `*.csv`, `*.vtk`, `*.f06`）をコミットしない。
@@ -68,6 +75,12 @@
 - 受入に使うコマンド・結果（pass/fail）は `docs/team_status.md` へ記録する。
 - PM受入時は最新エントリの機械監査を実行する:
   - `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30`
+  - 差し戻し文面まで一括生成する場合:
+    - `bash scripts/run_team_audit.sh docs/team_status.md 30`
+  - 遵守率の履歴確認（原因分析）:
+    - `python scripts/audit_team_history.py --team-status docs/team_status.md --min-elapsed 30`
+  - 監査レポートの保存先（例）:
+    - `docs/reports/team_session_compliance_audit_2026-02-08.md`
 - 以下のいずれかに該当する報告は差し戻す:
   - `scripts/session_timer.sh` の出力証跡が未記載
   - `elapsed_min < 30`（PM事前承認の緊急停止を除く）

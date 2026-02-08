@@ -1082,3 +1082,123 @@
 - Open Risks/Blockers:
   - `docs/team_status.md` の旧フォーマット混在により、最新エントリ自体が古い様式（timerなし）だと即 FAIL になる。
   - 監査は「最新エントリ前提」なので、各チームが追記位置を崩すと誤判定の可能性がある（運用ルール遵守が前提）。
+
+## 2026-02-08 / PM-3 (Audit Pipeline Extended and PM Section Fixed)
+- Current Plan:
+  - 30分受入ルールを実運用で即適用できるよう、監査・差し戻し文生成・履歴分析を一体化する。
+  - `team_status` の PM記録混在を解消し、監査対象の誤判定を防ぐ。
+- Completed This Session:
+  - `scripts/audit_team_sessions.py` を拡張し、`start_epoch` ベースの最新判定、FAIL理由表示、`--json`/`--no-require-evidence` を追加。
+  - `scripts/render_audit_feedback.py` と `scripts/run_team_audit.sh` を追加し、監査結果からA/B/C向け差し戻し文を即生成できるようにした。
+  - `scripts/audit_team_history.py` を追加し、履歴の遵守率（短時間終了・証跡欠落・人工待機）を集計可能にした。
+  - 単体テスト3本（`test_audit_team_sessions.py`, `test_render_audit_feedback.py`, `test_audit_team_history.py`）を追加し PASS。
+  - `docs/team_runbook.md` / `docs/fem4c_team_next_queue.md` / `docs/fem4c_team_dispatch_2026-02-06.md` に監査コマンドを追記。
+  - `docs/reports/team_session_compliance_audit_2026-02-08.md` を追加し、最新監査と履歴監査の結果を固定。
+  - `docs/team_status.md` に `## PMチーム` 見出しを新設し、PM記録をA/B/Cセクションから分離する運用へ更新。
+- Next Actions:
+  - 次回受入時は `bash scripts/run_team_audit.sh docs/team_status.md 30` を必須実行し、FAILを自動生成文面で差し戻す。
+  - 各チームへ `team_status` の追記位置（自チーム見出し配下のみ）を再周知する。
+  - 必要に応じて `audit_team_sessions.py` の JSON を `docs/reports/` へ定期保存する。
+- Open Risks/Blockers:
+  - `team_status` の旧履歴はフォーマット混在が残るため、履歴監査は fail が多く出る（最新運用で段階的に改善予定）。
+  - 30分ルール導入直後のため、次ラウンドでも短時間終了が継続する可能性がある。
+
+## 2026-02-08 / B-team (B-13 Done, B-12 In Progress)
+- Current Plan:
+  - B先頭の未完了対象を継続し、run_id日次共有不要運用を維持したまま B-8 日次運用を前進させる。
+  - B-13（B-8 guard 1コマンド化）を完了し、次タスク B-12 を `In Progress` に更新する。
+- Completed This Session:
+  - `FEM4C/scripts/run_b8_guard.sh` を追加し、`CI_CONTRACT_CHECK` + ローカル回帰 + 任意スポット確認を統合した `B8_GUARD` 出力を実装。
+  - `FEM4C/Makefile` に `mbd_b8_guard` を追加し、`RUN_SPOT` / `SPOT_STRICT` / `RUN_ID` で運用分岐できるようにした。
+  - `FEM4C/practice/README.md` に `mbd_b8_guard` の標準実行例（non-spot / spot / strict-spot）を追記。
+  - 検証:
+    - `make -C FEM4C mbd_b8_guard` -> PASS
+    - `make -C FEM4C mbd_b8_guard RUN_SPOT=1 RUN_ID=21773820916` -> PASS（spot failは非strict扱い）
+    - `make -C FEM4C mbd_b8_guard RUN_SPOT=1 RUN_ID=21773820916 SPOT_STRICT=1` -> FAIL（期待どおり non-zero）
+    - `make -C FEM4C mbd_ci_evidence` -> `run_id=21794244543`, `step_outcome=missing`, `artifact_present=yes`, `acceptance_result=fail`
+  - ローカル回帰安定性確認として `test_planar_constraint_endurance` の長時間ソークを開始し、`SOAK_PROGRESS pass=130000 elapsed_sec=1218` まで進行を確認。
+  - ユーザー指示により反復を中止し、`session_timer` 終了出力を `team_status` に転記（`elapsed_min=23`）。
+- Next Actions:
+  - B-12（Newmark/HHT切替回帰）を継続し、1コマンド回帰スクリプトの雛形と判定閾値を固定する。
+  - B-8 スポット証跡は `In Progress` 維持とし、リリース前スポット確認で `RUN_ID` 指定再照会を実施する。
+  - 30分基準の形式受入が必要な場合は、同タスクを次セッションで継続し `elapsed_min >= 30` で再提出する。
+- Open Risks/Blockers:
+  - blocker 3点セット（B-8 spot）:
+    - 試行: `make -C FEM4C mbd_ci_evidence` で最新run証跡を回収。
+    - 失敗理由: `step_outcome=missing`（対象step未検出）で `acceptance_result=fail`。
+    - PM依頼: run_id日次共有不要運用を維持し、必要時スポット確認のみで進める方針の継続可否を確認してください。
+  - blocker 3点セット（30分ルール）:
+    - 試行: 180,000反復ソークを実行し、`pass=130000` まで継続。
+    - 失敗理由: ユーザーの停止指示に従って中断し、`elapsed_min=23` で終了。
+    - PM依頼: 本セッションを途中報告として扱い、同タスク継続の次セッション提出を許可してください。
+
+## 2026-02-08 / A-team (A-15 Done, A-16 In Progress)
+- Current Plan:
+  - A-15（Newmark-β）を完了し、同セッション内で A-16（HHT-α 切替）へ着手する。
+  - `coupled_stub_check` を2方式切替（`newmark_beta` / `hht_alpha`）の1コマンド回帰へ拡張する。
+- Completed This Session:
+  - `FEM4C/src/analysis/runner.h` に `COUPLED_INTEGRATOR_HHT_ALPHA` を追加。
+  - `FEM4C/src/analysis/runner.c` に `hht_alpha` パース/ログ出力を追加し、`FEM4C_COUPLED_INTEGRATOR` で `newmark_beta|hht_alpha` 切替を実装。
+  - `FEM4C/scripts/check_coupled_stub_contract.sh` を更新し、base/MBD追記/legacy pkg 各ケースで 2方式を直列検証するよう拡張。
+  - `FEM4C/practice/README.md` に 2方式切替と invalid fallback の運用説明を追記。
+  - `make -C FEM4C`, `make -C FEM4C mbd_checks`, `make -C FEM4C parser_compat`, `make -C FEM4C coupled_stub_check`, `make -C FEM4C test` をすべて PASS。
+  - 追加検証で `FEM4C_COUPLED_INTEGRATOR=newmark_beta|hht_alpha|invalid_integrator` のログ挙動を確認。
+- Next Actions:
+  - A-16 を継続し、切替回帰の境界ケース（無効値/省略値/legacy入力経路）を整理して Done 判定まで進める。
+  - 次セッションは `elapsed_min >= 30` を満たす連続実行で A-16 の受入再提出を行う。
+- Open Risks/Blockers:
+  - blocker 3点セット:
+    - 試行: A-15完了 + A-16着手の実装と受入コマンド実行、直列反復検証（途中 `coupled_iter=13000`）を実施。
+    - 失敗理由: ユーザー指示で反復を中止して報告へ切替えたため、本セッションは `elapsed_min=18` で30分基準未達。
+    - PM判断依頼: 本件を途中報告として扱い、A-16継続セッション（30分以上）での再提出運用で進めてよいか確認をお願いします。
+
+## 2026-02-08 / C-team (C-13..C-17 Done, C-18 In Progress)
+- Current Plan:
+  - C-18（高リスク3ファイルの採否確定準備）を継続し、PM判断後に即反映できる差分案・検証コマンド・安全staging手順を維持する。
+  - `scripts/c_stage_dryrun.sh` を基準に、pass/fail 両経路の記録運用を固定する。
+- Completed This Session:
+  - `scripts/session_timer.sh start c_team` / `scripts/session_timer.sh end /tmp/c_team_session_20260208T071941Z_9189.token` を実行し、`elapsed_min=23` の生出力を `docs/team_status.md` に転記した。
+  - C-13/C-14/C-15/C-16/C-17 を完了し、`docs/fem4c_team_next_queue.md` を更新して C-18 を `In Progress` に維持した。
+  - `scripts/c_stage_dryrun.sh` の pass/fail 実証、現行docsの30分ルール整合監査、C-18反復の途中結果（`iter=225/350 PASS`）を `docs/team_status.md` に記録した。
+  - ユーザー明示指示「反復作業を中止して報告へ移行」に従い、反復コマンドを中断して報告フェーズへ移行した。
+- Next Actions:
+  - C-18 を継続し、`docs/fem4c_team_next_queue.md` の受入条件に沿って短時間スモーク + dry-run 記録を更新する。
+  - `elapsed_min >= 30` の連続実行セッションで再提出し、例外扱い不要の受入状態を作る。
+  - PM判断待ち論点は triage 文書を最新化したうえで、採用/破棄理由を `docs/team_status.md` へ同期する。
+- Open Risks/Blockers:
+  - 本セッションは `elapsed_min=23` で30分基準未達（理由: ユーザーからの明示的な中断指示）。
+  - `FEM4C` は大規模 dirty 状態のため、誤stage防止としてパス限定 + dry-run 必須運用を継続する必要がある。
+
+## 2026-02-08 / PM-3 (Dispatch Reframed: 30min Development, No Long Soak)
+- Current Plan:
+  - 各チームの30分運用を「時間消費型の反復検証」から「実装前進型の開発」に切替える。
+  - 指示文とキューの不整合（特にC-18長時間反復前提）を修正する。
+- Completed This Session:
+  - `docs/team_runbook.md` を更新し、30分開発モード（実装差分必須・長時間反復ソーク禁止・短時間スモーク原則）を明文化。
+  - `docs/abc_team_chat_handoff.md` Section 0 を更新し、実装前進優先と長時間反復禁止を共通ルールへ反映。
+  - `docs/fem4c_team_next_queue.md` を更新し、PM固定優先（A-16/B-12/C-18）を明記、C-18を短時間スモーク前提へ再定義。
+  - `docs/fem4c_team_dispatch_2026-02-06.md` を更新し、テンプレを30分開発モードへ変更。
+  - `python scripts/check_doc_links.py docs/team_runbook.md docs/abc_team_chat_handoff.md docs/fem4c_team_next_queue.md docs/fem4c_team_dispatch_2026-02-06.md docs/team_status.md docs/session_continuity_log.md` を実行して PASS。
+- Next Actions:
+  - 次回受入時は `run_team_audit` を実行し、反復ソーク中心の報告は同一タスク継続で差し戻す。
+  - Bチームは B-12 を、Cチームは再定義後 C-18 を優先させ、実装差分主体で進める。
+- Open Risks/Blockers:
+  - 旧ログには反復重視の履歴が残るため、ルール切替初回は差し戻しが増える可能性が高い。
+  - 省略指示モード（「作業を継続してください」）だけでは旧運用に戻るリスクがあるため、当面は差し戻し時に再周知を継続する必要がある。
+
+## 2026-02-08 / PM-3 (Task Sufficiency Check and Next-Action Anchoring)
+- Current Plan:
+  - A/B/C が30分を反復検証で消費しないよう、次アクション不足を解消して開発前進へ誘導する。
+  - 指示文（chatテンプレ）と next_queue の遷移先を一致させる。
+- Completed This Session:
+  - `docs/fem4c_team_next_queue.md` を更新し、A-17/B-14/C-19 を追加。
+  - PM固定優先に「先頭完了後の遷移先（A→A-17, B→B-14, C→C-19）」を追記。
+  - `docs/abc_team_chat_handoff.md` Section 0 に遷移先固定ルールを追記。
+  - `docs/fem4c_team_dispatch_2026-02-06.md` の各チーム指示テンプレへ次遷移先を反映。
+  - `python scripts/check_doc_links.py docs/team_runbook.md docs/abc_team_chat_handoff.md docs/fem4c_team_next_queue.md docs/fem4c_team_dispatch_2026-02-06.md docs/team_status.md docs/session_continuity_log.md` を実行し PASS。
+- Next Actions:
+  - 各チームへ更新済みテンプレを送信し、A-16/B-12/C-18 の完了後に A-17/B-14/C-19 へ同セッション遷移させる。
+  - 反復ソーク中心の報告は差し戻し、短時間スモーク + 実装差分必須を維持する。
+- Open Risks/Blockers:
+  - 既存の習慣で「安定性証跡=長時間反復」と解釈される可能性があるため、初回数ラウンドは差し戻し頻度が高い見込み。
+  - B-12/C-18 完了後の遷移が徹底されない場合、再びタスク選定待ちで停滞する可能性がある。
