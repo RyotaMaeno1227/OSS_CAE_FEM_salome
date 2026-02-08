@@ -1,6 +1,6 @@
 # FEM4C Team Next Queue
 
-更新日: 2026-02-08（30分連続実行モード反映 / A-13完了 / A-14着手 / 積分法方針追加）  
+更新日: 2026-02-08（A-14完了 / A-15着手 / 30分連続実行モード反映）  
 用途: チャットで「作業を継続してください」だけが来た場合の、各チーム共通の次タスク起点。
 
 ## 継続運用ルール
@@ -21,6 +21,7 @@
 - 15. 手入力だけの時刻・経過分（`start_at/end_at/elapsed_min` のみ）は証跡として不合格。
 - 16. `sleep` 等の人工待機で elapsed を満たす行為は不合格。
 - 17. `elapsed_min < 30` の終了報告は原則不合格（PM事前承認の緊急停止のみ例外）。
+- 18. PM受入時は `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30` を実行し、最新 A/B/C エントリの機械監査結果を確認する。
 
 ## セッション終了条件（共通）
 - 以下を満たしたときのみ終了報告する:
@@ -188,7 +189,7 @@
   - `make -C FEM4C test` など既存運用入口との接続方針（統合または明示的非統合理由）を `docs/team_status.md` に記録する。
 
 ### A-14 coupledスタブ契約ログの固定化
-- Status: `In Progress`（2026-02-07 A-team）
+- Status: `Done`（2026-02-08 A-team）
 - Goal: `coupled` スタブで I/O 契約スナップショットを安定ログ化し、将来の配線実装時に退行検知できる下地を作る。
 - Scope:
   - `FEM4C/src/analysis/runner.c`
@@ -201,7 +202,7 @@
   - `make -C FEM4C` が pass する。
 
 ### A-15 Newmark-β 積分器の導入（MBD）
-- Status: `Todo`
+- Status: `In Progress`（2026-02-08 A-team）
 - Goal: MBD 時間積分の第1方式として `Newmark-β` を導入し、方式名を契約ログへ固定する。
 - Scope:
   - `FEM4C/src/analysis/runner.h`
@@ -476,7 +477,7 @@
   - `git diff --cached --name-status` を使う最終確認手順が `team_status` に記録される。
 
 ### C-13 staging dry-run の定型化（次ラウンド）
-- Status: `In Progress`（2026-02-07 C-team）
+- Status: `Done`（2026-02-08 C-team: `docs/fem4c_dirty_diff_triage_2026-02-06.md` Section 14, `docs/team_runbook.md` 6.1, `scripts/c_stage_dryrun.sh`）
 - Goal: C-12 で実施した一時 index ドライランを定型化し、次回以降も同コマンドで混在チェックできるようにする。
 - Scope:
   - `docs/fem4c_dirty_diff_triage_2026-02-06.md`
@@ -484,6 +485,27 @@
 - Acceptance:
   - 一時 index を用いた dry-run 手順（前提/コマンド/判定）が docs に明記される。
   - `team_status` に実行ログ記録フォーマットが追加される。
+
+### C-14 dry-run failパス検証と運用同期
+- Status: `Done`（2026-02-08 C-team: triage Section 15 / `scripts/c_stage_dryrun.sh` pass+fail実証）
+- Goal: `scripts/c_stage_dryrun.sh` の failパス（forbidden混在）を実証し、運用docsへ記録して定型運用を完成させる。
+- Scope:
+  - `scripts/c_stage_dryrun.sh`
+  - `docs/fem4c_dirty_diff_triage_2026-02-06.md`
+  - 必要時のみ `docs/team_runbook.md`
+- Acceptance:
+  - passケースとfailケースの双方で期待どおりの判定が得られる。
+  - 実行コマンド/判定結果が `docs/team_status.md` に記録される。
+
+### C-15 dry-run 記録テンプレの固定
+- Status: `In Progress`（2026-02-08 C-team）
+- Goal: `team_status` へ貼る dry-run 記録テンプレを固定し、次回以降の報告粒度を統一する。
+- Scope:
+  - `docs/team_status.md`
+  - 必要時のみ `docs/team_runbook.md`
+- Acceptance:
+  - `dryrun_method/dryrun_cached_list/forbidden_check/required_set_check/dryrun_result` の5項目が定型で記録される。
+  - 次セッションでテンプレを再利用できる状態になっている。
 
 ---
 

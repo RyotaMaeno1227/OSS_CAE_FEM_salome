@@ -1065,3 +1065,20 @@
 - Open Risks/Blockers:
   - 過去ログ（`team_status` / `session_continuity_log`）には 15分表記が履歴として残るため、最新ルールは `team_runbook` と `fem4c_team_next_queue` の現行節で判定する必要がある。
   - ルール切替直後は旧テンプレの再利用リスクがあるため、次ラウンドで30分テンプレ使用を再確認する。
+
+## 2026-02-08 / PM-3 (Session Compliance Audit Automation Added)
+- Current Plan:
+  - 30分受入ルールを人手確認から機械監査へ移し、短時間終了や証跡欠落の見落としを防ぐ。
+  - PM受入時の標準コマンドを runbook/next_queue へ固定する。
+- Completed This Session:
+  - `scripts/audit_team_sessions.py` を追加し、A/B/C 最新エントリの `elapsed_min` / タイマー証跡 / 人工待機を自動判定できるようにした。
+  - `docs/team_runbook.md` と `docs/fem4c_team_next_queue.md` に PM受入時の監査コマンドを追記した。
+  - `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30` を実行し、A=19分、B=17分、C=タイマー証跡欠落を FAIL として検出した。
+  - `python scripts/check_doc_links.py docs/team_runbook.md docs/fem4c_team_next_queue.md docs/team_status.md docs/session_continuity_log.md docs/abc_team_chat_handoff.md docs/fem4c_team_dispatch_2026-02-06.md` を実行し PASS。
+- Next Actions:
+  - 次回の各チーム受入時は、監査コマンドの FAIL をそのまま差し戻し条件として適用する。
+  - Cチームには最新エントリの timer 原文記載を必須化し、監査 FAIL の再発を止める。
+  - 監査結果の出力を将来的に JSON 化し、日次の受入ログへ自動貼り付け可能にする。
+- Open Risks/Blockers:
+  - `docs/team_status.md` の旧フォーマット混在により、最新エントリ自体が古い様式（timerなし）だと即 FAIL になる。
+  - 監査は「最新エントリ前提」なので、各チームが追記位置を崩すと誤判定の可能性がある（運用ルール遵守が前提）。

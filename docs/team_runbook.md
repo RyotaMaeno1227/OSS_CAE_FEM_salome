@@ -66,12 +66,35 @@
 ## 6. 受入・検証
 - 各タスクの受入条件は `docs/fem4c_team_next_queue.md` の `Acceptance` を一次基準とする。
 - 受入に使うコマンド・結果（pass/fail）は `docs/team_status.md` へ記録する。
+- PM受入時は最新エントリの機械監査を実行する:
+  - `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30`
 - 以下のいずれかに該当する報告は差し戻す:
   - `scripts/session_timer.sh` の出力証跡が未記載
   - `elapsed_min < 30`（PM事前承認の緊急停止を除く）
   - 人工待機（`sleep` 等）で elapsed を満たした痕跡がある
   - 実作業証跡（変更ファイル・実行コマンド・pass/fail）が不足している
   - `Done` 0件かつ次タスク `In Progress` なし
+
+### 6.1 Cチーム staging dry-run（定型）
+- 目的:
+  - `FEM4C` と `chrono-2d` の混在ステージを、実 index を汚さずに毎回同じ手順で検査する。
+- 手順:
+  - `GIT_INDEX_FILE` を一時 index に切替える。
+  - 対象ファイル（3実装 + C docs）のみ `git add` した後、`git diff --cached --name-status` を取得する。
+  - 可能な限り `scripts/c_stage_dryrun.sh` を使用し、同一フォーマットで記録する。
+- 判定:
+  - `forbidden_check`: staged set に `chrono-2d/` と `.github/` が無いこと。
+  - `required_set_check`: 必須対象セットがすべて staged set に含まれること。
+  - 上記2条件を満たした場合のみ `dryrun_result=pass` とする。
+- 記録フォーマット（`docs/team_status.md`）:
+  - `dryrun_method=GIT_INDEX_FILE`
+  - `dryrun_cached_list=<name-status>`
+  - `forbidden_check=pass|fail`
+  - `required_set_check=pass|fail`
+  - `dryrun_result=pass|fail`
+- 参考コマンド:
+  - `scripts/c_stage_dryrun.sh --log /tmp/c_stage_dryrun_<date>.log`
+  - `scripts/c_stage_dryrun.sh --add-target chrono-2d/tests/test_coupled_constraint`（forbidden fail の再現確認）
 
 ## 7. アーカイブ方針
 - 旧 Chrono 運用・旧 PM 司令文書は以下へ退避済み（参照のみ）:

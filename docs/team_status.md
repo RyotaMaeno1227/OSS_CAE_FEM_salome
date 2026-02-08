@@ -1513,3 +1513,20 @@ elapsed_min=17
     - `python scripts/check_doc_links.py docs/team_runbook.md docs/fem4c_team_next_queue.md docs/abc_team_chat_handoff.md docs/fem4c_team_dispatch_2026-02-06.md docs/team_status.md docs/session_continuity_log.md` → PASS
   - 次タスク:
     - 次ラウンドのA/B/C受入は `elapsed_min >= 30` を必須に統一し、未達報告は同一タスク継続で差し戻す。
+- 実行タスク: PM-3 セッション監査の自動化（30分ルール受入の機械判定）
+  - Done:
+    - `scripts/audit_team_sessions.py` を新規追加し、`docs/team_status.md` の A/B/C 最新エントリを機械監査できるようにした。
+    - 監査条件を `SESSION_TIMER_START/END` 証跡、`elapsed_min` 閾値、`sleep` 人工待機検知の3点で固定した。
+    - `docs/team_runbook.md` と `docs/fem4c_team_next_queue.md` に監査コマンドを追記し、PM受入の必須手順へ組み込んだ。
+  - 変更ファイル:
+    - `scripts/audit_team_sessions.py`
+    - `docs/team_runbook.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実行コマンド / pass-fail:
+    - `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30` → FAIL（A=19分, B=17分, C=タイマー証跡欠落）
+    - `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 15` → FAIL（C=タイマー証跡欠落）
+    - `python scripts/check_doc_links.py docs/team_runbook.md docs/fem4c_team_next_queue.md docs/team_status.md docs/session_continuity_log.md docs/abc_team_chat_handoff.md docs/fem4c_team_dispatch_2026-02-06.md` → PASS
+  - 次タスク:
+    - 次回のA/B/C受入時は上記監査コマンドを必ず実行し、FAILの場合は同一タスク継続で差し戻す。
