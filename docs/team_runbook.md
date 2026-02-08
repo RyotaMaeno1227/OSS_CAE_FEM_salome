@@ -22,6 +22,7 @@
   - 学習用ドキュメント強化
 - Out of Scope（当面）:
   - FEM-MBD 連成本実装
+  - `coupled` モードの新規機能追加（連成仕様確定まで凍結）
   - 3D MBD 本実装
   - 通知運用・Nightly 周辺オペレーション
 
@@ -39,6 +40,11 @@
   - 1セッションで少なくとも1つの実装系ファイル差分を必須とする（docs単独更新での完了は禁止）。
   - 検証は短時間スモークを基本とし、長時間の反復ソーク/耐久ループは PM 明示指示がない限り禁止する。
   - 目安: 実装20分以上、検証10分以下。検証は最大3コマンド程度に抑える。
+  - 動的自走プロトコル（必須）:
+    - 先頭タスクが早く終わったら、同一セッション内で次の `Todo` / `In Progress` へ自動遷移する（PM確認不要）。
+    - 次タスク候補が空なら、同一スコープ内で「最小実装タスク（Auto-Next）」を自分で定義して継続する。
+    - Auto-Next は `Goal / Scope / Acceptance` を `docs/fem4c_team_next_queue.md` に追記し、`In Progress` にして着手する。
+    - 同じ検証コマンドの反復実行だけで時間を使わない（コード変更なしの連続反復は禁止）。
   - 進捗連絡は原則セッション末尾に 1 回のみ（小分け報告をしない）。
   - 先頭タスクが早く終わった場合は、同じセッション内で次タスクへ連続着手する。
   - PM 判断が必要な blocker が出ても、30分未満の時点では終了せず、同一セッション内で次の実行可能タスクへ継続する。
@@ -47,9 +53,12 @@
 - セッション時間の証跡（必須）:
   - 手入力の `start_at/end_at/elapsed_min` は証跡として無効とする。
   - 開始時に `scripts/session_timer.sh start <team_tag>` を実行し、`session_token` を取得する。
+  - 報告前に `bash scripts/session_timer_guard.sh <session_token> 30` を実行し、`guard_result=pass` を確認する。
+  - `guard_result=block` の間は報告せず、同一セッションで実装を継続する。
   - 終了時に `scripts/session_timer.sh end <session_token>` を実行し、出力（`start_utc/end_utc/start_epoch/end_epoch/elapsed_min`）を `docs/team_status.md` にそのまま貼る。
   - 受入には `elapsed_min >= 30` を必須とし、あわせて実作業証跡（変更ファイル・実行コマンド・pass/fail根拠）を確認する。
   - 30分未満で先頭タスクが完了した場合は、待機せず次タスク着手または blocker 解消作業へ進む。
+  - `elapsed_min < 30` の途中報告は禁止（継続中であることを前提に同セッションで実装を続ける）。
   - blocker 終了時は「試した対応」「失敗理由」「PMに必要な判断」を 3 点セットで記録する。
 - 作業終了時は必ず以下を更新する:
   - `docs/team_status.md`
@@ -75,10 +84,10 @@
 - 受入に使うコマンド・結果（pass/fail）は `docs/team_status.md` へ記録する。
 - PM受入時は最新エントリの機械監査を実行する:
   - `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30`
-  - Cチーム staging 運用の遵守監査:
-    - `python scripts/audit_c_team_staging.py --team-status docs/team_status.md`
+  - Cチーム staging 運用の遵守監査: `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze`
+  - Cチーム staging + タイマー完了の厳格監査: `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze_timer`
   - 差し戻し文面まで一括生成する場合:
-    - `bash scripts/run_team_audit.sh docs/team_status.md 30`
+    - `bash scripts/run_team_audit.sh docs/team_status.md 30 pass_section_freeze`
   - 遵守率の履歴確認（原因分析）:
     - `python scripts/audit_team_history.py --team-status docs/team_status.md --min-elapsed 30`
   - 監査レポートの保存先（例）:
@@ -108,9 +117,17 @@
   - `required_set_check=pass|fail`
   - `dryrun_result=pass|fail`
 - 参考コマンド:
+  - coupled凍結禁止パス定義: `scripts/c_coupled_freeze_forbidden_paths.txt`
+  - coupled凍結禁止パス定義の検査: `python scripts/check_c_coupled_freeze_file.py scripts/c_coupled_freeze_forbidden_paths.txt`
   - `scripts/c_stage_dryrun.sh --log /tmp/c_stage_dryrun_<date>.log`
   - `scripts/c_stage_dryrun.sh --add-target chrono-2d/tests/test_coupled_constraint`（forbidden fail の再現確認）
-  - `python scripts/audit_c_team_staging.py --team-status docs/team_status.md --require-pass`（最新C報告の dry-run 記録監査）
+  - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass`（最新C報告の dry-run 記録監査）
+  - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section`（C報告が `## Cチーム` 配下にあることも監査）
+  - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze`（`## Cチーム` 配下 + coupled凍結ポリシー監査）
+  - `COUPLED_FREEZE_FILE=/tmp/custom_freeze_paths.txt bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze`（監査禁止パスを一時差し替え）
+  - `python scripts/audit_c_team_staging.py --team-status docs/team_status.md --coupled-freeze-file scripts/c_coupled_freeze_forbidden_paths.txt --print-coupled-freeze-patterns`（監査に使う禁止パス一覧の確認）
+  - `bash scripts/run_c_team_staging_checks.sh docs/team_status.md`（C-team staging監査 + 関連テスト一括実行）
+  - `C_DRYRUN_POLICY=pass_section_freeze_timer bash scripts/run_c_team_staging_checks.sh docs/team_status.md`（タイマー完了まで含む厳格監査）
 
 ## 7. アーカイブ方針
 - 旧 Chrono 運用・旧 PM 司令文書は以下へ退避済み（参照のみ）:

@@ -16,7 +16,7 @@ PM-3 依頼です。今回スプリントは FEM4C Phase 2 を優先してくだ
 2) docs/team_runbook.md の共通ルール
 
 [担当]
-- mbd/coupled 実行モードの実装側
+- mbd 独立ソルバー実行モードの実装側
 - 対象は handoff の Aチーム欄どおり（runner/fem4c 周辺）
 
 [進捗報告先]
@@ -89,8 +89,12 @@ PM-3 依頼です。今回スプリントは FEM4C の巨大 dirty 差分の整�
 - 進捗は `docs/team_status.md`、セッション引継ぎは `docs/session_continuity_log.md`。
 - 混在コミット回避のため、担当範囲外ファイルはステージしない。
 - PM受入の機械監査: `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30`
-- C-team staging運用の機械監査: `python scripts/audit_c_team_staging.py --team-status docs/team_status.md`
-- 差し戻し文面を一括生成する場合: `bash scripts/run_team_audit.sh docs/team_status.md 30`
+- C-team staging運用の機械監査: `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass`
+- C-team見出し位置まで含めた厳格監査: `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section`
+- C-team見出し位置 + coupled凍結ポリシー監査: `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze`
+- C-team見出し位置 + coupled凍結 + timer完了監査: `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze_timer`
+- C-team staging監査 + 関連テスト一括: `bash scripts/run_c_team_staging_checks.sh docs/team_status.md`
+- 差し戻し文面を一括生成する場合: `bash scripts/run_team_audit.sh docs/team_status.md 30 pass_section_freeze`
 - 履歴の遵守率確認（短時間終了の傾向分析）: `python scripts/audit_team_history.py --team-status docs/team_status.md --min-elapsed 30`
 
 ---
@@ -114,14 +118,19 @@ PM-3 依頼です。今回スプリントは FEM4C の巨大 dirty 差分の整�
 - 30分は実装前進に使い、実装系ファイル差分を1件以上必須とする。
 - 長時間反復ソーク/耐久ループは禁止（PM明示指示時のみ例外）。
 - 検証は短時間スモークに限定し、最大3コマンド程度で受入確認する。
-- 先頭タスクが終わったら同セッション内で次タスクへ着手する。
-- 先頭タスク完了後の遷移先は `docs/fem4c_team_next_queue.md` の PM固定優先に従う（A→A-17, B→B-14, C→C-19）。
+- 先頭タスク完了時は同セッションで次タスクへ自動遷移する（PM確認不要）。
+- 次タスクが無い場合は `Auto-Next`（最小実装タスク）を `next_queue` に追記して継続する。
+- 同一コマンドの反復実行だけで時間を使わない（コード変更なしの連続反復は禁止）。
+- 先頭タスク完了後の遷移先は `docs/fem4c_team_next_queue.md` の PM固定優先に従う（A→A-17, B→B-14, C→C-20）。
 - 進捗報告はセッション末尾に1回のみ（小分け報告しない）。
 - session_continuity_log だけ更新した報告は不合格。
-- 開始時に `scripts/session_timer.sh start <team_tag>`、終了時に `scripts/session_timer.sh end <session_token>` を実行し、出力を team_status に貼る。
+- 開始時に `scripts/session_timer.sh start <team_tag>` を実行し、`session_token` を取得する。
+- 報告直前に `bash scripts/session_timer_guard.sh <session_token> 30` を実行し、`guard_result=pass` を確認する。
+- 終了時に `scripts/session_timer.sh end <session_token>` を実行し、出力を team_status に貼る。
 - 手入力の `start_at/end_at/elapsed_min` だけの報告は不合格。
 - `sleep` 等の人工待機で elapsed を満たす行為は禁止（不合格）。
 - `elapsed_min >= 30` を満たさない終了報告は原則不合格（PM事前承認の緊急停止のみ例外）。
+- `elapsed_min < 30` の途中報告は禁止（30分到達まで同セッションで継続）。
 
 [終了条件]
 - `elapsed_min >= 30` を満たす。
@@ -143,7 +152,7 @@ PM-3 依頼です。今回スプリントは FEM4C の巨大 dirty 差分の整�
 - この 1 行は「省略指示モード」の開始を意味する。
 - 各チームは `docs/abc_team_chat_handoff.md` Section 0 と `docs/fem4c_team_next_queue.md` を自動参照し、先頭未完了タスクへ着手する。
 - PM への追加確認は blocker 発生時のみ許可する。
-- 受入判定は `scripts/session_timer.sh` 出力を含む報告のみ有効とする。
+- 受入判定は `scripts/session_timer.sh` 出力と `scripts/session_timer_guard.sh` の `guard_result=pass` を含む報告のみ有効とする。
 - `elapsed_min >= 30` を満たさない報告は原則差し戻す。
 - 人工待機（`sleep` 等）を含む報告は無効とする。
 
@@ -178,16 +187,25 @@ PM-3 依頼です。今回スプリントは FEM4C の巨大 dirty 差分の整�
 作業を継続してください（30分以上、推奨30-45分の連続実行）。
 
 [今回のゴール]
-- A-16（HHT-α積分器の導入と切替固定）を実装で前進させる。
-- 先頭完了後は同セッションで A-17 を `In Progress` にして継続する。
+- `docs/fem4c_team_next_queue.md` の Aチーム先頭 `In Progress` を `Done` に近づける。
+- 先頭完了後は同セッションで次タスクを `In Progress` にして継続する。
 
 [今回の着手タスク]
 - docs/fem4c_team_next_queue.md の Aチーム先頭 `Todo` / `In Progress` から開始
-- A-16 の完了条件を満たす差分を優先（`runner.c` / `runner.h` / 必要時回帰スクリプト）
+- A先頭タスクの完了条件を満たす差分を優先（`--mode=mbd` 対象のコード差分必須）
 
 [時間証跡コマンド]
 - 開始: `scripts/session_timer.sh start a_team`
+- 報告可否判定: `bash scripts/session_timer_guard.sh <session_token> 30`
 - 終了: `scripts/session_timer.sh end <session_token>`
+
+[Aチーム専用: 動的自走ルール（必須）]
+- `elapsed_min < 30` の途中報告は禁止。30分到達まで同セッションで実装を継続する。
+- A-17 が早く完了した場合は、同セッションで次タスク（`Todo` / `In Progress`）へ自動遷移する。
+- 次タスク候補が無い場合は `Auto-Next` を `docs/fem4c_team_next_queue.md` に追記して継続する。
+- 報告直前に自己監査を実行し、FAILなら継続する:
+  - `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30 --teams A`
+- `session_timer_guard` が `guard_result=block` の間はチャット報告せず、同一セッションで次実装へ進む。
 
 [禁止事項]
 - 長時間反復ソーク/耐久ループで時間を消費しない。
@@ -196,11 +214,12 @@ PM-3 依頼です。今回スプリントは FEM4C の巨大 dirty 差分の整�
 
 [必須成果]
 - 実装差分ファイル（docsのみは不可）
-- A-16 は HHT-α 方式の実装差分を前進させること。
+- A先頭タスクの `Acceptance` を満たすこと。
 - 検証は短時間スモーク（最大3コマンド）で行うこと。
 - 実行コマンド
 - 受入判定 pass/fail
 - `scripts/session_timer.sh` の出力一式（`session_token/start_utc/end_utc/start_epoch/end_epoch/elapsed_min`）
+- `scripts/session_timer_guard.sh` の出力（`guard_result=pass`）
 - `elapsed_min >= 30`（未満は原則差し戻し）
 
 [報告先]
@@ -215,12 +234,13 @@ PM-3 依頼です。今回スプリントは FEM4C の巨大 dirty 差分の整�
 作業を継続してください（30分以上、推奨30-45分の連続実行）。
 
 [今回のゴール]
-- B-12（積分法切替回帰の固定化）を実装で前進させる。
-- 先頭完了後は同セッションで B-14 を `In Progress` にして継続する。
+- B-14（MBD積分法切替回帰の mbd 入口統合）を実装で前進させる。
+- 先頭完了後は同セッションで次タスクを `In Progress` にして継続する。
 
 [今回の着手タスク]
 - docs/fem4c_team_next_queue.md の Bチーム先頭 `Todo` / `In Progress` から開始
-- B-12 の完了条件を満たす差分を優先（切替回帰スクリプト / Makefile / README）
+- B-14 の完了条件を満たす差分を優先（`--mode=mbd` 切替回帰スクリプト / Makefile / README）
+- 先頭完了後は同セッションで次タスクへ自動遷移（候補が無ければ `Auto-Next` を追記）
 
 [時間証跡コマンド]
 - 開始: `scripts/session_timer.sh start b_team`
@@ -236,7 +256,7 @@ PM-3 依頼です。今回スプリントは FEM4C の巨大 dirty 差分の整�
 
 [必須成果]
 - 変更ファイル（Makefile/README/probe など実装差分を含む）
-- B-12（積分法切替回帰）を前進させること。
+- B-14（`--mode=mbd` 入口統合）を前進させること。
 - 検証は短時間スモーク（最大3コマンド）で行うこと。
 - 1行再現コマンド
 - pass/fail と閾値
@@ -255,12 +275,13 @@ PM-3 依頼です。今回スプリントは FEM4C の巨大 dirty 差分の整�
 作業を継続してください（30分以上、推奨30-45分の連続実行）。
 
 [今回のゴール]
-- C-18（短時間スモーク + staging運用整備）を前進させる。
-- 先頭完了後は同セッションで C-19 を `In Progress` にして継続する。
+- C-20（coupled凍結禁止パスの外部定義化）を前進させる。
+- 先頭完了後は同セッションで次タスクを `In Progress` にして継続する。
 
 [今回の着手タスク]
 - docs/fem4c_team_next_queue.md の Cチーム先頭 `Todo` / `In Progress` から開始
-- C-18 の完了条件を満たす差分を優先（`scripts/c_stage_dryrun.sh` 活用を必須）
+- C-20 の完了条件を満たす差分を優先（`scripts/c_coupled_freeze_forbidden_paths.txt` と監査導線）
+- 先頭完了後は同セッションで次タスクへ自動遷移（候補が無ければ `Auto-Next` を追記）
 
 [時間証跡コマンド]
 - 開始: `scripts/session_timer.sh start c_team`
@@ -272,7 +293,7 @@ PM-3 依頼です。今回スプリントは FEM4C の巨大 dirty 差分の整�
 
 [必須成果]
 - 最終判定が入った triage 文書差分
-- C-18 は短時間スモーク + `scripts/c_stage_dryrun.sh` の実行結果を必須とする。
+- C-20 は coupled凍結禁止パスの外部定義と監査導線を前進させること。
 - 検証は短時間スモーク（最大3コマンド）で行うこと。
 - 具体的コマンド（必要なら .gitignore 更新）
 - pass/fail 判定

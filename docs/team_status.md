@@ -1,6 +1,55 @@
 # チーム完了報告（A/B/Cそれぞれ自セクションのみ編集）
 
 ## Aチーム
+- 実行タスク: A-16 完了 + A-17 着手（30分基準未達のため途中報告）
+  - Run ID: local-fem4c-20260208-a16a17-02
+  - セッションタイマー開始出力（原文）:
+    - `SESSION_TIMER_START`
+    - `session_token=/tmp/a_team_session_20260208T075950Z_1551548.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-08T07:59:50Z`
+    - `start_epoch=1770537590`
+  - セッションタイマー終了出力（原文）:
+    - `SESSION_TIMER_END`
+    - `session_token=/tmp/a_team_session_20260208T075950Z_1551548.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-08T07:59:50Z`
+    - `end_utc=2026-02-08T08:10:34Z`
+    - `start_epoch=1770537590`
+    - `end_epoch=1770538234`
+    - `elapsed_sec=644`
+    - `elapsed_min=10`
+  - 変更ファイル（実装ファイル含む）:
+    - `FEM4C/src/fem4c.c`
+    - `FEM4C/src/analysis/runner.h`
+    - `FEM4C/src/analysis/runner.c`
+    - `FEM4C/scripts/check_coupled_stub_contract.sh`
+    - `FEM4C/practice/README.md`
+    - `docs/fem4c_team_next_queue.md`
+  - 内容:
+    - A-16: `HHT-α` を CLI/環境変数で切替可能化（`--coupled-integrator` / `FEM4C_COUPLED_INTEGRATOR`）し、`integrator=hht_alpha` ログを固定。
+    - A-16: `check_coupled_stub_contract.sh` を拡張し、`newmark_beta` / `hht_alpha` の切替、CLI指定、invalid integrator fallback を回帰へ統合。
+    - A-17着手: 主要パラメータ（`newmark_beta/newmark_gamma/hht_alpha`）を契約へ追加し、ログ出力を実装。
+    - A-17着手: `fem4c` に `--newmark-beta`, `--newmark-gamma`, `--hht-alpha` を追加し、範囲検証（`beta:1e-12..1.0`, `gamma:1e-12..1.5`, `alpha:-1/3..0`）を実装。
+    - A-17着手: 起動ログへ `Coupled integrator source` / `Coupled parameter source`（`cli|env|default`）を追加し、優先順位を可視化。
+    - A-17着手: envパラメータ範囲外の warning+fallback ケースと CLI優先順位ケースを `check_coupled_stub_contract.sh` に追加。
+  - 実行コマンド（短時間スモーク: 3コマンド）:
+    - `make -C FEM4C`
+    - `make -C FEM4C coupled_stub_check`
+    - `cd FEM4C && ./bin/fem4c --mode=coupled --coupled-integrator=hht_alpha --newmark-beta=0.31 --newmark-gamma=0.62 --hht-alpha=-0.10 examples/t3_cantilever_beam.dat /tmp/fem4c_a17_cli_valid.dat && ./bin/fem4c --mode=coupled --coupled-integrator=hht_alpha --hht-alpha=-0.8 examples/t3_cantilever_beam.dat /tmp/fem4c_a17_cli_invalid.dat`
+  - pass/fail 根拠:
+    - `make -C FEM4C` → PASS
+    - `make -C FEM4C coupled_stub_check` → PASS（`snapshot path + integrator/parameter switch + precedence + invalid-input boundaries`）
+    - 直接実行（上記3コマンド目）:
+      - valid case: `rc_valid=1`（stub期待どおり non-zero）+ `integrator_params: newmark_beta=3.100000e-01 ... hht_alpha=-1.000000e-01`
+      - invalid case: `rc_invalid=1` + `Invalid value for --hht-alpha: -0.8 (allowed range: -1/3..0)`
+  - blocker 3点セット（受入未達）:
+    - 試行: A-16 完了条件を満たす実装差分 + 3コマンドスモーク + A-17着手差分まで実施。
+    - 失敗理由: `elapsed_min=10` のため、受入条件 `elapsed_min >= 30` を満たしていない。
+    - PM判断依頼: A-17 をこのまま `In Progress` 継続として、次セッションで 30分以上の再提出を実施してよいか確認をお願いします。
+  - タスク状態:
+    - A-16: `Done`
+    - A-17: `In Progress`
 - 実行タスク: A-15 完了 + A-16 着手（反復停止指示で報告へ移行）
   - Run ID: local-fem4c-20260208-a15a16-01
   - セッションタイマー開始出力（原文）:
@@ -634,8 +683,198 @@
   - 生成物: `artifacts/bench_constraints.csv`（警告のみ、コミットしない）・`artifacts/kkt_descriptor_actions_local.csv`（schema確認用）。  
   - リンクチェック: なし（コード側のみ実行）。  
   - 備考: ベンチ baseline 比は 1.5x 警告を出力。必要に応じて baseline を更新予定。
+- 実行タスク: A-18（Done確認）/ A-19（Done）/ A-20（In Progress）
+  - Run ID: local-fem4c-20260208-a19-a20-01
+  - session_timer.sh start 出力:
+    ```text
+    SESSION_TIMER_START
+    session_token=/tmp/a_team_session_20260208T150220Z_19629.token
+    team_tag=a_team
+    start_utc=2026-02-08T15:02:20Z
+    start_epoch=1770562940
+    ```
+  - session_timer.sh end 出力:
+    ```text
+    SESSION_TIMER_END
+    session_token=/tmp/a_team_session_20260208T150220Z_19629.token
+    team_tag=a_team
+    start_utc=2026-02-08T15:02:20Z
+    end_utc=2026-02-08T15:16:39Z
+    start_epoch=1770562940
+    end_epoch=1770563799
+    elapsed_sec=859
+    elapsed_min=14
+    ```
+  - 変更ファイル（実装差分を含む）:
+    - `FEM4C/src/fem4c.c`
+    - `FEM4C/src/analysis/runner.c`
+    - `FEM4C/scripts/check_mbd_integrators.sh`
+    - `FEM4C/scripts/check_ci_contract.sh`
+    - `FEM4C/scripts/test_check_ci_contract.sh`
+    - `FEM4C/practice/README.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容（A-19）:
+    - `--mode=mbd` の時間制御/積分パラメータに `source_status` 出力を追加し、`cli|env|default|env_invalid_fallback|env_out_of_range_fallback` をログ/出力ファイルで追跡可能化。
+    - `FEM4C_MBD_*_SOURCE` メタ情報を `fem4c.c` から渡し、CLI指定時の `runner.c` 表示を `cli` に固定。
+    - `check_mbd_integrators.sh` を拡張し、`--mbd-dt`/`--mbd-steps` の不正値・env不正値・空白付き値の境界ケースを回帰に統合。
+  - 実装内容（A-20 着手）:
+    - `check_ci_contract.sh` に MBD時間制御境界ケースの静的検査（`run_env_time_fallback_case`, `run_cli_invalid_dt_case`, `run_cli_invalid_steps_case`）を追加。
+    - `test_check_ci_contract.sh` に上記欠落時FAILの自己テスト経路を追加。
+  - 実行コマンド / pass-fail:
+    - `make -C FEM4C` → PASS
+    - `make -C FEM4C mbd_integrator_checks` → PASS
+    - `make -C FEM4C mbd_checks` → PASS
+    - `make -C FEM4C mbd_ci_contract` → PASS
+    - `make -C FEM4C mbd_ci_contract_test` → PASS
+    - `make -C FEM4C mbd_b14_regression` → PASS
+  - 受入判定:
+    - A-19: PASS（境界/不正値ケースを回帰とCI静的検査へ固定）
+    - A-20: In Progress（CI静的検査追加は完了、運用文面の最終同期を次セッションで継続）
+  - blocker（30分未満）3点セット:
+    - 試行: A-19実装 + A-20着手まで実施し、回帰/契約チェックを一式実行。
+    - 失敗理由: `elapsed_min=14` で Section 0 の `elapsed_min >= 30` 基準を未充足。
+    - PM判断依頼: 本セッション成果を「実装前進ありの途中報告」として扱い、A-20継続で30分以上の再提出に進めてよいか確認をお願いします。
 
 ## Bチーム
+- 実行タスク: B-14（Done）/ B-15（In Progress, Auto-Next）/ B-8 spot確認（Blocker継続）
+  - Run ID: local-fem4c-20260208-b14-b15-01
+  - session_timer.sh start 出力:
+    ```text
+    SESSION_TIMER_START
+    session_token=/tmp/b_team_session_20260208T144849Z_6652.token
+    team_tag=b_team
+    start_utc=2026-02-08T14:48:49Z
+    start_epoch=1770562129
+    ```
+  - session_timer.sh end 出力:
+    ```text
+    SESSION_TIMER_END
+    session_token=/tmp/b_team_session_20260208T144849Z_6652.token
+    team_tag=b_team
+    start_utc=2026-02-08T14:48:49Z
+    end_utc=2026-02-08T15:19:52Z
+    start_epoch=1770562129
+    end_epoch=1770563992
+    elapsed_sec=1863
+    elapsed_min=31
+    ```
+  - 変更ファイル（実装差分を含む）:
+    - `.github/workflows/ci.yaml`
+    - `FEM4C/Makefile`
+    - `FEM4C/practice/README.md`
+    - `FEM4C/scripts/check_ci_contract.sh`
+    - `FEM4C/scripts/check_fem4c_test_log_markers.sh`
+    - `FEM4C/scripts/check_mbd_integrators.sh`
+    - `FEM4C/scripts/run_b14_regression.sh`
+    - `FEM4C/scripts/test_check_ci_contract.sh`
+    - `FEM4C/scripts/test_check_fem4c_test_log_markers.sh`
+    - `FEM4C/scripts/test_check_mbd_integrators.sh`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 1行再現コマンド:
+    - `make -C FEM4C mbd_b14_regression`
+  - 実行コマンド / pass-fail:
+    - `make -C FEM4C mbd_b14_regression` -> PASS（B-14回帰: contract + self-tests + local test entry）
+    - `make -C FEM4C clean all test` -> PASS（クリーン状態から同一コマンド再現可）
+    - `make -C FEM4C mbd_b8_guard RUN_SPOT=1 SPOT_SCAN_RUNS=20` -> PASS（non-strict）, spotは fail
+    - `make -C chrono-C-all clean tests test` -> PASS（workflow変更の副作用確認）
+    - `chrono-C-all/tests/bench_island_solver 512 50000 4 0.01 auto` -> PASS
+    - `chrono-C-all/tests/bench_island_solver 512 150000 4 0.01 auto` -> PASS
+    - `chrono-C-all/tests/bench_island_solver 512 60000 4 0.01 auto` -> PASS
+  - pass/fail（閾値含む）:
+    - B-14: `pass (done)`
+      - 閾値:
+        - `make -C FEM4C mbd_integrator_checks` が `--mode=mbd` の `newmark_beta` / `hht_alpha` / invalid fallback を1コマンド検証し、失敗時 non-zero。
+        - `make -C FEM4C test` で `mbd_checks` 経由の `mbd_integrator_checks` が実行される。
+        - `make -C FEM4C mbd_ci_contract` で `mbd_checks_dep_integrator` / `mbd_checks_in_test` / `test_log_gate_script_call` が PASS。
+      - 実測:
+        - `CI_CONTRACT_CHECK_SUMMARY=PASS checks=15 failed=0`
+        - `PASS: mbd integrator switch check (default/env/cli + params/time + boundary/invalid fallback)`
+        - `PASS: all MBD checks completed`
+        - FD照合閾値: `jacobian tol=1.0e-06`, `fd eps=1.0e-07`（`make -C FEM4C test` 内 `mbd_constraint_probe` で継続PASS）
+    - B-15: `in_progress`
+      - 前進内容:
+        - `make -C FEM4C mbd_b14_regression` を追加し、入口統合回帰を1コマンド化。
+        - `mbd_integrator_checks_test` / `fem4c_test_log_markers_test` を整備し、自己テスト導線を固定。
+        - `clean all test` 再現失敗（`bin/fem4c` 出力先欠落）を修正し、同一make再現を安定化。
+    - B-8 spot: `in_progress (blocker)`
+      - 受入閾値: `step_present==yes && artifact_present==yes`
+      - 実測:
+        - `spot_run_id=21794735211`
+        - `spot_step_outcome=missing`
+        - `spot_artifact_present=yes`
+        - `spot_acceptance_result=fail`
+      - blocker 3点セット:
+        - 試行: `make -C FEM4C mbd_b8_guard RUN_SPOT=1 SPOT_SCAN_RUNS=20`
+        - 失敗理由: `step_outcome=missing` により acceptance fail（artifactは取得済み）
+        - PM依頼: run_id日次共有不要運用を維持し、spot fail は blocker記録のみで継続してよいか確認をお願いします。
+- 実行タスク: B-12（Done）/ B-14（In Progress）/ B-8 spot更新（In Progress, Blocker）
+  - Run ID: local-fem4c-20260208-b11
+  - session_timer.sh start 出力:
+    ```text
+    SESSION_TIMER_START
+    session_token=/tmp/b_team_session_20260208T080028Z_1551833.token
+    team_tag=b_team
+    start_utc=2026-02-08T08:00:28Z
+    start_epoch=1770537628
+    ```
+  - session_timer.sh end 出力:
+    ```text
+    SESSION_TIMER_END
+    session_token=/tmp/b_team_session_20260208T080028Z_1551833.token
+    team_tag=b_team
+    start_utc=2026-02-08T08:00:28Z
+    end_utc=2026-02-08T08:30:39Z
+    start_epoch=1770537628
+    end_epoch=1770539439
+    elapsed_sec=1811
+    elapsed_min=30
+    ```
+  - 変更ファイル:
+    - `.github/workflows/ci.yaml`
+    - `FEM4C/Makefile`
+    - `FEM4C/practice/README.md`
+    - `FEM4C/scripts/check_coupled_integrators.sh`
+    - `FEM4C/scripts/check_ci_contract.sh`
+    - `FEM4C/scripts/test_check_ci_contract.sh`
+    - `FEM4C/scripts/fetch_fem4c_ci_evidence.py`
+    - `FEM4C/scripts/run_b8_guard.sh`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 1行再現コマンド:
+    - `make -C FEM4C test`
+  - 実行コマンド / pass-fail:
+    - `make -C FEM4C test` -> PASS
+    - `make -C FEM4C mbd_ci_contract` -> PASS
+    - `make -C FEM4C mbd_ci_contract_test` -> PASS
+    - `make -C FEM4C mbd_b8_guard RUN_SPOT=1 SPOT_SCAN_RUNS=5` -> PASS（non-strict）, spotは fail
+    - `make -C FEM4C mbd_ci_evidence` -> FAIL（`CI_EVIDENCE_ERROR error_type=rate_limit` または `acceptance_result=fail`）
+    - `python scripts/check_doc_links.py docs/fem4c_team_next_queue.md docs/team_status.md docs/session_continuity_log.md FEM4C/practice/README.md` -> PASS
+  - pass/fail（閾値含む）:
+    - B-12: `pass`
+      - 閾値: `newmark_beta` / `hht_alpha` / invalid fallback の3ケースが `integrator=` ログ一致、失敗時 non-zero。
+      - 実測: `make -C FEM4C test` 内 `integrator_checks` で `PASS: coupled integrator switch check (newmark_beta + hht_alpha + invalid fallback)`。
+    - B-14: `in_progress`
+      - 前進内容:
+        - `make -C FEM4C test` に `integrator_checks` を統合済み。
+        - `check_ci_contract.sh` に `integrator_in_test` と workflow上の `integrator_log_gate` を追加し、静的保証を固定。
+        - CI (`.github/workflows/ci.yaml`) で `fem4c_test.log` の integrator PASSマーカー不在時に fail するゲートを追加。
+      - 閾値:
+        - `make -C FEM4C test` が non-zero なしで完走し、`integrator_checks` 実行ログを含むこと。
+        - `make -C FEM4C mbd_ci_contract` が `integrator_target/integrator_in_test/integrator_log_gate` を PASS すること。
+    - B-8 spot: `in_progress (blocker)`
+      - 受入閾値: `step_present==yes && artifact_present==yes`
+      - 実測:
+        - `run_id=21794735211`, `step_outcome=missing`, `artifact_present=yes`, `acceptance_result=fail`
+        - 追加再試行は `CI_EVIDENCE_ERROR error_type=rate_limit`（`reset_utc=2026-02-08T09:21:21Z`）
+      - blocker 3点セット:
+        - 試行: `make -C FEM4C mbd_ci_evidence` と `make -C FEM4C mbd_b8_guard RUN_SPOT=1 SPOT_SCAN_RUNS=5` を実施。
+        - 失敗理由: 取得runで `Run FEM4C regression entrypoint` が未検出、かつ API レート制限再発。
+        - PM依頼: run_id日次共有不要運用を維持し、リリース前スポット確認のみ `RUN_ID` 指定（または低 `SCAN_RUNS`）で再照会する方針で継続可否を確認してください。
 - 実行タスク: B-13（Done）/ B-12（In Progress）/ B-8スポット確認（Blocker継続）
   - Run ID: local-fem4c-20260208-b10
   - session_timer.sh start 出力:
@@ -1658,6 +1897,178 @@ elapsed_min=17
     - `python scripts/check_doc_links.py docs/team_runbook.md docs/fem4c_team_next_queue.md docs/team_status.md docs/session_continuity_log.md docs/abc_team_chat_handoff.md docs/fem4c_team_dispatch_2026-02-06.md` → PASS
   - 次タスク:
     - 次回のA/B/C受入時は上記監査コマンドを必ず実行し、FAILの場合は同一タスク継続で差し戻す。
+- 実行タスク: C-18 完了（短時間スモーク + dry-run）/ C-19 継続（staging監査導線強化）
+  - タイマー出力（開始）:
+```text
+SESSION_TIMER_START
+session_token=/tmp/c_team_session_20260208T080019Z_1551746.token
+team_tag=c_team
+start_utc=2026-02-08T08:00:19Z
+start_epoch=1770537619
+```
+  - タイマー出力（終了）:
+```text
+SESSION_TIMER_END
+session_token=/tmp/c_team_session_20260208T080019Z_1551746.token
+team_tag=c_team
+start_utc=2026-02-08T08:00:19Z
+end_utc=2026-02-08T08:30:33Z
+start_epoch=1770537619
+end_epoch=1770539433
+elapsed_sec=1814
+elapsed_min=30
+```
+  - Done:
+    - C-18 を完了し、`docs/fem4c_dirty_diff_triage_2026-02-06.md` Section 16 に最終判定（`input.c` / `cg_solver.c` / `t3_element.c` は採用、破棄なし）を反映。
+    - C-18 受入条件の短時間スモーク（最大3コマンド）を実施し、non-zero なし / `Zero curvature` 未発生を確認。
+    - `scripts/c_stage_dryrun.sh` の pass/fail 両経路を再実証し、`dryrun_result=pass` / `dryrun_result=fail` を取得。
+  - C-19 着手（In Progress）:
+    - `scripts/check_c_team_dryrun_compliance.sh` を追加し、C-team dry-run 遵守監査の1コマンド入口を実装。
+    - `scripts/run_c_team_staging_checks.sh` を追加し、C-team staging監査 + 関連テストを1コマンドで実行可能にした。
+    - `scripts/audit_c_team_staging.py` を拡張（`--global-fallback`, `--require-c-section`）し、Cセクション外混在の検知を追加。
+    - `scripts/run_team_audit.sh` を拡張し、C dry-run ポリシー（`pass|pass_section|both|both_section|none`）を追加。
+    - テストを追加: `scripts/test_audit_c_team_staging.py`, `scripts/test_check_c_team_dryrun_compliance.py`, `scripts/test_run_team_audit.py`, `scripts/test_run_c_team_staging_checks.py`。
+  - 判定した差分ファイルと採用/破棄理由:
+    - `docs/fem4c_dirty_diff_triage_2026-02-06.md`（採用）
+      - 理由: C-18 最終判定（採用/破棄理由）と短時間スモーク結果、safe staging コマンドを固定。
+    - `docs/fem4c_team_next_queue.md`（採用）
+      - 理由: C-18 を `Done`、C-19 を `In Progress` に更新し、C-19 scope/verification を最新化。
+    - `docs/team_runbook.md`（採用）
+      - 理由: C-team dry-run 監査導線を `check_c_team_dryrun_compliance.sh` ベースへ更新。
+    - `docs/fem4c_team_dispatch_2026-02-06.md`（採用）
+      - 理由: PM配布テンプレの C-team 機械監査コマンドを新導線へ同期。
+    - `scripts/check_c_team_dryrun_compliance.sh`（採用）
+      - 理由: C-19 要件「PMが1コマンドで C-team staging 遵守判定」を満たす実装。
+    - `scripts/run_c_team_staging_checks.sh`（採用）
+      - 理由: C-team staging 監査と関連テストを1コマンドで再現可能にする。
+    - `scripts/audit_c_team_staging.py`（採用）
+      - 理由: Cセクション外混在時の誤判定リスクを低減する監査強化。
+    - `scripts/run_team_audit.sh`（採用）
+      - 理由: C dry-run ポリシー選択を追加し、受入監査の再利用性を向上。
+    - `scripts/test_audit_c_team_staging.py`（採用）
+      - 理由: C監査のオプション拡張（global fallback / c-section strict）を回帰固定。
+    - `scripts/test_check_c_team_dryrun_compliance.py`（採用）
+      - 理由: C監査ラッパーの `pass` / `pass_section` 挙動を固定。
+    - `scripts/test_run_team_audit.py`（採用）
+      - 理由: `run_team_audit.sh` の policy 検証と正常系を自動検証。
+    - `.gitignore`（破棄/更新なし）
+      - 理由: C-18/C-19 スコープでは新規除外パターン追加が不要。
+  - 実行コマンド / pass-fail:
+    - C-18 短時間スモーク（最大3コマンド）:
+      - `make -C FEM4C` → PASS
+      - `cd FEM4C && ./bin/fem4c examples/t6_cantilever_beam.dat /tmp/c18_t6_smoke.dat` → PASS（`Zero curvature` 未発生）
+      - `cd FEM4C && ./bin/fem4c NastranBalkFile/3Dtria_example.dat run_out part_0001 /tmp/c18_parser_smoke.dat` → PASS（`Zero curvature` 未発生）
+    - dry-run:
+      - `scripts/c_stage_dryrun.sh --add-target docs/team_runbook.md --log /tmp/c18_dryrun_pass.log` → PASS（`dryrun_result=pass`）
+      - `scripts/c_stage_dryrun.sh --add-target chrono-2d/tests/test_coupled_constraint --log /tmp/c18_dryrun_fail.log` → EXPECTED FAIL（`dryrun_result=fail`）
+    - C-19 実装/検証:
+      - `python scripts/test_audit_c_team_staging.py` → PASS
+      - `python scripts/test_check_c_team_dryrun_compliance.py` → PASS
+      - `python scripts/test_run_team_audit.py` → PASS
+      - `python scripts/test_run_c_team_staging_checks.py` → PASS
+      - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass` → PASS
+      - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section` → PASS（本エントリ追記後）
+      - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md both_section` → PASS
+      - `bash scripts/run_c_team_staging_checks.sh docs/team_status.md` → PASS
+      - `bash scripts/run_team_audit.sh docs/team_status.md 30 invalid_policy` → EXPECTED FAIL（exit 2）
+      - `bash scripts/run_team_audit.sh docs/team_status.md 30 pass` → FAIL（A は `elapsed_min<30`、B/C は PASS）
+      - `bash scripts/run_team_audit.sh docs/team_status.md 30 both_section` → FAIL（A は `elapsed_min<30`、B/C は PASS）
+      - `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30` → FAIL（A は `elapsed_min<30`、B/C は PASS）
+      - `python scripts/audit_team_history.py --team-status docs/team_status.md --min-elapsed 30` → PASS（履歴集計を出力）
+  - 次タスク:
+    - C-19 `staging 運用チェックの自動化` を `In Progress` で継続（strict 監査の既定化と PM運用適用）。
+  - pass/fail:
+    - PASS（`elapsed_min=30`、C-18 Done 1件、次タスク C-19 `In Progress`、人工待機なし）。
+
+- 実行タスク: C-19 完了（staging運用チェック自動化） + C-20 着手（coupled凍結禁止パス外部定義）
+  - タイマー出力（開始）:
+```text
+SESSION_TIMER_START
+session_token=/tmp/c_team_session_20260208T144843Z_6586.token
+team_tag=c_team
+start_utc=2026-02-08T14:48:43Z
+start_epoch=1770562123
+```
+  - タイマー出力（終了）:
+```text
+SESSION_TIMER_END
+session_token=/tmp/c_team_session_20260208T144843Z_6586.token
+team_tag=c_team
+start_utc=2026-02-08T14:48:43Z
+end_utc=2026-02-08T15:18:55Z
+start_epoch=1770562123
+end_epoch=1770563935
+elapsed_sec=1812
+elapsed_min=30
+```
+  - Done:
+    - C-19 を `Done` 化し、`pass_section_freeze` を既定とした C-team staging監査導線を固定。
+    - `scripts/audit_c_team_staging.py` を拡張し、coupled凍結禁止パスファイル読込・構造化パス抽出・監査追跡情報（`coupled_freeze_file`/`patterns_count`）を追加。
+    - `scripts/audit_c_team_staging.py` に `--require-complete-timer` を追加し、`end_epoch` / `elapsed_min` の完了記録を監査可能にした。
+    - `scripts/check_c_team_dryrun_compliance.sh` / `scripts/run_team_audit.sh` に `COUPLED_FREEZE_FILE` 運用を追加。
+    - `scripts/run_team_audit.sh` の監査出力JSONを `mktemp` 化し、並列実行時のファイル衝突を解消。
+    - `scripts/check_c_coupled_freeze_file.py` を追加し、禁止パス定義（空定義/重複/不正プレフィックス）を機械検査可能にした。
+    - `scripts/run_c_team_staging_checks.sh` に coupled凍結ファイル precheck と検査テスト実行を追加。
+  - C-20 着手（In Progress）:
+    - `scripts/c_coupled_freeze_forbidden_paths.txt` を運用定義として追加。
+    - C-20 scope/verification を `docs/fem4c_team_next_queue.md` と triage Section 18 へ反映。
+    - runbook/dispatch/handoff を C-19完了・C-20遷移へ同期。
+  - 判定した差分ファイルと採用/破棄理由:
+    - 採用:
+      - `scripts/audit_c_team_staging.py`
+        - 理由: coupled凍結監査の可視性向上（禁止パスファイル読込・追跡情報）と誤検知抑制（構造化パス抽出）。
+      - `scripts/check_c_team_dryrun_compliance.sh`
+        - 理由: `COUPLED_FREEZE_FILE` で禁止パス定義を運用差し替えできるようにするため。
+      - `scripts/run_team_audit.sh`
+        - 理由: 並列実行時のJSON衝突回避（`mktemp`）と coupled凍結ファイルの運用連携。
+      - `scripts/run_c_team_staging_checks.sh`
+        - 理由: coupled凍結禁止パス定義の precheck を監査前に必須化するため。
+      - `scripts/check_c_coupled_freeze_file.py`
+        - 理由: 禁止パス定義の品質ゲートを単体コマンド化するため。
+      - `scripts/c_coupled_freeze_forbidden_paths.txt`
+        - 理由: coupled凍結禁止パスの運用ソースをコード外へ分離するため。
+      - `scripts/test_audit_c_team_staging.py`
+        - 理由: 構造化パス抽出・禁止パス表示オプションの回帰固定。
+      - `scripts/test_check_c_team_dryrun_compliance.py`
+        - 理由: `COUPLED_FREEZE_FILE` 差し替え運用の回帰固定。
+      - `scripts/test_check_c_coupled_freeze_file.py`
+        - 理由: 禁止パス定義検査スクリプトの正常/異常系固定。
+      - `scripts/test_run_team_audit.py`
+        - 理由: 並列実行時のJSON衝突再発防止テストを追加。
+      - `scripts/test_run_c_team_staging_checks.py`
+        - 理由: freezeファイル欠落時 fail と coupled凍結違反 fail の回帰固定。
+      - `docs/fem4c_team_next_queue.md`
+        - 理由: C-19 `Done` / C-20 `In Progress` 遷移を固定。
+      - `docs/fem4c_dirty_diff_triage_2026-02-06.md`
+        - 理由: Section 17 を Done 化し、Section 18（C-20）を更新。
+      - `docs/team_runbook.md`
+        - 理由: coupled凍結ファイル検査/表示コマンドを運用手順へ追加。
+      - `docs/abc_team_chat_handoff.md`
+        - 理由: C遷移先を C-20 へ更新。
+      - `docs/fem4c_team_dispatch_2026-02-06.md`
+        - 理由: C-team 最新テンプレを C-20 前提へ同期。
+    - 破棄/更新なし:
+      - `.gitignore`
+        - 理由: 本セッション範囲では追加除外パターンが不要。
+  - 実行コマンド（短時間スモーク最大3コマンド）/ pass-fail:
+    - `scripts/c_stage_dryrun.sh --log /tmp/c_stage_dryrun_20260208T1456Z.log` -> PASS（`dryrun_result=pass`）
+    - `bash scripts/run_c_team_staging_checks.sh docs/team_status.md` -> PASS（`pass_section_freeze` + 回帰テスト一括 PASS）
+    - `python -m unittest discover -s scripts -p 'test_*.py'` -> PASS（40 tests）
+  - 追加実行コマンド / pass-fail:
+    - `make -C FEM4C test` -> PASS
+    - `make -C FEM4C mbd_ci_contract_test` -> PASS
+    - `python scripts/check_doc_links.py docs/abc_team_chat_handoff.md docs/team_runbook.md docs/fem4c_team_next_queue.md docs/fem4c_team_dispatch_2026-02-06.md docs/fem4c_dirty_diff_triage_2026-02-06.md` -> PASS
+    - `python scripts/check_c_coupled_freeze_file.py scripts/c_coupled_freeze_forbidden_paths.txt` -> PASS
+    - `python scripts/audit_c_team_staging.py --team-status docs/team_status.md --coupled-freeze-file scripts/c_coupled_freeze_forbidden_paths.txt --print-coupled-freeze-patterns` -> PASS
+    - `python scripts/audit_team_history.py --team-status docs/team_status.md --min-elapsed 30` -> PASS（履歴監査レポート出力）
+    - `C_DRYRUN_POLICY=pass_section_freeze_timer bash scripts/run_c_team_staging_checks.sh docs/team_status.md` -> EXPECTED FAIL（`end_epoch/elapsed_min` 未確定時）
+    - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze_timer` -> EXPECTED FAIL（`end_epoch/elapsed_min` 未確定時）
+    - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze_timer` -> PASS（timer確定後）
+    - `C_DRYRUN_POLICY=pass_section_freeze_timer bash scripts/run_c_team_staging_checks.sh docs/team_status.md` -> PASS（timer確定後）
+    - `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30 --teams C` -> PASS
+    - `bash scripts/run_team_audit.sh docs/team_status.md 30 pass_section_freeze_timer` -> FAIL（A/B の `elapsed_min` 欠落/未達を検知。CはPASS）
+  - pass/fail:
+    - PASS（`elapsed_min=30`、C-19 Done 1件、次タスク C-20 `In Progress`、人工待機なし）
 
 ## PMチーム
 - 実行タスク: PM-3 受入監査の自動化拡張（30分ルール）
@@ -1806,3 +2217,105 @@ elapsed_min=23
     - `bash scripts/run_team_audit.sh docs/team_status.md 30` → FAIL（A/B/C elapsed未達 + C staging監査FAILを同時出力）
   - 次タスク:
     - Cチームへ C-18/C-19 継続時に `dryrun_result` と `scripts/c_stage_dryrun.sh` 実行証跡を必須記録として再周知する。
+
+- 実行タスク: PM-3 全チーム進捗確認 + Aチーム30分未達対策（2026-02-08）
+  - 監査結果（最新）:
+    - `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30` -> FAIL（Aのみ FAIL）
+      - A: `elapsed_min=10`（FAIL）
+      - B: `elapsed_min=30`（PASS）
+      - C: `elapsed_min=30`（PASS）
+    - `python scripts/audit_c_team_staging.py --team-status docs/team_status.md` -> PASS
+    - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section` -> PASS
+  - Aチーム対策として実施した更新:
+    - `docs/fem4c_team_dispatch_2026-02-06.md` の Team A 指示を A-17 前提へ更新。
+    - Team A 指示に「30分達成プロトコル（途中報告禁止 / 実装2ステップ + 短時間スモーク / 報告前自己監査）」を追記。
+    - `docs/abc_team_chat_handoff.md` に Aチームの `elapsed_min < 30` 途中報告禁止ルールを追記。
+    - `docs/fem4c_team_next_queue.md` の継続運用ルールへ A専用ルール（自己監査コマンド）を追記。
+  - 変更ファイル:
+    - `docs/fem4c_team_dispatch_2026-02-06.md`
+    - `docs/abc_team_chat_handoff.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実行コマンド / pass-fail:
+    - `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30` -> FAIL（Aのみ未達）
+    - `python scripts/audit_c_team_staging.py --team-status docs/team_status.md` -> PASS
+    - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section` -> PASS
+    - `bash scripts/run_team_audit.sh docs/team_status.md 30 pass_section` -> FAIL（Aのみ未達）
+  - 次タスク:
+    - Aチームへ最新版の対策指示文を送信し、A-17 を同一セッションで継続させる（途中報告禁止）。
+
+- 実行タスク: PM-3 動的自走プロトコルの汎用化（2026-02-08）
+  - Done:
+    - `docs/team_runbook.md` に「動的自走プロトコル（Auto-Next）」を追加し、先頭完了後の自動遷移と途中報告禁止を共通化。
+    - `docs/abc_team_chat_handoff.md` Section 0 を更新し、A専用ではなく全チーム向けの動的自走ルールへ統一。
+    - `docs/fem4c_team_next_queue.md` の継続運用ルールへ `Auto-Next` 追記と反復検証抑止を追加。
+    - `docs/fem4c_team_dispatch_2026-02-06.md` を更新し、共通チャット文面に「自動遷移」「候補なし時の Auto-Next」「途中報告禁止」を反映。
+    - Team B/C の最新タスク表現を現状（B-14, C-19）へ同期し、毎回PMが細かいマイルストーンを書く負担を低減。
+  - 変更ファイル:
+    - `docs/team_runbook.md`
+    - `docs/abc_team_chat_handoff.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/fem4c_team_dispatch_2026-02-06.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実行コマンド / pass-fail:
+    - `python scripts/check_doc_links.py docs/team_runbook.md docs/abc_team_chat_handoff.md docs/fem4c_team_next_queue.md docs/fem4c_team_dispatch_2026-02-06.md` → PASS
+  - 次タスク:
+    - 次回からは「作業を継続してください」だけで運用し、差し戻し時のみ個別指示を送る。
+- 実行タスク: PM-3 独立ソルバー方針への再固定（2026-02-08）
+  - Done:
+    - `docs/long_term_target_definition.md` に PM決定（`coupled` 凍結 / FEM・MBD独立優先）を追記。
+    - `docs/abc_team_chat_handoff.md` に PM決定（2026-02-08）を追記し、Aチーム目的を `mbd` 独立ソルバー前提へ更新。
+    - `docs/fem4c_team_next_queue.md` の A-17/B-14 を `--mode=mbd` 独立ソルバー対象へ再定義。
+    - `docs/fem4c_team_dispatch_2026-02-06.md` の A/B 指示文を独立ソルバー方針へ更新。
+    - `docs/team_runbook.md` の Out of Scope に「`coupled` 新規機能追加凍結」を追記。
+  - 変更ファイル:
+    - `docs/long_term_target_definition.md`
+    - `docs/abc_team_chat_handoff.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/fem4c_team_dispatch_2026-02-06.md`
+    - `docs/team_runbook.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実行コマンド / pass-fail:
+    - `python scripts/check_doc_links.py docs/long_term_target_definition.md docs/abc_team_chat_handoff.md docs/fem4c_team_next_queue.md docs/fem4c_team_dispatch_2026-02-06.md docs/team_runbook.md docs/team_status.md docs/session_continuity_log.md` -> PASS
+  - 次タスク:
+    - Aチーム: A-17（`--mode=mbd` 積分法パラメータ契約固定）を継続。
+    - Bチーム: B-14（`--mode=mbd` 切替回帰の入口統合）を継続。
+    - Cチーム: C-19（staging運用チェック自動化）を継続。
+
+- 実行タスク: PM-3 MBD積分器切替の `--mode=mbd` 入口統合（2026-02-08）
+  - Done:
+    - `FEM4C/Makefile` に `mbd_integrator_checks` を追加し、`make -C FEM4C test` へ統合。
+    - `FEM4C/scripts/check_ci_contract.sh` / `FEM4C/scripts/test_check_ci_contract.sh` を更新し、`mbd_integrator_checks` のCI契約（workflowログゲート + Makefile配線）を検査対象へ追加。
+    - `.github/workflows/ci.yaml` の FEM4C 実行ステップに `PASS: mbd integrator switch check` のログゲートを追加。
+    - `FEM4C/practice/README.md` に `make -C FEM4C mbd_integrator_checks` の運用手順を追記。
+    - `FEM4C/src/fem4c.c` を調整し、`--mbd-integrator` 指定時に `MBD integrator source: cli` となるようCLIソース判定と環境変数反映の整合を修正。
+  - 実行コマンド / pass-fail:
+    - `make -C FEM4C` -> PASS
+    - `make -C FEM4C mbd_integrator_checks` -> PASS
+    - `make -C FEM4C mbd_ci_contract` -> PASS
+    - `make -C FEM4C mbd_ci_contract_test` -> PASS
+    - `make -C FEM4C test` -> PASS
+  - 次タスク:
+    - Aチームは A-17 を継続し、`--mode=mbd` で Newmark/HHT パラメータ契約を最終固定する。
+    - Bチームは B-14 を継続し、`test` 入口統合の運用証跡を日次フォーマットへ固定する。
+    - Cチームは C-19 を継続し、staging監査導線を pass_section 運用で安定化する。
+
+- 実行タスク: PM-3 Aチーム30分自走の強制ゲート導入（2026-02-08）
+  - Done:
+    - `scripts/session_timer_guard.sh` を新規追加し、`session_token` から経過時間を判定して `guard_result=pass|block` を返す報告前ゲートを実装。
+    - `docs/team_runbook.md` に「報告前ガード（`session_timer_guard`）」を追記し、`guard_result=block` 中は終了報告禁止を明文化。
+    - `docs/abc_team_chat_handoff.md` Section 0 に報告前ガード必須を追記。
+    - `docs/fem4c_team_next_queue.md` の継続運用ルールに `session_timer_guard` 実行を追加。
+    - `docs/fem4c_team_dispatch_2026-02-06.md` の Aチーム向け文面を更新し、`guard_result=pass` を必須成果へ追加。
+  - 実行コマンド / pass-fail:
+    - `scripts/session_timer.sh start a_team` -> PASS
+    - `bash scripts/session_timer_guard.sh <token> 30` -> BLOCK（期待どおり non-zero）
+    - `bash scripts/session_timer_guard.sh <token> 0` -> PASS
+    - `scripts/session_timer.sh end <token>` -> PASS
+    - `python scripts/check_doc_links.py docs/abc_team_chat_handoff.md docs/team_runbook.md docs/fem4c_team_next_queue.md docs/fem4c_team_dispatch_2026-02-06.md` -> PASS
+  - 次タスク:
+    - Aチームへ新テンプレを送信し、`guard_result=pass` が出るまで報告しない運用へ切替える。
+    - 次回受入時は `elapsed_min >= 30` と `guard_result=pass` の両方を必須判定として監査する。

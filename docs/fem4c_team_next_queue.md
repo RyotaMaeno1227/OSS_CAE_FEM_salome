@@ -1,14 +1,14 @@
 # FEM4C Team Next Queue
 
-更新日: 2026-02-08（30分開発モード反映 / A-16完了・A-17着手 / B-12完了 / C-18完了 / C-19継続）  
+更新日: 2026-02-08（30分開発モード + 動的自走プロトコル反映 + 独立ソルバー優先 + A-19完了/A-20着手）  
 用途: チャットで「作業を継続してください」だけが来た場合の、各チーム共通の次タスク起点。
 
 ## PM固定優先（2026-02-08）
-- Aチーム: A-17 `積分法パラメータ契約の固定` を継続（実装差分必須）。
-- Bチーム: B-12 `積分法切替回帰の固定化` を開始（B-8の長時間反復継続は停止）。
-- Cチーム: C-18 完了後、C-19 `staging運用チェックの自動化` を継続。
+- Aチーム: A-20 `MBD時間制御CI契約の静的固定` を継続（実装差分必須）。
+- Bチーム: B-14 `MBD積分法切替回帰の mbd 入口統合` を継続（B-8の長時間反復継続は停止）。
+- Cチーム: C-19 `staging運用チェックの自動化` を継続。
 - 先頭タスク完了後の遷移先:
-  - A: A-17
+  - A: A-20
   - B: B-14
   - C: C-19
 
@@ -31,9 +31,14 @@
 - 16. `sleep` 等の人工待機で elapsed を満たす行為は不合格。
 - 17. `elapsed_min < 30` の終了報告は原則不合格（PM事前承認の緊急停止のみ例外）。
 - 18. PM受入時は `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30` を実行し、最新 A/B/C エントリの機械監査結果を確認する。
-- 19. 差し戻し文面を即作成する場合は `bash scripts/run_team_audit.sh docs/team_status.md 30` を実行し、出力されたチーム別文面をそのまま送る（同時に C-team staging 監査 JSON も出力される）。
+- 19. 差し戻し文面を即作成する場合は `bash scripts/run_team_audit.sh docs/team_status.md 30 pass_section_freeze` を実行し、出力されたチーム別文面をそのまま送る（同時に C-team staging 監査 JSON も出力される）。
 - 20. 30分は「開発前進」に使う。実装系ファイル差分を1件以上必須とし、docs単独更新での完了を禁止する。
 - 21. 長時間反復ソーク/耐久ループは禁止（PM明示指示時のみ例外）。検証は短時間スモーク（最大3コマンド）を原則とする。
+- 22. `elapsed_min < 30` での途中報告を禁止し、同一セッションで実装を継続する。
+- 23. 先頭タスク完了時は、同一セッションで次の `Todo` / `In Progress` へ自動遷移する（PM確認不要）。
+- 24. 次タスク候補が無い場合は、同一スコープ内で `Auto-Next`（最小実装タスク）を `Goal / Scope / Acceptance` 付きで追記し、`In Progress` で継続する。
+- 25. 同一コマンドの反復のみで時間を使わない。コード変更なしで同一検証コマンドを連続実行する運用は禁止する。
+- 26. 報告直前に `bash scripts/session_timer_guard.sh <session_token> 30` を実行し、`guard_result=pass` を満たした場合のみ終了報告する。
 
 ## セッション終了条件（共通）
 - 以下を満たしたときのみ終了報告する:
@@ -55,6 +60,8 @@
 - PM決定（2026-02-07）: C-5 論点 #2（`FEM4C/src/solver/cg_solver.c` 零曲率閾値）は `Option A` を採用（`1.0e-14` 維持, Option Bは3Dtria回帰で失敗）。
 - PM決定（2026-02-07）: C-5 論点 #3（`FEM4C/src/elements/t3/t3_element.c`）は `Option B` を採用（既定は自動補正 + `--strict-t3-orientation` で即エラー）。
 - PM決定（2026-02-07）: MBD時間積分の実装対象は `Newmark-β` と `HHT-α` とし、最終的に実行時スイッチで切替可能にする。
+- PM決定（2026-02-08）: 連成（`coupled`）仕様が未確定のため、`coupled` はスタブ維持とし新規機能追加を凍結する。
+- PM決定（2026-02-08）: A/B の積分法タスクは `--mode=mbd` の独立ソルバー経路を対象に進める。
 
 ---
 
@@ -240,17 +247,55 @@
   - 2方式切替を1コマンドで確認できる回帰手順（`newmark_beta` / `hht_alpha`）が整備される。
   - `make -C FEM4C coupled_stub_check` と `make -C FEM4C test` が pass する。
 
-### A-17 積分法パラメータ契約の固定（MBD）
-- Status: `In Progress`（2026-02-08 A-team）
-- Goal: `Newmark-β` / `HHT-α` の主要パラメータ（例: beta/gamma/alpha）の既定値と入力経路を固定し、ログで追跡可能にする。
+### A-17 MBD独立ソルバーの積分法パラメータ契約固定
+- Status: `Done`（2026-02-08 A-team）
+- Goal: `--mode=mbd` で `Newmark-β` / `HHT-α` の主要パラメータ（例: beta/gamma/alpha）の既定値と入力経路を固定し、ログで追跡可能にする。
 - Scope:
+  - `FEM4C/src/fem4c.c`
   - `FEM4C/src/analysis/runner.h`
   - `FEM4C/src/analysis/runner.c`
   - 必要時のみ `FEM4C/practice/README.md`
 - Acceptance:
-  - `--mode=coupled` 実行ログに integrator 名と主要パラメータが出力される。
+  - `--mode=mbd` 実行ログに integrator 名と主要パラメータが出力される。
   - 既定値・入力上書き（CLIまたは環境変数）の優先順位が明文化される。
-  - `make -C FEM4C coupled_stub_check` と `make -C FEM4C test` が pass する。
+  - `make -C FEM4C mbd_checks` と `make -C FEM4C test` が pass する。
+
+### A-18 MBD独立ソルバーの時間制御契約固定（Auto-Next）
+- Status: `Done`（2026-02-08 A-team）
+- Goal: `--mode=mbd` の `dt/steps` 既定値と入力経路（CLI/env）を固定し、ログと出力で追跡可能にする。
+- Scope:
+  - `FEM4C/src/fem4c.c`
+  - `FEM4C/src/analysis/runner.c`
+  - 必要時のみ `FEM4C/practice/README.md`
+  - 必要時のみ `FEM4C/scripts/check_mbd_integrators.sh`
+- Acceptance:
+  - `--mode=mbd` 実行ログに `time_control: dt=<...> steps=<...>` が出力される。
+  - 起動ログに `MBD time source: dt=cli|env|default steps=cli|env|default` が出力される。
+  - `make -C FEM4C mbd_integrator_checks` と `make -C FEM4C mbd_checks` が pass する。
+
+### A-19 MBD時間制御の境界/失敗ケース回帰固定（Auto-Next）
+- Status: `Done`（2026-02-08 A-team）
+- Goal: `--mode=mbd` の `dt/steps` に対する境界値・不正値（CLI/env）を回帰へ固定し、失敗メッセージとfallback挙動の退行を防ぐ。
+- Scope:
+  - `FEM4C/src/fem4c.c`
+  - `FEM4C/src/analysis/runner.c`
+  - `FEM4C/scripts/check_mbd_integrators.sh`
+  - 必要時のみ `FEM4C/practice/README.md`
+- Acceptance:
+  - `mbd_integrator_checks` で `--mbd-dt` / `--mbd-steps` の不正値が non-zero で検出される。
+  - `FEM4C_MBD_DT` / `FEM4C_MBD_STEPS` の不正環境値が warning + default fallback で処理される。
+  - `make -C FEM4C mbd_integrator_checks` と `make -C FEM4C mbd_checks` が pass する。
+
+### A-20 MBD時間制御CI契約の静的固定（Auto-Next）
+- Status: `In Progress`（2026-02-08 A-team）
+- Goal: A-19で追加した時間制御境界ケースが `mbd_ci_contract` で静的検査される状態を固定し、回帰スクリプトの退行（ケース欠落）を早期検知する。
+- Scope:
+  - `FEM4C/scripts/check_ci_contract.sh`
+  - `FEM4C/scripts/test_check_ci_contract.sh`
+  - 必要時のみ `FEM4C/practice/README.md`
+- Acceptance:
+  - `make -C FEM4C mbd_ci_contract` が pass し、`mbd_integrator_cli_invalid_dt_case` / `mbd_integrator_cli_invalid_steps_case` の静的チェックが含まれる。
+  - `make -C FEM4C mbd_ci_contract_test` が pass し、上記チェック欠落時の fail 経路を自己テストで確認できる。
 
 ---
 
@@ -371,7 +416,7 @@
   - `docs/team_status.md` に pass/fail 根拠を記録する。
 
 ### B-12 積分法切替回帰の固定化（Newmark/HHT）
-- Status: `In Progress`（2026-02-08 PM固定優先）
+- Status: `Done`（2026-02-08 B-team: `make -C FEM4C integrator_checks`）
 - Goal: `Newmark-β` / `HHT-α` の切替回帰を自動化し、方式切替の退行を日次検出する。
 - Scope:
   - `FEM4C/scripts/`（新規: 積分法切替チェックスクリプト可）
@@ -394,17 +439,32 @@
   - `make -C FEM4C mbd_b8_guard RUN_SPOT=1 RUN_ID=<id>` で任意スポット証跡を同フォーマットで出力できる。
   - `SPOT_STRICT=1` 指定時はスポット失敗を non-zero に昇格できる。
 
-### B-14 積分法切替回帰の test 入口統合
-- Status: `Todo`
-- Goal: B-12 で整備した `newmark_beta` / `hht_alpha` 切替回帰を `make -C FEM4C test` 入口に統合し、日次で自動検出できるようにする。
+### B-14 MBD積分法切替回帰の mbd 入口統合
+- Status: `Done`（2026-02-08 B-team: `mbd_integrator_checks` / `test` / `mbd_ci_contract` / `mbd_b14_regression`）
+- Goal: B-12 で整備した `newmark_beta` / `hht_alpha` 切替回帰を `--mode=mbd` 入口に統合し、日次で自動検出できるようにする。
 - Scope:
   - `FEM4C/scripts/`（積分法切替チェックスクリプト）
   - `FEM4C/Makefile`
   - `FEM4C/practice/README.md`
 - Acceptance:
-  - `make -C FEM4C integrator_checks`（名称は任意）で2方式切替を1コマンド検証できる。
+  - `make -C FEM4C mbd_integrator_checks`（名称は任意）で `--mode=mbd` の2方式切替を1コマンド検証できる。
   - `make -C FEM4C test` で当該チェックが実行される。
   - 失敗時は non-zero で停止し、原因ログを追跡できる。
+  - `make -C FEM4C mbd_ci_contract` で `test` 入口に `mbd_integrator_checks`（または同等）が含まれる静的保証を確認できる。
+
+### B-15 B-14回帰導線の運用固定（Auto-Next）
+- Status: `In Progress`（2026-02-08 B-team）
+- Goal: B-14の入口統合を日次運用で再利用しやすくするため、1コマンド回帰と自己テスト導線を固定する。
+- Scope:
+  - `FEM4C/scripts/run_b14_regression.sh`（新規）
+  - `FEM4C/scripts/test_check_mbd_integrators.sh`（新規）
+  - `FEM4C/scripts/test_check_fem4c_test_log_markers.sh`
+  - `FEM4C/Makefile`
+  - `FEM4C/practice/README.md`
+- Acceptance:
+  - `make -C FEM4C mbd_b14_regression` で `mbd_ci_contract` / `mbd_ci_contract_test` / `mbd_integrator_checks_test` / `test` を直列実行しPASSする。
+  - `make -C FEM4C clean all test` が同一コマンドでも再現可能（bin/build再生成の欠落で失敗しない）。
+  - `docs/team_status.md` に1行再現コマンド、pass/fail、閾値（`jacobian tol=1e-6`, `fd eps=1e-7`）が記録される。
 
 ---
 
@@ -590,19 +650,58 @@
   - 長時間反復ループは実行しない。
 
 ### C-19 staging 運用チェックの自動化
-- Status: `In Progress`（2026-02-08 C-team: PM実装を C-team運用向けに拡張中）
+- Status: `Done`（2026-02-08 C-team: `pass_section_freeze` 運用 + coupled凍結監査の自動判定を実装）
 - Goal: `scripts/c_stage_dryrun.sh` の実行結果を PM受入で機械判定できるよう、最小の運用チェッカーを追加する。
 - Scope:
-  - `scripts/`（新規: C-team report checker）
+  - `scripts/check_c_team_dryrun_compliance.sh`
+  - `scripts/run_c_team_staging_checks.sh`
+  - `scripts/audit_c_team_staging.py`
+  - `scripts/run_team_audit.sh`
+  - `scripts/test_audit_c_team_staging.py`
+  - `scripts/test_check_c_team_dryrun_compliance.py`
+  - `scripts/test_run_team_audit.py`
+  - `scripts/test_run_c_team_staging_checks.py`
   - `docs/team_runbook.md`
   - 必要時のみ `docs/fem4c_team_dispatch_2026-02-06.md`
 - Acceptance:
   - Cチーム最新報告に `dryrun_result` が無い場合、non-zero で fail するチェックコマンドが用意される。
   - PMが1コマンドで Cチーム staging 運用の遵守可否を確認できる。
+  - `pass_section` 監査で、最新C報告が `## Cチーム` 配下にあることを確認できる。
+  - `pass_section_freeze` 監査で、最新C報告が coupled凍結対象パスを含まないことを確認できる。
   - `docs/team_status.md` に実行コマンドと pass/fail が記録される。
- - Verification:
-   - `python scripts/audit_c_team_staging.py --team-status docs/team_status.md`
-   - `bash scripts/run_team_audit.sh docs/team_status.md 30`
+- Verification:
+  - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass`
+  - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section`
+  - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze`
+  - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md both`
+  - `bash scripts/run_c_team_staging_checks.sh docs/team_status.md`
+  - `python scripts/test_audit_c_team_staging.py`
+  - `python scripts/test_check_c_team_dryrun_compliance.py`
+  - `python scripts/test_run_team_audit.py`
+  - `python scripts/test_run_c_team_staging_checks.py`
+
+### C-20 coupled凍結禁止パスの外部定義化（Auto-Next）
+- Status: `In Progress`（2026-02-08 C-team: 監査対象パターンの運用ファイル化を着手）
+- Goal: coupled凍結監査の禁止パス集合をコード外に分離し、PM運用で更新可能にする。
+- Scope:
+  - `scripts/c_coupled_freeze_forbidden_paths.txt`
+  - `scripts/check_c_coupled_freeze_file.py`
+  - `scripts/audit_c_team_staging.py`
+  - `scripts/run_c_team_staging_checks.sh`
+  - `scripts/test_audit_c_team_staging.py`
+  - `scripts/test_check_c_coupled_freeze_file.py`
+  - 必要時のみ `docs/team_runbook.md`
+- Acceptance:
+  - `--require-coupled-freeze` 実行時に、禁止パス集合を `scripts/c_coupled_freeze_forbidden_paths.txt` から読める。
+  - 禁止パスファイルが未読込でも fallback で監査が失敗せず動作する。
+  - 監査コードの読み込み仕様（コメント/空行無視）がテストで固定される。
+- Verification:
+  - `python scripts/test_audit_c_team_staging.py`
+  - `python scripts/test_check_c_coupled_freeze_file.py`
+  - `python scripts/check_c_coupled_freeze_file.py scripts/c_coupled_freeze_forbidden_paths.txt`
+  - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze`
+  - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze_timer`
+  - `C_DRYRUN_POLICY=pass_section_freeze_timer bash scripts/run_c_team_staging_checks.sh docs/team_status.md`
 
 ---
 
