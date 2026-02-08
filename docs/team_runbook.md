@@ -75,6 +75,8 @@
 - 受入に使うコマンド・結果（pass/fail）は `docs/team_status.md` へ記録する。
 - PM受入時は最新エントリの機械監査を実行する:
   - `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30`
+  - Cチーム staging 運用の遵守監査:
+    - `python scripts/audit_c_team_staging.py --team-status docs/team_status.md`
   - 差し戻し文面まで一括生成する場合:
     - `bash scripts/run_team_audit.sh docs/team_status.md 30`
   - 遵守率の履歴確認（原因分析）:
@@ -108,6 +110,7 @@
 - 参考コマンド:
   - `scripts/c_stage_dryrun.sh --log /tmp/c_stage_dryrun_<date>.log`
   - `scripts/c_stage_dryrun.sh --add-target chrono-2d/tests/test_coupled_constraint`（forbidden fail の再現確認）
+  - `python scripts/audit_c_team_staging.py --team-status docs/team_status.md --require-pass`（最新C報告の dry-run 記録監査）
 
 ## 7. アーカイブ方針
 - 旧 Chrono 運用・旧 PM 司令文書は以下へ退避済み（参照のみ）:

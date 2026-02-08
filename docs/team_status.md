@@ -1782,3 +1782,27 @@ elapsed_min=23
     - `python scripts/check_doc_links.py docs/abc_team_chat_handoff.md docs/fem4c_team_dispatch_2026-02-06.md` → PASS
   - 次タスク:
     - 各チームへ最新版チャット文面を送信し、次回以降は「作業を継続してください」の省略指示モードで継続する。
+
+- 実行タスク: PM-3 C-19 staging運用チェック自動化（2026-02-08）
+  - Done:
+    - `scripts/audit_c_team_staging.py` を新規追加し、Cチーム最新報告の `dryrun_result` 記録有無と `scripts/c_stage_dryrun.sh` 実行証跡を機械判定できるようにした。
+    - `scripts/run_team_audit.sh` を更新し、既存A/B/C監査に加えて C-team staging 監査JSONを同時出力するようにした。
+    - `scripts/test_audit_c_team_staging.py` を追加し、最新選択・必須項目判定・PMエントリ除外の単体テストを整備した。
+    - `docs/team_runbook.md`, `docs/fem4c_team_next_queue.md`, `docs/fem4c_team_dispatch_2026-02-06.md` に C-team staging 監査コマンドを追記した。
+  - 変更ファイル:
+    - `scripts/audit_c_team_staging.py`
+    - `scripts/test_audit_c_team_staging.py`
+    - `scripts/run_team_audit.sh`
+    - `docs/team_runbook.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/fem4c_team_dispatch_2026-02-06.md`
+  - 実行コマンド / pass-fail:
+    - `python scripts/test_audit_c_team_staging.py` → PASS
+    - `python scripts/test_audit_team_sessions.py` → PASS
+    - `python scripts/test_render_audit_feedback.py` → PASS
+    - `python scripts/test_audit_team_history.py` → PASS
+    - `python scripts/check_doc_links.py docs/team_runbook.md docs/fem4c_team_next_queue.md docs/fem4c_team_dispatch_2026-02-06.md` → PASS
+    - `python scripts/audit_c_team_staging.py --team-status docs/team_status.md` → FAIL（最新C報告に `dryrun_result`/`c_stage_dryrun` 記録なし）
+    - `bash scripts/run_team_audit.sh docs/team_status.md 30` → FAIL（A/B/C elapsed未達 + C staging監査FAILを同時出力）
+  - 次タスク:
+    - Cチームへ C-18/C-19 継続時に `dryrun_result` と `scripts/c_stage_dryrun.sh` 実行証跡を必須記録として再周知する。

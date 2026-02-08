@@ -89,6 +89,7 @@ PM-3 依頼です。今回スプリントは FEM4C の巨大 dirty 差分の整�
 - 進捗は `docs/team_status.md`、セッション引継ぎは `docs/session_continuity_log.md`。
 - 混在コミット回避のため、担当範囲外ファイルはステージしない。
 - PM受入の機械監査: `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30`
+- C-team staging運用の機械監査: `python scripts/audit_c_team_staging.py --team-status docs/team_status.md`
 - 差し戻し文面を一括生成する場合: `bash scripts/run_team_audit.sh docs/team_status.md 30`
 - 履歴の遵守率確認（短時間終了の傾向分析）: `python scripts/audit_team_history.py --team-status docs/team_status.md --min-elapsed 30`
 

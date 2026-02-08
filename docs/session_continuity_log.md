@@ -1217,3 +1217,27 @@
 - Open Risks/Blockers:
   - 旧テンプレを手元で再利用されると、長時間反復中心の運用へ戻るリスクがある。
   - 初回数ラウンドは「検証上限（最大3コマンド）」の運用定着に差し戻しが必要になる可能性がある。
+
+## 2026-02-08 / PM-3 (C-19 Staging Compliance Checker Added)
+- Current Plan:
+  - Cチームの staging 運用（`dryrun_result` 記録）を PM が1コマンドで機械判定できるようにする。
+  - 既存の A/B/C 監査導線へ C-team 専用監査を統合する。
+- Completed This Session:
+  - `scripts/audit_c_team_staging.py` を追加し、Cセクション最新報告の `dryrun_result` と `scripts/c_stage_dryrun.sh` 記録を監査可能にした。
+  - `scripts/run_team_audit.sh` を更新し、A/B/C監査に加えて C-team staging 監査JSONを同時出力するようにした。
+  - `scripts/test_audit_c_team_staging.py` を追加し、主要判定（必須項目欠落/最新選択/PM項目除外）をテスト化した。
+  - `docs/team_runbook.md`, `docs/fem4c_team_next_queue.md`, `docs/fem4c_team_dispatch_2026-02-06.md` に新コマンドを追記した。
+  - 検証:
+    - `python scripts/test_audit_c_team_staging.py` -> PASS
+    - `python scripts/test_audit_team_sessions.py` -> PASS
+    - `python scripts/test_render_audit_feedback.py` -> PASS
+    - `python scripts/test_audit_team_history.py` -> PASS
+    - `python scripts/check_doc_links.py docs/team_runbook.md docs/fem4c_team_next_queue.md docs/fem4c_team_dispatch_2026-02-06.md` -> PASS
+    - `python scripts/audit_c_team_staging.py --team-status docs/team_status.md` -> FAIL（最新C報告に `dryrun_result` 記録なし）
+    - `bash scripts/run_team_audit.sh docs/team_status.md 30` -> FAIL（elapsed未達 + C staging監査FAIL）
+- Next Actions:
+  - Cチームへ `dryrun_result` と `scripts/c_stage_dryrun.sh` の実行証跡を最新報告へ必須記録するよう再指示する。
+  - 次回受入時は `bash scripts/run_team_audit.sh docs/team_status.md 30` を標準実行し、C staging監査のFAILも差し戻し基準に含める。
+- Open Risks/Blockers:
+  - Cセクション最新の実報告が古いフォーマットのままだと、新規監査は継続的にFAILとなる。
+  - PM記録が誤って Cセクションへ混在した場合、latest選択の誤判定リスクがあるため追記位置ルールの徹底が必要。
