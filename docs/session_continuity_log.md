@@ -1460,3 +1460,19 @@
 - Open Risks/Blockers:
   - `session_timer_guard` を実行せずに自己判断で報告するリスクは残るため、PM受入時に必須証跡として機械確認する必要がある。
   - 既存の大規模 dirty 差分環境では、実装前進の有無判定は引き続き `変更ファイル + 実行コマンド + pass/fail` のセットで見る必要がある。
+
+## 2026-02-08 / PM-3 (Roadmap Revised for External CI Constraint)
+- Current Plan:
+  - GitHub Actions 常時接続前提を外し、MBD移植の受入をローカル完結で継続できる運用へ切替える。
+  - 実Run確認は毎セッション必須を廃止し、PM/ユーザーの節目スポット確認へ限定する。
+- Completed This Session:
+  - `docs/long_term_target_definition.md` に「検証ロードマップ（外部CI制約対応）」を追加（ローカル日次必須 + スポット確認3節目）。
+  - `docs/team_runbook.md` / `docs/abc_team_chat_handoff.md` / `docs/fem4c_team_next_queue.md` / `docs/fem4c_team_dispatch_2026-02-06.md` を更新し、外部CI未接続時の標準手順を統一。
+  - A-20/B-15 の受入定義を「ローカル静的契約を主、GitHub Actions実Runは任意スポット」に合わせて調整。
+  - `python scripts/check_doc_links.py docs/long_term_target_definition.md docs/team_runbook.md docs/abc_team_chat_handoff.md docs/fem4c_team_next_queue.md docs/fem4c_team_dispatch_2026-02-06.md` を実行し PASS。
+- Next Actions:
+  - 次回ディスパッチでは「日次ローカル3コマンド必須（`test`/`mbd_ci_contract`/`mbd_ci_contract_test`）」を明示して送信する。
+  - GitHub Actions スポット確認は A-20 完了時 / B-15 完了時 / リリース前に限定して PM判断で実施する。
+- Open Risks/Blockers:
+  - 外部CI未接続期間が長いと、workflow実行時固有の不具合検知が遅れる可能性がある（節目スポット確認で緩和）。
+  - ローカル検証のみで「十分」と誤解されるリスクがあるため、スポット確認未実施時の記録ルールを維持する必要がある。

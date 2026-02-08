@@ -1,16 +1,28 @@
 # FEM4C Team Next Queue
 
-更新日: 2026-02-08（30分開発モード + 動的自走プロトコル反映 + 独立ソルバー優先 + A-19完了/A-20着手）  
+更新日: 2026-02-08（30分開発モード + 動的自走プロトコル反映 + 独立ソルバー優先 + 外部CI制約対応）  
 用途: チャットで「作業を継続してください」だけが来た場合の、各チーム共通の次タスク起点。
 
 ## PM固定優先（2026-02-08）
-- Aチーム: A-20 `MBD時間制御CI契約の静的固定` を継続（実装差分必須）。
+- Aチーム: A-20 `MBD時間制御ローカルCI契約の静的固定` を継続（実装差分必須）。
 - Bチーム: B-14 `MBD積分法切替回帰の mbd 入口統合` を継続（B-8の長時間反復継続は停止）。
 - Cチーム: C-19 `staging運用チェックの自動化` を継続。
 - 先頭タスク完了後の遷移先:
   - A: A-20
   - B: B-14
   - C: C-19
+
+## 外部CI制約下の検証ロードマップ（2026-02-08 PM決定）
+- 日次受入はローカル完結を標準とする（GitHub Actions 未接続でも進行を止めない）。
+- 毎セッションの必須検証:
+  - `make -C FEM4C test`
+  - `make -C FEM4C mbd_ci_contract`
+  - `make -C FEM4C mbd_ci_contract_test`
+- GitHub Actions 実Runは任意スポット確認とし、PM/ユーザーが以下の節目で実施する:
+  1. A-20 完了時
+  2. B-15 完了時
+  3. リリース前
+- スポット確認未実施は blocker にしない。`team_status` には「外部CI未接続のため未実施」を記録し、ローカル検証を優先する。
 
 ## 継続運用ルール
 - 1. 各チームは本ファイルの自チーム先頭の未完了タスクから着手する。
@@ -286,9 +298,9 @@
   - `FEM4C_MBD_DT` / `FEM4C_MBD_STEPS` の不正環境値が warning + default fallback で処理される。
   - `make -C FEM4C mbd_integrator_checks` と `make -C FEM4C mbd_checks` が pass する。
 
-### A-20 MBD時間制御CI契約の静的固定（Auto-Next）
+### A-20 MBD時間制御ローカルCI契約の静的固定（Auto-Next）
 - Status: `In Progress`（2026-02-08 A-team）
-- Goal: A-19で追加した時間制御境界ケースが `mbd_ci_contract` で静的検査される状態を固定し、回帰スクリプトの退行（ケース欠落）を早期検知する。
+- Goal: A-19で追加した時間制御境界ケースがローカル静的検査（`mbd_ci_contract`）で常時検知される状態を固定し、回帰スクリプトの退行（ケース欠落）を早期検知する。
 - Scope:
   - `FEM4C/scripts/check_ci_contract.sh`
   - `FEM4C/scripts/test_check_ci_contract.sh`
@@ -296,6 +308,7 @@
 - Acceptance:
   - `make -C FEM4C mbd_ci_contract` が pass し、`mbd_integrator_cli_invalid_dt_case` / `mbd_integrator_cli_invalid_steps_case` の静的チェックが含まれる。
   - `make -C FEM4C mbd_ci_contract_test` が pass し、上記チェック欠落時の fail 経路を自己テストで確認できる。
+  - GitHub Actions 実Run確認は任意（PM/ユーザーのスポット実施時のみ記録）。
 
 ---
 
@@ -465,6 +478,7 @@
   - `make -C FEM4C mbd_b14_regression` で `mbd_ci_contract` / `mbd_ci_contract_test` / `mbd_integrator_checks_test` / `test` を直列実行しPASSする。
   - `make -C FEM4C clean all test` が同一コマンドでも再現可能（bin/build再生成の欠落で失敗しない）。
   - `docs/team_status.md` に1行再現コマンド、pass/fail、閾値（`jacobian tol=1e-6`, `fd eps=1e-7`）が記録される。
+  - GitHub Actions 実Runは必須にしない。節目スポット実施時のみ `run_id/step_outcome/artifact_present` を追記する。
 
 ---
 

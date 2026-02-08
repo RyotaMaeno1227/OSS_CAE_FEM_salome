@@ -2319,3 +2319,16 @@ elapsed_min=23
   - 次タスク:
     - Aチームへ新テンプレを送信し、`guard_result=pass` が出るまで報告しない運用へ切替える。
     - 次回受入時は `elapsed_min >= 30` と `guard_result=pass` の両方を必須判定として監査する。
+
+- 実行タスク: PM-3 外部CI制約対応ロードマップへの修正（2026-02-08）
+  - Done:
+    - `docs/long_term_target_definition.md` に「検証ロードマップ（外部CI制約対応）」を新設し、日次はローカル完結・GitHub Actionsは節目スポット確認へ方針固定。
+    - `docs/team_runbook.md` の受入基準を更新し、外部CI未接続でも `test` / `mbd_ci_contract` / `mbd_ci_contract_test` を日次必須と明記。
+    - `docs/abc_team_chat_handoff.md` Section 0 に PM決定（外部CI未接続時はローカル完結、実Runは数回スポット）を追記。
+    - `docs/fem4c_team_next_queue.md` を更新し、A-20名称/目標をローカル静的契約前提へ修正、節目スポット確認ルールを追加。
+    - `docs/fem4c_team_dispatch_2026-02-06.md` を更新し、PMメモ/共通実行ルールへ外部CI制約下の標準手順を追記。
+  - 実行コマンド / pass-fail:
+    - `python scripts/check_doc_links.py docs/long_term_target_definition.md docs/team_runbook.md docs/abc_team_chat_handoff.md docs/fem4c_team_next_queue.md docs/fem4c_team_dispatch_2026-02-06.md` -> PASS
+  - 次タスク:
+    - A/B/C へは「日次はローカル3コマンド必須、GitHub Actionsは節目スポット」の運用で再ディスパッチする。
+    - スポット確認は A-20 完了時 / B-15 完了時 / リリース前の3回に限定して PM判断で実施する。

@@ -1,6 +1,6 @@
 # 長期目標定義（FEM4C / Chrono 2D）
 
-最終更新: 2026-02-06  
+最終更新: 2026-02-08  
 オーナー: PM-3
 
 ## 1. 目的
@@ -9,6 +9,9 @@
   - マルチボディダイナミクス（Project Chrono コアの 2D 移植）を独立ソルバーとして完成させる。
   - 両ソルバーは共通 parser 結果を参照する。
   - 初学者がコードとドキュメントで実装を追体験できる状態にする。
+- PM決定（2026-02-08）:
+  - 連成（`coupled`）仕様が未確定の間は、`coupled` をスタブ維持とし新規機能追加を凍結する。
+  - 直近実装は FEM / MBD を独立ソルバーとして前進させる。
 
 ## 2. 完成系（Definition of Done）
 1. FEM ソルバー完成:
@@ -17,6 +20,7 @@
 2. 2D MBD ソルバー完成（Chrono コア移植）:
    - 2D 剛体系の最小拘束問題を安定して解ける。
    - コア機能（拘束、ヤコビアン、KKT レイアウト、時間積分の基本）が実装され、検証ハーネスで再現可能。
+   - 時間積分は `Newmark-β` と `HHT-α` の 2 種を実装し、実行時スイッチで切替できる。
 3. 共通 parser 契約:
    - parser 出力を FEM/MBD 両方が同一契約で参照できる。
    - 入力不足時のフォールバックやエラー方針が明文化されている。
@@ -44,10 +48,28 @@
 ## 5. 直近フェーズ（2026 Q1）
 1. MBD 最小実行経路を安定化（入力 MBD 優先 + フォールバック）。
 2. distance/revolute 拘束の残差・ヤコビアン検証を固定化。
-3. `coupled` は I/O 契約定義までを先行し、本実装は後続フェーズへ分離。
-4. ドキュメント導線を `abc_team_chat_handoff` / `fem4c_team_next_queue` / 本定義に一本化。
+3. `coupled` は仕様確定までスタブ維持とし、新規実装を凍結する。
+4. MBD 時間積分（`Newmark-β` / `HHT-α`）を `--mode=mbd` の独立実行で切替可能にする。
+5. FEM 側は既存解析経路の安定運用と回帰維持を優先する。
+6. ドキュメント導線を `abc_team_chat_handoff` / `fem4c_team_next_queue` / 本定義に一本化。
 
-## 6. 優先参照ドキュメント
+## 6. 検証ロードマップ（外部CI制約対応）
+- PM決定（2026-02-08）:
+  - 日次受入はローカル完結を標準とする（GitHub Actions 実行を必須にしない）。
+  - GitHub Actions 実Run確認は、PM/ユーザーが節目で数回のみスポット実施する。
+- 日次（毎セッション）必須:
+  - `make -C FEM4C test`
+  - `make -C FEM4C mbd_ci_contract`
+  - `make -C FEM4C mbd_ci_contract_test`
+- 節目スポット確認（任意）:
+  1. A-20 完了時（MBD時間制御契約の固定確認）
+  2. B-15 完了時（回帰導線の運用固定確認）
+  3. リリース前（最終受入確認）
+- 記録ルール:
+  - スポット確認を実施した場合のみ `run_id/step_outcome/artifact_present` を `docs/team_status.md` に追記する。
+  - 実施できない場合は blocker 化せず、「外部CI未接続のため未実施」と明記して先にローカル検証を進める。
+
+## 7. 優先参照ドキュメント
 - 長期目標（本書）: `docs/long_term_target_definition.md`
 - 現行チーム運用: `docs/abc_team_chat_handoff.md`
 - 次タスクキュー: `docs/fem4c_team_next_queue.md`

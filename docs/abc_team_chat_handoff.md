@@ -56,6 +56,8 @@ FEM4C スプリント中は **この Section 0 と `docs/fem4c_team_next_queue.m
   - PM決定（2026-02-08）:
     - 連成（`coupled`）仕様が未確定のため、`coupled` はスタブ維持・新規機能追加凍結とする。
     - 直近実装は FEM / MBD の独立ソルバー前進を最優先とする。
+    - 外部CI未接続環境では、日次受入をローカル（`make -C FEM4C test` / `mbd_ci_contract` / `mbd_ci_contract_test`）で完結する。
+    - GitHub Actions 実Run確認は PM/ユーザーが節目で数回のみスポット実施し、毎セッション必須にしない。
   - コンテクスト切れ/新規チャット移行時は `docs/team_runbook.md` の「8. コンテクスト切れ時の新規チャット移行手順」を必ず適用する。
 
 ### Aチーム（実装）

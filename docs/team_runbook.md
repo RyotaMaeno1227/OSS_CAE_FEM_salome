@@ -82,6 +82,11 @@
 ## 6. 受入・検証
 - 各タスクの受入条件は `docs/fem4c_team_next_queue.md` の `Acceptance` を一次基準とする。
 - 受入に使うコマンド・結果（pass/fail）は `docs/team_status.md` へ記録する。
+- 外部CI接続制約があるため、日次受入はローカル完結を標準とする:
+  - `make -C FEM4C test`
+  - `make -C FEM4C mbd_ci_contract`
+  - `make -C FEM4C mbd_ci_contract_test`
+- GitHub Actions 実Run確認は毎セッション必須ではない。PM/ユーザーが節目で数回のみスポット実施する。
 - PM受入時は最新エントリの機械監査を実行する:
   - `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30`
   - Cチーム staging 運用の遵守監査: `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze`
@@ -98,6 +103,7 @@
   - 人工待機（`sleep` 等）で elapsed を満たした痕跡がある
   - 実作業証跡（変更ファイル・実行コマンド・pass/fail）が不足している
   - `Done` 0件かつ次タスク `In Progress` なし
+- 外部CI未接続を理由に日次のローカル検証を省略している
 
 ### 6.1 Cチーム staging dry-run（定型）
 - 目的:

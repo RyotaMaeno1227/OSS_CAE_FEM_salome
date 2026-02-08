@@ -89,6 +89,11 @@ PM-3 依頼です。今回スプリントは FEM4C の巨大 dirty 差分の整�
 - 進捗は `docs/team_status.md`、セッション引継ぎは `docs/session_continuity_log.md`。
 - 混在コミット回避のため、担当範囲外ファイルはステージしない。
 - PM受入の機械監査: `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30`
+- 外部CI未接続時は、日次受入をローカル3コマンドで完結する:
+  - `make -C FEM4C test`
+  - `make -C FEM4C mbd_ci_contract`
+  - `make -C FEM4C mbd_ci_contract_test`
+- GitHub Actions 実Run確認は PM/ユーザーが節目で数回のみ実施し、毎セッション必須にしない。
 - C-team staging運用の機械監査: `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass`
 - C-team見出し位置まで含めた厳格監査: `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section`
 - C-team見出し位置 + coupled凍結ポリシー監査: `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze`
@@ -131,6 +136,7 @@ PM-3 依頼です。今回スプリントは FEM4C の巨大 dirty 差分の整�
 - `sleep` 等の人工待機で elapsed を満たす行為は禁止（不合格）。
 - `elapsed_min >= 30` を満たさない終了報告は原則不合格（PM事前承認の緊急停止のみ例外）。
 - `elapsed_min < 30` の途中報告は禁止（30分到達まで同セッションで継続）。
+- 外部CI未接続時でも、ローカル3コマンド（`test` / `mbd_ci_contract` / `mbd_ci_contract_test`）は必須で実行する。
 
 [終了条件]
 - `elapsed_min >= 30` を満たす。
