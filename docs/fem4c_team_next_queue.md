@@ -1,6 +1,6 @@
 # FEM4C Team Next Queue
 
-更新日: 2026-02-07（C-5 #3確定 / B-8運用簡素化）  
+更新日: 2026-02-08（30分連続実行モード反映 / A-13完了 / A-14着手 / 積分法方針追加）  
 用途: チャットで「作業を継続してください」だけが来た場合の、各チーム共通の次タスク起点。
 
 ## 継続運用ルール
@@ -11,20 +11,20 @@
 - 5. 担当外ファイルはステージしない（混在コミット禁止）。
 - 6. `session_continuity_log` だけ更新して完了報告することを禁止する（無効報告）。
 - 7. 完了報告には、実装差分ファイル・実行コマンド・受入判定（pass/fail）を必ず含める。
-- 8. 1セッションは 15分以上を必須とし、15-30分の連続実行を推奨レンジとする。
+- 8. 1セッションは 30分以上を必須とし、30-45分の連続実行を推奨レンジとする。
 - 9. 先頭タスク完了後は、同セッション内で次タスクを `In Progress` にして継続する。
-- 10. blocker 発生時も、15分未満なら同セッション内で次の実行可能タスクへ継続する（途中停止しない）。
+- 10. blocker 発生時も、30分未満なら同セッション内で次の実行可能タスクへ継続する（途中停止しない）。
 - 11. PMチャットが「作業を継続してください」のみの場合は省略指示モードとして扱い、追加確認なしで本ルールを適用する。
 - 12. 終了報告には `scripts/session_timer.sh` の出力（`session_token/start_utc/end_utc/start_epoch/end_epoch/elapsed_min`）を必ず含める（`team_status` に転記）。
-- 13. 受入判定は `elapsed_min >= 15` を必須とし、実作業証跡（変更ファイル・実行コマンド・pass/fail）を同時に満たすこと。
+- 13. 受入判定は `elapsed_min >= 30` を必須とし、実作業証跡（変更ファイル・実行コマンド・pass/fail）を同時に満たすこと。
 - 14. `Done` 0件かつ次タスク `In Progress` なしの終了報告は不合格。
 - 15. 手入力だけの時刻・経過分（`start_at/end_at/elapsed_min` のみ）は証跡として不合格。
 - 16. `sleep` 等の人工待機で elapsed を満たす行為は不合格。
-- 17. `elapsed_min < 15` の終了報告は原則不合格（PM事前承認の緊急停止のみ例外）。
+- 17. `elapsed_min < 30` の終了報告は原則不合格（PM事前承認の緊急停止のみ例外）。
 
 ## セッション終了条件（共通）
 - 以下を満たしたときのみ終了報告する:
-  - 1) `scripts/session_timer.sh` の出力で `elapsed_min >= 15` が確認できる
+  - 1) `scripts/session_timer.sh` の出力で `elapsed_min >= 30` が確認できる
   - 2) 受入基準を満たした `Done` タスクが 1 件以上ある
   - 3) かつ次タスクが `In Progress` または blocker が明記されている
   - 4) 人工待機なしで実作業証跡（変更ファイル・実行コマンド・pass/fail）が示される
@@ -41,6 +41,7 @@
 - PM決定（2026-02-07）: C-5 論点 #1（`FEM4C/src/io/input.c` 旧 `SPC/FORCE` 互換方針）は `Option A` を採用。
 - PM決定（2026-02-07）: C-5 論点 #2（`FEM4C/src/solver/cg_solver.c` 零曲率閾値）は `Option A` を採用（`1.0e-14` 維持, Option Bは3Dtria回帰で失敗）。
 - PM決定（2026-02-07）: C-5 論点 #3（`FEM4C/src/elements/t3/t3_element.c`）は `Option B` を採用（既定は自動補正 + `--strict-t3-orientation` で即エラー）。
+- PM決定（2026-02-07）: MBD時間積分の実装対象は `Newmark-β` と `HHT-α` とし、最終的に実行時スイッチで切替可能にする。
 
 ---
 
@@ -165,7 +166,7 @@
   - 実装差分（`input.c` 系）と pass/fail 根拠を `docs/team_status.md` に記録する。
 
 ### A-11 診断コード未カバー系の拡張
-- Status: `In Progress`（2026-02-07 A-team, A-12完了後に再開）
+- Status: `Done`（2026-02-07 A-team）
 - Goal: 負系回帰で未カバーの診断コード（例: `E_REVOLUTE_RANGE`, `E_BODY_RANGE`）を追加し、判定漏れを減らす。
 - Scope:
   - `FEM4C/scripts/check_mbd_invalid_inputs.sh`
@@ -174,6 +175,57 @@
 - Acceptance:
   - `make -C FEM4C mbd_regression` が pass し、`DIAG_CODES_SEEN` に追加コードが反映される。
   - `make -C FEM4C mbd_checks` が引き続き pass する。
+
+### A-13 parser互換回帰導線の整備
+- Status: `Done`（2026-02-07 A-team）
+- Goal: A-12 の旧 parser 互換を日常回帰で再検知できるよう、1コマンド導線を整備する。
+- Scope:
+  - `FEM4C/scripts/check_parser_compatibility.sh`
+  - `FEM4C/Makefile`
+  - 必要時のみ `FEM4C/practice/README.md`
+- Acceptance:
+  - `make -C FEM4C parser_compat` が pass する。
+  - `make -C FEM4C test` など既存運用入口との接続方針（統合または明示的非統合理由）を `docs/team_status.md` に記録する。
+
+### A-14 coupledスタブ契約ログの固定化
+- Status: `In Progress`（2026-02-07 A-team）
+- Goal: `coupled` スタブで I/O 契約スナップショットを安定ログ化し、将来の配線実装時に退行検知できる下地を作る。
+- Scope:
+  - `FEM4C/src/analysis/runner.c`
+  - 必要時のみ `FEM4C/src/analysis/runner.h`
+  - 必要時のみ `FEM4C/practice/README.md`
+- Acceptance:
+  - `cd FEM4C && ./bin/fem4c --mode=coupled examples/t3_cantilever_beam.dat /tmp/fem4c_coupled_stub_check.dat` が non-zero で終了し、契約スナップショット（fem/mbd/time）がログに出る。
+  - `make -C FEM4C coupled_stub_check` が pass する。
+  - `make -C FEM4C test` の運用入口で `coupled_stub_check` が実行される。
+  - `make -C FEM4C` が pass する。
+
+### A-15 Newmark-β 積分器の導入（MBD）
+- Status: `Todo`
+- Goal: MBD 時間積分の第1方式として `Newmark-β` を導入し、方式名を契約ログへ固定する。
+- Scope:
+  - `FEM4C/src/analysis/runner.h`
+  - `FEM4C/src/analysis/runner.c`
+  - 必要時のみ `FEM4C/src/mbd/*`
+  - 必要時のみ `FEM4C/practice/README.md`
+- Acceptance:
+  - `Newmark-β` を選択する設定（CLI または環境変数）が追加される。
+  - `--mode=coupled` 実行時ログに `integrator=newmark_beta` が出力される。
+  - `make -C FEM4C coupled_stub_check` と `make -C FEM4C test` が pass する。
+
+### A-16 HHT-α 積分器の導入と切替固定（MBD）
+- Status: `Todo`
+- Goal: 第2方式 `HHT-α` を追加し、`Newmark-β` / `HHT-α` の2方式を実行時に切替できるようにする。
+- Scope:
+  - `FEM4C/src/analysis/runner.h`
+  - `FEM4C/src/analysis/runner.c`
+  - 必要時のみ `FEM4C/src/mbd/*`
+  - 必要時のみ `FEM4C/practice/README.md`
+- Acceptance:
+  - `HHT-α` を選択する設定（CLI または環境変数）が追加される。
+  - `--mode=coupled` 実行時ログに `integrator=hht_alpha` が出力される。
+  - 2方式切替を1コマンドで確認できる回帰手順（`newmark_beta` / `hht_alpha`）が整備される。
+  - `make -C FEM4C coupled_stub_check` と `make -C FEM4C test` が pass する。
 
 ---
 
@@ -260,7 +312,7 @@
   - GitHub Actions 実ラン確認は、リリース前チェックなど必要な時のみ PM が単発実施する。
 
 ### B-9 CI証跡回収コマンドの整備
-- Status: `Done`（2026-02-07 B-team: `mbd_ci_evidence` を追加）
+- Status: `Done`（2026-02-07 B-team: `mbd_ci_evidence` + `RUN_ID` 指定導線）
 - Goal: 任意のスポット確認で CI証跡を1コマンド取得できるようにする。
 - Scope:
   - `FEM4C/scripts/fetch_fem4c_ci_evidence.py`
@@ -268,6 +320,7 @@
   - `FEM4C/practice/README.md`
 - Acceptance:
   - `make -C FEM4C mbd_ci_evidence` で API 回収処理が起動する。
+  - `make -C FEM4C mbd_ci_evidence RUN_ID=<id>` で単一runの照会ができる。
   - `--help` で必須引数と出力項目が確認できる。
 
 ### B-10 CI証跡フォーマット固定
@@ -291,6 +344,18 @@
   - 1コマンド（`make -C FEM4C mbd_ci_contract`）で `.github/workflows/ci.yaml` の必須要素（step名/id/artifact収集）を検査できる。
   - 必須要素欠落時は non-zero で失敗する。
   - `docs/team_status.md` に pass/fail 根拠を記録する。
+
+### B-12 積分法切替回帰の固定化（Newmark/HHT）
+- Status: `Todo`
+- Goal: `Newmark-β` / `HHT-α` の切替回帰を自動化し、方式切替の退行を日次検出する。
+- Scope:
+  - `FEM4C/scripts/`（新規: 積分法切替チェックスクリプト可）
+  - `FEM4C/Makefile`
+  - `FEM4C/practice/README.md`
+- Acceptance:
+  - 1コマンドで `newmark_beta` と `hht_alpha` の両方を検証できる。
+  - 方式名ログ不一致または実行失敗時は non-zero で fail する。
+  - `make -C FEM4C test` 入口との接続方針を `docs/team_status.md` に記録する。
 
 ---
 
@@ -390,7 +455,7 @@
   - 実行コマンド / pass-fail / 決定反映後の状態が `team_status` に記録される。
 
 ### C-11 strict orientation 回帰導線の固定
-- Status: `Todo`
+- Status: `Done`（2026-02-07 C-team: `make -C FEM4C t3_orientation_checks`）
 - Goal: `t3_element.c` の Option B（default=補正継続, strict=即エラー）を運用回帰へ組み込み、再現性を固定する。
 - Scope:
   - `FEM4C/Makefile`
@@ -399,6 +464,26 @@
 - Acceptance:
   - 1コマンドで「default PASS + strict expected-fail」の両方を確認できる。
   - 実行結果（pass/fail根拠）を `docs/team_status.md` に記録する。
+
+### C-12 PM決定反映後の安全 staging 最終確認
+- Status: `Done`（2026-02-07 C-team: triage Section 13 / cached dry-run + 220-run soak）
+- Goal: C-5確定済み3ファイルと Cチーム docs を混在なく stage できる最終手順を確定し、誤コミットリスクを下げる。
+- Scope:
+  - `docs/fem4c_dirty_diff_triage_2026-02-06.md`
+  - `docs/team_status.md`
+- Acceptance:
+  - 3ファイル（`input.c`, `cg_solver.c`, `t3_element.c`）+ docs の安全 staging コマンドが最新状態に同期している。
+  - `git diff --cached --name-status` を使う最終確認手順が `team_status` に記録される。
+
+### C-13 staging dry-run の定型化（次ラウンド）
+- Status: `In Progress`（2026-02-07 C-team）
+- Goal: C-12 で実施した一時 index ドライランを定型化し、次回以降も同コマンドで混在チェックできるようにする。
+- Scope:
+  - `docs/fem4c_dirty_diff_triage_2026-02-06.md`
+  - 必要時のみ `docs/team_runbook.md`
+- Acceptance:
+  - 一時 index を用いた dry-run 手順（前提/コマンド/判定）が docs に明記される。
+  - `team_status` に実行ログ記録フォーマットが追加される。
 
 ---
 

@@ -1,6 +1,57 @@
 # チーム完了報告（A/B/Cそれぞれ自セクションのみ編集）
 
 ## Aチーム
+- 実行タスク: A-14 継続（coverage拡張: expected failure message + 境界ケース）
+  - Run ID: local-fem4c-20260207-a14-coverage-03
+  - セッションタイマー開始出力（原文）:
+    - `SESSION_TIMER_START`
+    - `session_token=/tmp/a_team_session_20260207T042851Z_229127.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-07T04:28:51Z`
+    - `start_epoch=1770438531`
+  - セッションタイマー終了出力（原文）:
+    - `SESSION_TIMER_END`
+    - `session_token=/tmp/a_team_session_20260207T042851Z_229127.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-07T04:28:51Z`
+    - `end_utc=2026-02-07T04:48:42Z`
+    - `start_epoch=1770438531`
+    - `end_epoch=1770439722`
+    - `elapsed_sec=1191`
+    - `elapsed_min=19`
+  - 変更ファイル（実装ファイル含む）:
+    - `FEM4C/scripts/check_coupled_stub_contract.sh`
+    - `FEM4C/scripts/check_parser_compatibility.sh`
+    - `FEM4C/practice/README.md`
+  - 内容:
+    - A-14: `check_coupled_stub_contract.sh` に invalid入力の期待失敗回帰を追加（`E_BODY_PARSE`, `E_BODY_RANGE`, `E_DISTANCE_RANGE`, `E_REVOLUTE_RANGE`, `E_UNDEFINED_BODY_REF`, `E_INCOMPLETE_INPUT`, `E_UNSUPPORTED_DIRECTIVE`）。
+    - A-14: invalid入力時に coupled stub snapshot が出ないこと（seed段階で失敗すること）を検証条件に追加。
+    - A-14: snapshot経路（base入力、MBD追記入力、legacy parser package）の non-zero + 契約ログ確認を維持。
+    - 運用強化: `check_parser_compatibility.sh` に lock (`/tmp/fem4c_parser_compat.lock`) を追加し、並列起動時に fail-fast で競合回避。
+    - README更新: parserは直列実行前提、coupled stubは上記診断コード境界まで確認する運用を追記。
+    - 追加安定性確認: `PASS_COUPLED_COVERAGE_LOOPS=600`, `PASS_COUPLED_COVERAGE_LOOPS=2500`, `PASS_PARSER_SERIAL_LOOPS=1200`。
+  - 実行コマンド:
+    - `make -C FEM4C`
+    - `make -C FEM4C mbd_checks`
+    - `make -C FEM4C parser_compat`
+    - `make -C FEM4C parser_compat_fallback`
+    - `make -C FEM4C coupled_stub_check`
+    - `make -C FEM4C test`
+    - `cd FEM4C && bash scripts/check_parser_compatibility.sh & bash scripts/check_parser_compatibility.sh`（同時起動境界確認）
+    - `cd FEM4C && i=1; while [ $i -le 600 ]; do bash scripts/check_coupled_stub_contract.sh; i=$((i+1)); done`
+    - `cd FEM4C && i=1; while [ $i -le 2500 ]; do bash scripts/check_coupled_stub_contract.sh; i=$((i+1)); done`
+    - `cd FEM4C && i=1; while [ $i -le 1200 ]; do bash scripts/check_parser_compatibility.sh; i=$((i+1)); done`
+  - pass/fail 根拠:
+    - `make -C FEM4C` → PASS
+    - `make -C FEM4C mbd_checks` → PASS（`PASS: all MBD checks completed`）
+    - `make -C FEM4C parser_compat` → PASS（`PARSER_COMPAT_OLD_PKG=/tmp/parser_pkg_old`）
+    - `make -C FEM4C parser_compat_fallback` → PASS（`PARSER_COMPAT_OLD_PKG=/tmp/tmp.../parser_pkg_old_forced_fallback`）
+    - `make -C FEM4C coupled_stub_check` → PASS（`PASS: coupled stub contract check (snapshot path + invalid-input boundaries)`）
+    - `make -C FEM4C test` → PASS（`mbd_checks` + `parser_compat` + `coupled_stub_check` 連続PASS）
+    - 同時起動境界確認 → PASS（2本目が `FAIL: parser compatibility check is already running` で期待どおり non-zero）
+    - 反復確認 → PASS（`PASS_COUPLED_COVERAGE_LOOPS=600`, `PASS_COUPLED_COVERAGE_LOOPS=2500`, `PASS_PARSER_SERIAL_LOOPS=1200`）
+  - タスク状態:
+    - A-14: `In Progress`
 - 実行タスク: A-13 完了 + A-14 着手（省略指示モード継続）
   - Run ID: local-fem4c-20260207-a13a14-02
   - セッションタイマー開始出力（原文）:
@@ -528,6 +579,58 @@
   - 備考: ベンチ baseline 比は 1.5x 警告を出力。必要に応じて baseline を更新予定。
 
 ## Bチーム
+- 実行タスク: B-8（Done: 静的保証 + ローカル回帰再検証）/ B-8（In Progress, Blocker: スポット証跡）
+  - Run ID: local-fem4c-20260207-b09
+  - session_timer.sh start 出力:
+    ```text
+    SESSION_TIMER_START
+    session_token=/tmp/b_team_session_20260207T041954Z_182121.token
+    team_tag=b_team
+    start_utc=2026-02-07T04:19:54Z
+    start_epoch=1770437994
+    ```
+  - session_timer.sh end 出力:
+    ```text
+    SESSION_TIMER_END
+    session_token=/tmp/b_team_session_20260207T041954Z_182121.token
+    team_tag=b_team
+    start_utc=2026-02-07T04:19:54Z
+    end_utc=2026-02-07T04:37:07Z
+    start_epoch=1770437994
+    end_epoch=1770439027
+    elapsed_sec=1033
+    elapsed_min=17
+    ```
+  - 変更ファイル:
+    - `FEM4C/scripts/fetch_fem4c_ci_evidence.py`
+    - `FEM4C/scripts/test_fetch_fem4c_ci_evidence.py`
+    - `FEM4C/Makefile`
+    - `FEM4C/practice/README.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 1行再現コマンド:
+    - `make -C FEM4C mbd_ci_evidence`
+    - `make -C FEM4C mbd_ci_evidence RUN_ID=21773820916`
+    - `make -C FEM4C mbd_ci_contract`
+    - `make -C FEM4C test`
+    - `bash -lc 'start=$(date +%s); pass=0; for i in $(seq 1 70000); do ./chrono-C-all/tests/test_planar_constraint_endurance >/dev/null || { echo "SOAK_FAIL iteration=$i"; exit 1; }; pass=$i; if (( i % 10000 == 0 )); then now=$(date +%s); echo "SOAK_PROGRESS pass=$pass elapsed_sec=$((now-start))"; fi; done; end=$(date +%s); echo "SOAK_DONE pass=$pass elapsed_sec=$((end-start))"'`
+  - pass/fail（閾値含む）:
+    - B-8（静的保証 + ローカル回帰）: `pass`
+      - 静的保証閾値: `CI_CONTRACT_CHECK_SUMMARY=PASS checks=6 failed=0`
+      - ローカル回帰閾値: `make -C FEM4C test` が non-zero なしで完走（`mbd_checks`/`parser_compat`/`coupled_stub_check` PASS）
+      - 連続安定性閾値: `SOAK_DONE pass=70000 elapsed_sec=660`（70,000反復で失敗0）
+    - B-8（スポット証跡）: `in_progress (blocker)`
+      - 実測:
+        - `run_id=21773820916`
+        - `step_outcome=missing`
+        - `artifact_present=yes`
+        - `acceptance_result=fail`
+      - 受入閾値: `step_present==yes && artifact_present==yes`
+      - blocker 3点セット:
+        - 試行: 必須 `make -C FEM4C mbd_ci_evidence` と `RUN_ID` 指定の単一run照会を実行。
+        - 失敗理由: 取得対象runでは `Run FEM4C regression entrypoint` が未検出で `step_outcome=missing`。
+        - PM依頼: 日次 run_id 共有不要運用は維持し、リリース前スポット確認時に対象stepを含む run_id で再照会する運用で進めてよいか最終確認をお願いします。
 - 実行タスク: B-8（スポット証跡回収 #2: Done）/ B-8（In Progress, Blocker）
   - Run ID: local-fem4c-20260207-b08
   - session_timer.sh start 出力:
@@ -1335,3 +1438,78 @@ elapsed_min=2
     - `python scripts/check_doc_links.py docs/team_runbook.md docs/abc_team_chat_handoff.md docs/fem4c_team_dispatch_2026-02-06.md docs/team_status.md docs/session_continuity_log.md` → PASS
   - 次タスク:
     - 次回新規チャット移行時に、追加した初回送信テンプレを実運用で使用し、再現性を確認する。
+- 実行タスク: C-12 完了（安全 staging 最終確認） + C-13 着手
+  - タイマー出力（開始）:
+```text
+SESSION_TIMER_START
+session_token=/tmp/c_team_session_20260207T041859Z_173683.token
+team_tag=c_team
+start_utc=2026-02-07T04:18:59Z
+start_epoch=1770437939
+```
+  - タイマー出力（終了）:
+```text
+SESSION_TIMER_END
+session_token=/tmp/c_team_session_20260207T041859Z_173683.token
+team_tag=c_team
+start_utc=2026-02-07T04:18:59Z
+end_utc=2026-02-07T04:36:21Z
+start_epoch=1770437939
+end_epoch=1770438981
+elapsed_sec=1042
+elapsed_min=17
+```
+  - Done:
+    - C-12 `PM決定反映後の安全 staging 最終確認` を完了（`docs/fem4c_dirty_diff_triage_2026-02-06.md` Section 13）。
+  - 次タスク:
+    - C-13 `staging dry-run の定型化（次ラウンド）` を `In Progress` に更新済み。
+  - 判定した差分ファイルと採用/破棄理由:
+    - `docs/fem4c_dirty_diff_triage_2026-02-06.md`（採用）
+      - 理由: Section 10.4 の docs staging 対象を最新化し、Section 13 に C-12 実証（cached dry-run + soak）を追加。
+    - `docs/fem4c_team_next_queue.md`（採用）
+      - 理由: C-12 を Done、次タスク C-13 を In Progress に遷移。
+  - 実行コマンド / pass-fail:
+    - `GIT_INDEX_FILE=<tmp> ... git add ... git diff --cached --name-status`（C-12 dry-run）
+      - 1回目: FAIL（`git status --short` 全体検査で未stageの `chrono-2d` を誤検出）
+      - 2回目: PASS（cached set のみ検査し、`chrono-2d/.github` 非混在を確認）
+    - `for i in 1..220; do ./bin/fem4c examples/t6_cantilever_beam.dat ...; done`（連続ソーク） → PASS
+      - 進捗: `iter=20/220 ... iter=220/220 PASS`
+      - 結果: `SOAK_DONE total=220`, failログなし
+    - `python scripts/check_doc_links.py docs/fem4c_dirty_diff_triage_2026-02-06.md docs/fem4c_team_next_queue.md docs/team_status.md docs/session_continuity_log.md` → PASS
+  - pass/fail:
+    - PASS（`elapsed_min=17`、Done 1件、次タスク In Progress、人工待機なし）。
+- 実行タスク: PM-3 MBD積分法方針追加（Newmark-β / HHT-α）
+  - Done:
+    - `docs/long_term_target_definition.md` に MBD完成条件として `Newmark-β` / `HHT-α` の2方式実装と実行時切替を追記。
+    - `docs/fem4c_team_next_queue.md` に PM決定を追加し、A-15（Newmark-β導入）/ A-16（HHT-α導入+切替固定）/ B-12（積分法切替回帰）を新設。
+    - `docs/abc_team_chat_handoff.md` Section 0 の PM決定へ積分法2方式切替方針を追記。
+    - `docs/chrono_2d_development_plan.md` の積分器拡張へ `Newmark-β` / `HHT-α` と実行時スイッチ方針を追記。
+  - 変更ファイル:
+    - `docs/long_term_target_definition.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/abc_team_chat_handoff.md`
+    - `docs/chrono_2d_development_plan.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実行コマンド / pass-fail:
+    - `python scripts/check_doc_links.py docs/long_term_target_definition.md docs/fem4c_team_next_queue.md docs/abc_team_chat_handoff.md docs/chrono_2d_development_plan.md docs/team_status.md docs/session_continuity_log.md` → PASS
+  - 次タスク:
+    - Aチームは A-14 完了後、A-15（Newmark-β）へ着手。
+    - Bチームは B-12 の回帰導線定義を待機せず先行設計する。
+- 実行タスク: PM-3 自走セッション時間ルールを30分へ切替
+  - Done:
+    - `docs/team_runbook.md` の自走セッション受入基準を `elapsed_min >= 30` に固定。
+    - `docs/fem4c_team_next_queue.md` の継続運用ルール/終了条件を30分基準へ統一。
+    - `docs/abc_team_chat_handoff.md` Section 0 の受入条件を30分基準へ統一。
+    - `docs/fem4c_team_dispatch_2026-02-06.md` の配布テンプレを「30分連続実行モード」へ更新。
+  - 変更ファイル:
+    - `docs/team_runbook.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/abc_team_chat_handoff.md`
+    - `docs/fem4c_team_dispatch_2026-02-06.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実行コマンド / pass-fail:
+    - `python scripts/check_doc_links.py docs/team_runbook.md docs/fem4c_team_next_queue.md docs/abc_team_chat_handoff.md docs/fem4c_team_dispatch_2026-02-06.md docs/team_status.md docs/session_continuity_log.md` → PASS
+  - 次タスク:
+    - 次ラウンドのA/B/C受入は `elapsed_min >= 30` を必須に統一し、未達報告は同一タスク継続で差し戻す。

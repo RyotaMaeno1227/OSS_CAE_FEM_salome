@@ -20,8 +20,8 @@ FEM4C スプリント中は **この Section 0 と `docs/fem4c_team_next_queue.m
   - 省略指示モードでは、タスク選定の問い合わせを禁止する（問い合わせ可能なのは blocker 発生時のみ）。
   - 無効報告ルール: `session_continuity_log` のみ更新して実装/検証差分がない報告は完了扱いにしない。
   - セッション時間の証跡として、`scripts/session_timer.sh start <team_tag>` と `scripts/session_timer.sh end <session_token>` の出力を `team_status` に必ず記載する（手入力時刻のみは無効）。
-  - 受入には `elapsed_min >= 15` を必須とし、実作業証跡（変更ファイル・実行コマンド・pass/fail）を同時に満たすこと。
-  - 15分未満で先頭タスクが完了した場合は、待機せず次タスクへ継続する（早期終了は原則不合格）。
+  - 受入には `elapsed_min >= 30` を必須とし、実作業証跡（変更ファイル・実行コマンド・pass/fail）を同時に満たすこと。
+  - 30分未満で先頭タスクが完了した場合は、待機せず次タスクへ継続する（早期終了は原則不合格）。
   - `sleep` 等の人工待機で elapsed を満たす行為は禁止し、不合格とする。
   - 完了報告の必須セット:
     - 変更ファイル（実装ファイルを含む）
@@ -34,6 +34,7 @@ FEM4C スプリント中は **この Section 0 と `docs/fem4c_team_next_queue.m
     - `FEM4C/src/elements/t3/t3_element.c` は `Option B`（既定は自動補正 + `--strict-t3-orientation` で即エラー）を採用する。
     - B-8 の run_id共有必須運用は廃止し、日次受入は「CI導線の静的保証 + ローカル `make -C FEM4C test`」で判定する。
     - GitHub Actions 実ラン確認は毎セッション必須にせず、必要時のみスポット確認とする。
+    - MBD 時間積分は `Newmark-β` と `HHT-α` の 2 種を実装対象とし、最終的に実行時スイッチで切替できるようにする。
   - コンテクスト切れ/新規チャット移行時は `docs/team_runbook.md` の「8. コンテクスト切れ時の新規チャット移行手順」を必ず適用する。
 
 ### Aチーム（実装）

@@ -924,6 +924,28 @@
     - 失敗理由: 直近runで対象step未検出（`step_outcome=missing`）かつ追試で GitHub API rate limit (`HTTP 403`) に到達。
     - PM判断依頼: 対象stepを含む run_id の共有、またはレート制限回避後の再実行タイミングを指定してください。
 
+## 2026-02-07 / B-team (B-8 Re-submit: >=15min Session)
+- Current Plan:
+  - B-8 を同一タスクで継続し、現行運用（静的保証 + ローカル回帰）を再検証する。
+  - 必須 `make -C FEM4C mbd_ci_evidence` を実行し、スポット証跡（run_id/step_outcome/artifact_present/acceptance_result）を記録する。
+- Completed This Session:
+  - `FEM4C/scripts/fetch_fem4c_ci_evidence.py` に `--run-id` 指定と rate-limit 診断出力を追加し、`FEM4C/Makefile` / `FEM4C/practice/README.md` の導線を更新。
+  - `FEM4C/scripts/test_fetch_fem4c_ci_evidence.py` を追加し、helper関数の単体テスト（6件）を固定。
+  - 必須コマンド `make -C FEM4C mbd_ci_evidence` を実行し、`run_id=21773820916` / `step_outcome=missing` / `artifact_present=yes` / `acceptance_result=fail` を取得。
+  - `make -C FEM4C mbd_ci_evidence RUN_ID=21773820916` を実行し、単一run照会でも同結果であることを確認。
+  - `make -C FEM4C mbd_ci_contract` / `make -C FEM4C test` を pass。
+  - ローカル回帰の連続安定性検証として `test_planar_constraint_endurance` を 70,000 反復し、`SOAK_DONE pass=70000 elapsed_sec=660` を確認。
+  - `scripts/session_timer.sh` の生出力を `team_status` に転記し、`elapsed_min=17` を満たして再提出条件を充足。
+- Next Actions:
+  - B-8 スポット証跡は `In Progress` 維持とし、必要時（リリース前）に `RUN_ID` 指定で再照会する。
+  - 次回スポット実行時は `step_outcome` が `missing` 以外へ遷移しているかを確認し、判定を更新する。
+  - 必要に応じて `mbd_ci_evidence` 出力を `team_status` テンプレへそのまま貼れる形で運用統一する。
+- Open Risks/Blockers:
+  - blocker 3点セット:
+    - 試行: 必須 `make -C FEM4C mbd_ci_evidence` と `RUN_ID` 指定照会を実施。
+    - 失敗理由: 対象runで `Run FEM4C regression entrypoint` が未検出のため、`acceptance_result=fail`。
+    - PM依頼: 日次 run_id 共有不要運用を維持し、リリース前スポット確認時のみ対象stepを含む run_id で再照会する方針の最終確認をお願いします。
+
 ## 2026-02-07 / C-team (C-11 Done, C-12 In Progress)
 - Current Plan:
   - C先頭未完了の C-11 を完了し、strict orientation の回帰導線を1コマンドで固定する。
@@ -955,3 +977,91 @@
 - Open Risks/Blockers:
   - 旧テンプレのコピペが残ると新手順が適用されない可能性がある。
   - 長大な `team_status` で最新 PMエントリが埋もれるため、受入時の末尾確認を継続する。
+
+## 2026-02-07 / A-team (A-13 Done, A-14 In Progress)
+- Current Plan:
+  - A-13 parser互換回帰導線を完了し、既存運用入口（`make -C FEM4C test`）へ接続する。
+  - 同セッションで A-14 を `In Progress` にして、coupledスタブ契約ログの回帰導線を着手する。
+- Completed This Session:
+  - `FEM4C/scripts/check_parser_compatibility.sh` を更新し、`FEM4C_PARSER_COMPAT_FORCE_FALLBACK=1` で built-in legacy fixture を強制利用できるようにした。
+  - `FEM4C/Makefile` に `parser_compat_fallback` と `coupled_stub_check` を追加し、`make -C FEM4C test` から `parser_compat` と `coupled_stub_check` が実行されるようにした。
+  - `FEM4C/src/analysis/runner.c` の coupled スタブで、FEM件数（nodes/elements/materials）と MBD件数（bodies/constraints）を契約スナップショットへ反映する実装を追加した。
+  - `FEM4C/scripts/check_coupled_stub_contract.sh` を追加し、base入力 + MBD追記入力 +（存在時）legacy parser package の 2+ ケースで non-zero + 契約ログを検証する回帰を固定した。
+  - 検証: `make -C FEM4C`, `make -C FEM4C mbd_checks`, `make -C FEM4C parser_compat`, `make -C FEM4C parser_compat_fallback`, `make -C FEM4C coupled_stub_check`, `make -C FEM4C test` を PASS。
+  - 追加安定性確認: `check_parser_compatibility.sh` 反復 `1200` 回 + `900` 回を実行し、いずれも PASS（フレークなし）。
+- Next Actions:
+  - A-14 を継続し、`coupled_stub_check` の coverage（異常入力時の期待失敗メッセージ・境界ケース）を拡張する。
+  - `docs/team_status.md` に記録済みの並列実行競合（`run_out/part_0001`）を避けるため、parser系回帰は直列実行運用に固定する。
+  - A-14 完了後は次タスク（A-15）を `In Progress` へ更新する。
+- Open Risks/Blockers:
+  - `parser_compat` は `run_out/part_0001` を共有するため、並列実行で一時的な書き込み競合が起きる（直列運用で回避可能）。
+  - ワークツリー全体の巨大 dirty 差分は継続しており、混在ステージ防止（担当ファイル限定）が必須。
+
+## 2026-02-07 / C-team (C-12 Done, elapsed>=15 resubmission)
+- Current Plan:
+  - C-12（PM決定反映後の安全 staging 最終確認）を完了し、15分以上の連続実行証跡で再提出する。
+  - 完了後に次タスクを `In Progress` へ遷移して継続状態を維持する。
+- Completed This Session:
+  - `scripts/session_timer.sh start/end` を実行し、`elapsed_min=17` の生出力を `team_status` に転記。
+  - 一時 index（`GIT_INDEX_FILE`）を使った staging dry-run を実施し、cached staged set に `chrono-2d/.github` が混入しないことを確認。
+  - `examples/t6_cantilever_beam.dat` の 220 回連続ソークを実行し、`Zero curvature`/non-zero 終了なしを確認（`SOAK_DONE total=220`）。
+  - `docs/fem4c_dirty_diff_triage_2026-02-06.md` Section 13 に C-12 実証結果を追記。
+  - `docs/fem4c_team_next_queue.md` で C-12 を `Done`、C-13 を `In Progress` に更新。
+- Next Actions:
+  - C-13 として、一時 index dry-run 手順の定型化（前提/コマンド/判定フォーマット）を docs に固定する。
+  - `team_status` に C-13 用の定型ログ項目を追加し、次回以降の再利用性を高める。
+  - stage 実行前に `git diff --cached --name-status` を最終確認手順として維持する。
+- Open Risks/Blockers:
+  - C-12 は完了。C-13 は運用定型化フェーズであり blocker なし。
+  - ワークツリー全体は引き続き大規模 dirty のため、パス限定 stage 運用を継続する必要がある。
+
+## 2026-02-07 / PM-3 (MBD Integrator Plan Added: Newmark/HHT)
+- Current Plan:
+  - MBD の時間積分方式を明確化し、`Newmark-β` / `HHT-α` の2方式切替を計画へ正式反映する。
+- Completed This Session:
+  - `docs/long_term_target_definition.md` の DoD と直近フェーズへ、`Newmark-β` / `HHT-α` の実装・切替要件を追記。
+  - `docs/fem4c_team_next_queue.md` に A-15 / A-16 / B-12 を追加し、各チームの着手対象を明文化。
+  - `docs/abc_team_chat_handoff.md` の PM決定へ積分法2方式切替方針を追記。
+  - `docs/chrono_2d_development_plan.md` の積分器拡張へ `Newmark-β` / `HHT-α` と実行時スイッチ方針を追記。
+- Next Actions:
+  - Aチームへ A-15/A-16 を順次ディスパッチし、方式名ログと切替回帰を先行固定する。
+  - Bチームへ B-12（積分法切替回帰）を割り当て、`make -C FEM4C test` 入口統合方針を決定する。
+- Open Risks/Blockers:
+  - 積分法導入時は既存 `coupled_stub_check` の期待ログが変わるため、回帰スクリプト更新漏れに注意が必要。
+  - リポジトリ全体の dirty 差分が大きく、コミット時はパス限定 stage を継続する必要がある。
+
+## 2026-02-07 / A-team (A-14 Coverage Expansion)
+- Current Plan:
+  - A-14 を継続し、coupledスタブ回帰の異常系カバレッジを拡張する。
+  - parser回帰は直列実行を強制し、`run_out/part_0001` 競合を運用上発生させない。
+- Completed This Session:
+  - `FEM4C/scripts/check_coupled_stub_contract.sh` に expected-fail 境界ケースを追加（`E_BODY_PARSE`, `E_BODY_RANGE`, `E_DISTANCE_RANGE`, `E_REVOLUTE_RANGE`, `E_UNDEFINED_BODY_REF`, `E_INCOMPLETE_INPUT`, `E_UNSUPPORTED_DIRECTIVE`）。
+  - invalid入力では coupled stub snapshot が出ないこと（seed前段で失敗）を検証条件として固定。
+  - `FEM4C/scripts/check_parser_compatibility.sh` に lock (`/tmp/fem4c_parser_compat.lock`) を追加し、並列起動を fail-fast 化。
+  - `FEM4C/practice/README.md` を更新し、直列運用ルールと拡張coverage内容を明記。
+  - 検証: `make -C FEM4C`, `make -C FEM4C mbd_checks`, `make -C FEM4C parser_compat`, `make -C FEM4C parser_compat_fallback`, `make -C FEM4C coupled_stub_check`, `make -C FEM4C test` を PASS。
+  - 追加確認: 同時起動時の lock fail-fast を確認、`PASS_COUPLED_COVERAGE_LOOPS=600`, `PASS_COUPLED_COVERAGE_LOOPS=2500`, `PASS_PARSER_SERIAL_LOOPS=1200` を確認。
+- Next Actions:
+  - A-14 を継続し、`coupled_stub_check` の境界ケースを最小失敗分類（parser読込失敗 vs MBD診断失敗）でさらに分離する。
+  - A-14 完了条件を満たしたら A-15 を新設して `In Progress` へ遷移する。
+  - parser系回帰は今後も直列実行のみで運用する（並列禁止）。
+- Open Risks/Blockers:
+  - `parser_compat` は `run_out/part_0001` を共有するため、並列起動は引き続き禁止（今回 lock で fail-fast 化済み）。
+  - ワークツリー全体の巨大 dirty 差分は継続しており、担当外ファイルの混在ステージ回避が必須。
+
+## 2026-02-08 / PM-3 (Continuous Session Rule Switched to 30min)
+- Current Plan:
+  - A/B/C の自走セッション受入を 15分基準から 30分基準へ切替え、短時間終了を抑止する。
+  - 現行運用文書（runbook / handoff / next_queue / dispatch）の閾値を同一値へ統一する。
+- Completed This Session:
+  - `docs/team_runbook.md` の自走セッション・受入条件を `elapsed_min >= 30` 基準へ更新。
+  - `docs/fem4c_team_next_queue.md` の継続運用ルール（必須時間、終了条件、差し戻し条件）を30分へ更新。
+  - `docs/abc_team_chat_handoff.md` Section 0 と `docs/fem4c_team_dispatch_2026-02-06.md` のテンプレ文面を30分基準へ更新。
+  - `python scripts/check_doc_links.py docs/team_runbook.md docs/fem4c_team_next_queue.md docs/abc_team_chat_handoff.md docs/fem4c_team_dispatch_2026-02-06.md docs/team_status.md docs/session_continuity_log.md` を実行し PASS。
+- Next Actions:
+  - 次回の各チーム報告は `elapsed_min >= 30` を必須として受入判定する。
+  - 30分未満の終了報告は、PM事前承認の緊急停止を除き同一タスク継続で再提出させる。
+  - 人工待機（`sleep` 等）検知時は不合格として、実作業証跡付きで再実行を要求する。
+- Open Risks/Blockers:
+  - 過去ログ（`team_status` / `session_continuity_log`）には 15分表記が履歴として残るため、最新ルールは `team_runbook` と `fem4c_team_next_queue` の現行節で判定する必要がある。
+  - ルール切替直後は旧テンプレの再利用リスクがあるため、次ラウンドで30分テンプレ使用を再確認する。
