@@ -60,7 +60,9 @@ class AuditTeamSessionsTest(unittest.TestCase):
   - pass/fail:
 """
         audit = MOD.collect_latest_audits(markdown, ["A"])[0]
-        reasons = audit.failure_reasons(min_elapsed=30, require_evidence=True)
+        reasons = audit.failure_reasons(
+            min_elapsed=30, require_evidence=True, require_impl_changes=False
+        )
         self.assertIn("missing SESSION_TIMER_START", reasons)
         self.assertIn("missing SESSION_TIMER_END", reasons)
         self.assertIn("missing elapsed_min", reasons)
@@ -77,8 +79,11 @@ class AuditTeamSessionsTest(unittest.TestCase):
   - pass/fail:
 """
         audit = MOD.collect_latest_audits(markdown, ["A"])[0]
-        self.assertEqual(audit.verdict(30, True), "FAIL")
-        self.assertIn("artificial wait command detected", audit.failure_reasons(30, True))
+        self.assertEqual(audit.verdict(30, True, False), "FAIL")
+        self.assertIn(
+            "artificial wait command detected",
+            audit.failure_reasons(30, True, False),
+        )
 
     def test_evidence_optional(self):
         markdown = """## Aチーム
@@ -89,8 +94,116 @@ class AuditTeamSessionsTest(unittest.TestCase):
   - elapsed_min=35
 """
         audit = MOD.collect_latest_audits(markdown, ["A"])[0]
-        self.assertEqual(audit.verdict(30, True), "FAIL")
-        self.assertEqual(audit.verdict(30, False), "PASS")
+        self.assertEqual(audit.verdict(30, True, False), "FAIL")
+        self.assertEqual(audit.verdict(30, False, False), "PASS")
+
+    def test_elapsed_prefers_session_timer_end_over_guard(self):
+        markdown = """## Bチーム
+- 実行タスク: guard then end
+  - SESSION_TIMER_START
+  - start_epoch=100
+  - SESSION_TIMER_GUARD
+  - elapsed_min=24
+  - guard_result=block
+  - SESSION_TIMER_END
+  - end_epoch=200
+  - elapsed_min=30
+  - 変更ファイル:
+  - 実行コマンド:
+  - pass/fail:
+"""
+        audit = MOD.collect_latest_audits(markdown, ["B"])[0]
+        self.assertEqual(audit.elapsed_min, 30)
+        self.assertEqual(audit.verdict(30, True, False), "PASS")
+
+    def test_elapsed_uses_latest_session_timer_end_when_multiple(self):
+        markdown = """## Bチーム
+- 実行タスク: multiple sessions in one entry
+  - SESSION_TIMER_START
+  - start_epoch=100
+  - SESSION_TIMER_END
+  - elapsed_min=19
+  - SESSION_TIMER_START
+  - start_epoch=200
+  - SESSION_TIMER_END
+  - elapsed_min=5
+  - 変更ファイル:
+  - 実行コマンド:
+  - pass/fail:
+"""
+        audit = MOD.collect_latest_audits(markdown, ["B"])[0]
+        self.assertEqual(audit.elapsed_min, 5)
+        self.assertEqual(audit.start_epoch, 200)
+        self.assertEqual(audit.verdict(30, True, False), "FAIL")
+
+    def test_require_impl_changes_fails_on_docs_only(self):
+        markdown = """## Aチーム
+- 実行タスク: docs only
+  - SESSION_TIMER_START
+  - SESSION_TIMER_END
+  - start_epoch=100
+  - elapsed_min=40
+  - 変更ファイル: `docs/team_status.md`
+  - 実行コマンド: `python scripts/audit_team_sessions.py --team-status docs/team_status.md`
+  - pass/fail: PASS
+"""
+        audit = MOD.collect_latest_audits(markdown, ["A"])[0]
+        self.assertFalse(audit.has_impl_changes)
+        self.assertEqual(audit.verdict(30, True, True), "FAIL")
+        self.assertIn(
+            "changes evidence does not include implementation files",
+            audit.failure_reasons(30, True, True),
+        )
+
+    def test_require_impl_changes_passes_with_script_change(self):
+        markdown = """## Aチーム
+- 実行タスク: impl change
+  - SESSION_TIMER_START
+  - SESSION_TIMER_END
+  - start_epoch=100
+  - elapsed_min=40
+  - 変更ファイル: `scripts/audit_team_sessions.py`
+  - 実行コマンド: `python scripts/test_audit_team_sessions.py`
+  - pass/fail: PASS
+"""
+        audit = MOD.collect_latest_audits(markdown, ["A"])[0]
+        self.assertTrue(audit.has_impl_changes)
+        self.assertEqual(audit.verdict(30, True, True), "PASS")
+
+    def test_require_impl_changes_detects_non_backtick_paths(self):
+        markdown = """## Cチーム
+- 実行タスク: impl path without backticks
+  - SESSION_TIMER_START
+  - SESSION_TIMER_END
+  - start_epoch=300
+  - elapsed_min=40
+  - 変更ファイル:
+    - FEM4C/src/io/input.c
+    - docs/team_status.md
+  - 実行コマンド: scripts/c_stage_dryrun.sh
+  - pass/fail: PASS
+"""
+        audit = MOD.collect_latest_audits(markdown, ["C"])[0]
+        self.assertIn("FEM4C/src/io/input.c", audit.changed_paths)
+        self.assertTrue(audit.has_impl_changes)
+        self.assertEqual(audit.verdict(30, True, True), "PASS")
+
+    def test_changed_paths_ignores_wildcard_truncation(self):
+        markdown = """## Cチーム
+- 実行タスク: wildcard path
+  - SESSION_TIMER_START
+  - SESSION_TIMER_END
+  - start_epoch=300
+  - elapsed_min=40
+  - 変更ファイル:
+    - scripts/test_*.py
+    - scripts/check_c_team_submission_readiness.sh
+  - 実行コマンド: bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30
+  - pass/fail: PASS
+"""
+        audit = MOD.collect_latest_audits(markdown, ["C"])[0]
+        self.assertNotIn("scripts/test_", audit.changed_paths)
+        self.assertIn("scripts/check_c_team_submission_readiness.sh", audit.changed_paths)
 
 
 if __name__ == "__main__":

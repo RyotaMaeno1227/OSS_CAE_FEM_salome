@@ -26,7 +26,32 @@ TEAM_HEADINGS = {
 ENTRY_START_RE = re.compile(r"^- 実行タスク")
 ELAPSED_RE = re.compile(r"elapsed_min\s*[:=]\s*`?(\d+)`?")
 START_EPOCH_RE = re.compile(r"start_epoch\s*[:=]\s*`?(\d+)`?")
+END_BLOCK_RE = re.compile(
+    r"SESSION_TIMER_END(?P<body>.*?)(?=SESSION_TIMER_START|SESSION_TIMER_GUARD|SESSION_TIMER_END|$)",
+    re.DOTALL,
+)
+START_BLOCK_RE = re.compile(
+    r"SESSION_TIMER_START(?P<body>.*?)(?=SESSION_TIMER_START|SESSION_TIMER_GUARD|SESSION_TIMER_END|$)",
+    re.DOTALL,
+)
 SLEEP_RE = re.compile(r"(^|[`\s])sleep\s+\d+", re.IGNORECASE)
+BACKTICK_BLOCK_RE = re.compile(r"`([^`\n]+)`")
+TOP_FIELD_RE = re.compile(r"^\s{0,2}-\s")
+RAW_PATH_RE = re.compile(r"(?P<path>(?:FEM4C|docs|scripts|chrono-2d|data|\.github)/[A-Za-z0-9_./-]+)")
+
+# Path prefixes treated as implementation progress (not docs-only maintenance).
+IMPL_PATH_PREFIXES = (
+    "FEM4C/src/",
+    "FEM4C/scripts/",
+    "FEM4C/practice/ch09/",
+    "chrono-2d/",
+    "scripts/",
+    ".github/workflows/",
+)
+IMPL_PATH_EXACT = (
+    "FEM4C/Makefile",
+    ".github/workflows/ci.yaml",
+)
 
 
 @dataclass
@@ -38,11 +63,18 @@ class EntryAudit:
     has_end: bool
     has_sleep: bool
     has_changes: bool
+    has_impl_changes: bool
     has_commands: bool
     has_passfail: bool
+    changed_paths: list[str]
     start_epoch: int | None
 
-    def failure_reasons(self, min_elapsed: int, require_evidence: bool) -> list[str]:
+    def failure_reasons(
+        self,
+        min_elapsed: int,
+        require_evidence: bool,
+        require_impl_changes: bool,
+    ) -> list[str]:
         reasons: list[str] = []
         if not self.has_start:
             reasons.append("missing SESSION_TIMER_START")
@@ -57,16 +89,24 @@ class EntryAudit:
         if require_evidence:
             if not self.has_changes:
                 reasons.append("missing changes evidence")
+            if require_impl_changes and not self.has_impl_changes:
+                reasons.append("changes evidence does not include implementation files")
             if not self.has_commands:
                 reasons.append("missing command evidence")
             if not self.has_passfail:
                 reasons.append("missing pass/fail evidence")
         return reasons
 
-    def verdict(self, min_elapsed: int, require_evidence: bool) -> str:
-        return "PASS" if not self.failure_reasons(min_elapsed, require_evidence) else "FAIL"
+    def verdict(self, min_elapsed: int, require_evidence: bool, require_impl_changes: bool) -> str:
+        return (
+            "PASS"
+            if not self.failure_reasons(min_elapsed, require_evidence, require_impl_changes)
+            else "FAIL"
+        )
 
-    def to_dict(self, min_elapsed: int, require_evidence: bool) -> dict[str, object]:
+    def to_dict(
+        self, min_elapsed: int, require_evidence: bool, require_impl_changes: bool
+    ) -> dict[str, object]:
         return {
             "team": self.team,
             "entry": self.title,
@@ -76,10 +116,12 @@ class EntryAudit:
             "has_timer_end": self.has_end,
             "has_sleep": self.has_sleep,
             "has_changes": self.has_changes,
+            "has_impl_changes": self.has_impl_changes,
             "has_commands": self.has_commands,
             "has_passfail": self.has_passfail,
-            "verdict": self.verdict(min_elapsed, require_evidence),
-            "reasons": self.failure_reasons(min_elapsed, require_evidence),
+            "changed_paths": self.changed_paths,
+            "verdict": self.verdict(min_elapsed, require_evidence, require_impl_changes),
+            "reasons": self.failure_reasons(min_elapsed, require_evidence, require_impl_changes),
         }
 
 
@@ -120,18 +162,101 @@ def split_entries(section_lines: list[str]) -> list[list[str]]:
     return entries
 
 
-def first_elapsed(text: str) -> int | None:
-    match = ELAPSED_RE.search(text)
-    if not match:
+def extract_elapsed_min(text: str) -> int | None:
+    """Return elapsed_min using the latest SESSION_TIMER_END block.
+
+    Some entries include intermediate SESSION_TIMER_GUARD outputs with
+    elapsed_min below threshold before the final SESSION_TIMER_END value.
+    For compliance, we must evaluate the final session end value.
+    """
+    end_blocks = list(END_BLOCK_RE.finditer(text))
+    for block in reversed(end_blocks):
+        match = ELAPSED_RE.search(block.group("body"))
+        if match:
+            return int(match.group(1))
+
+    matches = list(ELAPSED_RE.finditer(text))
+    if not matches:
         return None
-    return int(match.group(1))
+    return int(matches[-1].group(1))
 
 
-def first_start_epoch(text: str) -> int | None:
-    match = START_EPOCH_RE.search(text)
-    if not match:
+def extract_start_epoch(text: str) -> int | None:
+    start_blocks = list(START_BLOCK_RE.finditer(text))
+    for block in reversed(start_blocks):
+        match = START_EPOCH_RE.search(block.group("body"))
+        if match:
+            return int(match.group(1))
+
+    matches = list(START_EPOCH_RE.finditer(text))
+    if not matches:
         return None
-    return int(match.group(1))
+    return int(matches[-1].group(1))
+
+
+def _looks_like_path(text: str) -> bool:
+    token = text.strip()
+    if " " in token:
+        return False
+    if "*" in token:
+        return False
+    if token.startswith("--"):
+        return False
+    if "/" in token:
+        base = token.rsplit("/", 1)[-1]
+        if not base:
+            return False
+        if base == "Makefile":
+            return True
+        if base.startswith("."):
+            return True
+        return "." in base
+    return token.endswith((".c", ".h", ".py", ".sh", ".md", ".yaml", ".yml", "Makefile"))
+
+
+def _normalize_path_token(token: str) -> str:
+    return token.strip().strip(".,:;)]}")
+
+
+def extract_changed_paths(lines: list[str]) -> list[str]:
+    paths: list[str] = []
+    seen: set[str] = set()
+    in_change_block = False
+    for line in lines:
+        stripped = line.strip()
+
+        if TOP_FIELD_RE.match(line):
+            if any(marker in stripped for marker in ("変更ファイル", "判定した差分ファイル", "変更対象")):
+                in_change_block = True
+            elif in_change_block:
+                in_change_block = False
+
+        if not in_change_block:
+            continue
+
+        for match in BACKTICK_BLOCK_RE.finditer(line):
+            token = _normalize_path_token(match.group(1).strip())
+            if not _looks_like_path(token):
+                continue
+            if token in seen:
+                continue
+            seen.add(token)
+            paths.append(token)
+        for match in RAW_PATH_RE.finditer(line):
+            token = _normalize_path_token(match.group("path"))
+            if not _looks_like_path(token):
+                continue
+            if token in seen:
+                continue
+            seen.add(token)
+            paths.append(token)
+    return paths
+
+
+def path_is_impl(path: str) -> bool:
+    if path in IMPL_PATH_EXACT:
+        return True
+    return any(path.startswith(prefix) for prefix in IMPL_PATH_PREFIXES)
 
 
 def audit_entry(team: str, lines: list[str]) -> EntryAudit:
@@ -144,17 +269,21 @@ def audit_entry(team: str, lines: list[str]) -> EntryAudit:
         "変更対象",
     )
     has_changes = any(marker in text for marker in changes_markers)
+    changed_paths = extract_changed_paths(lines)
+    has_impl_changes = any(path_is_impl(path) for path in changed_paths)
     return EntryAudit(
         team=team,
         title=title,
-        elapsed_min=first_elapsed(text),
+        elapsed_min=extract_elapsed_min(text),
         has_start="SESSION_TIMER_START" in text,
         has_end="SESSION_TIMER_END" in text,
         has_sleep=bool(SLEEP_RE.search(text)),
         has_changes=has_changes,
+        has_impl_changes=has_impl_changes,
         has_commands=("実行コマンド" in text or "1行再現コマンド" in text),
         has_passfail=("pass/fail" in text.lower() or "PASS" in text or "FAIL" in text),
-        start_epoch=first_start_epoch(text),
+        changed_paths=changed_paths,
+        start_epoch=extract_start_epoch(text),
     )
 
 
@@ -182,8 +311,10 @@ def collect_latest_audits(markdown: str, teams: Iterable[str]) -> list[EntryAudi
                     has_end=False,
                     has_sleep=False,
                     has_changes=False,
+                    has_impl_changes=False,
                     has_commands=False,
                     has_passfail=False,
+                    changed_paths=[],
                     start_epoch=None,
                 )
             )
@@ -193,14 +324,21 @@ def collect_latest_audits(markdown: str, teams: Iterable[str]) -> list[EntryAudi
     return audits
 
 
-def print_report(audits: list[EntryAudit], min_elapsed: int, require_evidence: bool) -> int:
+def print_report(
+    audits: list[EntryAudit],
+    min_elapsed: int,
+    require_evidence: bool,
+    require_impl_changes: bool,
+) -> int:
     print(f"AUDIT_TARGET: latest entries (A/B/C)  threshold=elapsed_min>={min_elapsed}")
     print("-" * 112)
-    print("team  verdict  elapsed  timer  sleep  changes  commands  pass/fail  start_epoch  entry")
+    print(
+        "team  verdict  elapsed  timer  sleep  changes  impl  commands  pass/fail  start_epoch  entry"
+    )
     print("-" * 112)
     failed = False
     for a in audits:
-        verdict = a.verdict(min_elapsed, require_evidence)
+        verdict = a.verdict(min_elapsed, require_evidence, require_impl_changes)
         if verdict != "PASS":
             failed = True
         timer = "ok" if (a.has_start and a.has_end) else "missing"
@@ -209,9 +347,10 @@ def print_report(audits: list[EntryAudit], min_elapsed: int, require_evidence: b
         print(
             f"{a.team:>4}  {verdict:<7}  {elapsed:>7}  {timer:<7}  "
             f"{str(a.has_sleep):<5}  {str(a.has_changes):<7}  "
-            f"{str(a.has_commands):<8}  {str(a.has_passfail):<9}  {start_epoch:>11}  {a.title}"
+            f"{str(a.has_impl_changes):<4}  {str(a.has_commands):<8}  {str(a.has_passfail):<9}  "
+            f"{start_epoch:>11}  {a.title}"
         )
-        reasons = a.failure_reasons(min_elapsed, require_evidence)
+        reasons = a.failure_reasons(min_elapsed, require_evidence, require_impl_changes)
         if reasons:
             print(f"      reasons: {', '.join(reasons)}")
     print("-" * 112)
@@ -258,6 +397,19 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         action="store_false",
         help="Skip changes/commands/pass-fail evidence checks",
     )
+    parser.add_argument(
+        "--require-impl-changes",
+        dest="require_impl_changes",
+        action="store_true",
+        default=False,
+        help="Require at least one implementation file in changed paths (default: off)",
+    )
+    parser.add_argument(
+        "--no-require-impl-changes",
+        dest="require_impl_changes",
+        action="store_false",
+        help="Disable implementation-file requirement",
+    )
     return parser.parse_args(argv)
 
 
@@ -275,7 +427,11 @@ def main(argv: list[str] | None = None) -> int:
         payload = {
             "threshold_min_elapsed": args.min_elapsed,
             "require_evidence": args.require_evidence,
-            "results": [a.to_dict(args.min_elapsed, args.require_evidence) for a in audits],
+            "require_impl_changes": args.require_impl_changes,
+            "results": [
+                a.to_dict(args.min_elapsed, args.require_evidence, args.require_impl_changes)
+                for a in audits
+            ],
         }
         payload["summary"] = {
             "all_pass": all(r["verdict"] == "PASS" for r in payload["results"]),
@@ -283,7 +439,7 @@ def main(argv: list[str] | None = None) -> int:
         }
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return 0 if payload["summary"]["all_pass"] else 1
-    return print_report(audits, args.min_elapsed, args.require_evidence)
+    return print_report(audits, args.min_elapsed, args.require_evidence, args.require_impl_changes)
 
 
 if __name__ == "__main__":
