@@ -13,6 +13,145 @@
 
 ---
 
+## 2026-02-15 / A-team (A-31 Done, A-32 In Progress)
+- Current Plan:
+  - A-32（step-log運用契約固定）を `In Progress` で継続し、acceptance serial の失敗要因トレースを運用定着させる。
+  - A-24系受入導線（serial + ci contract）の日次スモークを維持し、A-32完了条件を詰める。
+- Completed This Session:
+  - `FEM4C/scripts/run_a24_acceptance_serial.sh`:
+    - `A24_ACCEPT_SERIAL_RETRY_ON_137` / `A24_ACCEPT_SERIAL_FAKE_137_STEP` の入力契約を固定。
+    - summary に `failed_rc` を追加し、失敗要因（step/cmd/rc）を1行で追跡可能化。
+    - `A24_ACCEPT_SERIAL_STEP_LOG_DIR` を追加し、step-log 生成と `failed_log` 出力を実装。
+  - `FEM4C/scripts/test_run_a24_acceptance_serial.sh`:
+    - retry/fake-step の pass/fail ケースを追加。
+    - step-log ディレクトリ不正ケース、`failed_log` 出力ケースを追加。
+  - `FEM4C/scripts/check_ci_contract.sh` / `FEM4C/scripts/test_check_ci_contract.sh`:
+    - serial acceptance の retry/fake-step/failed_rc/step_log_dir/failed_log 契約を静的検査に追加し、負系ケースで欠落検知を固定。
+  - `FEM4C/practice/README.md` / `FEM4C/README.md`:
+    - serial acceptance の運用ノブ（retry/fake-step/step-log/summary_out）を追記。
+  - `docs/fem4c_team_next_queue.md` / `docs/abc_team_chat_handoff.md`:
+    - A-31 `Done`、A-32 `In Progress` へ更新し、先頭タスク参照を A-32 に同期。
+  - セッション証跡:
+    - `bash scripts/session_timer_guard.sh /tmp/a_team_session_20260215T160227Z_2513080.token 30` で `guard_result=pass`（`elapsed_min=30`）を確認。
+    - `scripts/session_timer.sh end /tmp/a_team_session_20260215T160227Z_2513080.token` で `elapsed_min=30` を確定。
+  - 受入再確認:
+    - `make -C FEM4C mbd_a24_acceptance_serial_test` PASS
+    - `make -C FEM4C mbd_a24_acceptance_serial` PASS
+    - `make -C FEM4C mbd_ci_contract_test` PASS
+  - 監査:
+    - `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30 --teams A` → PASS
+- Next Actions:
+  - A-32 を継続し、`A24_ACCEPT_SERIAL_STEP_LOG_DIR` の境界ケース（権限/既存ファイル衝突）と期待失敗メッセージを追加固定する。
+  - A-32 完了後は Auto-Next で次の Aタスクを `In Progress` に遷移し、同一導線の回帰契約を維持する。
+- Open Risks/Blockers:
+  - A/B/C 共通の巨大 dirty worktree が継続しており、コミット時は A-team 対象パス限定 staging が必須。
+  - `mbd_ci_contract_test` は B系契約も同時検証するため、他チームの in-flight 変更影響を受ける可能性がある。
+
+## 2026-02-15 / A-team (A-30 Done, A-31 In Progress)
+- Current Plan:
+  - A-30（A-24 serial acceptance導線の運用固定）を完了し、Auto-Next の A-31（失敗要因トレース契約固定）へ移行する。
+  - 30分セッションの証跡（guard/end）を `team_status` へ原文転記し、受入3コマンドを PASS で固定する。
+- Completed This Session:
+  - `FEM4C/scripts/run_a24_acceptance_serial.sh` に `A24_ACCEPT_SERIAL_RETRY_ON_137`（0/1）と `failed_rc` を追加。`A24_ACCEPT_SERIAL_SUMMARY` で `failed_step/failed_cmd/failed_rc` を固定出力。
+  - `FEM4C/scripts/test_run_a24_acceptance_serial.sh` を拡張し、invalid retry knob（`A24_ACCEPT_SERIAL_RETRY_ON_137=2`）負系を追加。
+  - `FEM4C/scripts/check_ci_contract.sh` / `FEM4C/scripts/test_check_ci_contract.sh` に serial acceptance の `retry_knob` / `retry_validation` / `failed_rc` / retry-knob-case 契約を追加。
+  - `docs/fem4c_team_next_queue.md` を更新し、A-30 を `Done`、A-31 を `In Progress` に変更。
+  - `docs/abc_team_chat_handoff.md` の A-team 先頭参照を A-31 ベースへ同期。
+  - 検証: `make -C FEM4C mbd_a24_acceptance_serial_test` / `make -C FEM4C mbd_a24_acceptance_serial` / `make -C FEM4C mbd_ci_contract_test` がすべて PASS。
+  - セッションタイマー証跡: `session_timer_guard` は `guard_result=pass`（`elapsed_min=31`）、`session_timer.sh end` は `elapsed_min=31` を確認。
+- Next Actions:
+  - A-31 を継続し、serial acceptance の retry/failure-trace 契約を README/運用導線に最小同期する。
+  - `make -C FEM4C mbd_a24_acceptance_serial_test` と `make -C FEM4C mbd_ci_contract_test` を日次受入の最小セットとして維持する。
+- Open Risks/Blockers:
+  - ワークツリーに他チーム由来の大規模差分が残存しているため、コミット時は Aチーム対象パス限定の staging が必須。
+  - `mbd_a24_*` 系は `make clean` や実行順の影響を受けやすいため、直列実行契約（parallel禁止）を継続運用する必要がある。
+
+## 2026-02-15 / B-team (B-24 Done, B-25 In Progress)
+- Current Plan:
+  - B-24（自己テスト temp-copy 衝突回避契約）を Done 化し、Auto-Next の B-25（temp-copy ディレクトリノブ契約）を `In Progress` で継続する。
+  - 受入は `mbd_ci_contract_test` / `mbd_b8_regression_test` の2本を維持し、B-25 の追加ノブはスポット確認で前進させる。
+- Completed This Session:
+  - `test_run_b8_regression.sh` / `test_run_b8_regression_full.sh` / `test_run_b8_guard_contract.sh` の temp-copy を `temp_copy_stamp` 付き `mktemp` へ固定し、B-24 の衝突回避契約を完了。
+  - `check_ci_contract.sh` / `test_check_ci_contract.sh` に `b8_*_temp_copy_marker` / `b8_*_temp_copy_stamp_marker` 契約を同期し、欠落時 fail を自己テストで固定。
+  - B-25前進として `B8_TEST_TMP_COPY_DIR`（既定/存在/書込チェック）を B-8自己テストへ実装。
+  - temp-copy を任意ディレクトリへ置いても実行できるよう、`run_b8_regression*.sh` / `run_b8_guard_contract.sh` に `FEM4C_REPO_ROOT` override を追加。
+  - `docs/fem4c_team_next_queue.md` を更新し、B-24 を `Done`、B-25 を `In Progress` に遷移。`docs/abc_team_chat_handoff.md` の B 先頭参照を B-25 へ同期。
+- Next Actions:
+  - B-25 を継続し、`B8_TEST_TMP_COPY_DIR` を付与した `mbd_b8_regression_test` 経路の再現安定性を詰める（必要なら wrapper 経路の環境伝播を追加固定）。
+  - `practice/README.md` の B-8運用節を最終同期し、ノブ利用時の推奨コマンドを1行化する。
+  - 次セッション開始時は `docs/fem4c_team_next_queue.md` の B-25 先頭から再開する。
+- Open Risks/Blockers:
+  - `B8_TEST_TMP_COPY_DIR` を wrapper nested make へ漏らさない隔離を追加したが、`make -C FEM4C mbd_b8_regression_test` の長い自己テスト連鎖では環境依存の一過性揺らぎが再発する可能性があるため監視を継続する。
+  - リポジトリ全体の巨大 dirty 差分が継続しているため、Bチーム対象ファイル限定の staging を維持する必要がある。
+
+## 2026-02-15 / B-team
+- Current Plan:
+  - B-23 を完了扱いに更新し、Auto-Next の B-24（自己テスト一時ファイル衝突回避の静的契約化）を `In Progress` で継続する。
+  - 日次受入は `mbd_ci_contract_test` + `mbd_b8_regression_test` を正本として維持し、`mbd_b8_regression` の再入不安定性を切り分ける。
+- Completed This Session:
+  - `test_run_b8_regression.sh` / `test_run_b8_regression_full.sh` / `test_run_b8_guard_contract.sh` の失敗経路 temp-copy を固定名から `mktemp` 一意名へ変更。
+  - `check_ci_contract.sh` / `test_check_ci_contract.sh` に temp-copy 再入契約を追加:
+    - `b8_regression_test_temp_copy_marker`
+    - `b8_full_test_temp_copy_marker`
+    - `b8_guard_contract_test_temp_copy_marker`
+  - `docs/fem4c_team_next_queue.md` を更新し、B-23 を `Done`、B-24 を `In Progress` へ遷移。
+  - `docs/abc_team_chat_handoff.md` を B-24 先頭参照へ同期。
+  - 検証: `make -C FEM4C mbd_ci_contract_test` / `make -C FEM4C mbd_b8_regression_test` / `make -C FEM4C test` は PASS。
+  - セッションタイマー証跡: `session_timer_guard` は `guard_result=pass`（`elapsed_min=30`）、`session_timer.sh end` は `elapsed_min=30` を確認。
+- Next Actions:
+  - B-24 を継続し、`make -C FEM4C mbd_b8_regression` 実行時に稀発する `test_check_ci_contract.sh` 構文エラー停止の再現条件を切り分ける。
+  - `mbd_ci_contract_test` と `mbd_b8_regression_test` の PASSを日次の受入導線として維持する。
+- Open Risks/Blockers:
+  - `make -C FEM4C mbd_b8_regression` で `mbd_ci_contract_test` 実行中に `scripts/test_check_ci_contract.sh` が稀に構文エラー停止する事象があり、再入不安定性が残る。
+  - ワークツリーに他チーム差分が大量に存在するため、コミット時は Bチーム対象ファイルの限定 staging が必須。
+
+## 2026-02-15 / B-team
+- Current Plan:
+  - B-22 を受入完了し、B-8 guard の静的契約（既定ターゲット/再帰make隔離）を固定する。
+  - 同一セッションで Auto-Next として B-23 を `In Progress` 化し、`mbd_b8_regression_test` の再入安定化を継続する。
+- Completed This Session:
+  - `FEM4C/scripts/check_ci_contract.sh` / `FEM4C/scripts/test_check_ci_contract.sh` に B-22/B-23 契約を追加:
+    - `b8_guard_local_target_default`
+    - `b8_guard_test_makeflags_case_marker`
+    - `b8_regression_b14_target_default`
+    - `b8_regression_b14_target_pass_through`
+    - `b8_regression_makeflags_isolation`
+  - `FEM4C/scripts/run_b8_regression.sh` を更新し、再帰makeで `env -u MAKEFLAGS -u MFLAGS` を適用。既定 `B8_B14_TARGET=mbd_ci_contract` で軽量連結を固定。
+  - `FEM4C/scripts/test_run_b8_regression.sh` を拡張し、既定B14ターゲット検証と `MAKEFLAGS/MFLAGS` 隔離の自己テストを追加。
+  - `FEM4C/scripts/test_run_b8_guard.sh` に `MAKEFLAGS/MFLAGS` 隔離ケースを追加。
+  - `FEM4C/practice/README.md` / `FEM4C/README.md` を更新し、B-8運用ノブ既定値と隔離契約を同期。
+  - `docs/fem4c_team_next_queue.md` で B-22 を `Done`、B-23 を `In Progress` へ更新。`docs/abc_team_chat_handoff.md` のB先頭タスク参照を `B-23` へ更新。
+  - セッションタイマー証跡を更新し、`session_timer_guard` は `guard_result=pass`（`elapsed_min=30`）、`session_timer.sh end` は `elapsed_min=30` を確認。
+  - 検証:
+    - `make -C FEM4C mbd_ci_contract_test` PASS
+    - `make -C FEM4C mbd_b8_regression_test` PASS
+    - `make -C FEM4C mbd_b8_regression_full_test` PASS
+    - `make -C FEM4C mbd_b8_guard_test` PASS
+- Next Actions:
+  - B-23 を継続し、`mbd_b8_regression_test` の連続実行安定性を日次運用（静的契約 + ローカル回帰）で監視する。
+  - B-8 wrapper の軽量経路既定（`B8_B14_TARGET=mbd_ci_contract`）を維持しつつ、必要時の重経路切替（`mbd_b14_regression`）手順を運用文面へ明確化する。
+- Open Risks/Blockers:
+  - ワークツリー全体に他チーム由来の大規模差分/未追跡ファイルが残存しており、コミット時は B チーム対象パス限定の staging が必須。
+  - `test_run_b8_regression.sh` は連続実行時に稀に不安定化するため、日次受入は `mbd_ci_contract_test` + `mbd_b8_regression_test` の組を正本にし、必要時のみ自己テストをスポット確認する。
+
+## 2026-02-14 / B-team
+- Current Plan:
+  - B-21 を `Done` 化し、B-8ノブマトリクスの smoke 入口を安定運用へ固定する。
+  - 続けて B-22（B-8 guard 安定化の静的契約固定）を `In Progress` で進める。
+- Completed This Session:
+  - `FEM4C/Makefile` と `FEM4C/scripts/run_b8_guard.sh` の B-8 guard 既定を `B8_LOCAL_TARGET=mbd_checks` に統一。
+  - `run_b8_guard.sh` に `env -u MAKEFLAGS -u MFLAGS` を導入し、再帰 make の環境干渉を抑制。
+  - `FEM4C/scripts/test_run_b8_guard_contract.sh` の基準ケースを `B8_B14_TARGET=mbd_ci_contract` に寄せ、wrapper自己テストを安定化。
+  - `FEM4C/scripts/check_ci_contract.sh` / `FEM4C/scripts/test_check_ci_contract.sh` に `mbd_b8_local_target_default` と `b8_guard_makeflags_isolation` 契約チェックを追加。
+  - `docs/fem4c_team_next_queue.md` を更新し、B-21 を `Done`、B-22 を `In Progress` に遷移。
+  - 検証: `make -C FEM4C mbd_ci_contract_test` / `make -C FEM4C mbd_b8_regression_test` / `make -C FEM4C mbd_b8_knob_matrix_smoke_test` / `make -C FEM4C mbd_b8_guard_contract_test` を PASS。
+- Next Actions:
+  - B-22 の受入条件に合わせ、README の運用文面を最終同期して `mbd_ci_contract_test` 契約監視の運用手順を固定する。
+  - `make -C FEM4C mbd_b8_regression_test` を日次回帰で継続観測し、B-8 guard/B-14連結の不安定化再発を監視する。
+- Open Risks/Blockers:
+  - `scripts/session_timer_guard.sh`（30分基準）は `guard_result=block`（`elapsed_min=19`）となっており、30分基準の厳格運用では再提出が必要。
+  - ワークツリーに他チーム由来の大規模差分が多く残っているため、コミット時は B チーム対象パス限定の staging が必須。
+
 ## 2026-02-06 / PM
 - Current Plan:
   - FEM4C のビルド安定化を維持しつつ、FEM整理とMBD移植を段階実装する。
@@ -1476,3 +1615,338 @@
 - Open Risks/Blockers:
   - 外部CI未接続期間が長いと、workflow実行時固有の不具合検知が遅れる可能性がある（節目スポット確認で緩和）。
   - ローカル検証のみで「十分」と誤解されるリスクがあるため、スポット確認未実施時の記録ルールを維持する必要がある。
+
+## 2026-02-09 / PM-3 (A-21 Completed, A-22 Open)
+- Current Plan:
+  - `A-21` を完了し、`mbd_ci_contract` が `integrator_fallback/time_fallback` と `*_source_status` 欠落を静的検知できる状態に固定する。
+  - 次タスクとして `A-22`（MBD時間ステップ実行トレース固定）を起票し、Aチームが反復検証に逃げず実装を継続できるキューを維持する。
+- Completed This Session:
+  - `FEM4C/scripts/check_ci_contract.sh` を更新し、source-status（default/cli/env_fallback）と fallback マーカーの静的チェックを追加。
+  - `FEM4C/scripts/test_check_ci_contract.sh` を更新し、source-status 欠落時の fail 経路自己テストを追加・修正。
+  - 検証: `make -C FEM4C mbd_ci_contract` / `make -C FEM4C mbd_ci_contract_test` を実行し PASS。
+  - `docs/fem4c_team_next_queue.md` を更新し、A-21 `Done`・A-22 `In Progress` へ更新。
+- Next Actions:
+  - A-22 実装（`--mode=mbd --mbd-steps` の実行トレースをログ/出力へ固定）を実施する。
+  - B-15/C-20 の進捗監査を実施し、30分連続実装の未達理由を `blocker 3点セット` で明文化させる。
+- Open Risks/Blockers:
+  - リポジトリ全体は引き続き大規模 dirty 差分のため、混在コミットリスクが高い。
+  - 30分運用下でタスク粒度が粗い場合、反復検証に偏る再発リスクがある（A-22のような実装中心タスクを常時先頭に維持する）。
+
+## 2026-02-09 / C-team (C-21 Done, C-22 In Progress)
+- Current Plan:
+  - C-21（strict-safe 監査既定化）を完了し、`pass_section_freeze_timer_safe` と `check_c_team_submission_readiness.sh` を既定運用として固定する。
+  - 続けて C-22（dry-run 記録ブロック自動生成）を `In Progress` で継続し、`team_status` 転記ミスを機械的に抑止する。
+- Completed This Session:
+  - `scripts/audit_c_team_staging.py` を更新し、`safe_stage_command` を行頭キーとして抽出、`git add` 形式必須（`safe_stage_command_not_git_add`）を追加した。
+  - `scripts/check_c_stage_dryrun_report.py` を更新し、`safe_stage_command` の `git add` 形式および `safe_stage_targets` との一致を検査するようにした。
+  - `scripts/render_c_stage_team_status_block.py` / `scripts/test_render_c_stage_team_status_block.py` を追加し、dry-run ログから `team_status` 用 markdown ブロックを自動生成できるようにした。
+  - `scripts/run_c_team_staging_checks.sh` に render step を追加し、進捗表示を `[0/9]..[9/9]` へ同期した。
+  - `scripts/session_timer.sh end /tmp/c_team_session_20260209T092046Z_6004.token` を再取得して `elapsed_min=30` を確定、`bash scripts/session_timer_guard.sh ... 30` で `guard_result=pass` を確認した。
+  - `docs/team_status.md` に timer生出力・dry-run 生値（`dryrun_result`/`safe_stage_command`）・コマンド結果を反映し、`pass/fail: PASS` へ更新した。
+  - `docs/fem4c_team_next_queue.md` を更新し、C-21 を `Done`、C-22 を `In Progress` へ遷移した。
+  - `docs/fem4c_dirty_diff_triage_2026-02-06.md` を更新し、Section 19 を Done 化、Section 20（C-22）を追加した。
+- Next Actions:
+  - C-22 を継続し、`render_c_stage_team_status_block.py` の出力を C-team 報告テンプレに完全統合する。
+  - C-22 の受入（生成ブロックを貼った最新C報告で strict-safe PASS 維持）を満たしたら `Done` 化し、次の Auto-Next を起票する。
+  - `scripts/check_c_team_submission_readiness.sh docs/team_status.md 30` を提出前ゲートとして毎回実行する。
+- Open Risks/Blockers:
+  - リポジトリ全体は引き続き巨大 dirty 差分状態で、混在ステージングの誤操作リスクが高い。
+  - `scripts/__pycache__/` が untracked で残っているため、staging 時に混入しないよう `safe_stage_command` のみを使用する運用を継続する必要がある。
+
+## 2026-02-09 / B-team (B-17 Done, B-18 In Progress)
+- Current Plan:
+  - B-17（B-8フル回帰ラッパー運用固定）を受入条件どおりに完了し、B-8日次運用を1コマンド再現できる状態を維持する。
+  - 同一セッションで Auto-Next の B-18 に遷移し、回帰ラッパーの運用ノブ（B-14連結有無）を固定する。
+- Completed This Session:
+  - `make -C FEM4C mbd_b8_regression` / `mbd_b8_regression_full` / `mbd_b8_regression_test` / `mbd_b8_regression_full_test` を実行し、B-17受入条件を満たす PASS 証跡を取得。
+  - `FEM4C/scripts/run_b8_regression.sh` と `FEM4C/scripts/run_b8_regression_full.sh` に `B8_MAKE_CMD` / `B8_RUN_B14_REGRESSION` を追加し、B-14連結有無を切替可能化。
+  - `FEM4C/scripts/test_run_b8_regression.sh` に `B8_RUN_B14_REGRESSION=0` 分岐の自己テストを追加。
+  - `FEM4C/scripts/test_run_b8_regression_full.sh` の fail-fast 検証置換を更新し、欠落ターゲット検知を維持。
+  - `scripts/session_timer_guard.sh /tmp/b_team_session_20260209T092808Z_29370.token 30` で `guard_result=pass` を確認し、`scripts/session_timer.sh end ...` で `elapsed_min=30` を確定。
+- Next Actions:
+  - B-18 を継続し、README運用文言と契約静的検査の追加要否を確定して受入まで仕上げる。
+  - B-8日次運用は run_id 日次共有不要の現行方針（静的保証 + ローカル回帰）を維持し、必要時のみスポット照会を実施する。
+  - 次セッション開始時は `docs/fem4c_team_next_queue.md` の B-18 から再開し、完了後に次 Auto-Next を起票する。
+- Open Risks/Blockers:
+  - blockerなし（次タスク `B-18` は `In Progress` で継続）。
+
+## 2026-02-09 / PM-3 (Progress Audit + Dispatch Sync)
+- Current Plan:
+  - 各チーム最新報告を監査し、30分要件・実装前進・staging監査の充足状況を確認する。
+  - 次ディスパッチ文面と handoff/queue の先頭タスク参照を一致させる。
+- Completed This Session:
+  - 監査結果: A=FAIL（elapsed 14）, B=PASS（30）, C=PASS（30）。
+  - `docs/fem4c_team_next_queue.md` を更新し、PM固定優先を A-24 / B-18 / C-22 に同期。
+  - `docs/abc_team_chat_handoff.md` と `docs/fem4c_team_dispatch_2026-02-06.md` の先頭タスク・指示文を最新化。
+  - `python scripts/check_doc_links.py docs/abc_team_chat_handoff.md docs/fem4c_team_next_queue.md docs/fem4c_team_dispatch_2026-02-06.md` で PASS を確認。
+- Next Actions:
+  - Aチームへ A-24 継続指示（`elapsed_min>=30` + `session_timer_guard pass` を必須）を送信。
+  - B/Cチームへ B-18/C-22 継続指示を送信し、Done後は Auto-Next へ遷移させる。
+- Open Risks/Blockers:
+  - Aチームの最新 `team_status` が A-20時点で止まっており、queue進捗との整合が不足している。
+  - 全体 dirty 差分が大きく、タスク外ファイルの混在コミットリスクが継続している。
+
+## 2026-02-09 / PM-3 (A-26 Batch Summary Output Contract)
+- Current Plan:
+  - A-26（A24 batch契約ログ固定）を実装で前進させ、日次報告で再利用できる summary 出力契約を追加する。
+  - 追加契約を self-test と static contract に反映し、退行検知できる状態で固定する。
+- Completed This Session:
+  - `run_a24_batch.sh` に `A24_BATCH_SUMMARY_OUT` を追加し、`A24_BATCH_SUMMARY ...` 行のファイル出力を実装。
+  - `test_run_a24_batch.sh` を更新し、summary出力ファイルの一致検証（pass/fail/lock）と lock分離（ユニーク lock dir）を追加。
+  - `check_ci_contract.sh` / `test_check_ci_contract.sh` に `a24_batch_summary_out_marker` 契約と欠落時fail経路を追加。
+  - `practice/README.md` に summary file 出力の運用コマンドを追記。
+  - 検証: `mbd_a24_batch_test` / `mbd_ci_contract` / `mbd_ci_contract_test` / 手動実行（summary file 出力）をすべて PASS。
+- Next Actions:
+  - queue の A-26 状態を再評価し、必要なら A-27（summary消費側の運用固定）を起票する。
+  - B/C の pending 記録復旧（TO_FILL / <pending>）対応を継続監査する。
+- Open Risks/Blockers:
+  - 既存の巨大 dirty 差分により、タスク外ファイル混在コミットのリスクは継続。
+  - `team_status` には B/C の未確定報告（`TO_FILL`, `<pending>`）が残っており、運用監査は引き続き FAIL になる。
+
+## 2026-02-14 / C-team (C-24 Done, C-25 In Progress)
+- Current Plan:
+  - C-24（セッション記録雛形自動生成）を完了状態へ引き上げ、strict-safe 証跡（guard/end/dry-run/safe_stage）を 1 コマンドで収集できる運用を固定する。
+  - C-25（token-missing 復旧半自動化）を着手し、旧エントリ無効化と再実行セッション遷移を機械化する。
+- Completed This Session:
+  - `scripts/render_c_team_session_entry.py` に `--timer-guard-file` / `--collect-timer-guard` / `--guard-minutes` / `--timer-guard-output` / `--c-stage-dryrun-log` を追加し、guard証跡と dry-run コマンド証跡を雛形へ出力可能にした。
+  - `scripts/collect_c_team_session_evidence.sh` を追加・拡張し、`dryrun -> guard -> end -> entry render -> (optional) team_status append -> (optional) strict-safe check` を一括化した。
+  - `scripts/append_c_team_entry.py`、`scripts/mark_c_team_entry_token_missing.py`、`scripts/recover_c_team_token_missing_session.sh` を追加し、C-25向け復旧導線を実装した。
+  - 旧 `C-22/C-23/C-24` エントリ（`start_epoch=1770633024`）へ `mark_c_team_entry_token_missing.py` を適用し、`token missing` 無効化を反映した。
+  - 現セッション token（`/tmp/c_team_session_20260214T150652Z_88302.token`）で `guard_result=pass`（`elapsed_min=30`）を達成し、`collect_c_team_session_evidence.sh` で timer end/dry-run/entry 追記を確定した。
+  - 最終受入チェックとして `check_c_team_dryrun_compliance.sh ... pass_section_freeze_timer_safe` と `check_c_team_submission_readiness.sh docs/team_status.md 30` を PASS させた。
+  - 回帰追加: `test_render_c_team_session_entry.py` / `test_collect_c_team_session_evidence.py` / `test_append_c_team_entry.py` / `test_mark_c_team_entry_token_missing.py` / `test_recover_c_team_token_missing_session.py` / `test_check_c_team_dryrun_compliance.py` / `test_check_c_team_submission_readiness.py` を更新し PASS を確認した。
+  - ドキュメント同期: `docs/fem4c_team_next_queue.md`（C-24 Done, C-25 In Progress）, `docs/fem4c_dirty_diff_triage_2026-02-06.md`, `docs/team_runbook.md`, `docs/abc_team_chat_handoff.md`, `docs/fem4c_team_dispatch_2026-02-06.md` を更新した。
+- Next Actions:
+  - C-25 を継続し、`recover_c_team_token_missing_session.sh` を実報告運用へ組み込む手順（復旧→新規セッション→strict-safe）を定型化する。
+  - `collect_c_team_session_evidence.sh` のカスタム出力（done/in-progress/command/pass-fail）を dispatch テンプレにも反映し、毎回の手編集をさらに削減する。
+  - 次セッション開始時は `docs/fem4c_team_next_queue.md` の C-25 から再開し、完了後に次 Auto-Next を起票する。
+- Open Risks/Blockers:
+  - blockerなし（`elapsed_min=30`, `guard_result=pass`, strict-safe PASS を確認済み）。
+  - リポジトリ全体は巨大 dirty 差分状態のため、引き続き safe staging（`c_stage_dryrun` + `safe_stage_command`）運用が必須。
+
+## 2026-02-14 / A-team (A-26 Done, A-27 In Progress)
+- Current Plan:
+  - A-26（batch契約ログ固定）を完了し、A-27（full/batch競合監視固定）を `In Progress` として継続する。
+  - `mbd_a24_batch_test` / `mbd_a24_regression_test` / `mbd_a24_regression_full_test` の3コマンドで受入証跡を固定する。
+- Completed This Session:
+  - `run_a24_batch.sh` に `A24_BATCH_SUMMARY` の固定出力と `A24_BATCH_SUMMARY_OUT` の同報出力を実装。
+  - lock運用を `lock_pid_file` 付きに変更し、stale lock 自動回収（pid欠落/死活不在）を追加。
+  - `run_a24_regression_full.sh` / `run_a24_batch.sh` に `MAKEFLAGS=-j1` を導入して nested clean/build 競合を抑止。
+  - `test_run_a24_batch.sh` を拡張し、expected fail / missing-summary / stale-lock recovery / lock-held の自己テストを追加。
+  - `check_ci_contract.sh` / `test_check_ci_contract.sh` に batch契約の追加静的チェック（lock pid / stale recovery marker / summary_out / serial makeflags）を追加。
+  - `docs/fem4c_team_next_queue.md` を更新し、A-26 を `Done`、A-27 を `In Progress` へ遷移。
+- Next Actions:
+  - A-27として full/batch wrapper の競合検出ログ（失敗ステップと原因）を運用ログへ固定する。
+  - rogue make残留が起きた場合の fail-fast 診断導線を wrapper self-test 側へ追加する。
+  - A-27 受入コマンドを `team_status` に反映し、queue の Auto-Next を維持する。
+- Open Risks/Blockers:
+  - 残留 `make -C FEM4C ...` プロセスがあると clean/build/run が干渉し、`Permission denied` / `No such file or directory` が断続的に発生する。
+  - 現在のリポジトリは広範囲に dirty 差分があるため、担当外ファイル混在ステージのリスクが継続している。
+
+## 2026-02-14 / B-team (B-20 Done, B-21 In Progress)
+- Current Plan:
+  - B-20 を受入完了まで固定し、B-21（ノブマトリクスのスモーク入口固定）へ同一セッションで遷移する。
+  - 受入コマンドは `mbd_b8_knob_matrix_test` / `mbd_b8_regression_test` / `mbd_ci_contract_test` の3本を維持する。
+- Completed This Session:
+  - `FEM4C/scripts/test_b8_knob_matrix.sh` を拡張し、通常回帰 + full回帰の `0|1|invalid knob|invalid make` を検証可能化。
+  - `FEM4C/scripts/check_ci_contract.sh` に B-8ノブマトリクス（通常/full）の静的契約チェックを追加。
+  - `FEM4C/scripts/test_check_ci_contract.sh` に B-8ノブマトリクス契約の failケースを追加し、既存 `sed` パターンの `$` エスケープ不備を修正して自己テストを安定化。
+  - B-21 着手として `B8_KNOB_MATRIX_SKIP_FULL=0|1` を追加し、`make -C FEM4C mbd_b8_knob_matrix_smoke_test` を新設（PASS）。
+  - `docs/fem4c_team_next_queue.md` を更新し、B-20 を Done、B-21 を In Progress へ更新。
+- Next Actions:
+  - B-21 の受入要件（smoke入口の静的契約固定）を詰め、次セッションで Done 化を狙う。
+  - `mbd_b8_knob_matrix_smoke_test` の契約を `test_check_ci_contract.sh` 側の failケースまで拡張する。
+- Open Risks/Blockers:
+  - blockerなし（`session_timer_guard` は `elapsed_min=30` で `guard_result=pass`、`session_timer.sh end` も取得済み）。
+
+## 2026-02-14 / PM-3 (Audit Elapsed Extraction Fix)
+- Current Plan:
+  - 受入監査の `elapsed_min` 誤判定（途中 `SESSION_TIMER_GUARD` 値を採用）を解消し、最新A/B/C判定の整合を回復する。
+- Completed This Session:
+  - `scripts/audit_team_sessions.py` を修正し、`SESSION_TIMER_END` ブロックの `elapsed_min` を優先して抽出するように更新。
+  - フォールバックとして `elapsed_min` の最終出現値を採用する処理を追加。
+  - `scripts/test_audit_team_sessions.py` に guard->end 競合ケースの回帰テストを追加。
+  - 検証:
+    - `python -m unittest -v scripts/test_audit_team_sessions.py` -> PASS
+    - `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30` -> PASS（A=31 / B=30 / C=30）
+- Next Actions:
+  - 次回受入時は `run_team_audit.sh` 出力を正本にして、途中 guard 値による誤差分を排除する。
+  - A-27 / B-21 / C-25 の継続受入で同監査を適用する。
+- Open Risks/Blockers:
+  - `team_status.md` のエントリ内に複数セッションが混在した場合は、`start_epoch` とエントリ境界の整合監査が引き続き必要。
+  - リポジトリ全体の巨大 dirty 差分は継続しており、混在コミットリスクは残る。
+
+## 2026-02-14 / A-team (A-27 Done, A-28 In Progress)
+- Current Plan:
+  - A-27（A-24 full/batch導線の競合監視固定）を受入完了し、同一セッションで A-28（retry契約強化）へ遷移する。
+  - 受入は `mbd_a24_regression_test` / `mbd_a24_regression_full_test` / `mbd_a24_batch_test` を直列で固定し、A24 wrapper 契約の安定性を確認する。
+- Completed This Session:
+  - `run_a24_batch.sh` に `failed_cmd` を追加し、失敗時の対象コマンドを要約ログで追跡可能化。
+  - `run_a24_batch.sh` に `A24_BATCH_RETRY_ON_137`（0/1）を追加し、`rc=137` の一時失敗を1回だけ再試行できる契約を実装。
+  - `run_a24_regression_full.sh` に `A24_FULL_RETRY_ON_137`（0/1）を追加し、clean/build/regression の各ステップで `rc=137` の1回再試行を実装。
+  - `test_run_a24_batch.sh` / `test_run_a24_regression_full.sh` に retry knob 範囲外（`2`）の設定異常系を追加し、summary付き fail を自己テスト化。
+  - `check_ci_contract.sh` / `test_check_ci_contract.sh` に full/batch retry knob の静的契約チェックと fail ケースを追加。
+  - `practice/README.md` に `A24_FULL_RETRY_ON_137` / `A24_BATCH_RETRY_ON_137` の運用例を追記。
+  - `docs/fem4c_team_next_queue.md` を更新し、A-27 `Done` / A-28 `In Progress` へ遷移。
+- Next Actions:
+  - A-28 を継続し、`rc=137` リトライが発生したケースの運用ログ再利用（報告テンプレ化）を追加する。
+  - A24 wrapper の retry 契約を `team_status` の定型出力へ統合し、PASS/FAIL根拠を1ブロックで貼れる状態にする。
+  - 次セッションは `docs/fem4c_team_next_queue.md` の A-28 先頭から再開する。
+- Open Risks/Blockers:
+  - `mbd_a24_batch_test` は環境負荷により断続的に `rc=137` が発生することがあり、retry 1回で吸収できない場合は fail するリスクが残る。
+  - リポジトリ全体は巨大 dirty 差分状態のため、担当外ファイル混在ステージのリスクが継続している。
+
+## 2026-02-14 / C-team (C-27 Done, C-28 In Progress)
+- Current Plan:
+  - C-27（token-missing 復旧報告のテンプレ整合監査強化）を完了し、C-28（preflight 認証ログ固定）を `In Progress` で継続する。
+  - strict-safe/readiness 失敗時に `team_status` を汚染しない preflight 運用を既定化し、報告差し戻しを減らす。
+- Completed This Session:
+  - `scripts/audit_c_team_staging.py` の template placeholder 検知を `<記入>` 固定から汎用トークン検知へ拡張し、`<PASS|FAIL>` など判定未確定残骸も FAIL 化した。
+  - `scripts/collect_c_team_session_evidence.sh` を更新し、validation用 `team_status` への preflight 監査（`preflight_mode` / `preflight_team_status` / `preflight_result` 出力）を追加、PASS時のみ本番 `team_status` を更新するようにした。
+  - `scripts/check_c_team_collect_preflight_report.py` と `scripts/test_check_c_team_collect_preflight_report.py` を追加し、collect 出力の preflight 契約を機械検証可能にした。
+  - 回帰更新: `test_collect_c_team_session_evidence.py`, `test_check_c_team_dryrun_compliance.py`, `test_check_c_team_submission_readiness.py`, `test_audit_c_team_staging.py`, `test_recover_c_team_token_missing_session.py`。
+  - ドキュメント同期: `docs/fem4c_team_next_queue.md`（C-27 Done/C-28 In Progress）, `docs/fem4c_dirty_diff_triage_2026-02-06.md`, `docs/team_runbook.md`, `docs/abc_team_chat_handoff.md`, `docs/fem4c_team_dispatch_2026-02-06.md` を更新した。
+- Next Actions:
+  - C-28 を継続し、collect/recover 出力ログの preflight 判定を `team_status` 監査フロー（提出前チェック）へ接続する。
+  - `check_c_team_collect_preflight_report.py` を `run_c_team_staging_checks.sh` 連携対象へ昇格するか評価し、必要なら Auto-Next で実装する。
+  - 次セッション開始時は `docs/fem4c_team_next_queue.md` の C-28 先頭から再開する。
+- Open Risks/Blockers:
+  - blocker なし（本セッションは `elapsed_min=31`、`guard_result=pass`、strict-safe/readiness PASS を確認）。
+  - `c_stage_dryrun` の safe targets は依然として高リスク3ファイル中心のため、C-28 完了時に preflight ログとの整合運用を追加で見直す余地がある。
+
+## 2026-02-15 / A-team (A-28 Done, A-29 In Progress)
+- Current Plan:
+  - A-28 を Done 化し、A-29（A-24 self-test導線の実行安定化）を In Progress で継続する。
+  - 受入コマンド `mbd_a24_regression_full_test` / `mbd_a24_batch_test` / `mbd_ci_contract_test` の3本を直列PASSで維持する。
+- Completed This Session:
+  - `run_a24_regression.sh` に `A24_RUN_CONTRACT_TEST`（0/1）を導入し、wrapper-focused 実行時に nested `mbd_ci_contract_test` をスキップ可能化（既定は実行）。
+  - `test_run_a24_regression.sh` を拡張し、`A24_RUN_CONTRACT_TEST=2` の設定異常系（non-zero/エラーメッセージ）を自己テスト化。
+  - `test_run_a24_regression_full.sh` / `test_run_a24_batch.sh` を `A24_RUN_CONTRACT_TEST=0` で実行するよう更新し、full/batch wrapper の自己テスト再現性を安定化。
+  - `test_run_a24_batch.sh` / `test_run_a24_regression_full.sh` へ retry網羅ケースを追加（batch: `regression_test`/`regression_full_test`, full: `build`/`regression` の `rc=137`）。
+  - `check_ci_contract.sh` / `test_check_ci_contract.sh` に `A24_RUN_CONTRACT_TEST` ノブ契約（marker/validation/skip marker）の静的検査と fail ケースを追加。
+  - `run_a24_regression.sh` に `A24_REGRESSION_SUMMARY` / `A24_REGRESSION_SUMMARY_OUT` を追加し、`failed_step` / `failed_cmd` を含む1行トレースを固定。
+  - `run_a24_regression.sh` の各 `make` 実行を `env -u MAKEFLAGS -u MFLAGS` で隔離し、親 `MAKEFLAGS` 混入による自己テスト不安定化を抑止。
+  - `test_run_a24_regression.sh` を拡張し、baseline/fail/config-fail で `A24_REGRESSION_SUMMARY` 契約を検証する自己テストを追加。
+  - `check_ci_contract.sh` / `test_check_ci_contract.sh` に A-24 regression の summary/isolation 契約チェックを追加。
+  - `test_check_ci_contract.sh` に A-24 regression の `makeflags-isolation` / `summary` / `summary_out` marker 欠落時の fail ケースを追加し、契約負系の再現性を補強。
+  - `test_run_a24_regression.sh` / `test_run_a24_batch.sh` に build preflight（`env -u MAKEFLAGS -u MFLAGS make -C FEM4C`）を追加し、`full_test` 後の `./bin/fem4c` 不在で揺れるケースを収束。
+  - `test_run_a24_batch.sh` / `test_run_a24_regression_full.sh` / `test_check_ci_contract.sh` に cleanup 時 `pkill -P $$` を追加し、早期失敗時の残留プロセス抑止を実装。
+  - `docs/fem4c_team_next_queue.md` を更新し、A-28 `Done`、A-29 `In Progress` へ遷移。
+  - 検証: `mbd_a24_regression_full_test` / `mbd_a24_batch_test` / `mbd_ci_contract_test` / `mbd_a24_regression_test` / `A24_RUN_CONTRACT_TEST=0|2` / `make test` / `make clean all` を実行し、想定どおりの PASS/期待FAIL を確認。
+  - セッション証跡: `bash scripts/session_timer_guard.sh /tmp/a_team_session_20260215T111839Z_21325.token 30` で `guard_result=pass` を確認し、`scripts/session_timer.sh end /tmp/a_team_session_20260215T111839Z_21325.token` で `elapsed_min=30` を取得。
+- Next Actions:
+  - A-29継続として、A-24 self-test導線の連続実行再現性（特に full→batch 直列ケース）を次セッションで再確認する。
+  - `docs/fem4c_team_next_queue.md` の A先頭（A-29）から再開し、完了可否に応じて Auto-Next 遷移を更新する。
+  - PM向け報告で A-28 Done / A-29 In Progress と受入3コマンドPASS根拠、および一時FAILからの収束内容を提出する。
+- Open Risks/Blockers:
+  - リポジトリ全体の巨大 dirty 差分により、担当外ファイル混在コミットのリスクは継続。
+  - `make` 系の残留プロセスが残ると再現性が低下するため、引き続き直列実行とプロセス掃除の運用が必要。
+
+## 2026-02-15 / C-team (C-28 完了確認, C-29 In Progress)
+- Current Plan:
+  - C-28 の受入最終確認として preflight 認証ログ固定（`preflight_team_status` canonical + `--expect-team-status`）を証跡付きで確定する。
+  - 同一セッションで C-29 を `In Progress` として継続し、staging bundle 統合運用を維持する。
+- Completed This Session:
+  - `scripts/session_timer.sh start c_team` で開始したセッション（`/tmp/c_team_session_20260215T111914Z_34999.token`）を `session_timer_guard` 30分通過後に `session_timer.sh end` で終了し、`elapsed_min=31` を確定。
+  - `bash scripts/collect_c_team_session_evidence.sh ... --append-to-team-status --check-compliance-policy pass_section_freeze_timer_safe --check-submission-readiness-minutes 30` を実行し、`docs/team_status.md` に C-28 完了確認 + C-29 継続の新規エントリを追記。
+  - 受入コマンドを再実行して PASS を確認:
+    - `python scripts/test_collect_c_team_session_evidence.py`
+    - `python scripts/test_check_c_team_collect_preflight_report.py`
+    - `python scripts/test_recover_c_team_token_missing_session.py`
+    - `bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30`
+  - preflight ログ検証:
+    - `python scripts/check_c_team_collect_preflight_report.py /tmp/c28_collect_final.log --require-enabled --expect-team-status docs/team_status.md` -> PASS
+- Next Actions:
+  - C-29 を継続し、`run_c_team_staging_checks.sh` / `check_c_team_submission_readiness.sh` で preflight team_status 一致検証を bundle 標準運用として固定する。
+  - 必要に応じて C-29 の受入根拠を `docs/fem4c_dirty_diff_triage_2026-02-06.md` と `docs/fem4c_team_next_queue.md` に追補する。
+- Open Risks/Blockers:
+  - blocker なし（`guard_result=pass`, `elapsed_min=31`, strict-safe/readiness PASS）。
+  - リポジトリ全体の巨大 dirty 差分は継続しているため、`safe_stage_command` 経由の限定 staging を維持する必要がある。
+
+## 2026-02-15 / A-team (A-29 Done, A-30 In Progress)
+- Current Plan:
+  - A-29（A-24 self-test導線の実行安定化）を受入完了し、A-30（serial acceptance導線の運用固定）を `In Progress` で継続する。
+  - A-24受入3コマンド（`mbd_a24_regression_full_test` / `mbd_a24_batch_test` / `mbd_ci_contract_test`）を直列PASSで維持し、新規 `mbd_a24_acceptance_serial` 導線を固定する。
+- Completed This Session:
+  - `test_run_a24_regression_full.sh` に build preflight を追加し、実行順依存の `bin/fem4c` 欠落揺らぎを抑止。
+  - `test_run_a24_batch.sh` に full->batch 連結ケースを追加し、`run_a24_regression_full` 実行後の batch self-test 再現性を固定。
+  - `check_ci_contract.sh` / `test_check_ci_contract.sh` に preflight/full->batch 連結契約を追加し、marker欠落時の fail ケースを実装。
+  - `run_a24_acceptance_serial.sh` / `test_run_a24_acceptance_serial.sh` を新規追加し、A-24受入3コマンドの直列実行導線と自己テスト（pass/fail/lock-held）を実装。
+  - `FEM4C/Makefile` に `mbd_a24_acceptance_serial` / `mbd_a24_acceptance_serial_test` を追加、`FEM4C/practice/README.md` に運用手順を追記。
+  - `check_ci_contract.sh` / `test_check_ci_contract.sh` を拡張し、serial acceptance 導線（Makefile配線 + summary/build-preflight/command/help marker）を静的契約へ追加。
+  - `docs/fem4c_team_next_queue.md` を更新し、A-29 `Done`、A-30 `In Progress` へ遷移。
+  - 検証: `mbd_a24_regression_full_test` / `mbd_a24_batch_test` / `mbd_ci_contract_test` / `mbd_a24_acceptance_serial` / `mbd_a24_acceptance_serial_test` / `clean all` / `mbd_ci_contract` を実行し、PASSを確認。
+- Next Actions:
+  - A-30継続として、`mbd_a24_acceptance_serial` の運用定着（報告テンプレ/契約チェック）を仕上げる。
+  - `docs/fem4c_team_next_queue.md` のA先頭（A-30）から再開し、完了可否に応じて Auto-Next を更新する。
+  - セッション終了時に `session_timer_guard` / `session_timer.sh end` の生出力を `docs/team_status.md` に転記して提出する。
+- Open Risks/Blockers:
+  - リポジトリ全体の巨大 dirty 差分が継続しており、担当外ファイル混在コミットのリスクが高い。
+  - A-24系テストを並列実行すると `clean/build` 競合で一時不安定化するため、引き続き直列運用を徹底する必要がある。
+
+## 2026-02-15 / C-team (C-30 Done, C-31 In Progress)
+- Current Plan:
+  - C-30（collect preflight latest 参照導線の自動化）を Done 化し、手入力なしの日次運用を固定する。
+  - C-31（latest strict mode 運用固定）を In Progress で継続し、提出直前の fail-fast 運用を整理する。
+- Completed This Session:
+  - `scripts/run_c_team_staging_checks.sh` / `scripts/check_c_team_submission_readiness.sh` の `C_COLLECT_PREFLIGHT_LOG` 既定を `latest` 自動解決へ更新した（空文字指定時は明示 disable）。
+  - `scripts/run_c_team_collect_preflight_check.sh` を更新し、latest 解決先が preflight 契約不一致のときは既定 `collect_preflight_check=skipped`、`C_COLLECT_LATEST_REQUIRE_FOUND=1` で fail-fast する分離を実装した。
+  - 回帰更新: `scripts/test_run_c_team_collect_preflight_check.py`, `scripts/test_run_c_team_staging_checks.py`, `scripts/test_check_c_team_submission_readiness.py` を拡張し PASS を確認した。
+  - スモーク確認: `C_SKIP_NESTED_SELFTESTS=1 bash scripts/run_c_team_staging_checks.sh docs/team_status.md`, `C_TEAM_SKIP_STAGING_BUNDLE=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30`, `scripts/c_stage_dryrun.sh --log /tmp/c30_dryrun.log` を実行して PASS。
+  - `scripts/collect_c_team_session_evidence.sh --append-to-team-status --check-compliance-policy pass_section_freeze_timer_safe --check-submission-readiness-minutes 30` を実行し、`docs/team_status.md` に `elapsed_min=35` の C-30 Done/C-31 In Progress エントリを追記した。
+  - ドキュメント同期: `docs/fem4c_team_next_queue.md`（C-30 Done/C-31 In Progress）, `docs/abc_team_chat_handoff.md`, `docs/fem4c_dirty_diff_triage_2026-02-06.md`, `docs/team_runbook.md` を更新した。
+- Next Actions:
+  - C-31 を継続し、latest 既定運用（skip）と提出直前 strict 運用（fail-fast）の使い分けを dispatch/runbook まで固定する。
+  - 必要に応じて `C_COLLECT_LATEST_REQUIRE_FOUND=1` を提出前テンプレへ昇格し、PM判断が必要な運用境界を明文化する。
+  - 次セッションは `docs/fem4c_team_next_queue.md` の C-31 先頭から再開する。
+- Open Risks/Blockers:
+  - blocker なし（`guard_result=pass`, `elapsed_min=35`, strict-safe/readiness PASS）。
+  - 最新 C エントリに collect preflight ログ証跡がないケースでは既定 `skip` になるため、提出直前は strict ノブの適用漏れリスクが残る。
+
+## 2026-02-15 / PM-3 (Dispatch Automation Update)
+- Current Plan:
+  - PMの手作業を減らすため、`fem4c_team_next_queue` から各チーム向け指示文を自動生成する。
+  - 既存の dispatch 文書と整合を保ち、運用導線を一本化する。
+- Completed This Session:
+  - `scripts/render_team_dispatch_from_queue.py` を追加し、A/B/C 先頭タスク（`In Progress` 優先）からコピペ用チャット文を生成可能にした。
+  - 回帰テスト `scripts/test_render_team_dispatch_from_queue.py` を追加し、`In Progress` 優先選択と `Todo` フォールバックを検証した。
+  - `docs/fem4c_team_dispatch_2026-02-06.md` に自動生成コマンド（`python scripts/render_team_dispatch_from_queue.py --team all`）を追記した。
+  - 検証: `python scripts/test_render_team_dispatch_from_queue.py` / `python scripts/check_doc_links.py docs/fem4c_team_dispatch_2026-02-06.md` を実行し PASS。
+- Next Actions:
+  - 次回のチーム再起動時は `python scripts/render_team_dispatch_from_queue.py --team all` を使って最新タスク同期済みの指示文を生成する。
+  - 必要なら `--team A|B|C` 指定で個別再送を実施する。
+- Open Risks/Blockers:
+  - リポジトリ全体の dirty 差分が大きいため、コミット時は今回の変更ファイルのみを限定ステージする必要がある。
+
+## 2026-02-15 / C-team (C-34 Done, C-35 In Progress)
+- Current Plan:
+  - C-34（strict latest 提出テンプレ最終固定）を完了し、同一スコープの Auto-Next で C-35（strict latest fail理由キーの提出ログ固定）を継続する。
+  - strict-safe / readiness の提出前ゲートを `elapsed_min=30` 証跡付きで維持し、Cセクション最新報告を受入可能状態へ揃える。
+- Completed This Session:
+  - 実装差分:
+    - `scripts/render_c_team_session_entry.py` に `preflight_latest_require_found=0|1` の常時出力を追加し、strict/default 境界を team_status エントリに残せるようにした。
+    - `scripts/recover_c_team_token_missing_session.sh` に `next_finalize_command_strict_latest=... --collect-latest-require-found 1` を追加し、復旧開始時点で strict finalize 手順を即提示できるようにした。
+    - 回帰更新: `scripts/test_render_c_team_session_entry.py`, `scripts/test_collect_c_team_session_evidence.py`, `scripts/test_recover_c_team_token_missing_session.py`。
+  - 文書同期:
+    - `docs/fem4c_team_dispatch_2026-02-06.md` の Team C テンプレを C-34 向けに更新し、strict latest 既定コマンド（`--collect-latest-require-found 1`）を固定。
+    - `docs/team_runbook.md` に C-34 以降の strict 提出テンプレ既定運用と理由キー追跡手順を追記。
+    - `docs/fem4c_team_next_queue.md` を C-34 Done / C-35 In Progress へ更新。
+    - `docs/abc_team_chat_handoff.md` と `docs/fem4c_dirty_diff_triage_2026-02-06.md` を C-35 起点へ同期。
+  - 主要コマンド結果:
+    - `python -m unittest scripts.test_render_c_team_session_entry scripts.test_collect_c_team_session_evidence scripts.test_recover_c_team_token_missing_session` -> PASS
+    - `python scripts/check_doc_links.py docs/team_runbook.md docs/fem4c_team_dispatch_2026-02-06.md docs/fem4c_team_next_queue.md docs/abc_team_chat_handoff.md docs/fem4c_dirty_diff_triage_2026-02-06.md` -> PASS
+    - `C_COLLECT_PREFLIGHT_LOG=/tmp/c34_preflight_seed.log C_COLLECT_EXPECT_TEAM_STATUS=docs/team_status.md C_COLLECT_LATEST_REQUIRE_FOUND=1 C_TEAM_SKIP_STAGING_BUNDLE=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30` -> PASS
+    - `python scripts/append_c_team_entry.py --team-status docs/team_status.md --entry-file /tmp/c34_c35_entry.md --in-place` -> UPDATED
+    - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze_timer_safe` -> PASS
+    - `C_SKIP_NESTED_SELFTESTS=1 C_COLLECT_EXPECT_TEAM_STATUS=docs/team_status.md C_COLLECT_LATEST_REQUIRE_FOUND=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30` -> PASS
+  - セッション証跡:
+    - `SESSION_TIMER_GUARD`（`guard_result=pass`, `elapsed_min=30`）
+    - `SESSION_TIMER_END`（`elapsed_min=30`）
+    - token: `/tmp/c_team_session_20260215T160336Z_2513451.token`
+- Next Actions:
+  - C-35 を継続し、strict fail-fast 時の `collect_preflight_check_reason=*` を提出ログへ自動転記する実装と回帰を追加する。
+  - `collect_c_team_session_evidence.sh` の strict 運用で nested self-test が strict 環境変数に影響されない導線（環境固定または skip 方針）を整理する。
+  - C-35 の受入を満たしたら `next_queue` / `triage` / `handoff` を Done + 次タスク In Progress へ再同期する。
+- Open Risks/Blockers:
+  - `collect_c_team_session_evidence.sh` 実行時に strict 環境変数（`C_COLLECT_LATEST_REQUIRE_FOUND=1`）が nested self-test へ波及し、`test_run_c_team_collect_preflight_check.py` の default 分岐テストが FAIL する経路を確認（今回は `C_SKIP_NESTED_SELFTESTS=1` で回避）。
+  - `make -C FEM4C mbd_ci_contract_test` は現ワークツリー差分の影響で FAIL（`FEM4C/scripts/check_ci_contract.sh` の引用符不整合）となり、Cタスク受入コマンドには未採用。

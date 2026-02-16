@@ -37,13 +37,14 @@ FEM4C スプリント中は **この Section 0 と `docs/fem4c_team_next_queue.m
     - 変更ファイル（実装ファイルを含む）
     - 実行コマンド
     - 受入基準に対応した pass/fail 根拠
-  - Cチーム staging 検証は `scripts/c_stage_dryrun.sh` を優先使用し、`dryrun_result` を `team_status` に記録する。
+  - Cチーム staging 検証は `scripts/c_stage_dryrun.sh` を優先使用し、`dryrun_result` と `safe_stage_command=git add <path-list>` を `team_status` に記録する。
   - C-19 以降は `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze` を実行し、`## Cチーム` 配下の最新報告が coupled凍結ポリシー込みで PASS であることを確認する。
   - タイマー完了まで厳格に確認する場合は `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze_timer` を使用する。
+  - safe staging 記録まで厳格に確認する場合は `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze_timer_safe` を使用する。
   - 次タスク遷移の優先順（先頭完了後の迷い防止）:
-    - A: A-16 完了後は A-17 へ遷移
-    - B: B-12 完了後は B-14 へ遷移
-    - C: C-19 完了後は C-20 へ遷移
+    - A: A-31 完了後は A-32 へ遷移
+    - B: B-24 完了後は B-25 へ遷移
+    - C: C-35 完了後は C-36 へ遷移
   - 上記の優先遷移先が完了済み/候補なしの場合は `Auto-Next` を `next_queue` に追記し、同一セッションで継続する。
   - PM決定（2026-02-07）:
     - `FEM4C/src/io/input.c` の旧 `SPC/FORCE` / `NastranBalkFile` 互換は維持する（Option A）。
@@ -62,45 +63,52 @@ FEM4C スプリント中は **この Section 0 と `docs/fem4c_team_next_queue.m
 
 ### Aチーム（実装）
 - 目的: `mbd` モードを独立ソルバーとして段階的に完成させる。
+- 現在の先頭タスク: `A-32`（`docs/fem4c_team_next_queue.md` を正とする）
 - 対象ファイル:
-  - `FEM4C/src/analysis/runner.c`
-  - `FEM4C/src/analysis/runner.h`
-  - 必要時のみ `FEM4C/src/fem4c.c`
+  - `FEM4C/scripts/run_a24_acceptance_serial.sh`
+  - `FEM4C/scripts/test_run_a24_acceptance_serial.sh`
+  - `FEM4C/scripts/check_ci_contract.sh`
+  - `FEM4C/scripts/test_check_ci_contract.sh`
+  - 必要時のみ `FEM4C/Makefile`
 - 指示:
-  1. `mbd` モードで 2D 最小ケース（2 body + distance/revolute）を実行できる関数を追加する。
-  2. `mbd_constraint_evaluate()` と `mbd_kkt_compute_layout_from_constraints()` を実際に呼び、残差ノルムとDOF情報をログ出力する。
-  3. `coupled` モードは仕様確定までスタブ維持とし、新規機能追加は行わない。
+  1. A-32 の受入基準に沿って、A-24 serial acceptance の step-log 契約（step_log_dir/failed_log）を固定する（実装差分必須）。
+  2. `mbd_a24_acceptance_serial_test` / `mbd_ci_contract_test` / `mbd_a24_acceptance_serial` の再入失敗を潰し、失敗時に原因ログ位置を 1 行サマリで追跡できる状態を維持する。
+  3. 先頭完了後は `next_queue` の次タスクへ同一セッションで自動遷移する。
 - 受入基準:
-  - `cd FEM4C && ./bin/fem4c --mode=mbd examples/t6_cantilever_beam.dat out_mbd.dat` が終了コード 0。
-  - 実行ログに `Analysis mode: mbd` と拘束式本数/残差が表示される。
+  - `docs/fem4c_team_next_queue.md` の A-32 `Acceptance` を満たすこと。
   - `docs/session_continuity_log.md` 以外に、少なくとも 1 つの実装ファイル差分があること。
 
 ### Bチーム（検証）
-- 目的: 追加済み MBD拘束 API の数値妥当性を固定テストで担保する。
+- 目的: B-8 系回帰ラッパーの運用安定性を固定する。
+- 現在の先頭タスク: `B-25`（`docs/fem4c_team_next_queue.md` を正とする）
 - 対象ファイル:
-  - `FEM4C/practice/ch09/`（新規テストハーネス追加可）
-  - `FEM4C/src/mbd/constraint2d.c`（必要最小限の修正のみ）
-  - `FEM4C/src/mbd/kkt2d.c`（必要最小限の修正のみ）
+  - `FEM4C/scripts/test_run_b8_regression.sh`
+  - `FEM4C/scripts/test_run_b8_regression_full.sh`
+  - `FEM4C/scripts/test_run_b8_guard_contract.sh`
+  - 必要時のみ `FEM4C/scripts/check_ci_contract.sh`
 - 指示:
-  1. distance/revolute の残差・ヤコビアンを検証する最小ハーネスを追加する。
-  2. 有限差分でヤコビアン照合（推奨 `eps=1e-7`）を実施し、閾値を明記する。
-  3. `mbd_kkt_count_constraint_equations()` が revolute=2式を正しく数えることを確認する。
+  1. B-25 の受入基準に沿って、B-8 自己テストの temp-copy ディレクトリノブ契約（`B8_TEST_TMP_COPY_DIR`）を固定する。
+  2. 既定ディレクトリ、存在チェック、書込チェックと静的契約チェックを同期し、再入時の衝突余地を減らす。
+  3. 先頭完了後は `next_queue` の次タスクへ同一セッションで自動遷移する。
 - 受入基準:
-  - 検証コマンドを 1 行で実行できる（README かコメントに記載）。
-  - 期待閾値を超えた場合は非0終了で失敗する。
+  - `docs/fem4c_team_next_queue.md` の B-25 `Acceptance` を満たすこと。
+  - 1行再現コマンドと pass/fail 根拠を `team_status` に記録すること。
 
 ### Cチーム（差分整理）
-- 目的: 巨大 dirty 差分の誤コミットリスクを先に下げる。
+- 目的: preflight 認証ログを staging bundle 導線へ統合し、提出前品質ゲートを固定する。
+- 現在の先頭タスク: `C-36`（`docs/fem4c_team_next_queue.md` を正とする）
 - 対象ファイル:
-  - `docs/` 配下に整理レポートを新規作成（例: `docs/fem4c_dirty_diff_triage_2026-02-06.md`）
-  - 必要時のみ `.gitignore`
+  - `scripts/collect_c_team_session_evidence.sh`
+  - `scripts/check_c_team_submission_readiness.sh`
+  - `scripts/run_c_team_staging_checks.sh`
+  - 必要時のみ `docs/fem4c_dirty_diff_triage_2026-02-06.md`
 - 指示:
-  1. 現在差分を 3分類（実装として残す / 生成物・不要物 / 意図不明）で一覧化する。
-  2. `FEM4C/test/*` 削除群は「復元候補」「削除確定」の二択で暫定判定を付ける。
-  3. PM がそのまま使える `git add` パス指定例（安全ステージング手順）を記載する。
+  1. C-36 の受入基準に沿って、strict latest 理由ログ運用の提出前安定化を進める。
+  2. strict-safe（timer + safe stage + placeholderなし）監査で PASS を維持する。
+  3. 先頭完了後は `next_queue` の次タスクへ同一セッションで自動遷移する。
 - 受入基準:
-  - 上記3分類がファイルパス付きで提示されている。
-  - 混在コミット回避の staging 例が 3 コマンド以上ある。
+  - `docs/fem4c_team_next_queue.md` の C-36 `Acceptance` を満たすこと。
+  - `scripts/c_stage_dryrun.sh` と `check_c_team_submission_readiness.sh` の結果を `team_status` に記録すること。
 
 ---
 

@@ -1,16 +1,16 @@
 # FEM4C Team Next Queue
 
-更新日: 2026-02-08（30分開発モード + 動的自走プロトコル反映 + 独立ソルバー優先 + 外部CI制約対応）  
+更新日: 2026-02-16（30分開発モード + 動的自走プロトコル反映 + 独立ソルバー優先 + A-31完了/A-32着手 + B-24完了/B-25着手 + C-35完了/C-36着手）  
 用途: チャットで「作業を継続してください」だけが来た場合の、各チーム共通の次タスク起点。
 
 ## PM固定優先（2026-02-08）
-- Aチーム: A-20 `MBD時間制御ローカルCI契約の静的固定` を継続（実装差分必須）。
-- Bチーム: B-14 `MBD積分法切替回帰の mbd 入口統合` を継続（B-8の長時間反復継続は停止）。
-- Cチーム: C-19 `staging運用チェックの自動化` を継続。
+- Aチーム: A-32 `A-24 serial acceptance step-log運用契約の固定` を継続（実装差分必須）。
+- Bチーム: B-25 `B-8自己テスト temp-copy ディレクトリノブ契約固定` を継続。
+- Cチーム: C-36 `strict latest 理由ログ運用の提出前安定化` を継続。
 - 先頭タスク完了後の遷移先:
-  - A: A-20
-  - B: B-14
-  - C: C-19
+  - A: A-32
+  - B: B-25
+  - C: C-36
 
 ## 外部CI制約下の検証ロードマップ（2026-02-08 PM決定）
 - 日次受入はローカル完結を標準とする（GitHub Actions 未接続でも進行を止めない）。
@@ -42,7 +42,7 @@
 - 15. 手入力だけの時刻・経過分（`start_at/end_at/elapsed_min` のみ）は証跡として不合格。
 - 16. `sleep` 等の人工待機で elapsed を満たす行為は不合格。
 - 17. `elapsed_min < 30` の終了報告は原則不合格（PM事前承認の緊急停止のみ例外）。
-- 18. PM受入時は `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30` を実行し、最新 A/B/C エントリの機械監査結果を確認する。
+- 18. PM受入時は `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30` を実行し、最新 A/B/C エントリの機械監査結果を確認する（実装差分必須を強制する場合は `--require-impl-changes` を付与）。
 - 19. 差し戻し文面を即作成する場合は `bash scripts/run_team_audit.sh docs/team_status.md 30 pass_section_freeze` を実行し、出力されたチーム別文面をそのまま送る（同時に C-team staging 監査 JSON も出力される）。
 - 20. 30分は「開発前進」に使う。実装系ファイル差分を1件以上必須とし、docs単独更新での完了を禁止する。
 - 21. 長時間反復ソーク/耐久ループは禁止（PM明示指示時のみ例外）。検証は短時間スモーク（最大3コマンド）を原則とする。
@@ -299,7 +299,7 @@
   - `make -C FEM4C mbd_integrator_checks` と `make -C FEM4C mbd_checks` が pass する。
 
 ### A-20 MBD時間制御ローカルCI契約の静的固定（Auto-Next）
-- Status: `In Progress`（2026-02-08 A-team）
+- Status: `Done`（2026-02-09 A-team）
 - Goal: A-19で追加した時間制御境界ケースがローカル静的検査（`mbd_ci_contract`）で常時検知される状態を固定し、回帰スクリプトの退行（ケース欠落）を早期検知する。
 - Scope:
   - `FEM4C/scripts/check_ci_contract.sh`
@@ -309,6 +309,173 @@
   - `make -C FEM4C mbd_ci_contract` が pass し、`mbd_integrator_cli_invalid_dt_case` / `mbd_integrator_cli_invalid_steps_case` の静的チェックが含まれる。
   - `make -C FEM4C mbd_ci_contract_test` が pass し、上記チェック欠落時の fail 経路を自己テストで確認できる。
   - GitHub Actions 実Run確認は任意（PM/ユーザーのスポット実施時のみ記録）。
+
+### A-21 MBD source-status 契約の静的検査強化（Auto-Next）
+- Status: `Done`（2026-02-09 PM実装: `mbd_ci_contract`/`mbd_ci_contract_test` で source-status 欠落検知を固定）
+- Goal: `check_mbd_integrators.sh` の `integrator_fallback/time_fallback` と `*_source_status` 検証が `mbd_ci_contract` で欠落検知されるようにし、回帰スクリプトの簡略化による退行を抑止する。
+- Scope:
+  - `FEM4C/scripts/check_ci_contract.sh`
+  - `FEM4C/scripts/test_check_ci_contract.sh`
+  - 必要時のみ `FEM4C/practice/README.md`
+- Acceptance:
+  - `make -C FEM4C mbd_ci_contract` が pass し、`mbd_integrator_time_whitespace_fallback_marker` を含む source/fallback 系静的チェックが実行される。
+  - `make -C FEM4C mbd_ci_contract_test` が pass し、source/fallback 系チェック欠落時の fail 経路が自己テストで確認できる。
+
+### A-22 MBD時間ステップ実行トレースの固定（Auto-Next）
+- Status: `Done`（2026-02-09 A-team）
+- Goal: `--mode=mbd` の `steps` 設定がログ/出力で実行トレースとして追跡できるようにし、将来の時刻積分実装（Newmark/HHT）の足場を固める。
+- Scope:
+  - `FEM4C/src/analysis/runner.c`
+  - `FEM4C/scripts/check_mbd_integrators.sh`
+  - 必要時のみ `FEM4C/practice/README.md`
+- Acceptance:
+  - `./bin/fem4c --mode=mbd --mbd-steps=3 ...` 実行時に、ステップ進行がログで確認できる（例: `mbd_step=1/3 ... 3/3`）。
+  - 出力ファイルに `steps_requested` と `steps_executed` が記録され、`steps_executed==steps_requested` を確認できる。
+  - `make -C FEM4C mbd_integrator_checks` と `make -C FEM4C mbd_checks` が pass する。
+
+### A-23 MBD時間ステップ実行トレースの静的契約固定（Auto-Next）
+- Status: `Done`（2026-02-09 A-team）
+- Goal: A-22で追加した `mbd_step` / `steps_requested` / `steps_executed` の検証観点をローカル静的契約チェックへ接続し、回帰スクリプトの簡略化による欠落を早期検知する。
+- Scope:
+  - `FEM4C/scripts/check_ci_contract.sh`
+  - `FEM4C/scripts/test_check_ci_contract.sh`
+  - 必要時のみ `FEM4C/practice/README.md`
+- Acceptance:
+  - `make -C FEM4C mbd_ci_contract` が pass し、A-22由来の step trace/steps_* マーカー静的チェックが実行される。
+  - `make -C FEM4C mbd_ci_contract_test` が pass し、上記マーカー欠落時の fail 経路を自己テストで確認できる。
+
+### A-24 MBD時間ステップ実行トレースの1コマンド回帰導線（Auto-Next）
+- Status: `Done`（2026-02-09 A-team）
+- Goal: A-22/A-23 で追加した runtime/static 契約を1コマンドで実行できる回帰導線を追加し、運用時のチェック漏れを防ぐ。
+- Scope:
+  - `FEM4C/scripts/run_a24_regression.sh`
+  - `FEM4C/scripts/test_run_a24_regression.sh`
+  - `FEM4C/Makefile`
+  - 必要時のみ `FEM4C/practice/README.md`
+- Acceptance:
+  - `make -C FEM4C mbd_a24_regression` が pass（`mbd_integrator_checks` + `mbd_ci_contract` + `mbd_ci_contract_test` を一括実行）。
+  - `make -C FEM4C mbd_a24_regression_test` が pass（wrapper欠落時の fail 経路を自己テストで確認）。
+
+### A-25 A-24導線のfull/batch固定（Auto-Next）
+- Status: `Done`（2026-02-09 A-team）
+- Goal: A-24 の1コマンド導線を clean rebuild 含む full 経路と直列 batch 経路へ拡張し、並列競合を避けた運用を固定する。
+- Scope:
+  - `FEM4C/scripts/run_a24_regression_full.sh`
+  - `FEM4C/scripts/test_run_a24_regression_full.sh`
+  - `FEM4C/scripts/run_a24_batch.sh`
+  - `FEM4C/scripts/test_run_a24_batch.sh`
+  - `FEM4C/Makefile`
+  - `FEM4C/scripts/check_ci_contract.sh`
+  - `FEM4C/scripts/test_check_ci_contract.sh`
+  - 必要時のみ `FEM4C/practice/README.md`
+- Acceptance:
+  - `make -C FEM4C mbd_a24_regression_full_test` が pass（clean rebuild + expected fail path を自己テスト）。
+  - `make -C FEM4C mbd_a24_batch_test` が pass（直列バッチ導線 + expected fail path を自己テスト）。
+  - `make -C FEM4C mbd_a24_regression` / `make -C FEM4C mbd_a24_regression_test` が引き続き pass。
+
+### A-26 A-24導線のbatch契約ログ固定（Auto-Next）
+- Status: `Done`（2026-02-14 A-team）
+- Goal: A-25 で導入した `run_a24_batch.sh` の直列実行結果を機械可読な要約ログとして残し、日次報告時の pass/fail 根拠を1出力で再利用可能にする。
+- Scope:
+  - `FEM4C/scripts/run_a24_batch.sh`
+  - `FEM4C/scripts/test_run_a24_batch.sh`
+  - `FEM4C/practice/README.md`
+  - 必要時のみ `FEM4C/Makefile`
+- Acceptance:
+  - `run_a24_batch.sh` 実行時に、各サブコマンドの pass/fail を要約した固定フォーマット行が出力される。
+  - `make -C FEM4C mbd_a24_batch_test` が pass し、要約ログ欠落時の fail 経路を自己テストで確認できる。
+  - `make -C FEM4C mbd_a24_regression` / `make -C FEM4C mbd_a24_regression_test` / `make -C FEM4C mbd_a24_regression_full_test` が引き続き pass する。
+
+### A-27 A-24 full/batch導線の競合監視固定（Auto-Next）
+- Status: `Done`（2026-02-14 A-team）
+- Goal: full/batch wrapper 実行時の並列競合（`clean` と `bin/fem4c` 実行の衝突）を検出し、fail要因を単一ログで再現できる運用に固定する。
+- Scope:
+  - `FEM4C/scripts/run_a24_regression_full.sh`
+  - `FEM4C/scripts/run_a24_batch.sh`
+  - `FEM4C/scripts/test_run_a24_regression_full.sh`
+  - 必要時のみ `FEM4C/scripts/test_run_a24_batch.sh`
+  - 必要時のみ `FEM4C/practice/README.md`
+- Acceptance:
+  - wrapper が直列実行固定（`MAKEFLAGS=-j1` 等）を維持し、clean/build/run の競合を抑止できる。
+  - `make -C FEM4C mbd_a24_regression_full_test` と `make -C FEM4C mbd_a24_batch_test` が pass する。
+  - 競合起因の失敗時に、原因判定に必要な情報（対象コマンド/失敗ステップ）がログで追跡できる。
+
+### A-28 A-24 full/batch導線のリトライ契約と失敗要因トレース固定（Auto-Next）
+- Status: `Done`（2026-02-15 A-team）
+- Goal: A-27で固定した競合監視導線に対して、`rc=137` の一時失敗を再試行で吸収できる運用契約と設定検証を追加し、日次受入の安定性を上げる。
+- Scope:
+  - `FEM4C/scripts/run_a24_regression_full.sh`
+  - `FEM4C/scripts/run_a24_batch.sh`
+  - `FEM4C/scripts/test_run_a24_regression_full.sh`
+  - `FEM4C/scripts/test_run_a24_batch.sh`
+  - `FEM4C/scripts/check_ci_contract.sh`
+  - `FEM4C/scripts/test_check_ci_contract.sh`
+  - 必要時のみ `FEM4C/practice/README.md`
+- Acceptance:
+  - full/batch wrapper が `A24_FULL_RETRY_ON_137` / `A24_BATCH_RETRY_ON_137`（0 or 1）を受け付け、設定不正時は要約ログ付きで fail する。
+  - `make -C FEM4C mbd_a24_regression_full_test` と `make -C FEM4C mbd_a24_batch_test` が pass する。
+  - `make -C FEM4C mbd_ci_contract_test` が pass し、retry knob 契約が静的チェックに含まれる。
+
+### A-29 A-24 self-test導線の実行安定化（Auto-Next）
+- Status: `Done`（2026-02-15 A-team）
+- Goal: A-28 で固定した retry 契約を維持しつつ、A-24 self-test の再現性を強化して `mbd_a24_*_test` の日次受入安定性を上げる。
+- Scope:
+  - `FEM4C/scripts/run_a24_regression.sh`
+  - `FEM4C/scripts/test_run_a24_regression.sh`
+  - `FEM4C/scripts/test_run_a24_batch.sh`
+  - `FEM4C/scripts/test_run_a24_regression_full.sh`
+  - 必要時のみ `FEM4C/practice/README.md`
+  - 必要時のみ `FEM4C/scripts/check_ci_contract.sh`
+  - 必要時のみ `FEM4C/scripts/test_check_ci_contract.sh`
+- Acceptance:
+  - `A24_RUN_CONTRACT_TEST`（0/1）が有効化され、`A24_RUN_CONTRACT_TEST=2` は non-zero + 明示エラーで失敗する。
+  - `run_a24_batch` / `run_a24_regression_full` の retry 自己テストがサブステップ（clean/build/regression/regression_test/regression_full_test）ごとにカバーされる。
+  - `make -C FEM4C mbd_a24_regression_full_test` と `make -C FEM4C mbd_a24_batch_test` が pass する。
+  - `make -C FEM4C mbd_ci_contract_test` が引き続き pass する。
+
+### A-30 A-24 serial acceptance導線の運用固定（Auto-Next）
+- Status: `Done`（2026-02-15 A-team）
+- Goal: A-29 で安定化した self-test 群を 1コマンド直列受入導線へ固定し、日次運用時の実行順差異を減らす。
+- Scope:
+  - `FEM4C/scripts/run_a24_acceptance_serial.sh`
+  - `FEM4C/scripts/test_run_a24_acceptance_serial.sh`
+  - `FEM4C/Makefile`
+  - 必要時のみ `FEM4C/scripts/check_ci_contract.sh`
+  - 必要時のみ `FEM4C/scripts/test_check_ci_contract.sh`
+  - 必要時のみ `FEM4C/practice/README.md`
+- Acceptance:
+  - `make -C FEM4C mbd_a24_acceptance_serial` が pass し、`A24_ACCEPT_SERIAL_SUMMARY` を出力する。
+  - `make -C FEM4C mbd_a24_acceptance_serial_test` が pass する。
+  - `make -C FEM4C mbd_ci_contract_test` が pass し、serial acceptance 導線の Makefile/スクリプト契約が静的チェックに含まれる。
+
+### A-31 A-24 serial acceptance失敗要因トレースの契約固定（Auto-Next）
+- Status: `Done`（2026-02-15 A-team）
+- Goal: A-30 で追加した serial acceptance 導線の失敗要因トレース（retry knob / failed_rc / summary 契約）を継続運用で崩れないよう固定する。
+- Scope:
+  - `FEM4C/scripts/run_a24_acceptance_serial.sh`
+  - `FEM4C/scripts/test_run_a24_acceptance_serial.sh`
+  - `FEM4C/scripts/check_ci_contract.sh`
+  - `FEM4C/scripts/test_check_ci_contract.sh`
+  - 必要時のみ `FEM4C/Makefile`
+- Acceptance:
+  - `A24_ACCEPT_SERIAL_RETRY_ON_137`（0/1）が有効化され、範囲外値は明示エラー + non-zero で失敗する。
+  - `A24_ACCEPT_SERIAL_SUMMARY` に `failed_rc` が含まれ、lock/fail/pass で期待値が固定される。
+  - `make -C FEM4C mbd_a24_acceptance_serial_test` と `make -C FEM4C mbd_ci_contract_test` が pass する。
+
+### A-32 A-24 serial acceptance step-log運用契約の固定（Auto-Next）
+- Status: `In Progress`（2026-02-15 A-team）
+- Goal: A-31 で固定した失敗要因トレースを拡張し、失敗時の step-log 参照（`failed_log`）を運用契約として固定する。
+- Scope:
+  - `FEM4C/scripts/run_a24_acceptance_serial.sh`
+  - `FEM4C/scripts/test_run_a24_acceptance_serial.sh`
+  - `FEM4C/scripts/check_ci_contract.sh`
+  - `FEM4C/scripts/test_check_ci_contract.sh`
+  - 必要時のみ `FEM4C/practice/README.md`
+  - 必要時のみ `FEM4C/README.md`
+- Acceptance:
+  - `A24_ACCEPT_SERIAL_STEP_LOG_DIR` が有効化され、作成不可パスは明示エラー + non-zero で失敗する。
+  - `A24_ACCEPT_SERIAL_SUMMARY` に `step_log_dir` / `failed_log` が含まれ、step-log 有効時に失敗ステップのログパスが固定される。
+  - `make -C FEM4C mbd_a24_acceptance_serial_test` / `make -C FEM4C mbd_ci_contract_test` / `make -C FEM4C mbd_a24_acceptance_serial` が pass する。
 
 ---
 
@@ -466,7 +633,7 @@
   - `make -C FEM4C mbd_ci_contract` で `test` 入口に `mbd_integrator_checks`（または同等）が含まれる静的保証を確認できる。
 
 ### B-15 B-14回帰導線の運用固定（Auto-Next）
-- Status: `In Progress`（2026-02-08 B-team）
+- Status: `Done`（2026-02-09 B-team: `mbd_b14_regression` / `mbd_b8_guard RUN_B14_REGRESSION=1` / `clean all test`）
 - Goal: B-14の入口統合を日次運用で再利用しやすくするため、1コマンド回帰と自己テスト導線を固定する。
 - Scope:
   - `FEM4C/scripts/run_b14_regression.sh`（新規）
@@ -479,6 +646,136 @@
   - `make -C FEM4C clean all test` が同一コマンドでも再現可能（bin/build再生成の欠落で失敗しない）。
   - `docs/team_status.md` に1行再現コマンド、pass/fail、閾値（`jacobian tol=1e-6`, `fd eps=1e-7`）が記録される。
   - GitHub Actions 実Runは必須にしない。節目スポット実施時のみ `run_id/step_outcome/artifact_present` を追記する。
+
+### B-16 B-8ガード自己テストの運用固定（Auto-Next）
+- Status: `Done`（2026-02-09 B-team: `mbd_b8_guard_test` / `mbd_b8_guard_contract`）
+- Goal: B-8日次ガード（`mbd_b8_guard`）の運用契約を自己テストで固定し、`RUN_B14_REGRESSION` 連結と `SPOT_STRICT` 判定の退行を早期検知する。
+- Scope:
+  - `FEM4C/scripts/test_run_b8_guard.sh`（新規）
+  - `FEM4C/scripts/run_b8_guard.sh`
+  - `FEM4C/Makefile`
+  - 必要時のみ `FEM4C/practice/README.md`
+- Acceptance:
+  - `make -C FEM4C mbd_b8_guard_test` で `b14 chaining` と `spot strict/non-strict` の自己テストが PASS する。
+  - `make -C FEM4C mbd_b8_guard RUN_B14_REGRESSION=1` で `b14_regression_requested=yes` / `b14_regression_result=pass` を出力し `B8_GUARD_SUMMARY=PASS` となる。
+### B-17 B-8フル回帰ラッパーの運用固定（Auto-Next）
+- Status: `Done`（2026-02-09 B-team: `mbd_b8_regression` / `mbd_b8_regression_full` / `mbd_b8_regression_test` / `mbd_b8_regression_full_test`）
+- Goal: B-8回帰を「通常経路」と「clean再生成込み経路」の2系統で1コマンド化し、日次で運用フォーマットを崩さず再現できるようにする。
+- Scope:
+  - `FEM4C/scripts/run_b8_regression.sh`
+  - `FEM4C/scripts/test_run_b8_regression.sh`
+  - `FEM4C/scripts/run_b8_regression_full.sh`
+  - `FEM4C/scripts/test_run_b8_regression_full.sh`
+  - `FEM4C/scripts/check_b8_scripts_syntax.sh`
+  - `FEM4C/scripts/test_check_b8_guard_output.sh`
+  - `FEM4C/scripts/run_b8_guard_contract.sh`
+  - `FEM4C/scripts/test_run_b8_guard_contract.sh`
+  - `FEM4C/scripts/check_b8_guard_output.sh`
+  - `FEM4C/Makefile`
+  - 必要時のみ `FEM4C/practice/README.md`
+- Acceptance:
+  - `make -C FEM4C mbd_b8_regression` が PASS し、`mbd_b8_syntax` / `mbd_b8_guard_output_test` / `mbd_ci_contract` / `mbd_ci_contract_test` / `mbd_b8_guard_test` / `mbd_b8_guard_contract_test` / `mbd_b8_guard_contract RUN_B14_REGRESSION=1` を直列実行する。
+  - `make -C FEM4C mbd_b8_regression_full` が PASS し、`make -C FEM4C clean all test` 後も同一回帰が再現できる。
+  - `make -C FEM4C mbd_b8_regression_test` / `make -C FEM4C mbd_b8_regression_full_test` / `make -C FEM4C mbd_b8_guard_contract_test` の自己テストが PASS し、fail-fast 経路（欠落ターゲット）を確認できる。
+
+### B-18 B-8回帰ラッパー運用ノブの固定（Auto-Next）
+- Status: `Done`（2026-02-09 B-team: `B8_RUN_B14_REGRESSION=0|1` 切替 + `mbd_b8_regression_test` / `mbd_b8_regression_full_test`）
+- Goal: `mbd_b8_regression` / `mbd_b8_regression_full` で B-14 連結有無と make コマンドを実行時に切替できるようにし、日次運用とローカル自己テストの切替コストを下げる。
+- Scope:
+  - `FEM4C/scripts/run_b8_regression.sh`
+  - `FEM4C/scripts/run_b8_regression_full.sh`
+  - `FEM4C/scripts/test_run_b8_regression.sh`
+  - `FEM4C/scripts/test_run_b8_regression_full.sh`
+  - 必要時のみ `FEM4C/practice/README.md`
+- Acceptance:
+  - `B8_RUN_B14_REGRESSION=0|1` で `mbd_b8_regression` / `mbd_b8_regression_full` の B-14 連結有無を切替できる。
+  - `make -C FEM4C mbd_b8_regression_test` が PASS し、`B8_RUN_B14_REGRESSION=0` の分岐を自己テストで検証する。
+  - `make -C FEM4C mbd_b8_regression_full_test` が PASS し、fail-fast 経路（欠落ターゲット）を維持する。
+
+### B-19 B-8運用ノブ配線の静的契約固定（Auto-Next）
+- Status: `Done`（2026-02-09 B-team: `mbd_ci_contract_test` で B-8ノブ配線/検証マーカーを静的契約化）
+- Goal: B-18で導入した `B8_MAKE_CMD` / `B8_RUN_B14_REGRESSION` の Makefile配線が退行しないよう、`mbd_ci_contract` の静的契約へ組み込み、日次で検知可能にする。
+- Scope:
+  - `FEM4C/scripts/check_ci_contract.sh`
+  - 必要時のみ `FEM4C/scripts/test_check_ci_contract.sh`
+  - 必要時のみ `FEM4C/practice/README.md`
+- Acceptance:
+  - `make -C FEM4C mbd_ci_contract_test` が PASS する。
+  - `check_ci_contract.sh` が `B8_MAKE_CMD` と `B8_RUN_B14_REGRESSION` の Makefile配線を静的チェックする。
+
+### B-20 B-8ノブマトリクステストの運用固定（Auto-Next）
+- Status: `Done`（2026-02-14 B-team: `mbd_b8_knob_matrix_test` + `mbd_b8_regression_test` + `mbd_ci_contract_test`）
+- Goal: `B8_RUN_B14_REGRESSION` / `B8_MAKE_CMD` の有効値・無効値を1コマンドで検証できる運用入口を追加し、手順ばらつきを抑える。
+- Scope:
+  - `FEM4C/scripts/test_b8_knob_matrix.sh`（新規）
+  - `FEM4C/Makefile`
+  - 必要時のみ `FEM4C/practice/README.md`
+- Acceptance:
+  - `make -C FEM4C mbd_b8_knob_matrix_test` が PASS する。
+  - 同テストで `B8_RUN_B14_REGRESSION=0|1` の両経路が PASS し、`B8_RUN_B14_REGRESSION=2` と `B8_MAKE_CMD=__missing_make__` が fail-fast で検知される。
+
+### B-21 B-8ノブマトリクスのスモーク入口固定（Auto-Next）
+- Status: `Done`（2026-02-14 B-team: `mbd_b8_knob_matrix_smoke_test` + `mbd_b8_regression_test` + `mbd_ci_contract_test`）
+- Goal: B-20 のマトリクステストを日次運用しやすくするため、full再構築を省略できる smoke 入口を追加し、重い検証と短時間検証を切替可能にする。
+- Scope:
+  - `FEM4C/scripts/test_b8_knob_matrix.sh`
+  - `FEM4C/Makefile`
+  - 必要時のみ `FEM4C/practice/README.md`
+- Acceptance:
+  - `make -C FEM4C mbd_b8_knob_matrix_smoke_test` が PASS する。
+  - `B8_KNOB_MATRIX_SKIP_FULL=1` 時に full回帰ケースを明示的にスキップし、`B8_RUN_B14_REGRESSION` / `B8_MAKE_CMD` の通常経路マトリクスは維持される。
+
+### B-22 B-8ガード安定化の静的契約固定（Auto-Next）
+- Status: `Done`（2026-02-15 B-team: `mbd_ci_contract_test` + `mbd_b8_regression_test`）
+- Goal: B-21 後の運用で `mbd_b8_regression_test` が不安定化しないよう、B-8 guard の既定ターゲット (`mbd_checks`) と再帰 make 隔離の契約を静的チェックへ固定する。
+- Scope:
+  - `FEM4C/scripts/check_ci_contract.sh`
+  - `FEM4C/scripts/test_check_ci_contract.sh`
+  - `FEM4C/scripts/run_b8_guard.sh`
+  - 必要時のみ `FEM4C/practice/README.md`
+- Acceptance:
+  - `make -C FEM4C mbd_ci_contract_test` が PASS し、B-8 guard の既定ターゲット/再帰 make 隔離に関する契約が検査される。
+  - `make -C FEM4C mbd_b8_regression_test` が PASS する。
+
+### B-23 B-8回帰ラッパー再入安定化（Auto-Next）
+- Status: `Done`（2026-02-15 B-team: `mbd_b8_regression_test` + `mbd_ci_contract_test`）
+- Goal: `mbd_b8_regression_test` の連続実行安定性を高めるため、B-8回帰ラッパー既定B14ターゲットを軽量経路へ固定し、再帰make隔離を静的契約+自己テストで担保する。
+- Scope:
+  - `FEM4C/scripts/run_b8_regression.sh`
+  - `FEM4C/scripts/test_run_b8_regression.sh`
+  - `FEM4C/scripts/check_ci_contract.sh`
+  - `FEM4C/scripts/test_check_ci_contract.sh`
+  - 必要時のみ `FEM4C/practice/README.md`
+- Acceptance:
+  - `make -C FEM4C mbd_b8_regression_test` が PASS し、`B8_RUN_B14_REGRESSION=0|1` の両経路が自己テストで通過する。
+  - `make -C FEM4C mbd_ci_contract_test` が PASS し、`b8_regression_b14_target_default` / `b8_regression_makeflags_isolation` が静的契約で検査される。
+
+### B-24 B-8自己テスト一時ファイル衝突の静的契約固定（Auto-Next）
+- Status: `Done`（2026-02-15 B-team: `mbd_ci_contract_test` + `mbd_b8_regression_test`）
+- Goal: B-8 wrapper自己テストの再入安定性を上げるため、失敗経路で生成する一時スクリプト名を衝突しない形式へ固定し、静的契約で退行検知可能にする。
+- Scope:
+  - `FEM4C/scripts/test_run_b8_regression.sh`
+  - `FEM4C/scripts/test_run_b8_regression_full.sh`
+  - `FEM4C/scripts/test_run_b8_guard_contract.sh`
+  - `FEM4C/scripts/check_ci_contract.sh`
+  - `FEM4C/scripts/test_check_ci_contract.sh`
+- Acceptance:
+  - `make -C FEM4C mbd_ci_contract_test` が PASS し、`b8_regression_test_temp_copy_marker` / `b8_full_test_temp_copy_marker` / `b8_guard_contract_test_temp_copy_marker` を静的契約で検査する。
+  - `make -C FEM4C mbd_b8_regression_test` が PASS する。
+
+### B-25 B-8自己テスト temp-copy ディレクトリノブ契約固定（Auto-Next）
+- Status: `In Progress`（2026-02-15 B-team）
+- Goal: B-8 wrapper自己テストの再入安定性と運用柔軟性を上げるため、temp-copy の生成先を `B8_TEST_TMP_COPY_DIR` で切替可能にし、既定値/存在チェック/書込チェックを静的契約へ固定する。
+- Scope:
+  - `FEM4C/scripts/test_run_b8_regression.sh`
+  - `FEM4C/scripts/test_run_b8_regression_full.sh`
+  - `FEM4C/scripts/test_run_b8_guard_contract.sh`
+  - `FEM4C/scripts/check_ci_contract.sh`
+  - `FEM4C/scripts/test_check_ci_contract.sh`
+  - 必要時のみ `FEM4C/practice/README.md`
+- Acceptance:
+  - `make -C FEM4C mbd_ci_contract_test` が PASS し、`b8_regression_test_temp_copy_dir_knob_marker` / `b8_full_test_temp_copy_dir_knob_marker` / `b8_guard_contract_test_temp_copy_dir_knob_marker` と `*_validate_marker` / `*_writable_marker` が静的契約で検査される。
+  - `make -C FEM4C mbd_b8_regression_test` が PASS する。
 
 ---
 
@@ -695,27 +992,388 @@
   - `python scripts/test_run_c_team_staging_checks.py`
 
 ### C-20 coupled凍結禁止パスの外部定義化（Auto-Next）
-- Status: `In Progress`（2026-02-08 C-team: 監査対象パターンの運用ファイル化を着手）
+- Status: `Done`（2026-02-09 C-team: `c_stage_dryrun` 同期 + safe staging 契約検査まで実装）
 - Goal: coupled凍結監査の禁止パス集合をコード外に分離し、PM運用で更新可能にする。
 - Scope:
   - `scripts/c_coupled_freeze_forbidden_paths.txt`
   - `scripts/check_c_coupled_freeze_file.py`
+  - `scripts/check_c_stage_dryrun_report.py`
   - `scripts/audit_c_team_staging.py`
+  - `scripts/c_stage_dryrun.sh`
   - `scripts/run_c_team_staging_checks.sh`
   - `scripts/test_audit_c_team_staging.py`
   - `scripts/test_check_c_coupled_freeze_file.py`
+  - `scripts/test_check_c_stage_dryrun_report.py`
+  - `scripts/test_c_stage_dryrun.py`
   - 必要時のみ `docs/team_runbook.md`
 - Acceptance:
   - `--require-coupled-freeze` 実行時に、禁止パス集合を `scripts/c_coupled_freeze_forbidden_paths.txt` から読める。
   - 禁止パスファイルが未読込でも fallback で監査が失敗せず動作する。
   - 監査コードの読み込み仕様（コメント/空行無視）がテストで固定される。
+  - `scripts/c_stage_dryrun.sh` が `coupled_freeze_check` と `safe_stage_command` を出力し、ログ契約検査に通る。
 - Verification:
   - `python scripts/test_audit_c_team_staging.py`
   - `python scripts/test_check_c_coupled_freeze_file.py`
+  - `python scripts/test_check_c_stage_dryrun_report.py`
+  - `python scripts/test_c_stage_dryrun.py`
   - `python scripts/check_c_coupled_freeze_file.py scripts/c_coupled_freeze_forbidden_paths.txt`
+  - `scripts/c_stage_dryrun.sh --log /tmp/c_stage_dryrun_auto.log`
+  - `python scripts/check_c_stage_dryrun_report.py /tmp/c_stage_dryrun_auto.log --policy pass`
   - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze`
   - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze_timer`
+  - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze_timer_safe`
   - `C_DRYRUN_POLICY=pass_section_freeze_timer bash scripts/run_c_team_staging_checks.sh docs/team_status.md`
+  - `C_DRYRUN_POLICY=pass_section_freeze_timer_safe bash scripts/run_c_team_staging_checks.sh docs/team_status.md`
+
+### C-21 strict-safe 監査既定化（Auto-Next）
+- Status: `Done`（2026-02-09 C-team: `pass_section_freeze_timer_safe` + `submission_readiness` PASS 固定）
+- Goal: C-team 提出時に `pass_section_freeze_timer_safe` を既定で PASS できる運用に移行する。
+- Scope:
+  - `docs/team_status.md`（C-team セッション記録テンプレ）
+  - `scripts/check_c_team_dryrun_compliance.sh`
+  - `scripts/run_c_team_staging_checks.sh`
+  - `scripts/check_c_team_submission_readiness.sh`
+  - `scripts/test_check_c_team_submission_readiness.py`
+  - 必要時のみ `docs/team_runbook.md`, `docs/fem4c_team_dispatch_2026-02-06.md`
+- Acceptance:
+  - 最新C報告に `safe_stage_command=git add <path-list>` が含まれ、`pass_section_freeze_timer_safe` で PASS する。
+  - `run_c_team_staging_checks.sh` を strict-safe policy で実行して PASS できる。
+- Verification:
+  - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze_timer_safe`
+  - `C_DRYRUN_POLICY=pass_section_freeze_timer_safe bash scripts/run_c_team_staging_checks.sh docs/team_status.md`
+  - `bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30`
+
+### C-22 dry-run 記録ブロック自動生成（Auto-Next）
+- Status: `Done`（2026-02-09 C-team: 出力ファイル対応 + staging checks 連携まで実装）
+- Goal: `c_stage_dryrun` ログを `team_status` 記録形式へ自動変換し、報告時の転記ミスを防止する。
+- Scope:
+  - `scripts/render_c_stage_team_status_block.py`
+  - `scripts/test_render_c_stage_team_status_block.py`
+  - `scripts/run_c_team_staging_checks.sh`
+  - 必要時のみ `docs/team_runbook.md`, `docs/team_status.md`
+- Acceptance:
+  - `render_c_stage_team_status_block.py` で必要キー不足を FAIL できる。
+  - `render_c_stage_team_status_block.py --output <path>` で再利用可能な markdown ファイルを生成できる。
+  - 生成される markdown ブロックを `team_status` にそのまま貼って strict-safe 監査を PASS できる。
+- Verification:
+  - `python scripts/test_render_c_stage_team_status_block.py`
+  - `python scripts/render_c_stage_team_status_block.py /tmp/c_stage_dryrun_auto.log`
+  - `python scripts/render_c_stage_team_status_block.py /tmp/c_stage_dryrun_auto.log --output /tmp/c_stage_team_status_block.md`
+  - `C_TEAM_STATUS_BLOCK_OUT=/tmp/c22_team_status_block_from_checks.md bash scripts/run_c_team_staging_checks.sh docs/team_status.md`
+
+### C-23 C-team 報告ブロック適用自動化（Auto-Next）
+- Status: `Done`（2026-02-09 C-team: 適用スクリプト + run_c checks 自動適用まで実装）
+- Goal: 生成した dry-run 記録ブロックを `team_status` 最新Cエントリへ安全に反映する手作業をさらに削減する。
+- Scope:
+  - `scripts/apply_c_stage_block_to_team_status.py`
+  - `scripts/test_apply_c_stage_block_to_team_status.py`
+  - `scripts/run_c_team_staging_checks.sh`
+  - `docs/team_status.md` 記録テンプレ（必要時）
+  - 必要時のみ `docs/team_runbook.md`
+- Acceptance:
+  - 最新 C エントリへの反映手順が `apply_c_stage_block_to_team_status.py` の 1 コマンドで再現できる。
+  - `--target-start-epoch` で適用先を明示して更新できる。
+  - 反映後に `pass_section_freeze_timer_safe` が PASS を維持する。
+- Verification:
+  - `python scripts/test_apply_c_stage_block_to_team_status.py`
+  - `python scripts/apply_c_stage_block_to_team_status.py --team-status docs/team_status.md --block-file /tmp/c22_team_status_block.md --in-place`
+  - `python scripts/apply_c_stage_block_to_team_status.py --team-status docs/team_status.md --block-file /tmp/c22_team_status_block.md --target-start-epoch <start_epoch> --in-place`
+  - `C_APPLY_BLOCK_TO_TEAM_STATUS=1 C_TEAM_STATUS_BLOCK_OUT=/tmp/c23_team_status_block.md bash scripts/run_c_team_staging_checks.sh docs/team_status.md`
+  - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze_timer_safe`
+  - `bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30`
+
+### C-24 C-team セッション記録雛形の自動生成（Auto-Next）
+- Status: `Done`（2026-02-14 C-team: guard証跡 + 一括収集 + Cセクション追記補助まで実装）
+- Goal: `session_timer` 生出力と dry-run 記録から `team_status` のセッションエントリ雛形を生成し、報告作成を標準化する。
+- Scope:
+  - `scripts/render_c_team_session_entry.py`
+  - `scripts/test_render_c_team_session_entry.py`
+  - `scripts/collect_c_team_session_evidence.sh`
+  - `scripts/test_collect_c_team_session_evidence.py`
+  - `scripts/append_c_team_entry.py`
+  - `scripts/test_append_c_team_entry.py`
+  - 必要時のみ `scripts/session_timer.sh`
+  - 必要時のみ `docs/team_runbook.md`, `docs/team_status.md`
+- Acceptance:
+  - `render_c_team_session_entry.py` が start/guard/end 生出力を含む雛形を生成できる。
+  - `--collect-timer-end` 指定時に `session_timer.sh end` の出力取得を自動化できる。
+  - `--collect-timer-guard` 指定時に `session_timer_guard.sh` の出力取得を自動化できる。
+  - `collect_c_team_session_evidence.sh` 1コマンドで dry-run/guard/end/entry 生成を通せる。
+  - `collect_c_team_session_evidence.sh --append-to-team-status` で Cセクションへの追記まで自動化できる。
+  - 生成される entry に `scripts/c_stage_dryrun.sh --log <path>` のコマンド証跡が含まれる。
+  - `render_c_team_session_entry.py` の `--done-line/--in-progress-line/--command-line/--pass-fail-line` で報告雛形の手編集を削減できる。
+  - 必須キー欠落時に non-zero で fail する。
+- Verification:
+  - `python scripts/test_render_c_team_session_entry.py`
+  - `python scripts/test_collect_c_team_session_evidence.py`
+  - `python scripts/test_append_c_team_entry.py`
+  - `python scripts/render_c_team_session_entry.py --task-title "<task>" --session-token <token> --timer-end-file <end_file> --dryrun-block-file /tmp/c_stage_team_status_block.md --output /tmp/c_team_session_entry.md`
+  - `python scripts/render_c_team_session_entry.py --task-title "<task>" --session-token <token> --collect-timer-end --collect-timer-guard --guard-minutes 0 --timer-end-output /tmp/c_team_timer_end.txt --timer-guard-output /tmp/c_team_timer_guard.txt --output /tmp/c_team_session_entry.md`
+  - `bash scripts/collect_c_team_session_evidence.sh --task-title "<task>" --session-token <token> --guard-minutes 0 --entry-out /tmp/c_team_session_entry.md`
+  - `bash scripts/collect_c_team_session_evidence.sh --task-title "<task>" --session-token <token> --guard-minutes 0 --entry-out /tmp/c_team_session_entry.md --team-status docs/team_status.md --append-to-team-status`
+
+### C-25 token-missing 復旧テンプレの半自動化（Auto-Next）
+- Status: `Done`（2026-02-14 C-team: start/finalize の2段コマンド運用を固定）
+- Goal: `token missing` 発生時に旧 C エントリを安全に無効化し、再実行セッションへ移るテンプレ更新を標準化する。
+- Scope:
+  - `scripts/append_c_team_entry.py`（再利用）
+  - `scripts/mark_c_team_entry_token_missing.py`
+  - `scripts/test_mark_c_team_entry_token_missing.py`
+  - `scripts/recover_c_team_token_missing_session.sh`
+  - `scripts/test_recover_c_team_token_missing_session.py`
+  - `scripts/audit_c_team_staging.py`（pending/token-missing 検知）
+  - 必要時のみ `docs/team_status.md`, `docs/team_runbook.md`
+- Acceptance:
+  - 最新 C エントリに `<pending>` / `token missing` が残っている場合、strict-safe 監査で FAIL を返す。
+  - 復旧時に「旧エントリ無効化 + 新規セッションエントリ追記」の手順を 3 コマンド以内で再現できる。
+- Verification:
+  - `python scripts/test_audit_c_team_staging.py`
+  - `python scripts/test_check_c_team_dryrun_compliance.py`
+  - `python scripts/test_check_c_team_submission_readiness.py`
+  - `python scripts/test_mark_c_team_entry_token_missing.py`
+  - `python scripts/test_recover_c_team_token_missing_session.py`
+  - `python scripts/mark_c_team_entry_token_missing.py --team-status docs/team_status.md --target-start-epoch <start_epoch> --token-path <missing_token> --in-place`
+  - `bash scripts/recover_c_team_token_missing_session.sh --team-status docs/team_status.md --target-start-epoch <start_epoch> --token-path <missing_token> --new-team-tag c_team`
+  - `bash scripts/recover_c_team_token_missing_session.sh --team-status docs/team_status.md --finalize-session-token <new_token> --task-title "<task>" --guard-minutes 30 --check-compliance-policy pass_section_freeze_timer_safe`
+
+### C-26 token-missing 復旧運用の提出前ゲート固定（Auto-Next）
+- Status: `Done`（2026-02-14 C-team: readiness統合 + template残骸監査を固定）
+- Goal: token-missing 復旧時の提出前チェックを 1 コマンド化し、再提出品質を機械ゲートで固定する。
+- Scope:
+  - `scripts/check_c_team_submission_readiness.sh`
+  - `scripts/run_c_team_staging_checks.sh`
+  - `scripts/collect_c_team_session_evidence.sh`
+  - `scripts/recover_c_team_token_missing_session.sh`
+  - `scripts/test_collect_c_team_session_evidence.py`
+  - `scripts/test_check_c_team_submission_readiness.py`
+  - `scripts/test_recover_c_team_token_missing_session.py`
+  - `scripts/test_run_c_team_staging_checks.py`
+  - 必要時のみ `docs/team_runbook.md`, `docs/team_status.md`
+- Acceptance:
+  - 復旧セッションの報告前に `strict-safe` + C単独 elapsed 判定を 1 コマンドで確認できる。
+  - `collect_c_team_session_evidence.sh` / recover finalize から提出前ゲート（`--check-submission-readiness-minutes`）を呼び出せる。
+  - `pass_section_freeze_timer_safe` 監査で `<記入>` などテンプレ残骸を FAIL 化できる。
+  - token-missing 無効化済み旧エントリが最新提出判定へ誤混入しないことをテストで固定できる。
+- Verification:
+  - `python scripts/test_collect_c_team_session_evidence.py`
+  - `python scripts/test_recover_c_team_token_missing_session.py`
+  - `python scripts/test_check_c_team_submission_readiness.py`
+  - `python scripts/test_run_c_team_staging_checks.py`
+  - `bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30`
+
+### C-27 token-missing 復旧報告のテンプレ整合監査強化（Auto-Next）
+- Status: `Done`（2026-02-14 C-team: placeholder検知拡張 + append前検証を固定）
+- Goal: 復旧セッションの `team_status` 記録がテンプレ未記入・判定不足のまま提出されないよう、監査と雛形を整合させる。
+- Scope:
+  - `scripts/audit_c_team_staging.py`
+  - `scripts/check_c_team_dryrun_compliance.sh`
+  - `scripts/render_c_team_session_entry.py`
+  - `scripts/collect_c_team_session_evidence.sh`
+  - `scripts/test_audit_c_team_staging.py`
+  - `scripts/test_check_c_team_dryrun_compliance.py`
+  - `scripts/test_render_c_team_session_entry.py`
+  - 必要時のみ `docs/team_runbook.md`, `docs/fem4c_dirty_diff_triage_2026-02-06.md`
+- Acceptance:
+  - strict-safe 監査でテンプレ残骸（`<記入>`, `<PASS|FAIL>` 等）を確実に FAIL 化できる。
+  - `collect` / `recover finalize` 生成エントリが strict-safe 監査で追加編集なしに PASS できる。
+  - strict-safe/readiness 失敗時に `team_status` へ不正エントリを追記しないことを回帰テストで固定できる。
+- Verification:
+  - `python scripts/test_audit_c_team_staging.py`
+  - `python scripts/test_check_c_team_dryrun_compliance.py`
+  - `python scripts/test_check_c_team_submission_readiness.py`
+  - `python scripts/test_collect_c_team_session_evidence.py`
+  - `python scripts/test_recover_c_team_token_missing_session.py`
+  - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze_timer_safe`
+
+### C-28 token-missing 復旧報告の preflight 認証ログ固定（Auto-Next）
+- Status: `Done`（2026-02-14 C-team: collect/recover preflightログ固定 + 契約検証を実装）
+- Goal: `collect` / `recover finalize` の preflight 監査結果を再利用しやすい定型ログとして固定し、復旧時の切り戻し判断を短時間化する。
+- Scope:
+  - `scripts/collect_c_team_session_evidence.sh`
+  - `scripts/check_c_team_collect_preflight_report.py`
+  - `scripts/recover_c_team_token_missing_session.sh`
+  - `scripts/test_collect_c_team_session_evidence.py`
+  - `scripts/test_check_c_team_collect_preflight_report.py`
+  - `scripts/test_recover_c_team_token_missing_session.py`
+  - 必要時のみ `docs/team_runbook.md`, `docs/fem4c_dirty_diff_triage_2026-02-06.md`
+- Acceptance:
+  - `collect` / `recover finalize` が preflight 対象（validation用 team_status）と最終反映結果をログで区別して出力できる。
+  - `collect --check-compliance-policy ...` を `--append-to-team-status` なしで実行しても、preflight 判定のみを実行できる（本番 `team_status` は無変更）。
+  - 失敗時ログ（compliance/readiness）だけで FAIL原因を再現可能で、`team_status` 無汚染を維持できる。
+- Verification:
+  - `python scripts/test_collect_c_team_session_evidence.py`
+  - `python scripts/test_check_c_team_collect_preflight_report.py`
+  - `python scripts/test_recover_c_team_token_missing_session.py`
+  - `python scripts/check_c_team_collect_preflight_report.py /tmp/c_team_collect.log --require-enabled --expect-team-status docs/team_status.md`
+  - `bash scripts/collect_c_team_session_evidence.sh --task-title "<task>" --session-token <token> --guard-minutes 30 --team-status docs/team_status.md --check-compliance-policy pass_section_freeze_timer_safe`
+  - `bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30`
+
+### C-29 preflight 認証ログの staging bundle 統合（Auto-Next）
+- Status: `Done`（2026-02-15 C-team: preflight check共通導線化 + bundle/readiness 同期）
+- Goal: C-team の日次 staging bundle 実行時に preflight 認証ログチェックを標準化し、復旧報告の提出前品質を 1 導線で確認できるようにする。
+- Scope:
+  - `scripts/run_c_team_staging_checks.sh`
+  - `scripts/check_c_team_submission_readiness.sh`
+  - `scripts/run_c_team_collect_preflight_check.sh`
+  - `scripts/check_c_team_collect_preflight_report.py`
+  - `scripts/test_run_c_team_staging_checks.py`
+  - 必要時のみ `docs/team_runbook.md`, `docs/fem4c_dirty_diff_triage_2026-02-06.md`
+- Acceptance:
+  - staging bundle 実行時に preflight 契約検証（`check_c_team_collect_preflight_report.py`）を任意入力で実行できる。
+  - preflight 契約違反時に明確な FAIL 理由が出力される。
+  - `preflight_team_status` が対象 `team_status` と一致していることを bundle/readiness で検証できる。
+- Verification:
+  - `python scripts/test_run_c_team_collect_preflight_check.py`
+  - `python scripts/test_run_c_team_staging_checks.py`
+  - `python scripts/test_check_c_team_submission_readiness.py`
+  - `python scripts/test_check_c_team_collect_preflight_report.py`
+  - `C_SKIP_NESTED_SELFTESTS=1 bash scripts/run_c_team_staging_checks.sh docs/team_status.md`
+
+### C-30 collect preflight ログ参照導線の自動化（Auto-Next）
+- Status: `Done`（2026-02-15 C-team: latest自動解決既定化 + invalid latest の運用分離を実装）
+- Goal: collect preflight ログ参照の運用を標準化し、bundle/readiness の日次実行で手入力パラメータを最小化する。
+- Scope:
+  - `scripts/run_c_team_collect_preflight_check.sh`
+  - `scripts/extract_c_team_latest_collect_log.py`
+  - `scripts/run_c_team_staging_checks.sh`
+  - `scripts/check_c_team_submission_readiness.sh`
+  - `scripts/render_c_team_session_entry.py`
+  - `scripts/collect_c_team_session_evidence.sh`
+  - `scripts/recover_c_team_token_missing_session.sh`
+  - `scripts/test_run_c_team_collect_preflight_check.py`
+  - 必要時のみ `docs/team_runbook.md`, `docs/fem4c_dirty_diff_triage_2026-02-06.md`
+- Acceptance:
+  - collect preflight 検証ロジックが helper へ集約され、bundle/readiness の重複実装が解消される。
+  - preflight 検証ステップが `collect_preflight_check=skipped|pass` を共通出力する。
+  - `C_COLLECT_PREFLIGHT_LOG=latest` で最新 C エントリから collect ログを自動解決できる（未検出時は既定 skip、厳格モードは fail）。
+  - staging checks の既定 `/tmp` 出力がセッション固有化され、並列実行時のログ衝突が低減される。
+  - helper の pass/fail 回帰が追加され、既存 staging/readiness 回帰が維持される。
+- Verification:
+  - `python scripts/test_run_c_team_collect_preflight_check.py`
+  - `python scripts/test_extract_c_team_latest_collect_log.py`
+  - `python scripts/test_run_c_team_staging_checks.py`
+  - `python scripts/test_check_c_team_submission_readiness.py`
+  - `python scripts/test_render_c_team_session_entry.py`
+  - `python scripts/test_collect_c_team_session_evidence.py`
+  - `python scripts/test_recover_c_team_token_missing_session.py`
+  - `C_COLLECT_PREFLIGHT_LOG=latest bash scripts/run_c_team_collect_preflight_check.sh docs/team_status.md`
+  - `C_COLLECT_PREFLIGHT_LOG=/tmp/c_team_collect.log C_TEAM_SKIP_STAGING_BUNDLE=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30`
+
+### C-31 latest preflight 解決の厳格モード分離（Auto-Next）
+- Status: `Done`（2026-02-15 C-team: staging/readiness strict分離を回帰固定）
+- Goal: `latest` 自動解決の利便性を維持しつつ、提出直前の厳格監査だけ fail-fast できる運用ノブを固定する。
+- Scope:
+  - `scripts/run_c_team_collect_preflight_check.sh`
+  - `scripts/run_c_team_staging_checks.sh`
+  - `scripts/check_c_team_submission_readiness.sh`
+  - `scripts/test_run_c_team_collect_preflight_check.py`
+  - 必要時のみ `docs/team_runbook.md`, `docs/fem4c_dirty_diff_triage_2026-02-06.md`
+- Acceptance:
+  - `latest` 自動解決時、解決先が preflight 契約を満たさない場合でも既定は `collect_preflight_check=skipped` で継続できる。
+  - `C_COLLECT_LATEST_REQUIRE_FOUND=1` では、latest 解決不能または契約不一致を fail-fast できる。
+  - staging/readiness 経路で上記挙動が一致し、回帰テストで固定される。
+- Verification:
+  - `python scripts/test_run_c_team_collect_preflight_check.py`
+  - `python scripts/test_run_c_team_staging_checks.py`
+  - `python scripts/test_check_c_team_submission_readiness.py`
+  - `C_SKIP_NESTED_SELFTESTS=1 bash scripts/run_c_team_staging_checks.sh docs/team_status.md`
+  - `C_TEAM_SKIP_STAGING_BUNDLE=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30`
+
+### C-32 collect証跡導線で strict latest ノブ固定（Auto-Next）
+- Status: `Done`（2026-02-15 C-team: collect/recover strictノブ明示化 + 証跡出力）
+- Goal: `collect_c_team_session_evidence.sh` / `recover_c_team_token_missing_session.sh` の提出導線で strict latest ノブを明示指定できるようにし、運用時の設定漏れを減らす。
+- Scope:
+  - `scripts/collect_c_team_session_evidence.sh`
+  - `scripts/recover_c_team_token_missing_session.sh`
+  - `scripts/render_c_team_session_entry.py`
+  - `scripts/test_collect_c_team_session_evidence.py`
+  - `scripts/test_recover_c_team_token_missing_session.py`
+  - 必要時のみ `docs/team_runbook.md`, `docs/fem4c_dirty_diff_triage_2026-02-06.md`
+- Acceptance:
+  - collect/recover 実行時に strict latest ノブ（`C_COLLECT_LATEST_REQUIRE_FOUND=1` 相当）を明示的に有効化できる。
+  - strict latest ノブ有効時は、latest 解決不能または契約不一致で fail-fast し、理由をログで特定できる。
+  - 生成される `team_status` エントリに strict latest ノブの実行証跡を残せる。
+- Verification:
+  - `python scripts/test_collect_c_team_session_evidence.py`
+  - `python scripts/test_recover_c_team_token_missing_session.py`
+  - `python scripts/test_render_c_team_session_entry.py`
+  - `bash scripts/collect_c_team_session_evidence.sh --help`
+
+### C-33 latest候補優先順位とstrict運用境界の固定（Auto-Next）
+- Status: `Done`（2026-02-15 C-team: 候補優先順位 + 理由キー固定）
+- Goal: latest 参照候補の優先順位を安定化し、strict運用時の誤解決リスクを下げる。
+- Scope:
+  - `scripts/extract_c_team_latest_collect_log.py`
+  - `scripts/run_c_team_collect_preflight_check.sh`
+  - `scripts/test_extract_c_team_latest_collect_log.py`
+  - `scripts/test_run_c_team_collect_preflight_check.py`
+  - `scripts/test_run_c_team_staging_checks.py`
+  - `scripts/test_check_c_team_submission_readiness.py`
+  - 必要時のみ `docs/team_runbook.md`, `docs/fem4c_dirty_diff_triage_2026-02-06.md`
+- Acceptance:
+  - latest 解決時に `check_c_team_collect_preflight_report.py` 由来のログ候補が `collect_log_out` 候補より優先される。
+  - strictノブ時の fail-fast 判定理由が再現可能で、default運用（skip）との境界が文書化される。
+  - `run_c_team_collect_preflight_check.sh` が latest境界の理由キー（`collect_preflight_check_reason=*`）を出力し、ログだけで判定分岐を追跡できる。
+  - 回帰テストで候補優先順位の退行を検知できる。
+- Verification:
+  - `python scripts/test_extract_c_team_latest_collect_log.py`
+  - `python scripts/test_run_c_team_collect_preflight_check.py`
+  - `python scripts/test_run_c_team_staging_checks.py`
+
+### C-34 strict latest 提出テンプレの最終固定（Auto-Next）
+- Status: `Done`（2026-02-15 C-team: strictテンプレ固定 + team_status 記録キー追加）
+- Goal: strict latest ノブ（`C_COLLECT_LATEST_REQUIRE_FOUND=1`）を提出テンプレへ固定し、運用手順の揺れをなくす。
+- Scope:
+  - `scripts/collect_c_team_session_evidence.sh`
+  - `scripts/recover_c_team_token_missing_session.sh`
+  - `docs/team_runbook.md`
+  - `docs/fem4c_team_dispatch_2026-02-06.md`
+  - 必要時のみ `scripts/test_collect_c_team_session_evidence.py`, `scripts/test_recover_c_team_token_missing_session.py`
+- Acceptance:
+  - strict latest モードの実行手順が dispatch/runbook の提出テンプレに明記される。
+  - collect/recover 経路で strict latest ノブの記録が `team_status` エントリに残る。
+  - 失敗時に `collect_preflight_check_reason=*` から fail要因を特定できる。
+- Verification:
+  - `python scripts/test_collect_c_team_session_evidence.py`
+  - `python scripts/test_recover_c_team_token_missing_session.py`
+  - `python scripts/check_doc_links.py docs/team_runbook.md docs/fem4c_team_dispatch_2026-02-06.md`
+
+### C-35 strict latest 失敗理由の提出ログ固定（Auto-Next）
+- Status: `Done`（2026-02-16 C-team: reason自動転記 + strict envリーク修正）
+- Goal: strict latest fail-fast 時の理由キー（`collect_preflight_check_reason=*`）を提出ログへ自動転記し、切り戻し判断をログのみで完結できるようにする。
+- Scope:
+  - `scripts/collect_c_team_session_evidence.sh`
+  - `scripts/render_c_team_session_entry.py`
+  - `scripts/run_c_team_staging_checks.sh`
+  - 必要時のみ `scripts/test_collect_c_team_session_evidence.py`, `scripts/test_render_c_team_session_entry.py`, `scripts/test_run_c_team_staging_checks.py`
+  - 必要時のみ `docs/team_runbook.md`, `docs/fem4c_dirty_diff_triage_2026-02-06.md`
+- Acceptance:
+  - strict latest 失敗時に `collect_preflight_check_reason=*` が `team_status` エントリへ残る。
+  - successful path でも strict/default の判定境界（`preflight_latest_require_found=0|1`）がログから識別できる。
+  - 回帰テストで理由キー転記の退行を検知できる。
+- Verification:
+  - `python scripts/test_collect_c_team_session_evidence.py`
+  - `python scripts/test_render_c_team_session_entry.py`
+  - `python scripts/test_run_c_team_staging_checks.py`
+  - `C_COLLECT_PREFLIGHT_LOG=/tmp/c35_preflight_seed.log C_COLLECT_EXPECT_TEAM_STATUS=docs/team_status.md C_COLLECT_LATEST_REQUIRE_FOUND=1 bash scripts/run_c_team_staging_checks.sh docs/team_status.md`
+
+### C-36 strict latest 理由ログ運用の提出前安定化（Auto-Next）
+- Status: `In Progress`（2026-02-16 C-team）
+- Goal: strict latest 運用時の reasonログ収集と提出前ゲート実行を、欠落ログがあっても切り戻し判断可能な形で安定化する。
+- Scope:
+  - `scripts/collect_c_team_session_evidence.sh`
+  - `scripts/check_c_team_submission_readiness.sh`
+  - `scripts/run_c_team_collect_preflight_check.sh`
+  - 必要時のみ `scripts/test_collect_c_team_session_evidence.py`, `scripts/test_check_c_team_submission_readiness.py`
+  - 必要時のみ `docs/team_runbook.md`, `docs/fem4c_dirty_diff_triage_2026-02-06.md`, `docs/fem4c_team_dispatch_2026-02-06.md`
+- Acceptance:
+  - strictモードで preflight ログ欠落/不正時に、失敗理由キーと失敗コマンドを提出ログから一意に追跡できる。
+  - `collect` 実行失敗時も `team_status` 汚染なしを維持し、再実行に必要なコマンドがログへ残る。
+  - 回帰テストで strict/default の境界と fail理由出力の退行を検知できる。
+- Verification:
+  - `python scripts/test_collect_c_team_session_evidence.py`
+  - `python scripts/test_check_c_team_submission_readiness.py`
+  - `C_COLLECT_LATEST_REQUIRE_FOUND=1 C_TEAM_SKIP_STAGING_BUNDLE=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30`
 
 ---
 

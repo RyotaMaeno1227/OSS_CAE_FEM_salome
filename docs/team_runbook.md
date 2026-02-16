@@ -89,10 +89,13 @@
 - GitHub Actions 実Run確認は毎セッション必須ではない。PM/ユーザーが節目で数回のみスポット実施する。
 - PM受入時は最新エントリの機械監査を実行する:
   - `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30`
+  - 実装差分必須を同時監査する場合: `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30 --require-impl-changes`
   - Cチーム staging 運用の遵守監査: `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze`
   - Cチーム staging + タイマー完了の厳格監査: `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze_timer`
+  - Cチーム staging + タイマー完了 + safe staging 記録 + テンプレ残骸なしの厳格監査: `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze_timer_safe`
   - 差し戻し文面まで一括生成する場合:
     - `bash scripts/run_team_audit.sh docs/team_status.md 30 pass_section_freeze`
+    - 実装差分必須を同時監査する場合: `TEAM_AUDIT_REQUIRE_IMPL_CHANGES=1 bash scripts/run_team_audit.sh docs/team_status.md 30 pass_section_freeze`
   - 遵守率の履歴確認（原因分析）:
     - `python scripts/audit_team_history.py --team-status docs/team_status.md --min-elapsed 30`
   - 監査レポートの保存先（例）:
@@ -115,17 +118,53 @@
 - 判定:
   - `forbidden_check`: staged set に `chrono-2d/` と `.github/` が無いこと。
   - `required_set_check`: 必須対象セットがすべて staged set に含まれること。
+  - `safe_stage_command`: `git add <path-list>` 形式で、`safe_stage_targets` と一致すること（`check_c_stage_dryrun_report.py --policy pass` で検査）。
+  - strict-safe（timer完了監査）では最新Cエントリに `<pending>` / `token missing` / `<記入>` / `<PASS|FAIL>` などのテンプレ残骸が残っていないこと。
   - 上記2条件を満たした場合のみ `dryrun_result=pass` とする。
 - 記録フォーマット（`docs/team_status.md`）:
   - `dryrun_method=GIT_INDEX_FILE`
   - `dryrun_cached_list=<name-status>`
   - `forbidden_check=pass|fail`
+  - `coupled_freeze_file=<path>`
+  - `coupled_freeze_hits=<path-list|->`
+  - `coupled_freeze_check=pass|fail`
   - `required_set_check=pass|fail`
+  - `safe_stage_targets=<path-list>`
+  - `safe_stage_command=git add <path-list>`
   - `dryrun_result=pass|fail`
 - 参考コマンド:
   - coupled凍結禁止パス定義: `scripts/c_coupled_freeze_forbidden_paths.txt`
   - coupled凍結禁止パス定義の検査: `python scripts/check_c_coupled_freeze_file.py scripts/c_coupled_freeze_forbidden_paths.txt`
   - `scripts/c_stage_dryrun.sh --log /tmp/c_stage_dryrun_<date>.log`
+  - `python scripts/check_c_stage_dryrun_report.py /tmp/c_stage_dryrun_<date>.log --policy pass`（dry-runログ契約検査）
+  - `python scripts/render_c_stage_team_status_block.py /tmp/c_stage_dryrun_<date>.log`（`team_status` へ貼る dry-run 記録ブロック生成）
+  - `python scripts/render_c_stage_team_status_block.py /tmp/c_stage_dryrun_<date>.log --output /tmp/c_stage_team_status_block.md`（貼り付け用ファイルも同時生成）
+  - `python scripts/apply_c_stage_block_to_team_status.py --team-status docs/team_status.md --block-file /tmp/c_stage_team_status_block.md --in-place`（最新Cエントリへ生成ブロックを適用）
+  - `python scripts/apply_c_stage_block_to_team_status.py --team-status docs/team_status.md --block-file /tmp/c_stage_team_status_block.md --target-start-epoch <start_epoch> --in-place`（適用先を明示）
+  - `python scripts/render_c_team_session_entry.py --task-title "<task>" --session-token <token> --timer-end-file <end_file> --timer-guard-file <guard_file> --dryrun-block-file /tmp/c_stage_team_status_block.md`（セッション記録エントリ雛形を生成）
+  - `python scripts/render_c_team_session_entry.py --task-title "<task>" --session-token <token> --timer-end-file <end_file> --timer-guard-file <guard_file> --dryrun-block-file /tmp/c_stage_team_status_block.md --c-stage-dryrun-log /tmp/c_stage_dryrun.log`（strict-safe 用の dry-run コマンド証跡も同時出力）
+  - `python scripts/render_c_team_session_entry.py --task-title "<task>" --session-token <token> --timer-end-file <end_file> --timer-guard-file <guard_file> --done-line "<done>" --in-progress-line "<next>" --command-line "<cmd> -> PASS" --pass-fail-line "PASS（...）"`（Done/In Progress/command/pass-fail を雛形へ直接埋め込む）
+  - `python scripts/render_c_team_session_entry.py --task-title "<task>" --session-token <token> --collect-timer-end --collect-timer-guard --timer-end-output /tmp/c_team_timer_end.txt --timer-guard-output /tmp/c_team_timer_guard.txt --dryrun-block-file /tmp/c_stage_team_status_block.md`（end/guard出力を自動取得して雛形生成）
+  - `bash scripts/collect_c_team_session_evidence.sh --task-title "<task>" --session-token <token> --guard-minutes 30 --entry-out /tmp/c_team_session_entry.md`（dry-run + guard + end + 雛形生成を一括実行）
+  - `bash scripts/collect_c_team_session_evidence.sh --task-title "<task>" --session-token <token> --guard-minutes 30 --collect-preflight-log /tmp/c_team_collect.log`（生成エントリに collect preflight ログ証跡を埋め込む）
+  - `bash scripts/collect_c_team_session_evidence.sh ... > /tmp/c_team_collect.log && python scripts/check_c_team_collect_preflight_report.py /tmp/c_team_collect.log`（collect 出力の preflight 契約を検査）
+  - `python scripts/append_c_team_entry.py --team-status docs/team_status.md --entry-file /tmp/c_team_session_entry.md --in-place`（生成済み雛形を Cセクションへ追記）
+  - `python scripts/mark_c_team_entry_token_missing.py --team-status docs/team_status.md --target-start-epoch <start_epoch> --token-path <missing_token> --in-place`（token missing 旧エントリを無効化）
+  - `bash scripts/recover_c_team_token_missing_session.sh --team-status docs/team_status.md --target-start-epoch <start_epoch> --token-path <missing_token> --new-team-tag c_team`（旧エントリ無効化 + 新規timer開始を一括実行、`next_finalize_command` を出力）
+  - `bash scripts/recover_c_team_token_missing_session.sh --team-status docs/team_status.md --finalize-session-token <session_token> --task-title "<task>" --guard-minutes 30 --check-compliance-policy pass_section_freeze_timer_safe`（復旧セッションの証跡収集 + Cエントリ追記 + strict-safe確認を一括実行）
+  - `bash scripts/recover_c_team_token_missing_session.sh --team-status docs/team_status.md --finalize-session-token <session_token> --task-title "<task>" --guard-minutes 30 --check-compliance-policy pass_section_freeze_timer_safe --collect-log-out /tmp/c_team_collect.log`（collect出力を保存し、preflight契約チェックまで一括実行）
+  - `bash scripts/collect_c_team_session_evidence.sh --task-title "<task>" --session-token <token> --guard-minutes 30 --entry-out /tmp/c_team_session_entry.md --team-status docs/team_status.md --append-to-team-status`（収集から追記まで一括実行）
+  - `bash scripts/collect_c_team_session_evidence.sh --task-title "<task>" --session-token <token> --guard-minutes 30 --team-status docs/team_status.md --append-to-team-status --check-submission-readiness-minutes 30`（validation用 `team_status` で preflight 監査し、PASS時のみ本番へ追記）
+  - `bash scripts/collect_c_team_session_evidence.sh --task-title "<task>" --session-token <token> --guard-minutes 30 --team-status docs/team_status.md --append-to-team-status --check-submission-readiness-minutes 30 --collect-latest-require-found 1`（latest 解決不能/契約不一致を fail-fast する厳格提出モード）
+  - `bash scripts/collect_c_team_session_evidence.sh --task-title "<task>" --session-token <token> --guard-minutes 30 --team-status docs/team_status.md --check-compliance-policy pass_section_freeze_timer_safe`（appendせず preflight 判定のみ実行）
+  - `bash scripts/recover_c_team_token_missing_session.sh --team-status docs/team_status.md --finalize-session-token <session_token> --task-title "<task>" --guard-minutes 30 --check-compliance-policy pass_section_freeze_timer_safe --check-submission-readiness-minutes 30`（token-missing 復旧セッションの最終反映 + 提出前ゲートを一括実行）
+  - `bash scripts/recover_c_team_token_missing_session.sh --team-status docs/team_status.md --finalize-session-token <session_token> --task-title "<task>" --guard-minutes 30 --check-compliance-policy pass_section_freeze_timer_safe --check-submission-readiness-minutes 30 --collect-latest-require-found 1`（復旧 finalize を strict latest fail-fast で実行）
+  - C-34 以降の提出テンプレは上記 2 コマンド（collect / recover finalize）の `--collect-latest-require-found 1` を既定とする。
+  - `scripts/render_c_team_session_entry.py` が出力する `preflight_latest_require_found=0|1` を `team_status` の実行証跡として扱う。
+  - strict 失敗時は `collect_preflight_check_reason=*` を `team_status` に転記し、fail要因（`latest_not_found_strict` / `latest_invalid_report_strict`）を明示する。
+  - `python scripts/check_c_team_collect_preflight_report.py /tmp/c_team_collect.log --require-enabled`（collectログの preflight 契約検証）
+  - `python scripts/check_c_team_collect_preflight_report.py /tmp/c_team_collect.log --require-enabled --expect-team-status docs/team_status.md`（preflightログの `preflight_team_status` が提出対象と一致していることを検証）
+  - `C_TEAM_SKIP_STAGING_BUNDLE=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30`（テスト時のみ staging bundle を省略して elapsed 監査を確認）
   - `scripts/c_stage_dryrun.sh --add-target chrono-2d/tests/test_coupled_constraint`（forbidden fail の再現確認）
   - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass`（最新C報告の dry-run 記録監査）
   - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section`（C報告が `## Cチーム` 配下にあることも監査）
@@ -133,7 +172,30 @@
   - `COUPLED_FREEZE_FILE=/tmp/custom_freeze_paths.txt bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze`（監査禁止パスを一時差し替え）
   - `python scripts/audit_c_team_staging.py --team-status docs/team_status.md --coupled-freeze-file scripts/c_coupled_freeze_forbidden_paths.txt --print-coupled-freeze-patterns`（監査に使う禁止パス一覧の確認）
   - `bash scripts/run_c_team_staging_checks.sh docs/team_status.md`（C-team staging監査 + 関連テスト一括実行）
+  - `C_TEAM_STATUS_BLOCK_OUT=/tmp/c_stage_team_status_block.md bash scripts/run_c_team_staging_checks.sh docs/team_status.md`（生成ブロックの出力先を指定）
+  - `C_APPLY_BLOCK_TO_TEAM_STATUS=1 bash scripts/run_c_team_staging_checks.sh docs/team_status.md`（生成ブロックを最新Cエントリへ自動適用）
   - `C_DRYRUN_POLICY=pass_section_freeze_timer bash scripts/run_c_team_staging_checks.sh docs/team_status.md`（タイマー完了まで含む厳格監査）
+  - `C_DRYRUN_POLICY=pass_section_freeze_timer_safe bash scripts/run_c_team_staging_checks.sh docs/team_status.md`（タイマー完了 + safe staging記録まで含む厳格監査）
+  - `C_COLLECT_PREFLIGHT_LOG=/tmp/c_team_collect.log bash scripts/run_c_team_staging_checks.sh docs/team_status.md`（collect preflight 契約ログを bundle 実行内で検証）
+  - `C_COLLECT_PREFLIGHT_LOG=/tmp/c_team_collect.log C_COLLECT_EXPECT_TEAM_STATUS=docs/team_status.md bash scripts/run_c_team_staging_checks.sh docs/team_status.md`（collectログの team_status 一致まで bundle で検証）
+  - `C_COLLECT_PREFLIGHT_LOG=/tmp/c_team_collect.log bash scripts/run_c_team_collect_preflight_check.sh docs/team_status.md`（collect preflight 契約検証だけを単独実行）
+  - `C_COLLECT_PREFLIGHT_LOG=latest bash scripts/run_c_team_collect_preflight_check.sh docs/team_status.md`（最新Cエントリから collect ログを自動解決して検証）
+  - `C_COLLECT_PREFLIGHT_LOG=latest` は、解決先ログが preflight 契約を満たさない場合も既定は `collect_preflight_check=skipped`（日次運用を停止しない）。
+  - latest 既定skip/strict fail の分岐理由は `collect_preflight_check_reason=*`（`latest_not_found_*`, `latest_invalid_report_*`）で追跡する。
+  - `collect_c_team_session_evidence.sh` は preflight 判定理由が検出できた場合、`collect_preflight_check_reason=*` を `team_status` エントリの実行コマンド欄へ自動転記する。
+  - latest 候補が複数ある場合は `check_c_team_collect_preflight_report.py <log>` の明示コマンド由来を優先し、`collect_log_out` 由来候補より先に採用する。
+  - `C_COLLECT_PREFLIGHT_LOG=latest C_COLLECT_LATEST_REQUIRE_FOUND=1 bash scripts/run_c_team_collect_preflight_check.sh docs/team_status.md`（latest 解決不能または契約不一致を FAIL にする厳格モード）
+  - `C_SKIP_NESTED_SELFTESTS=1 bash scripts/run_c_team_staging_checks.sh docs/team_status.md`（nested self-test を省略して staging/preflight 契約だけを短時間確認）
+  - `run_c_team_staging_checks.sh` は nested self-test 実行前に `C_COLLECT_LATEST_REQUIRE_FOUND` をクリアし、strict提出モード環境変数が自己テスト判定へ波及しないようにする。
+  - `bash scripts/run_c_team_staging_checks.sh docs/team_status.md` は `C_COLLECT_PREFLIGHT_LOG` 未指定時に `latest` を自動解決（未検出は既定 skip）。
+  - `C_COLLECT_PREFLIGHT_LOG= bash scripts/run_c_team_staging_checks.sh docs/team_status.md` で preflight 検証を明示的に無効化できる。
+  - `C_COLLECT_LATEST_REQUIRE_FOUND=1 bash scripts/run_c_team_staging_checks.sh docs/team_status.md` で latest 解決不能/契約不一致を staging bundle 内で fail-fast できる。
+  - `bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30`（strict-safe + C単独30分監査の提出前一括確認）
+  - `bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30` も `C_COLLECT_PREFLIGHT_LOG` 未指定時は `latest` 自動解決（未検出は既定 skip）。
+  - `C_COLLECT_PREFLIGHT_LOG=/tmp/c_team_collect.log bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30`（提出前ゲートで collect preflight 契約を同時検証）
+  - `C_COLLECT_PREFLIGHT_LOG=/tmp/c_team_collect.log C_COLLECT_EXPECT_TEAM_STATUS=docs/team_status.md bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30`（提出前ゲートで preflightログの team_status 一致を必須化）
+  - `C_COLLECT_LATEST_REQUIRE_FOUND=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30` で latest 解決不能/契約不一致を提出前ゲートで fail-fast できる。
+  - `C_COLLECT_PREFLIGHT_LOG= C_TEAM_SKIP_STAGING_BUNDLE=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30`（collect preflight 検証を明示的に無効化して最小監査だけ確認）
 
 ## 7. アーカイブ方針
 - 旧 Chrono 運用・旧 PM 司令文書は以下へ退避済み（参照のみ）:
