@@ -53,7 +53,7 @@ make help           # 全ビルドターゲット表示
 
 ## 使用方法
 ```bash
-./bin/fem4c [入力ファイル] [出力ファイル]
+./bin/fem4c [--mode=fem|mbd|coupled] [--strict-t3-orientation] [入力ファイル] [出力ファイル]
 ```
 
 ### 実行例
@@ -74,6 +74,48 @@ make help           # 全ビルドターゲット表示
 ```bash
 ./bin/fem4c <parser出力ディレクトリ>
 ```
+
+### T3要素の strict orientation チェック（任意）
+```bash
+# clockwise要素を自動補正せず、入力エラーで停止
+./bin/fem4c --strict-t3-orientation /tmp/t3_clockwise.dat out.dat
+```
+
+### MBD回帰ラッパー（B-team運用）
+```bash
+# B-8 smoke/contract regression entrypoints
+make -C FEM4C mbd_b8_knob_matrix_smoke_test
+make -C FEM4C mbd_b8_regression_test
+make -C FEM4C mbd_ci_contract_test
+```
+
+### A-24 serial acceptance（A-team運用）
+```bash
+# A-24 acceptance 3コマンドを直列実行
+make -C FEM4C mbd_a24_acceptance_serial
+
+# 直列ラッパーの自己テスト
+make -C FEM4C mbd_a24_acceptance_serial_test
+```
+
+`mbd_a24_acceptance_serial` は `mbd_a24_regression_full_test` →
+`mbd_a24_batch_test` → `mbd_ci_contract_test` を直列実行し、
+`A24_ACCEPT_SERIAL_SUMMARY` で結果を1行要約します。
+
+主な運用ノブ:
+- `A24_ACCEPT_SERIAL_RETRY_ON_137=0|1`（既定: `1`）
+- `A24_ACCEPT_SERIAL_FAKE_137_STEP=none|full_test|batch_test|ci_contract_test`（自己テスト用途）
+- `A24_ACCEPT_SERIAL_SUMMARY_OUT=<path>`（summary 1行をファイル出力）
+- `A24_ACCEPT_SERIAL_STEP_LOG_DIR=<dir>`（ステップログを保存し、失敗時 `failed_log` で参照可能。既存ファイル指定や非 writable ディレクトリは fail-fast）
+
+`mbd_b8_guard` 系は既定で `B8_LOCAL_TARGET=mbd_checks` を使い、再帰 make 呼び出し時に
+`MAKEFLAGS/MFLAGS` を隔離して安定化しています。`mbd_b8_regression` 系は
+`B8_B14_TARGET=mbd_ci_contract` を既定値にして B-14 連結を軽量化しつつ、必要時は
+`B8_B14_TARGET=mbd_b14_regression` で重い経路へ切替できます。
+`mbd_ci_contract_test` では B-8自己テストの一時スクリプト生成契約
+（`b8_regression_test_temp_copy_marker` など）に加えて、
+`B8_TEST_TMP_COPY_DIR` の既定値/存在チェック/書込チェック契約
+（`b8_*_temp_copy_dir_*_marker`）も静的検査します。
 
 詳細な操作手順は `USAGE_PARSER.md` を参照してください。
 
