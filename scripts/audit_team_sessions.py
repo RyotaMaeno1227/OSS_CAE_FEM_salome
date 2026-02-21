@@ -38,6 +38,11 @@ SLEEP_RE = re.compile(r"(^|[`\s])sleep\s+\d+", re.IGNORECASE)
 BACKTICK_BLOCK_RE = re.compile(r"`([^`\n]+)`")
 TOP_FIELD_RE = re.compile(r"^\s{0,2}-\s")
 RAW_PATH_RE = re.compile(r"(?P<path>(?:FEM4C|docs|scripts|chrono-2d|data|\.github)/[A-Za-z0-9_./-]+)")
+OUTCOME_SUFFIX_RE = re.compile(r"\s*->\s*(PASS|FAIL|EXPECTED FAIL).*$", re.IGNORECASE)
+ENV_COMMAND_RE = re.compile(
+    r"^[A-Z0-9_]+=.+\b(make|python|bash|./|scripts/|git|rg|cd)\b",
+    re.IGNORECASE,
+)
 
 # Path prefixes treated as implementation progress (not docs-only maintenance).
 IMPL_PATH_PREFIXES = (
@@ -51,6 +56,18 @@ IMPL_PATH_PREFIXES = (
 IMPL_PATH_EXACT = (
     "FEM4C/Makefile",
     ".github/workflows/ci.yaml",
+)
+COMMAND_PREFIXES = (
+    "make ",
+    "python ",
+    "bash ",
+    "sh ",
+    "./",
+    "scripts/",
+    "git ",
+    "rg ",
+    "cd ",
+    "env ",
 )
 
 
@@ -66,6 +83,8 @@ class EntryAudit:
     has_impl_changes: bool
     has_commands: bool
     has_passfail: bool
+    max_same_command_run: int
+    repeated_command: str | None
     changed_paths: list[str]
     start_epoch: int | None
 
@@ -74,6 +93,7 @@ class EntryAudit:
         min_elapsed: int,
         require_evidence: bool,
         require_impl_changes: bool,
+        max_consecutive_same_command: int = 1,
     ) -> list[str]:
         reasons: list[str] = []
         if not self.has_start:
@@ -95,17 +115,38 @@ class EntryAudit:
                 reasons.append("missing command evidence")
             if not self.has_passfail:
                 reasons.append("missing pass/fail evidence")
+        if max_consecutive_same_command > 0 and self.max_same_command_run > max_consecutive_same_command:
+            repeated = self.repeated_command or "(unknown)"
+            reasons.append(
+                "consecutive identical command detected "
+                f"(run={self.max_same_command_run}, command='{repeated}')"
+            )
         return reasons
 
-    def verdict(self, min_elapsed: int, require_evidence: bool, require_impl_changes: bool) -> str:
+    def verdict(
+        self,
+        min_elapsed: int,
+        require_evidence: bool,
+        require_impl_changes: bool,
+        max_consecutive_same_command: int = 1,
+    ) -> str:
         return (
             "PASS"
-            if not self.failure_reasons(min_elapsed, require_evidence, require_impl_changes)
+            if not self.failure_reasons(
+                min_elapsed,
+                require_evidence,
+                require_impl_changes,
+                max_consecutive_same_command,
+            )
             else "FAIL"
         )
 
     def to_dict(
-        self, min_elapsed: int, require_evidence: bool, require_impl_changes: bool
+        self,
+        min_elapsed: int,
+        require_evidence: bool,
+        require_impl_changes: bool,
+        max_consecutive_same_command: int = 1,
     ) -> dict[str, object]:
         return {
             "team": self.team,
@@ -119,9 +160,21 @@ class EntryAudit:
             "has_impl_changes": self.has_impl_changes,
             "has_commands": self.has_commands,
             "has_passfail": self.has_passfail,
+            "max_same_command_run": self.max_same_command_run,
+            "repeated_command": self.repeated_command,
             "changed_paths": self.changed_paths,
-            "verdict": self.verdict(min_elapsed, require_evidence, require_impl_changes),
-            "reasons": self.failure_reasons(min_elapsed, require_evidence, require_impl_changes),
+            "verdict": self.verdict(
+                min_elapsed,
+                require_evidence,
+                require_impl_changes,
+                max_consecutive_same_command,
+            ),
+            "reasons": self.failure_reasons(
+                min_elapsed,
+                require_evidence,
+                require_impl_changes,
+                max_consecutive_same_command,
+            ),
         }
 
 
@@ -218,6 +271,83 @@ def _normalize_path_token(token: str) -> str:
     return token.strip().strip(".,:;)]}")
 
 
+def _normalize_command_token(token: str) -> str:
+    cmd = token.strip().strip("`")
+    cmd = OUTCOME_SUFFIX_RE.sub("", cmd).strip()
+    cmd = re.sub(r"\s+", " ", cmd)
+    return cmd
+
+
+def _looks_like_command(token: str) -> bool:
+    t = token.strip()
+    if not t:
+        return False
+    if t.endswith(":"):
+        return False
+    low = t.lower()
+    if low.startswith(("session_timer_", "session_token=", "team_tag=", "start_", "end_", "elapsed_")):
+        return False
+    if low.startswith(("guard_result=", "run id:", "run id=")):
+        return False
+    if low.startswith(COMMAND_PREFIXES):
+        return True
+    if ENV_COMMAND_RE.search(t):
+        return True
+    # fallback for command lines like "scripts/foo.sh --arg ..." not wrapped by backticks
+    if " " in t and "/" in t:
+        return True
+    return False
+
+
+def extract_command_sequence(lines: list[str]) -> list[str]:
+    commands: list[str] = []
+    in_command_block = False
+    command_markers = ("実行コマンド", "1行再現コマンド")
+    for line in lines:
+        stripped = line.strip()
+        if TOP_FIELD_RE.match(line):
+            if any(marker in stripped for marker in command_markers):
+                in_command_block = True
+            elif in_command_block:
+                in_command_block = False
+        if not in_command_block:
+            continue
+
+        tokens: list[str] = []
+        for match in BACKTICK_BLOCK_RE.finditer(line):
+            norm = _normalize_command_token(match.group(1))
+            if _looks_like_command(norm):
+                tokens.append(norm)
+        if tokens:
+            commands.extend(tokens)
+            continue
+
+        raw = re.sub(r"^\s*-\s*", "", line).strip()
+        if not raw:
+            continue
+        norm_raw = _normalize_command_token(raw)
+        if _looks_like_command(norm_raw):
+            commands.append(norm_raw)
+    return commands
+
+
+def analyze_consecutive_same_command(commands: list[str]) -> tuple[int, str | None]:
+    if not commands:
+        return (0, None)
+    max_run = 1
+    current_run = 1
+    repeated_command: str | None = None
+    for i in range(1, len(commands)):
+        if commands[i] == commands[i - 1]:
+            current_run += 1
+            if current_run > max_run:
+                max_run = current_run
+                repeated_command = commands[i]
+        else:
+            current_run = 1
+    return (max_run, repeated_command)
+
+
 def extract_changed_paths(lines: list[str]) -> list[str]:
     paths: list[str] = []
     seen: set[str] = set()
@@ -271,6 +401,8 @@ def audit_entry(team: str, lines: list[str]) -> EntryAudit:
     has_changes = any(marker in text for marker in changes_markers)
     changed_paths = extract_changed_paths(lines)
     has_impl_changes = any(path_is_impl(path) for path in changed_paths)
+    command_sequence = extract_command_sequence(lines)
+    max_same_run, repeated_command = analyze_consecutive_same_command(command_sequence)
     return EntryAudit(
         team=team,
         title=title,
@@ -282,6 +414,8 @@ def audit_entry(team: str, lines: list[str]) -> EntryAudit:
         has_impl_changes=has_impl_changes,
         has_commands=("実行コマンド" in text or "1行再現コマンド" in text),
         has_passfail=("pass/fail" in text.lower() or "PASS" in text or "FAIL" in text),
+        max_same_command_run=max_same_run,
+        repeated_command=repeated_command,
         changed_paths=changed_paths,
         start_epoch=extract_start_epoch(text),
     )
@@ -329,28 +463,38 @@ def print_report(
     min_elapsed: int,
     require_evidence: bool,
     require_impl_changes: bool,
+    max_consecutive_same_command: int,
 ) -> int:
     print(f"AUDIT_TARGET: latest entries (A/B/C)  threshold=elapsed_min>={min_elapsed}")
     print("-" * 112)
-    print(
-        "team  verdict  elapsed  timer  sleep  changes  impl  commands  pass/fail  start_epoch  entry"
-    )
+    print("team  verdict  elapsed  timer  sleep  changes  impl  commands  pass/fail  same_cmd  start_epoch  entry")
     print("-" * 112)
     failed = False
     for a in audits:
-        verdict = a.verdict(min_elapsed, require_evidence, require_impl_changes)
+        verdict = a.verdict(
+            min_elapsed,
+            require_evidence,
+            require_impl_changes,
+            max_consecutive_same_command,
+        )
         if verdict != "PASS":
             failed = True
         timer = "ok" if (a.has_start and a.has_end) else "missing"
         elapsed = "-" if a.elapsed_min is None else str(a.elapsed_min)
         start_epoch = "-" if a.start_epoch is None else str(a.start_epoch)
+        same_cmd = "-" if a.max_same_command_run <= 1 else str(a.max_same_command_run)
         print(
             f"{a.team:>4}  {verdict:<7}  {elapsed:>7}  {timer:<7}  "
             f"{str(a.has_sleep):<5}  {str(a.has_changes):<7}  "
-            f"{str(a.has_impl_changes):<4}  {str(a.has_commands):<8}  {str(a.has_passfail):<9}  "
+            f"{str(a.has_impl_changes):<4}  {str(a.has_commands):<8}  {str(a.has_passfail):<9}  {same_cmd:>8}  "
             f"{start_epoch:>11}  {a.title}"
         )
-        reasons = a.failure_reasons(min_elapsed, require_evidence, require_impl_changes)
+        reasons = a.failure_reasons(
+            min_elapsed,
+            require_evidence,
+            require_impl_changes,
+            max_consecutive_same_command,
+        )
         if reasons:
             print(f"      reasons: {', '.join(reasons)}")
     print("-" * 112)
@@ -410,6 +554,15 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         action="store_false",
         help="Disable implementation-file requirement",
     )
+    parser.add_argument(
+        "--max-consecutive-same-command",
+        type=int,
+        default=1,
+        help=(
+            "Maximum allowed consecutive identical commands in the command evidence block "
+            "(default: 1, set 0 to disable)"
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -428,8 +581,14 @@ def main(argv: list[str] | None = None) -> int:
             "threshold_min_elapsed": args.min_elapsed,
             "require_evidence": args.require_evidence,
             "require_impl_changes": args.require_impl_changes,
+            "max_consecutive_same_command": args.max_consecutive_same_command,
             "results": [
-                a.to_dict(args.min_elapsed, args.require_evidence, args.require_impl_changes)
+                a.to_dict(
+                    args.min_elapsed,
+                    args.require_evidence,
+                    args.require_impl_changes,
+                    args.max_consecutive_same_command,
+                )
                 for a in audits
             ],
         }
@@ -439,7 +598,13 @@ def main(argv: list[str] | None = None) -> int:
         }
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return 0 if payload["summary"]["all_pass"] else 1
-    return print_report(audits, args.min_elapsed, args.require_evidence, args.require_impl_changes)
+    return print_report(
+        audits,
+        args.min_elapsed,
+        args.require_evidence,
+        args.require_impl_changes,
+        args.max_consecutive_same_command,
+    )
 
 
 if __name__ == "__main__":

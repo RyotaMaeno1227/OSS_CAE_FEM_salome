@@ -205,6 +205,60 @@ class AuditTeamSessionsTest(unittest.TestCase):
         self.assertNotIn("scripts/test_", audit.changed_paths)
         self.assertIn("scripts/check_c_team_submission_readiness.sh", audit.changed_paths)
 
+    def test_consecutive_identical_commands_fail(self):
+        markdown = """## Aチーム
+- 実行タスク: same command repeated
+  - SESSION_TIMER_START
+  - SESSION_TIMER_END
+  - start_epoch=100
+  - elapsed_min=40
+  - 変更ファイル: `scripts/audit_team_sessions.py`
+  - 実行コマンド:
+    - `make -C FEM4C mbd_ci_contract_test` -> PASS
+    - `make -C FEM4C mbd_ci_contract_test` -> PASS
+  - pass/fail: PASS
+"""
+        audit = MOD.collect_latest_audits(markdown, ["A"])[0]
+        self.assertEqual(audit.max_same_command_run, 2)
+        self.assertEqual(audit.verdict(30, True, True), "FAIL")
+        reasons = audit.failure_reasons(30, True, True)
+        self.assertTrue(any("consecutive identical command detected" in r for r in reasons))
+
+    def test_disable_consecutive_command_check(self):
+        markdown = """## Bチーム
+- 実行タスク: repeated command but allowed
+  - SESSION_TIMER_START
+  - SESSION_TIMER_END
+  - start_epoch=200
+  - elapsed_min=40
+  - 変更ファイル: `FEM4C/scripts/run_b8_regression.sh`
+  - 実行コマンド:
+    - `make -C FEM4C mbd_b8_regression_test` -> PASS
+    - `make -C FEM4C mbd_b8_regression_test` -> PASS
+  - pass/fail: PASS
+"""
+        audit = MOD.collect_latest_audits(markdown, ["B"])[0]
+        self.assertEqual(audit.max_same_command_run, 2)
+        self.assertEqual(audit.verdict(30, True, True, max_consecutive_same_command=0), "PASS")
+
+    def test_non_consecutive_same_command_passes(self):
+        markdown = """## Cチーム
+- 実行タスク: same command non-consecutive
+  - SESSION_TIMER_START
+  - SESSION_TIMER_END
+  - start_epoch=300
+  - elapsed_min=40
+  - 変更ファイル: `scripts/check_c_team_submission_readiness.sh`
+  - 実行コマンド:
+    - `python scripts/test_collect_c_team_session_evidence.py` -> PASS
+    - `make -C FEM4C mbd_ci_contract_test` -> PASS
+    - `python scripts/test_collect_c_team_session_evidence.py` -> PASS
+  - pass/fail: PASS
+"""
+        audit = MOD.collect_latest_audits(markdown, ["C"])[0]
+        self.assertEqual(audit.max_same_command_run, 1)
+        self.assertEqual(audit.verdict(30, True, True), "PASS")
+
 
 if __name__ == "__main__":
     unittest.main()
