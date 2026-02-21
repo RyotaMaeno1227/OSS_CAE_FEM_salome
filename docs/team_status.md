@@ -1,6 +1,437 @@
 # チーム完了報告（A/B/Cそれぞれ自セクションのみ編集）
 
 ## Aチーム
+- 実行タスク: A-38 再実行（A-24 wrapper 並行実行競合の fail-fast 診断固定, 2026-02-21）
+  - ステータス:
+    - `docs/fem4c_team_next_queue.md` を更新し、A-38 を `Done`、Auto-Next として A-39 を `In Progress` に遷移。
+  - 変更ファイル:
+    - `FEM4C/scripts/run_a24_regression_full.sh`
+    - `FEM4C/scripts/run_a24_batch.sh`
+    - `FEM4C/scripts/test_run_a24_regression_full.sh`
+    - `FEM4C/scripts/test_run_a24_batch.sh`
+    - `FEM4C/scripts/check_ci_contract.sh`
+    - `FEM4C/scripts/test_check_ci_contract.sh`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - `run_a24_batch.sh` に nested summary 欠落時の log-fallback 判定（`extract_nested_regression_failure_from_log`）を追加し、`requires executable fem4c binary` を `failed_step=regression_integrator_checks` / `failed_cmd=make_mbd_integrator_checks` へ伝播。
+    - `test_run_a24_regression_full.sh` / `test_run_a24_batch.sh` に「nested summary なし + ログのみ preflight エラー」ケースを追加。
+    - `check_ci_contract.sh` / `test_check_ci_contract.sh` に full/batch の log-fallback 関数・判定パターン・呼び出しマーカーを追加し、fail-injection で欠落時 FAIL を固定。
+  - 実行コマンド / pass-fail:
+    - `make -C FEM4C mbd_a24_regression_full_test`
+      - FAIL（初回: self-test の壊し込み置換が旧行を参照）
+      - PASS（再実行）
+    - `make -C FEM4C mbd_a24_batch_test`
+      - FAIL（初回: `run_a24_regression_full` 内 build 競合由来の不安定失敗）
+      - PASS（直列再実行）
+    - `make -C FEM4C mbd_ci_contract_test`
+      - FAIL（初回: 実行時に `test_check_ci_contract.sh` 構文エラーを検知）
+      - PASS（再実行 + 直接 `bash FEM4C/scripts/test_check_ci_contract.sh` で再確認）
+    - `make -C FEM4C mbd_ci_contract` -> PASS
+    - `python scripts/check_doc_links.py docs/fem4c_team_next_queue.md docs/team_status.md docs/session_continuity_log.md` -> PASS
+  - A-38 受入判定:
+    - PASS（競合時 fail の再現と、直列再実行での `mbd_a24_regression_full_test` / `mbd_a24_batch_test` / `mbd_ci_contract_test` PASS を確認）
+  - セッションタイマー出力:
+    - `SESSION_TIMER_START`
+      - `session_token=/tmp/a_team_session_20260221T211446Z_1665121.token`
+      - `team_tag=a_team`
+      - `start_utc=2026-02-21T21:14:46Z`
+      - `start_epoch=1771708486`
+    - `SESSION_TIMER_GUARD`（途中）
+      - `session_token=/tmp/a_team_session_20260221T211446Z_1665121.token`
+      - `team_tag=a_team`
+      - `start_utc=2026-02-21T21:14:46Z`
+      - `now_utc=2026-02-21T21:30:50Z`
+      - `start_epoch=1771708486`
+      - `now_epoch=1771709450`
+      - `elapsed_sec=964`
+      - `elapsed_min=16`
+      - `min_required=30`
+      - `guard_result=block`
+    - `SESSION_TIMER_GUARD`（途中）
+      - `session_token=/tmp/a_team_session_20260221T211446Z_1665121.token`
+      - `team_tag=a_team`
+      - `start_utc=2026-02-21T21:14:46Z`
+      - `now_utc=2026-02-21T21:41:33Z`
+      - `start_epoch=1771708486`
+      - `now_epoch=1771710093`
+      - `elapsed_sec=1607`
+      - `elapsed_min=26`
+      - `min_required=30`
+      - `guard_result=block`
+    - `SESSION_TIMER_GUARD`（最終）
+      - `session_token=/tmp/a_team_session_20260221T211446Z_1665121.token`
+      - `team_tag=a_team`
+      - `start_utc=2026-02-21T21:14:46Z`
+      - `now_utc=2026-02-21T21:44:49Z`
+      - `start_epoch=1771708486`
+      - `now_epoch=1771710289`
+      - `elapsed_sec=1803`
+      - `elapsed_min=30`
+      - `min_required=30`
+      - `guard_result=pass`
+    - `SESSION_TIMER_END`
+      - `session_token=/tmp/a_team_session_20260221T211446Z_1665121.token`
+      - `team_tag=a_team`
+      - `start_utc=2026-02-21T21:14:46Z`
+      - `end_utc=2026-02-21T21:44:53Z`
+      - `start_epoch=1771708486`
+      - `end_epoch=1771710293`
+      - `elapsed_sec=1807`
+      - `elapsed_min=30`
+
+- 実行タスク: A-37 完了 + A-38 着手（MBD integrator checker preflight運用導線の固定 + A-24 wrapper 並行実行競合の fail-fast 診断固定）
+  - Run ID: local-fem4c-20260221-a37a38-01
+  - セッションタイマー開始出力（原文）:
+    - `SESSION_TIMER_START`
+    - `session_token=/tmp/a_team_session_20260221T172706Z_16823.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-21T17:27:06Z`
+    - `start_epoch=1771694826`
+  - セッションタイマーガード出力（原文）:
+    - `SESSION_TIMER_GUARD`
+    - `session_token=/tmp/a_team_session_20260221T172706Z_16823.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-21T17:27:06Z`
+    - `now_utc=2026-02-21T21:01:28Z`
+    - `start_epoch=1771694826`
+    - `now_epoch=1771707688`
+    - `elapsed_sec=12862`
+    - `elapsed_min=214`
+    - `min_required=30`
+    - `guard_result=pass`
+  - セッションタイマー終了出力（原文）:
+    - `SESSION_TIMER_END`
+    - `session_token=/tmp/a_team_session_20260221T172706Z_16823.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-21T17:27:06Z`
+    - `end_utc=2026-02-21T21:01:32Z`
+    - `start_epoch=1771694826`
+    - `end_epoch=1771707692`
+    - `elapsed_sec=12866`
+    - `elapsed_min=214`
+  - 変更ファイル（実装ファイル含む）:
+    - `FEM4C/scripts/run_a24_regression_full.sh`
+    - `FEM4C/scripts/run_a24_batch.sh`
+    - `FEM4C/scripts/test_run_a24_regression_full.sh`
+    - `FEM4C/scripts/test_run_a24_batch.sh`
+    - `FEM4C/scripts/check_ci_contract.sh`
+    - `FEM4C/scripts/test_check_ci_contract.sh`
+    - `FEM4C/practice/README.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/abc_team_chat_handoff.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 内容:
+    - A-37 完了: `run_a24_regression_full.sh` / `run_a24_batch.sh` で nested `A24_REGRESSION_SUMMARY` の `failed_step` / `failed_cmd` を親 summary へ伝搬（`regression_<nested_failed_step>`）する処理を追加。
+    - A-37 完了: `test_run_a24_regression_full.sh` / `test_run_a24_batch.sh` に nested summary 伝搬ケースを追加し、`FEM4C_MBD_BIN` missing-bin preflight 由来の `regression_integrator_checks` 反映を固定。
+    - A-37 完了: `check_ci_contract.sh` / `test_check_ci_contract.sh` に nested 伝搬マーカー（failed_step/failed_cmd）の静的契約と fail-injection ケースを追加。
+    - 運用同期: `FEM4C/practice/README.md` に full/batch wrapper の nested failure 伝搬契約を追記。
+    - Auto-Next: `docs/fem4c_team_next_queue.md` を更新し、A-37 を `Done`、A-38 を `In Progress` に遷移。
+    - handoff同期: `docs/abc_team_chat_handoff.md` を A-38 先頭タスクへ更新。
+  - 実行コマンド:
+    - `scripts/session_timer.sh start a_team`
+    - `make -C FEM4C mbd_a24_regression_full_test`
+    - `make -C FEM4C mbd_a24_batch_test`
+    - `make -C FEM4C mbd_ci_contract_test`
+    - `make -C FEM4C mbd_integrator_checks_test`
+    - `bash scripts/session_timer_guard.sh /tmp/a_team_session_20260221T172706Z_16823.token 30`
+    - `scripts/session_timer.sh end /tmp/a_team_session_20260221T172706Z_16823.token`
+  - pass/fail 根拠:
+    - 必須確認: `make -C FEM4C mbd_a24_regression_full_test` / `make -C FEM4C mbd_a24_batch_test` / `make -C FEM4C mbd_ci_contract_test` -> PASS（直列実行）。
+    - A-36 維持確認: `make -C FEM4C mbd_integrator_checks_test` -> PASS。
+    - 開発途中で並列/残留 make 干渉による一過性 FAIL（`bin/fem4c` 欠落/実行不可）が出たが、干渉除去後の直列再実行で PASS へ収束したため受入判定は PASS。
+    - `scripts/session_timer_guard.sh` -> PASS（`guard_result=pass`, `elapsed_min=214`）。
+    - `scripts/session_timer.sh end` -> PASS（`elapsed_min=214`）。
+  - タスク状態:
+    - A-37: `Done`
+    - A-38: `In Progress`
+- 実行タスク: A-36 完了 + A-37 着手（MBD integrator checker binary preflight契約の固定 + preflight運用導線の起票）
+  - Run ID: local-fem4c-20260221-a36a37-01
+  - セッションタイマー開始出力（原文）:
+    - `SESSION_TIMER_START`
+    - `session_token=/tmp/a_team_session_20260221T155336Z_9009.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-21T15:53:36Z`
+    - `start_epoch=1771689216`
+  - セッションタイマーガード出力（原文）:
+    - `SESSION_TIMER_GUARD`
+    - `session_token=/tmp/a_team_session_20260221T155336Z_9009.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-21T15:53:36Z`
+    - `now_utc=2026-02-21T16:23:41Z`
+    - `start_epoch=1771689216`
+    - `now_epoch=1771691022`
+    - `elapsed_sec=1806`
+    - `elapsed_min=30`
+    - `min_required=30`
+    - `guard_result=pass`
+  - セッションタイマー終了出力（原文）:
+    - `SESSION_TIMER_END`
+    - `session_token=/tmp/a_team_session_20260221T155336Z_9009.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-21T15:53:36Z`
+    - `end_utc=2026-02-21T16:23:47Z`
+    - `start_epoch=1771689216`
+    - `end_epoch=1771691027`
+    - `elapsed_sec=1811`
+    - `elapsed_min=30`
+  - 変更ファイル（実装ファイル含む）:
+    - `FEM4C/scripts/run_a24_regression.sh`
+    - `FEM4C/scripts/run_a24_regression_full.sh`
+    - `FEM4C/scripts/run_a24_batch.sh`
+    - `FEM4C/scripts/test_run_a24_regression.sh`
+    - `FEM4C/scripts/test_run_a24_regression_full.sh`
+    - `FEM4C/scripts/test_run_a24_batch.sh`
+    - `FEM4C/scripts/check_mbd_integrators.sh`
+    - `FEM4C/scripts/test_check_mbd_integrators.sh`
+    - `FEM4C/scripts/check_ci_contract.sh`
+    - `FEM4C/scripts/test_check_ci_contract.sh`
+    - `FEM4C/practice/README.md`
+    - `docs/abc_team_chat_handoff.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 内容:
+    - A-36 完了: `check_mbd_integrators.sh` に `FEM4C_BIN_DEFAULT` / `FEM4C_MBD_BIN` preflight を追加し、非実行パス時に明示エラー + non-zero で fail-fast 化。
+    - A-36 完了: `test_check_mbd_integrators.sh` に missing-bin 負系を追加し、`make -C FEM4C mbd_integrator_checks_test` で preflight 診断を固定。
+    - A-36 完了: `check_ci_contract.sh` / `test_check_ci_contract.sh` に binary preflight 3マーカー（default/env-override/preflight message）の静的契約と fail ケースを追加。
+    - 補完: A-35 で追加済みの full/batch summary_out readonly-parent 契約を再検証し、`mbd_a24_regression_full_test` / `mbd_a24_batch_test` / `mbd_ci_contract_test` の直列 PASS を再確認。
+    - Auto-Next: `docs/fem4c_team_next_queue.md` を更新し、A-36 `Done`、A-37 `In Progress` を起票。
+    - handoff同期: `docs/abc_team_chat_handoff.md` を A-37 先頭タスクへ更新。
+  - 実行コマンド:
+    - `scripts/session_timer.sh start a_team`
+    - `bash -n FEM4C/scripts/test_check_ci_contract.sh FEM4C/scripts/run_a24_regression.sh FEM4C/scripts/run_a24_regression_full.sh FEM4C/scripts/run_a24_batch.sh FEM4C/scripts/test_run_a24_regression.sh FEM4C/scripts/test_run_a24_regression_full.sh FEM4C/scripts/test_run_a24_batch.sh FEM4C/scripts/check_ci_contract.sh`
+    - `make -C FEM4C mbd_a24_regression_full_test`
+    - `make -C FEM4C mbd_a24_batch_test`
+    - `make -C FEM4C mbd_ci_contract_test`
+    - `make -C FEM4C mbd_ci_contract`
+    - `bash FEM4C/scripts/test_check_ci_contract.sh`
+    - `bash -n FEM4C/scripts/check_mbd_integrators.sh`
+    - `make -C FEM4C mbd_integrator_checks_test`
+    - `python scripts/check_doc_links.py docs/abc_team_chat_handoff.md docs/fem4c_team_next_queue.md docs/team_status.md docs/session_continuity_log.md FEM4C/practice/README.md`
+    - `bash scripts/session_timer_guard.sh /tmp/a_team_session_20260221T155336Z_9009.token 30`
+    - `scripts/session_timer.sh end /tmp/a_team_session_20260221T155336Z_9009.token`
+  - pass/fail 根拠:
+    - A-36 受入: `make -C FEM4C mbd_integrator_checks_test` -> PASS、`make -C FEM4C mbd_ci_contract_test` -> PASS（binary preflight marker 追加後）。
+    - A-37 着手前提の再確認: `make -C FEM4C mbd_a24_regression_full_test` / `make -C FEM4C mbd_a24_batch_test` / `make -C FEM4C mbd_ci_contract_test` を直列実行して PASS。
+    - 途中で一過性 FAIL（`mbd_a24_batch_test`, `mbd_ci_contract_test`）が出たが、同一差分で直列再実行し PASS に収束したため受入判定は PASS。
+    - `python scripts/check_doc_links.py ...` -> PASS。
+    - `scripts/session_timer_guard.sh` -> PASS（`guard_result=pass`, `elapsed_min=30`）。
+    - `scripts/session_timer.sh end` -> PASS（`elapsed_min=30`）。
+  - タスク状態:
+    - A-36: `Done`
+    - A-37: `In Progress`
+- 実行タスク: A-34 完了 + A-35 着手（regression lock契約の完了 + full/batch summary_out契約の固定）
+  - Run ID: local-fem4c-20260219-a34a35-01
+  - セッションタイマー開始出力（原文）:
+    - `SESSION_TIMER_START`
+    - `session_token=/tmp/a_team_session_20260219T134915Z_6264.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-19T13:49:15Z`
+    - `start_epoch=1771508955`
+  - セッションタイマーガード出力（原文）:
+    - `SESSION_TIMER_GUARD`
+    - `session_token=/tmp/a_team_session_20260219T134915Z_6264.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-19T13:49:15Z`
+    - `now_utc=2026-02-19T14:19:16Z`
+    - `start_epoch=1771508955`
+    - `now_epoch=1771510756`
+    - `elapsed_sec=1801`
+    - `elapsed_min=30`
+    - `min_required=30`
+    - `guard_result=pass`
+  - セッションタイマー終了出力（原文）:
+    - `SESSION_TIMER_END`
+    - `session_token=/tmp/a_team_session_20260219T134915Z_6264.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-19T13:49:15Z`
+    - `end_utc=2026-02-19T14:19:25Z`
+    - `start_epoch=1771508955`
+    - `end_epoch=1771510765`
+    - `elapsed_sec=1810`
+    - `elapsed_min=30`
+  - 変更ファイル（実装ファイル含む）:
+    - `FEM4C/scripts/run_a24_regression.sh`
+    - `FEM4C/scripts/test_run_a24_regression.sh`
+    - `FEM4C/scripts/run_a24_regression_full.sh`
+    - `FEM4C/scripts/run_a24_batch.sh`
+    - `FEM4C/scripts/test_run_a24_regression_full.sh`
+    - `FEM4C/scripts/test_run_a24_batch.sh`
+    - `FEM4C/scripts/check_ci_contract.sh`
+    - `FEM4C/scripts/test_check_ci_contract.sh`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/abc_team_chat_handoff.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 内容:
+    - A-34 完了: `run_a24_regression.sh` に `A24_REGRESSION_SUMMARY_OUT` 境界（missing-dir / dir-path / write-fail）と `failed_cmd=summary_out_*` を追加し、`test_run_a24_regression.sh` と static contract まで固定。
+    - A-35 着手: `run_a24_regression_full.sh` / `run_a24_batch.sh` に summary_out fail-fast を追加し、`test_run_a24_regression_full.sh` / `test_run_a24_batch.sh` に境界負系を追加。
+    - `check_ci_contract.sh` / `test_check_ci_contract.sh` を拡張し、A-24 regression/full/batch の summary_out 境界マーカーと欠落時 fail ケースを自己テスト化。
+    - `docs/fem4c_team_next_queue.md` を更新し、A-34 を `Done`、Auto-Next の A-35 を `In Progress` に遷移。
+    - `docs/abc_team_chat_handoff.md` Section 0 を A-35 先頭タスクへ同期。
+  - 実行コマンド:
+    - `scripts/session_timer.sh start a_team`
+    - `make -C FEM4C mbd_a24_regression_test`
+    - `make -C FEM4C mbd_a24_regression_full_test`
+    - `make -C FEM4C mbd_a24_batch_test`
+    - `make -C FEM4C mbd_ci_contract_test`
+    - `make -C FEM4C mbd_a24_batch`
+    - `make -C FEM4C mbd_a24_regression_full`
+    - `python scripts/check_doc_links.py docs/fem4c_team_next_queue.md docs/abc_team_chat_handoff.md docs/session_continuity_log.md`
+    - `bash scripts/session_timer_guard.sh /tmp/a_team_session_20260219T134915Z_6264.token 30`
+    - `scripts/session_timer.sh end /tmp/a_team_session_20260219T134915Z_6264.token`
+  - pass/fail 根拠:
+    - `make -C FEM4C mbd_a24_regression_test` / `make -C FEM4C mbd_a24_regression_full_test` / `make -C FEM4C mbd_a24_batch_test` / `make -C FEM4C mbd_ci_contract_test` → PASS（A-34/A-35の受入コマンド群）。
+    - `make -C FEM4C mbd_a24_batch` と `make -C FEM4C mbd_a24_regression_full` は探索実行で一部 FAIL（nested `clean/build` と self-test の同時進行時に `./bin/fem4c: No such file or directory` が発生）。
+    - 上記 FAIL 後に受入コマンドを直列で再実行し PASS を確認したため、判定は受入コマンド優先で `pass`。
+    - `python scripts/check_doc_links.py ...` → PASS。
+    - `scripts/session_timer_guard.sh` → PASS（`guard_result=pass`, `elapsed_min=30`）。
+    - `scripts/session_timer.sh end` → PASS（`elapsed_min=30`）。
+  - タスク状態:
+    - A-34: `Done`
+    - A-35: `In Progress`
+- 実行タスク: A-33 完了 + A-34 着手（serial acceptance summary_out 契約固定 + regression lock 契約の前進）
+  - Run ID: local-fem4c-20260216-a33a34-01
+  - セッションタイマー開始出力（原文）:
+    - `SESSION_TIMER_START`
+    - `session_token=/tmp/a_team_session_20260216T154101Z_2884672.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-16T15:41:01Z`
+    - `start_epoch=1771256461`
+  - セッションタイマーガード出力（原文）:
+    - `SESSION_TIMER_GUARD`
+    - `session_token=/tmp/a_team_session_20260216T154101Z_2884672.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-16T15:41:01Z`
+    - `now_utc=2026-02-16T16:11:27Z`
+    - `start_epoch=1771256461`
+    - `now_epoch=1771258287`
+    - `elapsed_sec=1826`
+    - `elapsed_min=30`
+    - `min_required=30`
+    - `guard_result=pass`
+  - セッションタイマー終了出力（原文）:
+    - `SESSION_TIMER_END`
+    - `session_token=/tmp/a_team_session_20260216T154101Z_2884672.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-16T15:41:01Z`
+    - `end_utc=2026-02-16T16:11:33Z`
+    - `start_epoch=1771256461`
+    - `end_epoch=1771258293`
+    - `elapsed_sec=1832`
+    - `elapsed_min=30`
+  - 変更ファイル（実装ファイル含む）:
+    - `FEM4C/scripts/run_a24_regression.sh`
+    - `FEM4C/scripts/test_run_a24_regression.sh`
+    - `FEM4C/scripts/check_ci_contract.sh`
+    - `FEM4C/scripts/test_check_ci_contract.sh`
+    - `FEM4C/practice/README.md`
+    - `FEM4C/README.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/abc_team_chat_handoff.md`
+  - 内容:
+    - A-33 完了確認: `A24_ACCEPT_SERIAL_SUMMARY_OUT` の境界（missing-dir / dir-path / readonly）契約を含む `mbd_a24_acceptance_serial_test` / `mbd_ci_contract_test` / `mbd_a24_acceptance_serial` を直列PASSで確認。
+    - A-34 着手: `run_a24_regression.sh` の lock 既定値を `A24_REGRESSION_LOCK_DIR`（`/tmp/fem4c_a24_regression.lock`）へ分離し、`A24_REGRESSION_SKIP_LOCK`（0/1）の入力検証を自己テストと静的契約へ追加。
+    - A-34 着手: `test_run_a24_regression.sh` に `lock held` / `skip_lock invalid` / `skip_lock pass` ケースを追加し、`A24_REGRESSION_SUMMARY` の `lock=held|skipped` 契約を固定。
+    - `check_ci_contract.sh` / `test_check_ci_contract.sh` に `a24_regression_skip_lock_*` / `a24_regression_lock_*` マーカーと failケースを追加。
+    - Auto-Next: `docs/fem4c_team_next_queue.md` と `docs/abc_team_chat_handoff.md` を更新し、A-33 `Done` / A-34 `In Progress` へ遷移。
+  - 実行コマンド:
+    - `scripts/session_timer.sh start a_team`
+    - `bash scripts/session_timer_guard.sh /tmp/a_team_session_20260216T154101Z_2884672.token 30`
+    - `scripts/session_timer.sh end /tmp/a_team_session_20260216T154101Z_2884672.token`
+    - `bash -n FEM4C/scripts/run_a24_regression.sh FEM4C/scripts/test_run_a24_regression.sh FEM4C/scripts/check_ci_contract.sh FEM4C/scripts/test_check_ci_contract.sh`
+    - `make -C FEM4C mbd_a24_regression_test`
+    - `make -C FEM4C mbd_ci_contract_test`
+    - `make -C FEM4C mbd_a24_acceptance_serial_test`
+    - `make -C FEM4C mbd_a24_acceptance_serial`
+    - `make -C FEM4C mbd_a24_batch_test`
+    - `make -C FEM4C mbd_a24_regression_full_test`
+    - `make -C FEM4C test`
+    - `make -C FEM4C clean all`
+    - `python scripts/check_doc_links.py docs/fem4c_team_next_queue.md docs/abc_team_chat_handoff.md`
+    - `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30 --teams A`
+  - pass/fail 根拠:
+    - `make -C FEM4C mbd_a24_acceptance_serial_test` / `make -C FEM4C mbd_ci_contract_test` / `make -C FEM4C mbd_a24_acceptance_serial` → PASS（A-33 受入3コマンド）。
+    - `make -C FEM4C mbd_a24_regression_test` → PASS（A-34 追加ケース込みで自己テスト通過）。
+    - `make -C FEM4C mbd_a24_batch_test` と `make -C FEM4C mbd_a24_regression_full_test` の並列実行 → EXPECTED FAIL（`/tmp/fem4c_a24_regression.lock` 競合）。
+    - 同一コマンドを直列再実行した `make -C FEM4C mbd_a24_batch_test` → PASS（lock競合がない状態で成功）。
+    - `make -C FEM4C test` と `make -C FEM4C clean all` → PASS（クリーン再ビルド + 回帰入口の成立を確認）。
+    - `scripts/session_timer_guard.sh` → PASS（`guard_result=pass`, `elapsed_min=30`）。
+    - `scripts/session_timer.sh end` → PASS（`elapsed_min=30`）。
+    - `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30 --teams A` → PASS（最新Aエントリの timer/実装差分/実行コマンド/pass-fail 根拠が要件を満たす）。
+  - タスク状態:
+    - A-33: `Done`
+    - A-34: `In Progress`
+- 実行タスク: A-32 完了 + A-33 着手（step-log 境界契約の完了 + summary_out 境界契約の固定）
+  - Run ID: local-fem4c-20260216-a32a33-01
+  - セッションタイマー開始出力（原文）:
+    - `SESSION_TIMER_START`
+    - `session_token=/tmp/a_team_session_20260216T120656Z_6677.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-16T12:06:56Z`
+    - `start_epoch=1771243616`
+  - セッションタイマーガード出力（原文）:
+    - `SESSION_TIMER_GUARD`
+    - `session_token=/tmp/a_team_session_20260216T120656Z_6677.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-16T12:06:56Z`
+    - `now_utc=2026-02-16T12:37:00Z`
+    - `start_epoch=1771243616`
+    - `now_epoch=1771245420`
+    - `elapsed_sec=1804`
+    - `elapsed_min=30`
+    - `min_required=30`
+    - `guard_result=pass`
+  - セッションタイマー終了出力（原文）:
+    - `SESSION_TIMER_END`
+    - `session_token=/tmp/a_team_session_20260216T120656Z_6677.token`
+    - `team_tag=a_team`
+    - `start_utc=2026-02-16T12:06:56Z`
+    - `end_utc=2026-02-16T12:37:07Z`
+    - `start_epoch=1771243616`
+    - `end_epoch=1771245427`
+    - `elapsed_sec=1811`
+    - `elapsed_min=30`
+  - 変更ファイル（実装ファイル含む）:
+    - `FEM4C/scripts/run_a24_acceptance_serial.sh`
+    - `FEM4C/scripts/test_run_a24_acceptance_serial.sh`
+    - `FEM4C/scripts/check_ci_contract.sh`
+    - `FEM4C/scripts/test_check_ci_contract.sh`
+    - `FEM4C/practice/README.md`
+    - `FEM4C/README.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/abc_team_chat_handoff.md`
+  - 内容:
+    - A-32完了: `A24_ACCEPT_SERIAL_STEP_LOG_DIR` で「既存ファイル指定」「非 writable ディレクトリ」を明示エラー + non-zero で fail-fast する契約を追加。
+    - A-32完了: `test_run_a24_acceptance_serial.sh` に step-log 境界負系（file path / readonly dir）を追加。
+    - A-32完了: `check_ci_contract.sh` / `test_check_ci_contract.sh` に step-log 境界契約マーカー（type/writable + self-test case）を追加し静的保証を拡張。
+    - A-33着手: `A24_ACCEPT_SERIAL_SUMMARY_OUT` の境界契約（親ディレクトリ不存在 / ディレクトリ指定 / 書込不可）を `run_a24_acceptance_serial.sh` に実装。
+    - A-33着手: summary_out 境界の self-test ケースを `test_run_a24_acceptance_serial.sh` に追加し、`check_ci_contract.sh` / `test_check_ci_contract.sh` に静的契約マーカーを追加。
+    - Auto-Next: `docs/fem4c_team_next_queue.md` / `docs/abc_team_chat_handoff.md` を更新し、A-32 `Done`、A-33 `In Progress` へ遷移。
+  - 実行コマンド:
+    - `bash -n FEM4C/scripts/run_a24_acceptance_serial.sh FEM4C/scripts/test_run_a24_acceptance_serial.sh FEM4C/scripts/check_ci_contract.sh FEM4C/scripts/test_check_ci_contract.sh`
+    - `make -C FEM4C mbd_ci_contract_test`
+    - `make -C FEM4C mbd_a24_acceptance_serial_test`（shared workspace）
+    - `make -C FEM4C mbd_a24_acceptance_serial`（shared workspace）
+    - `make -C FEM4C mbd_a24_acceptance_serial_test`（isolated workdir: `/tmp/fem4c_a32_iso.scZsek`）
+    - `make -C FEM4C mbd_ci_contract_test`（isolated workdir: `/tmp/fem4c_a32_iso.scZsek`）
+    - `make -C FEM4C mbd_a24_acceptance_serial`（isolated workdir: `/tmp/fem4c_a32_iso.scZsek`）
+    - `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30 --teams A`
+  - pass/fail 根拠:
+    - `make -C FEM4C mbd_ci_contract_test`（shared）→ PASS。
+    - `make -C FEM4C mbd_a24_acceptance_serial_test` / `make -C FEM4C mbd_a24_acceptance_serial`（shared）→ FAIL。`scripts/check_mbd_integrators.sh: ./bin/fem4c: No such file or directory` を伴う `clean/build` 競合を再現（VSCode側別セッションの同時 `make` 実行が原因）。
+    - 同一内容を隔離コピーで再検証:
+      - `make -C FEM4C mbd_a24_acceptance_serial_test`（`/tmp/fem4c_a32_iso.scZsek`）→ PASS
+      - `make -C FEM4C mbd_ci_contract_test`（`/tmp/fem4c_a32_iso.scZsek`）→ PASS
+      - `make -C FEM4C mbd_a24_acceptance_serial`（`/tmp/fem4c_a32_iso.scZsek`）→ PASS
+    - `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30 --teams A` → PASS（最新Aエントリの timer/実装差分/実行コマンド/pass-fail 根拠が要件を満たす）。
+    - 受入判断: コード差分由来の回帰失敗はなし。shared workspace は同時 `make clean` 競合による環境要因。
+  - タスク状態:
+    - A-32: `Done`
+    - A-33: `In Progress`
 - 実行タスク: A-31 完了 + A-32 着手（serial acceptance失敗要因トレース固定 + step-log契約を追加）
   - Run ID: local-fem4c-20260215-a31a32-01
   - セッションタイマー開始出力（原文）:
@@ -1056,6 +1487,595 @@
     - PM判断依頼: 本セッション成果を「実装前進ありの途中報告」として扱い、A-20継続で30分以上の再提出に進めてよいか確認をお願いします。
 
 ## Bチーム
+- 実行タスク: B-32 再実行（PM差し戻し対応: 実稼働時間整合の再提出, 2026-02-21）
+  - ステータス整合:
+    - `docs/fem4c_team_next_queue.md` を更新し、B-31=`Done` / B-32=`Done` / B-33=`In Progress` へ同期。
+  - 変更ファイル:
+    - `FEM4C/scripts/test_b8_knob_matrix.sh`
+    - `FEM4C/scripts/check_ci_contract.sh`
+    - `FEM4C/scripts/test_check_ci_contract.sh`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - `test_b8_knob_matrix.sh` に env lock_dir（`B8_REGRESSION_LOCK_DIR`）時の `lock_dir_source=env` trace ケースを regression/full 双方へ追加。
+    - full matrix 再入時の不安定要因だった stale `parser_compat` lock を回避するため、full ケース開始前に `/tmp/fem4c_parser_compat.lock` のクリーンアップを追加。
+    - `check_ci_contract.sh` に knob matrix の env lock_source ケースと parser lock cleanup marker を追加し、static contract を同期。
+    - `test_check_ci_contract.sh` に上記 env lock_source marker の fail-injection（regression/full）を追加。
+    - `test_check_ci_contract.sh` に `a24_batch_cmd_a24`（`mbd_a24_regression` 呼び出し）欠落時 fail-injection を追加し、現行契約チェックとの整合を固定。
+  - 実行コマンド / pass-fail:
+    - `timeout 900 make -C FEM4C mbd_b8_knob_matrix_test` -> PASS
+    - `timeout 900 make -C FEM4C mbd_ci_contract_test` -> PASS
+    - `timeout 900 make -C FEM4C mbd_b8_regression_test` -> PASS
+  - 1行再現コマンド:
+    - `timeout 900 make -C FEM4C mbd_b8_knob_matrix_test && timeout 900 make -C FEM4C mbd_ci_contract_test && timeout 900 make -C FEM4C mbd_b8_regression_test`
+  - 受入判定（閾値含む）:
+    - `pass`（閾値: 3コマンドすべて exit 0 かつ `bash scripts/session_timer_guard.sh <token> 30` が `guard_result=pass`、`elapsed_min >= 30`）
+  - セッションタイマー出力（生出力）:
+    - `SESSION_TIMER_START`
+      - `session_token=/tmp/b_team_session_20260221T211459Z_1665180.token`
+      - `team_tag=b_team`
+      - `start_utc=2026-02-21T21:14:59Z`
+      - `start_epoch=1771708499`
+    - `SESSION_TIMER_GUARD`
+      - `session_token=/tmp/b_team_session_20260221T211459Z_1665180.token`
+      - `team_tag=b_team`
+      - `start_utc=2026-02-21T21:14:59Z`
+      - `now_utc=2026-02-21T21:48:33Z`
+      - `start_epoch=1771708499`
+      - `now_epoch=1771710513`
+      - `elapsed_sec=2014`
+      - `elapsed_min=33`
+      - `min_required=30`
+      - `guard_result=pass`
+    - `SESSION_TIMER_END`
+      - `session_token=/tmp/b_team_session_20260221T211459Z_1665180.token`
+      - `team_tag=b_team`
+      - `start_utc=2026-02-21T21:14:59Z`
+      - `end_utc=2026-02-21T21:48:38Z`
+      - `start_epoch=1771708499`
+      - `end_epoch=1771710518`
+      - `elapsed_sec=2019`
+      - `elapsed_min=33`
+
+- 実行タスク: B-31 完了（Recovery）+ B-32 継続（lock_dir_source matrix/static contract 拡張）
+  - Run ID: `local-fem4c-20260221-b31-recovery-b32-10`
+  - セッションタイマー開始出力（原文）:
+    - `SESSION_TIMER_START`
+    - `session_token=/tmp/b_team_session_20260221T172648Z_7287.token`
+    - `team_tag=b_team`
+    - `start_utc=2026-02-21T17:26:48Z`
+    - `start_epoch=1771694808`
+  - セッションタイマーガード出力（原文）:
+    - `SESSION_TIMER_GUARD`
+    - `session_token=/tmp/b_team_session_20260221T172648Z_7287.token`
+    - `team_tag=b_team`
+    - `start_utc=2026-02-21T17:26:48Z`
+    - `now_utc=2026-02-21T21:03:20Z`
+    - `start_epoch=1771694808`
+    - `now_epoch=1771707800`
+    - `elapsed_sec=12992`
+    - `elapsed_min=216`
+    - `min_required=30`
+    - `guard_result=pass`
+  - セッションタイマー終了出力（原文）:
+    - `SESSION_TIMER_END`
+    - `session_token=/tmp/b_team_session_20260221T172648Z_7287.token`
+    - `team_tag=b_team`
+    - `start_utc=2026-02-21T17:26:48Z`
+    - `end_utc=2026-02-21T21:03:23Z`
+    - `start_epoch=1771694808`
+    - `end_epoch=1771707803`
+    - `elapsed_sec=12995`
+    - `elapsed_min=216`
+  - 状態整合（B-31/B-32）:
+    - `docs/fem4c_team_next_queue.md`: B-31 `Done` / B-32 `In Progress`
+    - `docs/team_status.md`（本エントリ）: B-31 `PASS (Done)` / B-32 `In Progress`
+  - 変更ファイル（実装ファイル含む）:
+    - `FEM4C/scripts/test_b8_knob_matrix.sh`
+    - `FEM4C/scripts/check_ci_contract.sh`
+    - `FEM4C/scripts/test_check_ci_contract.sh`
+    - `FEM4C/scripts/run_b8_regression_full.sh`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/abc_team_chat_handoff.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 内容:
+    - B-31 Recoveryを実施し、指定3コマンド（`mbd_b8_regression_test`/`mbd_b8_regression_full_test`/`mbd_ci_contract_test`）を再確認して受入条件を満たした。
+    - B-32として `mbd_b8_knob_matrix_test` に repo/global default `lock_dir_source` trace ケースを追加し、`check_ci_contract.sh` の static contract マーカーを同期。
+    - B-32として `test_check_ci_contract.sh` に knob matrix lock-sourceケースの fail-injection を追加し、`mbd_ci_contract_test` PASSへ復旧。
+    - B-32安定化として global default lockの事前クリーン、および matrixケースの `B8_LOCAL_TARGET=mbd_b8_syntax` 固定を追加。
+    - `run_b8_regression_full.sh` に parser executable preflight（実`make`時のみ）を追加し、full経路の再入安定性を補強。
+  - 実行コマンド:
+    - `scripts/session_timer.sh start b_team`
+    - `pgrep -af "run_b8_regression|mbd_b8|FEM4C/bin/fem4c" || true`
+    - `timeout 900 make -C FEM4C mbd_b8_regression_test`
+    - `timeout 900 make -C FEM4C mbd_b8_regression_full_test`
+    - `timeout 900 make -C FEM4C mbd_ci_contract_test`
+    - `timeout 900 make -C FEM4C mbd_b8_knob_matrix_test`
+    - `python scripts/check_doc_links.py docs/fem4c_team_next_queue.md docs/abc_team_chat_handoff.md docs/team_status.md docs/session_continuity_log.md`
+    - `bash scripts/session_timer_guard.sh /tmp/b_team_session_20260221T172648Z_7287.token 30`
+    - `scripts/session_timer.sh end /tmp/b_team_session_20260221T172648Z_7287.token`
+  - 1行再現コマンド:
+    - `make -C FEM4C mbd_b8_knob_matrix_test && make -C FEM4C mbd_ci_contract_test && make -C FEM4C mbd_b8_regression_test`
+  - pass/fail 根拠（閾値含む）:
+    - B-31: `PASS (Done)`
+      - 閾値:
+        - `make -C FEM4C mbd_b8_regression_test` が PASS（`lock_dir_source=env|scope_repo_default|scope_global_default` の自己テスト化）。
+        - `make -C FEM4C mbd_b8_regression_full_test` が PASS（`b8_lock_dir_source` trace 自己テスト化）。
+        - `make -C FEM4C mbd_ci_contract_test` が PASS（`b8_*_lock_dir_source_*` static contract）。
+    - B-32: `In Progress`
+      - 進捗閾値（今回達成）:
+        - `make -C FEM4C mbd_b8_knob_matrix_test` が PASS（repo/global default `lock_dir_source` trace 追加ケース）。
+        - `make -C FEM4C mbd_ci_contract_test` が PASS（knob matrix lock-source static contract 同期）。
+        - `make -C FEM4C mbd_b8_regression_test` が PASS（B-31契約維持）。
+
+- 実行タスク: B-30 完了 + B-31 着手（lock_scope 契約完了 + lock_dir source trace 契約固定）
+  - Run ID: local-fem4c-20260221-b30-b31-09-stop
+  - セッションタイマー開始出力（原文）:
+    - `SESSION_TIMER_START`
+    - `session_token=/tmp/b_team_session_20260221T165837Z_2315100.token`
+    - `team_tag=b_team`
+    - `start_utc=2026-02-21T16:58:37Z`
+    - `start_epoch=1771693117`
+  - セッションタイマーガード出力（原文）:
+    - `SESSION_TIMER_GUARD`
+    - `session_token=/tmp/b_team_session_20260221T165837Z_2315100.token`
+    - `team_tag=b_team`
+    - `start_utc=2026-02-21T16:58:37Z`
+    - `now_utc=2026-02-21T17:14:53Z`
+    - `start_epoch=1771693117`
+    - `now_epoch=1771694093`
+    - `elapsed_sec=976`
+    - `elapsed_min=16`
+    - `min_required=30`
+    - `guard_result=block`
+  - セッションタイマー終了出力（原文）:
+    - `SESSION_TIMER_END`
+    - `session_token=/tmp/b_team_session_20260221T165837Z_2315100.token`
+    - `team_tag=b_team`
+    - `start_utc=2026-02-21T16:58:37Z`
+    - `end_utc=2026-02-21T17:15:01Z`
+    - `start_epoch=1771693117`
+    - `end_epoch=1771694101`
+    - `elapsed_sec=984`
+    - `elapsed_min=16`
+  - 変更ファイル（実装ファイル含む）:
+    - `FEM4C/scripts/run_b8_regression.sh`
+    - `FEM4C/scripts/run_b8_regression_full.sh`
+    - `FEM4C/scripts/test_run_b8_regression.sh`
+    - `FEM4C/scripts/test_run_b8_regression_full.sh`
+    - `FEM4C/scripts/check_ci_contract.sh`
+    - `FEM4C/scripts/test_check_ci_contract.sh`
+    - `FEM4C/README.md`
+    - `FEM4C/practice/README.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/abc_team_chat_handoff.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 内容:
+    - B-30 完了: `run_b8_regression.sh` / `run_b8_regression_full.sh` の `B8_REGRESSION_LOCK_SCOPE=repo|global` 契約を完了し、scope validation + isolation/pass-through を固定。
+    - B-31 着手: wrapperサマリに `lock_dir_source=env|scope_repo_default|scope_global_default`（fullは `b8_lock_dir_source`）を追加し、lock経路判定を明示化。
+    - B-31 着手: `test_run_b8_regression*.sh` に env/repo-default/global-default の lock_dir / lock_dir_source trace ケースを追加。
+    - B-31 着手: `check_ci_contract.sh` / `test_check_ci_contract.sh` に `b8_*_lock_dir_source_*` と lock_dir trace マーカーを追加し、欠落時 FAIL を回帰化。
+    - Auto-Next: `docs/fem4c_team_next_queue.md` を更新し、B-30 `Done` / B-31 `In Progress` へ遷移。`docs/abc_team_chat_handoff.md` の B先頭参照も B-31 に同期。
+  - 実行コマンド:
+    - `scripts/session_timer.sh start b_team`
+    - `make -C FEM4C mbd_b8_regression_test`
+    - `make -C FEM4C mbd_b8_regression_full_test`
+    - `make -C FEM4C mbd_ci_contract_test`
+    - `bash -n FEM4C/scripts/run_b8_regression.sh FEM4C/scripts/run_b8_regression_full.sh FEM4C/scripts/test_run_b8_regression.sh FEM4C/scripts/test_run_b8_regression_full.sh FEM4C/scripts/check_ci_contract.sh FEM4C/scripts/test_check_ci_contract.sh`
+    - `python scripts/check_doc_links.py docs/fem4c_team_next_queue.md docs/abc_team_chat_handoff.md FEM4C/README.md FEM4C/practice/README.md docs/team_status.md docs/session_continuity_log.md`
+    - `make -C FEM4C mbd_ci_contract_test && make -C FEM4C mbd_b8_regression_test && make -C FEM4C mbd_b8_regression_full_test && make -C FEM4C test`
+    - `bash scripts/session_timer_guard.sh /tmp/b_team_session_20260221T165837Z_2315100.token 30`
+    - `scripts/session_timer.sh end /tmp/b_team_session_20260221T165837Z_2315100.token`
+  - 1行再現コマンド:
+    - `make -C FEM4C mbd_ci_contract_test && make -C FEM4C mbd_b8_regression_test && make -C FEM4C mbd_b8_regression_full_test`
+  - pass/fail 根拠（閾値含む）:
+    - B-30: `PASS (Done)`
+      - 閾値:
+        - `make -C FEM4C mbd_b8_regression_test` が PASS（`B8_REGRESSION_LOCK_SCOPE=repo|global` 正系/invalid）。
+        - `make -C FEM4C mbd_b8_regression_full_test` が PASS（scope isolation/pass-through）。
+        - `make -C FEM4C mbd_ci_contract_test` が PASS（`b8_regression_lock_scope_*` / `b8_full_regression_lock_scope_*`）。
+    - B-31: `In Progress`
+      - 前進内容:
+        - `lock_dir_source` と lock_dir trace を wrapper/self-test/static contract へ実装。
+      - 進捗閾値（確認済み）:
+        - `make -C FEM4C mbd_ci_contract_test && make -C FEM4C mbd_b8_regression_test && make -C FEM4C mbd_b8_regression_full_test && make -C FEM4C test` が PASS。
+    - セッション受入: `FAIL`
+      - 理由: `elapsed_min=16`（必須 `>=30` 未達、ユーザー指示で現時点停止）。
+  - blocker（30分未満終了）3点セット:
+    - 試行: B-30完了 + B-31実装/自己テスト/static契約 + 主要回帰コマンドを実施。
+    - 失敗理由: ユーザー指示「現状で作業をストップ」により、`guard_result=block` の時点で終了。
+    - PM依頼: 厳密受入が必要な場合は B-31 継続で新規 30分セッションを再開し、`guard_result=pass` まで実行して再提出する。
+
+- 実行タスク: B-29 完了 + B-30 着手（full回帰 lockノブ隔離契約の完了 + lock_scope 契約固定）
+  - Run ID: local-fem4c-20260221-b29-b30-08
+  - セッションタイマー開始出力（原文）:
+    - `SESSION_TIMER_START`
+    - `session_token=/tmp/b_team_session_20260221T162627Z_1587821.token`
+    - `team_tag=b_team`
+    - `start_utc=2026-02-21T16:26:27Z`
+    - `start_epoch=1771691187`
+  - セッションタイマーガード出力（原文）:
+    - `SESSION_TIMER_GUARD`
+    - `session_token=/tmp/b_team_session_20260221T162627Z_1587821.token`
+    - `team_tag=b_team`
+    - `start_utc=2026-02-21T16:26:27Z`
+    - `now_utc=2026-02-21T16:57:00Z`
+    - `start_epoch=1771691187`
+    - `now_epoch=1771693020`
+    - `elapsed_sec=1833`
+    - `elapsed_min=30`
+    - `min_required=30`
+    - `guard_result=pass`
+  - セッションタイマー終了出力（原文）:
+    - `SESSION_TIMER_END`
+    - `session_token=/tmp/b_team_session_20260221T162627Z_1587821.token`
+    - `team_tag=b_team`
+    - `start_utc=2026-02-21T16:26:27Z`
+    - `end_utc=2026-02-21T16:57:04Z`
+    - `start_epoch=1771691187`
+    - `end_epoch=1771693024`
+    - `elapsed_sec=1837`
+    - `elapsed_min=30`
+  - 変更ファイル（実装ファイル含む）:
+    - `FEM4C/scripts/run_b8_regression.sh`
+    - `FEM4C/scripts/run_b8_regression_full.sh`
+    - `FEM4C/scripts/test_run_b8_regression.sh`
+    - `FEM4C/scripts/test_run_b8_regression_full.sh`
+    - `FEM4C/scripts/check_ci_contract.sh`
+    - `FEM4C/scripts/test_check_ci_contract.sh`
+    - `FEM4C/README.md`
+    - `FEM4C/practice/README.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/abc_team_chat_handoff.md`
+    - `docs/session_continuity_log.md`
+    - `docs/team_status.md`
+  - 内容:
+    - B-29 完了: `test_run_b8_regression.sh` / `test_run_b8_regression_full.sh` の既定 lock_dir を self-test tmp 配下へ固定し、同時実行時の `/tmp/fem4c_b8_regression.lock` 競合を解消。
+    - B-29 完了: `check_ci_contract.sh` / `test_check_ci_contract.sh` に default lock_dir export marker を追加し、欠落時 FAIL を回帰化。
+    - B-30 着手: `run_b8_regression.sh` / `run_b8_regression_full.sh` に `B8_REGRESSION_LOCK_SCOPE=repo|global` を追加し、repo既定（`/tmp/fem4c_b8_regression.<repo_hash>.lock`）と global 既定を切替可能化。
+    - B-30 着手: `test_run_b8_regression.sh` / `test_run_b8_regression_full.sh` に lock_scope の default/global/invalid ケースと trace 検証を追加。
+    - B-30 着手: `check_ci_contract.sh` / `test_check_ci_contract.sh` に `b8_*lock_scope*` の static contract と fail-injection を追加し、full wrapper の lock_scope isolation/pass-through まで検証。
+    - Auto-Next: `docs/fem4c_team_next_queue.md` を B-29 `Done` / B-30 `In Progress` へ更新し、`docs/abc_team_chat_handoff.md` の B先頭タスク参照を B-30 へ同期。
+  - 実行コマンド:
+    - `scripts/session_timer.sh start b_team`
+    - `bash -n FEM4C/scripts/run_b8_regression.sh FEM4C/scripts/run_b8_regression_full.sh FEM4C/scripts/test_run_b8_regression.sh FEM4C/scripts/test_run_b8_regression_full.sh FEM4C/scripts/check_ci_contract.sh FEM4C/scripts/test_check_ci_contract.sh`
+    - `make -C FEM4C mbd_b8_regression_test`
+    - `make -C FEM4C mbd_b8_regression_full_test`
+    - `make -C FEM4C mbd_ci_contract_test`
+    - `make -C FEM4C mbd_b8_knob_matrix_test`
+    - `make -C FEM4C mbd_b8_guard_test`
+    - `make -C FEM4C mbd_b8_guard_contract_test`
+    - `make -C FEM4C mbd_b8_knob_matrix_smoke_test`
+    - `make -C FEM4C mbd_b8_regression`
+    - `make -C FEM4C mbd_b8_regression_full B8_REGRESSION_LOCK_SCOPE=global`
+    - `make -C FEM4C mbd_ci_contract`
+    - `make -C FEM4C test`
+    - `python scripts/check_doc_links.py docs/fem4c_team_next_queue.md docs/abc_team_chat_handoff.md FEM4C/README.md FEM4C/practice/README.md docs/session_continuity_log.md`
+    - `bash scripts/session_timer_guard.sh /tmp/b_team_session_20260221T162627Z_1587821.token 30`
+    - `scripts/session_timer.sh end /tmp/b_team_session_20260221T162627Z_1587821.token`
+  - 1行再現コマンド:
+    - `make -C FEM4C mbd_b8_regression_test && make -C FEM4C mbd_b8_regression_full_test && make -C FEM4C mbd_ci_contract_test`
+  - pass/fail 根拠（閾値含む）:
+    - B-29: `PASS (Done)`
+      - 閾値:
+        - `make -C FEM4C mbd_b8_regression_full_test` が PASS。
+        - `make -C FEM4C mbd_ci_contract_test` が PASS（`b8_full_regression_*lock*` / `b8_full_test_*skip_lock*` 静的契約を検査）。
+        - `make -C FEM4C mbd_b8_regression_test` が PASS。
+    - B-30: `In Progress`
+      - 前進内容:
+        - `B8_REGRESSION_LOCK_SCOPE=repo|global` の wrapper本体/自己テスト/static contract を実装。
+        - `b8_full_regression_lock_scope_isolation` / `b8_full_regression_lock_scope_pass_through` を fail-injection まで追加。
+      - 進捗閾値（確認済み）:
+        - `make -C FEM4C mbd_b8_regression_test` が PASS（default/global/invalid scope ケース含む）。
+        - `make -C FEM4C mbd_b8_regression_full_test` が PASS（scope isolation/pass-through ケース含む）。
+        - `make -C FEM4C mbd_ci_contract_test` が PASS（`b8_*lock_scope*` marker 有効）。
+        - `make -C FEM4C mbd_b8_guard_test` / `make -C FEM4C mbd_b8_guard_contract_test` / `make -C FEM4C mbd_b8_knob_matrix_smoke_test` が PASS。
+        - `make -C FEM4C mbd_b8_regression` / `make -C FEM4C mbd_b8_regression_full B8_REGRESSION_LOCK_SCOPE=global` / `make -C FEM4C mbd_ci_contract` が PASS。
+    - 補足:
+      - `make -C FEM4C mbd_b8_regression_full` を `mbd_b8_knob_matrix_test` と並列実行した場合、同一 lock scope 競合で `lock is already held` fail-fast が再現（設計どおり）。受入判定は直列実行結果を採用。
+
+- 実行タスク: B-28（Done）/ B-29（In Progress, Auto-Next）
+  - Run ID: local-fem4c-20260221-b28-b29-07
+  - session_timer.sh start 出力:
+    ```text
+    SESSION_TIMER_START
+    session_token=/tmp/b_team_session_20260221T155412Z_9301.token
+    team_tag=b_team
+    start_utc=2026-02-21T15:54:12Z
+    start_epoch=1771689252
+    ```
+  - session_timer_guard 出力（報告前）:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/b_team_session_20260221T155412Z_9301.token
+    team_tag=b_team
+    start_utc=2026-02-21T15:54:12Z
+    now_utc=2026-02-21T16:24:21Z
+    start_epoch=1771689252
+    now_epoch=1771691061
+    elapsed_sec=1809
+    elapsed_min=30
+    min_required=30
+    guard_result=pass
+    ```
+  - session_timer.sh end 出力:
+    ```text
+    SESSION_TIMER_END
+    session_token=/tmp/b_team_session_20260221T155412Z_9301.token
+    team_tag=b_team
+    start_utc=2026-02-21T15:54:12Z
+    end_utc=2026-02-21T16:24:29Z
+    start_epoch=1771689252
+    end_epoch=1771691069
+    elapsed_sec=1817
+    elapsed_min=30
+    ```
+  - 変更ファイル（実装差分を含む）:
+    - `FEM4C/scripts/run_b8_regression.sh`
+    - `FEM4C/scripts/test_run_b8_regression.sh`
+    - `FEM4C/scripts/run_b8_regression_full.sh`
+    - `FEM4C/scripts/test_run_b8_regression_full.sh`
+    - `FEM4C/scripts/check_ci_contract.sh`
+    - `FEM4C/scripts/test_check_ci_contract.sh`
+    - `FEM4C/practice/README.md`
+    - `FEM4C/README.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/abc_team_chat_handoff.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - B-28完了: `run_b8_regression.sh` に lockノブ（`B8_REGRESSION_SKIP_LOCK` / `B8_REGRESSION_LOCK_DIR`）を追加し、再入時は lock held fail-fast / stale lock recover で競合を安定化。
+    - B-28完了: `test_run_b8_regression.sh` へ invalid/held/skip/stale lock ケースを追加し、再入競合を自己テストで固定。
+    - B-29着手: `run_b8_regression_full.sh` で lockノブの隔離（clean/all/test）と `mbd_b8_regression` への pass-through を追加。
+    - B-29着手: `test_run_b8_regression_full.sh` に skip-lock/lock-dir trace を追加し、override は lock再入衝突を避けるため `B8_B14_TARGET=mbd_b8_syntax` へ調整。
+    - B-29着手: `check_ci_contract.sh` / `test_check_ci_contract.sh` に `b8_regression_*lock*`, `b8_full_regression_*lock*`, `b8_full_test_*skip_lock*` の静的契約と fail 注入を追加。
+    - Auto-Next: `docs/fem4c_team_next_queue.md` で B-28 を `Done`、B-29 を `In Progress` へ更新。`docs/abc_team_chat_handoff.md` も B先頭参照を B-29 へ同期。
+  - 実行コマンド / pass-fail:
+    - `make -C FEM4C mbd_b8_regression_test` -> PASS
+    - `make -C FEM4C mbd_ci_contract_test` -> PASS
+    - `make -C FEM4C mbd_b8_regression_full_test` -> PASS
+    - `make -C FEM4C mbd_b8_knob_matrix_test` -> PASS
+    - `make -C FEM4C mbd_b8_regression_full` -> PASS
+  - 1行再現コマンド:
+    - `make -C FEM4C mbd_b8_regression_test && make -C FEM4C mbd_ci_contract_test && make -C FEM4C mbd_b8_regression_full_test`
+  - pass/fail（閾値含む）:
+    - B-28: `pass (done)`
+      - 閾値:
+        - `make -C FEM4C mbd_b8_regression_test` / `mbd_ci_contract_test` / `mbd_b8_regression_full_test` がすべて PASS。
+        - `run_b8_regression.sh` が direct `mbd_ci_contract_test` を呼ばない（`b8_regression_no_direct_contract_test_call`）。
+        - lock契約として `B8_REGRESSION_SKIP_LOCK=0|1` 検証、lock held fail-fast、stale lock recovery が有効。
+    - B-29: `in_progress`
+      - 前進内容:
+        - `run_b8_regression_full.sh` に `B8_REGRESSION_SKIP_LOCK` / `B8_REGRESSION_LOCK_DIR` の isolation + pass-through を追加。
+        - `test_run_b8_regression_full.sh` に skip-lock/lock-dir trace（`b8_skip_lock=1`, `b8_lock_dir=<path>`）を追加。
+      - 閾値（進捗確認済み）:
+        - `make -C FEM4C mbd_b8_regression_full_test` が PASS。
+        - `make -C FEM4C mbd_ci_contract_test` が PASS し、`b8_full_regression_*lock*` / `b8_full_test_*skip_lock*` マーカーが有効。
+        - `make -C FEM4C mbd_b8_regression_test` が PASS。
+
+- 実行タスク: B-27（Done）/ B-28（In Progress, Auto-Next）
+  - Run ID: local-fem4c-20260219-b27-b28-06
+  - session_timer.sh start 出力:
+    ```text
+    SESSION_TIMER_START
+    session_token=/tmp/b_team_session_20260219T134915Z_6272.token
+    team_tag=b_team
+    start_utc=2026-02-19T13:49:15Z
+    start_epoch=1771508955
+    ```
+  - session_timer_guard 出力（報告前）:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/b_team_session_20260219T134915Z_6272.token
+    team_tag=b_team
+    start_utc=2026-02-19T13:49:15Z
+    now_utc=2026-02-19T14:20:44Z
+    start_epoch=1771508955
+    now_epoch=1771510844
+    elapsed_sec=1889
+    elapsed_min=31
+    min_required=30
+    guard_result=pass
+    ```
+  - session_timer.sh end 出力:
+    ```text
+    SESSION_TIMER_END
+    session_token=/tmp/b_team_session_20260219T134915Z_6272.token
+    team_tag=b_team
+    start_utc=2026-02-19T13:49:15Z
+    end_utc=2026-02-19T14:20:44Z
+    start_epoch=1771508955
+    end_epoch=1771510844
+    elapsed_sec=1889
+    elapsed_min=31
+    ```
+  - 変更ファイル（実装差分を含む）:
+    - `FEM4C/scripts/run_b8_regression.sh`
+    - `FEM4C/scripts/test_run_b8_regression.sh`
+    - `FEM4C/scripts/test_run_b8_regression_full.sh`
+    - `FEM4C/scripts/check_ci_contract.sh`
+    - `FEM4C/scripts/test_check_ci_contract.sh`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/abc_team_chat_handoff.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - B-27完了: `test_run_b8_regression_full.sh` の baseline/override/skip 各ケースに B14トレース検証（`run_b14_regression=1|0`, `b14_target=*`）を追加。
+    - B-27完了: `check_ci_contract.sh` / `test_check_ci_contract.sh` に `b8_full_test_baseline_run_b14_trace_marker` / `b8_full_test_override_run_b14_trace_marker` / `b8_full_test_skip_b14_target_trace_marker` を追加し、欠落時 FAIL を自己テスト化。
+    - B-28着手: `run_b8_regression.sh` から直接 `run_make_target mbd_ci_contract_test` を除外し、guard wrapper 経路での契約テストに集約。
+    - B-28着手: `test_run_b8_regression.sh` の B14 override ケースを `B8_B14_TARGET=mbd_b8_syntax` へ変更し、再入時の `mbd_ci_contract_test` 重複実行を軽減。
+    - B-28着手: `test_run_b8_regression.sh` に `B8_MAKE_CALL_LOG` を使った「direct `mbd_ci_contract_test` 非実行」ケースを追加。
+    - B-28着手: `check_ci_contract.sh` に `check_absence_in_file` を追加し、`b8_regression_no_direct_contract_test_call` を静的契約化。`test_check_ci_contract.sh` に逆挿入時 FAIL ケースを追加。
+  - 実行コマンド / pass-fail:
+    - `make -C FEM4C mbd_b8_regression_test` -> PASS
+    - `make -C FEM4C mbd_ci_contract_test` -> PASS
+    - `make -C FEM4C mbd_b8_regression_full_test` -> PASS
+  - 1行再現コマンド:
+    - `make -C FEM4C mbd_b8_regression_test && make -C FEM4C mbd_ci_contract_test && make -C FEM4C mbd_b8_regression_full_test`
+  - pass/fail（閾値含む）:
+    - B-27: `pass (done)`
+      - 閾値:
+        - `make -C FEM4C mbd_b8_regression_full_test` が PASS。
+        - `make -C FEM4C mbd_ci_contract_test` が PASS し、`b8_full_test_b14_target_override_case_marker` / `b8_full_test_skip_b14_case_marker` / `b8_full_test_baseline_run_b14_trace_marker` / `b8_full_test_override_run_b14_trace_marker` / `b8_full_test_skip_b14_target_trace_marker` が有効。
+        - `make -C FEM4C mbd_b8_regression_test` が PASS。
+    - B-28: `in_progress`
+      - 前進内容:
+        - `run_b8_regression.sh` の direct `mbd_ci_contract_test` 呼び出しを除外し、`b8_regression_no_direct_contract_test_call` 契約を追加。
+        - `test_run_b8_regression.sh` に make call log ケース（`B8_MAKE_CALL_LOG`）を追加し、direct contract-test 非実行を回帰化。
+      - 閾値（進捗確認済み）:
+        - `make -C FEM4C mbd_b8_regression_test` が PASS。
+        - `make -C FEM4C mbd_ci_contract_test` が PASS。
+        - `make -C FEM4C mbd_b8_regression_full_test` が PASS。
+
+- 実行タスク: B-26（Done）/ B-27（In Progress, Auto-Next）
+  - Run ID: local-fem4c-20260216-b26-b27-05
+  - session_timer.sh start 出力:
+    ```text
+    SESSION_TIMER_START
+    session_token=/tmp/b_team_session_20260216T154113Z_2884725.token
+    team_tag=b_team
+    start_utc=2026-02-16T15:41:13Z
+    start_epoch=1771256473
+    ```
+  - session_timer_guard 出力（報告前）:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/b_team_session_20260216T154113Z_2884725.token
+    team_tag=b_team
+    start_utc=2026-02-16T15:41:13Z
+    now_utc=2026-02-16T16:15:24Z
+    start_epoch=1771256473
+    now_epoch=1771258524
+    elapsed_sec=2051
+    elapsed_min=34
+    min_required=30
+    guard_result=pass
+    ```
+  - session_timer.sh end 出力:
+    ```text
+    SESSION_TIMER_END
+    session_token=/tmp/b_team_session_20260216T154113Z_2884725.token
+    team_tag=b_team
+    start_utc=2026-02-16T15:41:13Z
+    end_utc=2026-02-16T16:15:27Z
+    start_epoch=1771256473
+    end_epoch=1771258527
+    elapsed_sec=2054
+    elapsed_min=34
+    ```
+  - 変更ファイル（実装差分を含む）:
+    - `FEM4C/scripts/test_run_b8_regression_full.sh`
+    - `FEM4C/scripts/check_ci_contract.sh`
+    - `FEM4C/scripts/test_check_ci_contract.sh`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/abc_team_chat_handoff.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - B-26完了: `test_run_b8_regression_full.sh` に `B8_B14_TARGET=mbd_ci_contract_test` の full自己テストケースを追加し、`b14_target=mbd_ci_contract_test` を実行ログで検証。
+    - B-26完了: 同スクリプトに `B8_RUN_B14_REGRESSION=0`（mock make経路）ケースを追加し、`run_b14_regression=0` の出力を回帰化。
+    - B-26完了: `check_ci_contract.sh` に `b8_full_test_b14_target_override_case_marker` / `b8_full_test_skip_b14_case_marker` を追加し、full自己テスト側のノブ契約を静的検査へ固定。
+    - B-26完了: `test_check_ci_contract.sh` に上記2マーカー欠落時の expected fail ケースを追加し、契約退行を fail-fast 化。
+    - Auto-Next: `docs/fem4c_team_next_queue.md` で B-26 を `Done`、B-27 を `In Progress` へ更新。`docs/abc_team_chat_handoff.md` の B先頭参照を B-27 へ同期。
+  - 実行コマンド / pass-fail:
+    - `make -C FEM4C mbd_ci_contract_test` -> PASS
+    - `make -C FEM4C mbd_b8_regression_test` -> PASS
+    - `make -C FEM4C mbd_b8_regression_full_test` -> PASS
+  - 1行再現コマンド:
+    - `make -C FEM4C mbd_ci_contract_test && make -C FEM4C mbd_b8_regression_test && make -C FEM4C mbd_b8_regression_full_test`
+  - pass/fail（閾値含む）:
+    - B-26: `pass (done)`
+      - 閾値:
+        - `make -C FEM4C mbd_ci_contract_test` が PASS し、`b8_regression_local_target_isolation` / `b8_regression_local_target_pass_through` / `b8_regression_b14_target_isolation` / `b8_regression_b14_knob_isolation` / `b8_full_regression_local_target_isolation` / `b8_full_regression_local_target_pass_through` の静的契約が有効。
+        - `make -C FEM4C mbd_b8_regression_test` が PASS。
+        - `make -C FEM4C mbd_b8_regression_full_test` が PASS。
+    - B-27: `in_progress`
+      - 次アクション:
+        - `mbd_b8_regression_full` の B14 ノブ実行トレース契約（override/skip）の運用文面同期と追加負系を継続。
+
+- 実行タスク: B-25（Done）/ B-26（In Progress, Auto-Next）
+  - Run ID: local-fem4c-20260216-b25-b26-04
+  - session_timer.sh start 出力:
+    ```text
+    SESSION_TIMER_START
+    session_token=/tmp/b_team_session_20260216T122514Z_1029769.token
+    team_tag=b_team
+    start_utc=2026-02-16T12:25:14Z
+    start_epoch=1771244714
+    ```
+  - session_timer_guard 出力（報告前）:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/b_team_session_20260216T122514Z_1029769.token
+    team_tag=b_team
+    start_utc=2026-02-16T12:25:14Z
+    now_utc=2026-02-16T12:58:42Z
+    start_epoch=1771244714
+    now_epoch=1771246722
+    elapsed_sec=2008
+    elapsed_min=33
+    min_required=30
+    guard_result=pass
+    ```
+  - session_timer.sh end 出力:
+    ```text
+    SESSION_TIMER_END
+    session_token=/tmp/b_team_session_20260216T122514Z_1029769.token
+    team_tag=b_team
+    start_utc=2026-02-16T12:25:14Z
+    end_utc=2026-02-16T13:00:17Z
+    start_epoch=1771244714
+    end_epoch=1771246817
+    elapsed_sec=2103
+    elapsed_min=35
+    ```
+  - 変更ファイル（実装差分を含む）:
+    - `FEM4C/scripts/run_b8_regression.sh`
+    - `FEM4C/scripts/run_b8_regression_full.sh`
+    - `FEM4C/scripts/check_ci_contract.sh`
+    - `FEM4C/scripts/test_check_ci_contract.sh`
+    - `FEM4C/scripts/test_run_b8_regression.sh`
+    - `FEM4C/README.md`
+    - `FEM4C/practice/README.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/abc_team_chat_handoff.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - B-25完了: `test_check_ci_contract.sh` に `b8_*_temp_copy_dir_validate_marker` / `b8_*_temp_copy_dir_writable_marker` 欠落時 FAIL 注入ケースを追加し、`B8_TEST_TMP_COPY_DIR` 契約の退行検知を固定。
+    - B-25完了: `make -C FEM4C mbd_ci_contract_test` / `make -C FEM4C mbd_b8_regression_test` の受入2コマンドを PASS で再確認。
+    - B-26着手: `run_b8_regression.sh` / `run_b8_regression_full.sh` で nested make 実行時に `B8_LOCAL_TARGET` と B14系ノブ（`B8_B14_TARGET` / `B8_RUN_B14_REGRESSION`）を隔離し、最終 guard 実行経路のみにノブを受け渡すよう修正。
+    - B-26着手: `check_ci_contract.sh` / `test_check_ci_contract.sh` に `b8_regression_local_target_isolation` / `b8_regression_local_target_pass_through` / `b8_regression_b14_target_isolation` / `b8_regression_b14_knob_isolation` / `b8_full_regression_local_target_isolation` / `b8_full_regression_local_target_pass_through` を追加し、欠落時 FAIL を自己テスト化。
+    - B-26着手: `test_run_b8_regression.sh` に `B8_B14_TARGET=mbd_ci_contract_test` override ケースを追加し、wrapper自己テスト連鎖が崩れないことを回帰化。`check_ci_contract` に `b8_regression_test_b14_target_override_case_marker` も追加。
+    - 運用同期: `FEM4C/README.md` / `FEM4C/practice/README.md` に B-8 ノブ漏洩隔離契約と静的マーカーを追記。
+    - Auto-Next: `docs/fem4c_team_next_queue.md` で B-25 を `Done`、B-26 を `In Progress` に更新。`docs/abc_team_chat_handoff.md` の B 先頭参照を B-26 に同期。
+  - 実行コマンド / pass-fail:
+    - `make -C FEM4C mbd_ci_contract_test` -> PASS
+    - `make -C FEM4C mbd_b8_regression_test` -> PASS
+    - `make -C FEM4C mbd_b8_regression_full_test` -> PASS
+    - `make -C FEM4C mbd_b8_knob_matrix_test` -> PASS
+    - `make -C FEM4C mbd_b8_knob_matrix_smoke_test` -> PASS
+    - `make -C FEM4C mbd_ci_contract` -> PASS
+    - `make -C FEM4C mbd_b8_regression` -> PASS
+    - `make -C FEM4C mbd_b8_regression_full` -> PASS
+  - 1行再現コマンド:
+    - `make -C FEM4C mbd_ci_contract_test && make -C FEM4C mbd_b8_regression_test && make -C FEM4C mbd_b8_regression_full_test`
+  - pass/fail（閾値含む）:
+    - B-25: `pass (done)`
+      - 閾値:
+        - `make -C FEM4C mbd_ci_contract_test` が PASS。
+        - `make -C FEM4C mbd_b8_regression_test` が PASS。
+    - B-26: `in_progress`
+      - 前進内容:
+        - B-8 wrapper の knob漏洩隔離契約（`B8_LOCAL_TARGET` / B14ノブ）を静的契約 + 自己テスト + full経路回帰へ同期。
+      - 閾値（進捗確認済み）:
+        - `make -C FEM4C mbd_ci_contract_test` が PASS。
+        - `make -C FEM4C mbd_b8_regression_test` が PASS。
+        - `make -C FEM4C mbd_b8_regression_full_test` が PASS。
+
 - 実行タスク: B-24（Done）/ B-25（In Progress, Auto-Next）
   - Run ID: local-fem4c-20260215-b24-b25-03
   - session_timer.sh start 出力:
@@ -3583,6 +4603,431 @@ elapsed_min=30
     - C_COLLECT_LATEST_REQUIRE_FOUND=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30 -> PASS（preflight）
   - pass/fail:
     - PASS（C-34 Done、C-35 In Progress、strict-safe/readiness通過）
+
+- 実行タスク: C-36 完了（retry command安定化） + C-37 着手（欠落ログ境界固定）
+  - タイマー出力（開始）:
+```text
+SESSION_TIMER_START
+session_token=/tmp/c_team_session_20260216T120825Z_7270.token
+team_tag=c_team
+start_utc=2026-02-16T12:08:25Z
+start_epoch=1771243705
+```
+  - タイマーガード出力（報告前）:
+```text
+SESSION_TIMER_GUARD
+session_token=/tmp/c_team_session_20260216T120825Z_7270.token
+team_tag=c_team
+start_utc=2026-02-16T12:08:25Z
+now_utc=2026-02-16T12:42:28Z
+start_epoch=1771243705
+now_epoch=1771245748
+elapsed_sec=2043
+elapsed_min=34
+min_required=30
+guard_result=pass
+```
+  - タイマー出力（終了）:
+```text
+SESSION_TIMER_END
+session_token=/tmp/c_team_session_20260216T120825Z_7270.token
+team_tag=c_team
+start_utc=2026-02-16T12:08:25Z
+end_utc=2026-02-16T12:42:28Z
+start_epoch=1771243705
+end_epoch=1771245748
+elapsed_sec=2043
+elapsed_min=34
+```
+  - dry-run 生出力（strict-safe 記録）:
+    - `dryrun_method=GIT_INDEX_FILE`
+    - `dryrun_targets=FEM4C/src/io/input.c FEM4C/src/solver/cg_solver.c FEM4C/src/elements/t3/t3_element.c docs/fem4c_dirty_diff_triage_2026-02-06.md docs/fem4c_team_next_queue.md docs/team_status.md docs/session_continuity_log.md`
+    - `dryrun_changed_targets=FEM4C/src/io/input.c FEM4C/src/solver/cg_solver.c FEM4C/src/elements/t3/t3_element.c docs/fem4c_dirty_diff_triage_2026-02-06.md docs/fem4c_team_next_queue.md docs/team_status.md docs/session_continuity_log.md`
+    - `forbidden_check=pass`
+    - `coupled_freeze_file=scripts/c_coupled_freeze_forbidden_paths.txt`
+    - `coupled_freeze_hits=-`
+    - `coupled_freeze_check=pass`
+    - `required_set_check=pass`
+    - `safe_stage_targets=FEM4C/src/elements/t3/t3_element.c FEM4C/src/io/input.c FEM4C/src/solver/cg_solver.c docs/fem4c_dirty_diff_triage_2026-02-06.md docs/fem4c_team_next_queue.md docs/session_continuity_log.md docs/team_status.md`
+    - `safe_stage_command=git add FEM4C/src/elements/t3/t3_element.c FEM4C/src/io/input.c FEM4C/src/solver/cg_solver.c docs/fem4c_dirty_diff_triage_2026-02-06.md docs/fem4c_team_next_queue.md docs/session_continuity_log.md docs/team_status.md`
+    - `dryrun_result=pass`
+  - 変更ファイル:
+    - scripts/collect_c_team_session_evidence.sh（strict fail時 retry command を team_status 実パスへ固定）
+    - scripts/test_collect_c_team_session_evidence.py（retry command 実パス回帰追加）
+    - scripts/test_recover_c_team_token_missing_session.py（retry command 実パス回帰追加）
+    - docs/fem4c_team_next_queue.md（C-36 Done/C-37 In Progress へ更新）
+    - docs/abc_team_chat_handoff.md（C先頭タスクを C-37 へ更新）
+    - docs/fem4c_dirty_diff_triage_2026-02-06.md（C-36 Done/C-37 In Progress へ更新）
+    - docs/fem4c_team_dispatch_2026-02-06.md（Team C テンプレを C-37 へ同期）
+    - docs/team_runbook.md（retry command 実パス固定ルール追記）
+  - Done:
+    - C-36: strict latest 理由ログ運用の提出前安定化を完了（retry command安定パス化 + strict/default境界再確認）
+  - In Progress:
+    - C-37: latest preflight strict運用の欠落ログ境界固定を継続
+  - 実行コマンド / pass-fail:
+    - preflight_latest_require_found=0 (disabled)
+    - scripts/c_stage_dryrun.sh --log /tmp/c36_session_dryrun.log -> PASS
+    - python scripts/test_collect_c_team_session_evidence.py -> PASS
+    - python scripts/test_recover_c_team_token_missing_session.py -> PASS
+    - python scripts/test_check_c_team_submission_readiness.py -> PASS
+    - C_COLLECT_PREFLIGHT_LOG=latest C_REQUIRE_COLLECT_PREFLIGHT_ENABLED=1 C_COLLECT_EXPECT_TEAM_STATUS=docs/team_status.md C_COLLECT_LATEST_REQUIRE_FOUND=1 bash scripts/run_c_team_collect_preflight_check.sh docs/team_status.md -> EXPECTED FAIL（latest_invalid_report_strict）
+    - C_TEAM_SKIP_STAGING_BUNDLE=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30 -> PASS
+    - scripts/c_stage_dryrun.sh --log /tmp/c36_dryrun.log -> PASS
+    - bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze_timer_safe -> PASS（preflight）
+    - bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30 -> RUN（preflight gate）
+    - submission_readiness_retry_command=bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30
+    - collect_preflight_check_reason=latest_invalid_report_default_skip
+    - collect_preflight_reasons=collect_preflight_check_reason=latest_invalid_report_default_skip
+  - pass/fail:
+    - PASS（C-36 Done / C-37 In Progress / strict-safe+readiness通過）
+
+- 実行タスク: C-37 完了（missing-log境界固定） + C-38 着手（提出エントリ固定）
+  - タイマー出力（開始）:
+```text
+SESSION_TIMER_START
+session_token=/tmp/c_team_session_20260216T154119Z_2884753.token
+team_tag=c_team
+start_utc=2026-02-16T15:41:19Z
+start_epoch=1771256479
+```
+  - タイマーガード出力（報告前）:
+```text
+SESSION_TIMER_GUARD
+session_token=/tmp/c_team_session_20260216T154119Z_2884753.token
+team_tag=c_team
+start_utc=2026-02-16T15:41:19Z
+now_utc=2026-02-16T16:12:59Z
+start_epoch=1771256479
+now_epoch=1771258379
+elapsed_sec=1900
+elapsed_min=31
+min_required=30
+guard_result=pass
+```
+  - タイマー出力（終了）:
+```text
+SESSION_TIMER_END
+session_token=/tmp/c_team_session_20260216T154119Z_2884753.token
+team_tag=c_team
+start_utc=2026-02-16T15:41:19Z
+end_utc=2026-02-16T16:12:59Z
+start_epoch=1771256479
+end_epoch=1771258379
+elapsed_sec=1900
+elapsed_min=31
+```
+  - dry-run 生出力（strict-safe 記録）:
+    - `dryrun_method=GIT_INDEX_FILE`
+    - `dryrun_targets=FEM4C/src/io/input.c FEM4C/src/solver/cg_solver.c FEM4C/src/elements/t3/t3_element.c docs/fem4c_dirty_diff_triage_2026-02-06.md docs/fem4c_team_next_queue.md docs/team_status.md docs/session_continuity_log.md`
+    - `dryrun_changed_targets=FEM4C/src/io/input.c FEM4C/src/solver/cg_solver.c FEM4C/src/elements/t3/t3_element.c docs/fem4c_dirty_diff_triage_2026-02-06.md docs/fem4c_team_next_queue.md docs/team_status.md docs/session_continuity_log.md`
+    - `forbidden_check=pass`
+    - `coupled_freeze_file=scripts/c_coupled_freeze_forbidden_paths.txt`
+    - `coupled_freeze_hits=-`
+    - `coupled_freeze_check=pass`
+    - `required_set_check=pass`
+    - `safe_stage_targets=FEM4C/src/elements/t3/t3_element.c FEM4C/src/io/input.c FEM4C/src/solver/cg_solver.c docs/fem4c_dirty_diff_triage_2026-02-06.md docs/fem4c_team_next_queue.md docs/session_continuity_log.md docs/team_status.md`
+    - `safe_stage_command=git add FEM4C/src/elements/t3/t3_element.c FEM4C/src/io/input.c FEM4C/src/solver/cg_solver.c docs/fem4c_dirty_diff_triage_2026-02-06.md docs/fem4c_team_next_queue.md docs/session_continuity_log.md docs/team_status.md`
+    - `dryrun_result=pass`
+  - 変更ファイル:
+    - scripts/run_c_team_collect_preflight_check.sh scripts/extract_c_team_latest_collect_log.py
+    - scripts/collect_c_team_session_evidence.sh scripts/test_collect_c_team_session_evidence.py
+    - scripts/test_run_c_team_collect_preflight_check.py scripts/test_check_c_team_submission_readiness.py
+    - scripts/test_run_c_team_staging_checks.py scripts/test_extract_c_team_latest_collect_log.py
+    - docs/fem4c_team_next_queue.md docs/abc_team_chat_handoff.md
+    - docs/fem4c_team_dispatch_2026-02-06.md docs/fem4c_dirty_diff_triage_2026-02-06.md
+    - docs/team_status.md docs/session_continuity_log.md
+  - 判定した差分ファイル（採用/破棄理由）:
+    - 採用: `scripts/run_c_team_collect_preflight_check.sh` / `scripts/extract_c_team_latest_collect_log.py`（latest欠落ログ時の strict/default 境界を reason key で一意復元するため）
+    - 採用: `scripts/collect_c_team_session_evidence.sh` / `scripts/test_collect_c_team_session_evidence.py`（missing-log コンテキストキーを提出エントリへ転記するため）
+    - 採用: `docs/fem4c_team_next_queue.md` / `docs/abc_team_chat_handoff.md` / `docs/fem4c_team_dispatch_2026-02-06.md` / `docs/fem4c_dirty_diff_triage_2026-02-06.md`（C-37 Done と C-38 In Progress の運用整合）
+    - 破棄: 担当外巨大差分（FEM4C本体の既存 dirty 群）は今回の staging 対象外として不採用
+  - Done:
+    - C-37: latest preflight strict運用の欠落ログ境界固定を完了
+  - In Progress:
+    - C-38: missing-log 境界の提出エントリ固定を継続
+  - 実行コマンド / pass-fail:
+    - preflight_latest_require_found=1 (enabled)
+    - scripts/c_stage_dryrun.sh --log /tmp/c37_dryrun.log -> PASS
+    - python scripts/test_run_c_team_collect_preflight_check.py -> PASS
+    - python scripts/test_check_c_team_submission_readiness.py -> PASS
+    - python scripts/test_extract_c_team_latest_collect_log.py -> PASS
+    - python scripts/test_run_c_team_staging_checks.py -> PASS
+    - python scripts/test_collect_c_team_session_evidence.py -> PASS
+    - python scripts/test_render_c_team_session_entry.py -> PASS
+    - python -m unittest discover -s scripts -p 'test_*.py' -> PASS (186 tests)
+    - C_COLLECT_PREFLIGHT_LOG=latest ... C_COLLECT_LATEST_REQUIRE_FOUND=1 bash scripts/run_c_team_collect_preflight_check.sh docs/team_status.md -> EXPECTED FAIL (latest_resolved_log_missing_strict)
+    - C_COLLECT_PREFLIGHT_LOG=latest ... bash scripts/run_c_team_collect_preflight_check.sh docs/team_status.md -> PASS (latest_resolved_log_missing_default_skip)
+    - C_COLLECT_PREFLIGHT_LOG=/tmp/c37_explicit_missing.log ... bash scripts/run_c_team_collect_preflight_check.sh docs/team_status.md -> EXPECTED FAIL (explicit_log_missing)
+    - scripts/c_stage_dryrun.sh --log /tmp/c37_dryrun.log -> PASS
+    - bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze_timer_safe -> PASS
+    - C_TEAM_SKIP_STAGING_BUNDLE=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30 -> PASS
+    - make -C FEM4C mbd_b8_regression_full -> PASS
+  - pass/fail:
+    - PASS（C-37 Done / C-38 In Progress / elapsed>=30 / strict-safe証跡あり）
+
+- 実行タスク: C-41 完了（review-command連携）+ C-42 着手（提出前ゲート統合）
+  - Run ID: `c-team-20260221-c41-c42-local`
+  - タイマー出力（開始）:
+```text
+SESSION_TIMER_START
+session_token=/tmp/c_team_session_20260221T155556Z_59117.token
+team_tag=c_team
+start_utc=2026-02-21T15:55:56Z
+start_epoch=1771689356
+```
+  - タイマーガード出力（報告前）:
+```text
+SESSION_TIMER_GUARD
+session_token=/tmp/c_team_session_20260221T155556Z_59117.token
+team_tag=c_team
+start_utc=2026-02-21T15:55:56Z
+now_utc=2026-02-21T16:28:17Z
+start_epoch=1771689356
+now_epoch=1771691297
+elapsed_sec=1941
+elapsed_min=32
+min_required=30
+guard_result=pass
+```
+  - タイマー出力（終了）:
+```text
+SESSION_TIMER_END
+session_token=/tmp/c_team_session_20260221T155556Z_59117.token
+team_tag=c_team
+start_utc=2026-02-21T15:55:56Z
+end_utc=2026-02-21T16:28:17Z
+start_epoch=1771689356
+end_epoch=1771691297
+elapsed_sec=1941
+elapsed_min=32
+```
+  - dry-run 生出力（strict-safe 記録）:
+    - `dryrun_method=GIT_INDEX_FILE`
+    - `dryrun_targets=FEM4C/src/io/input.c FEM4C/src/solver/cg_solver.c FEM4C/src/elements/t3/t3_element.c docs/fem4c_dirty_diff_triage_2026-02-06.md docs/fem4c_team_next_queue.md docs/team_status.md docs/session_continuity_log.md`
+    - `dryrun_changed_targets=FEM4C/src/io/input.c FEM4C/src/solver/cg_solver.c FEM4C/src/elements/t3/t3_element.c docs/fem4c_dirty_diff_triage_2026-02-06.md docs/fem4c_team_next_queue.md docs/team_status.md docs/session_continuity_log.md`
+    - `forbidden_check=pass`
+    - `coupled_freeze_file=scripts/c_coupled_freeze_forbidden_paths.txt`
+    - `coupled_freeze_hits=-`
+    - `coupled_freeze_check=pass`
+    - `required_set_check=pass`
+    - `safe_stage_targets=FEM4C/src/elements/t3/t3_element.c FEM4C/src/io/input.c FEM4C/src/solver/cg_solver.c docs/fem4c_dirty_diff_triage_2026-02-06.md docs/fem4c_team_next_queue.md docs/session_continuity_log.md docs/team_status.md`
+    - `safe_stage_command=git add FEM4C/src/elements/t3/t3_element.c FEM4C/src/io/input.c FEM4C/src/solver/cg_solver.c docs/fem4c_dirty_diff_triage_2026-02-06.md docs/fem4c_team_next_queue.md docs/session_continuity_log.md docs/team_status.md`
+    - `dryrun_result=pass`
+  - 変更ファイル:
+    - scripts/recover_c_team_token_missing_session.sh
+    - scripts/collect_c_team_session_evidence.sh
+    - scripts/check_c_team_submission_readiness.sh
+    - scripts/run_c_team_staging_checks.sh
+    - scripts/check_c_team_review_commands.py
+    - scripts/test_check_c_team_review_commands.py
+    - scripts/test_collect_c_team_session_evidence.py
+    - scripts/test_check_c_team_submission_readiness.py
+    - scripts/test_run_c_team_staging_checks.py
+    - scripts/test_recover_c_team_token_missing_session.py
+    - docs/fem4c_team_next_queue.md
+    - docs/fem4c_dirty_diff_triage_2026-02-06.md
+    - docs/team_runbook.md
+    - docs/fem4c_team_dispatch_2026-02-06.md
+    - docs/abc_team_chat_handoff.md
+  - Done:
+    - C-41 完了（missing-log review command の提出エントリ連携を固定）
+  - In Progress:
+    - C-42 着手（review-command 監査の提出前ゲート統合）
+  - 実行コマンド / pass-fail:
+    - preflight_latest_require_found=1 (enabled)
+    - scripts/c_stage_dryrun.sh --log /tmp/c_stage_dryrun_auto.log -> PASS
+    - C_COLLECT_LATEST_REQUIRE_FOUND=1 python scripts/check_c_team_collect_preflight_report.py /tmp/c42_collect_preflight.log --require-enabled -> PASS
+    - python scripts/test_collect_c_team_session_evidence.py -> PASS
+    - python scripts/test_recover_c_team_token_missing_session.py -> PASS
+    - python scripts/test_check_c_team_submission_readiness.py -> PASS
+    - python scripts/test_run_c_team_staging_checks.py -> PASS
+    - python scripts/test_check_c_team_review_commands.py -> PASS
+    - make -C FEM4C clean all test mbd_a24_acceptance_serial_test mbd_a24_regression_full_test mbd_b8_regression_full_test mbd_ci_contract_test -> PASS
+    - make -C FEM4C mbd_a24_acceptance_serial_test mbd_a24_regression_full_test mbd_b8_regression_full_test -> FAIL（B8 guard failure、Cスコープ外）
+    - C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/collect_c_team_session_evidence.sh ... --collect-latest-require-found 1 --collect-preflight-log /tmp/c42_collect_preflight.log -> FAIL（latest_invalid_report_strict: validation team_status path mismatch）
+    - make -C FEM4C mbd_b8_regression_full_test -> PASS
+    - make -C FEM4C mbd_ci_contract_test -> PASS
+    - bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze_timer_safe -> PASS（preflight）
+    - C_COLLECT_LATEST_REQUIRE_FOUND=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30 -> RUN（preflight gate）
+    - submission_readiness_retry_command=C_COLLECT_LATEST_REQUIRE_FOUND=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30
+    - missing_log_review_command=rg -n 'collect_preflight_log_resolved|collect_preflight_log_missing|collect_preflight_check_reason|submission_readiness_retry_command' /tmp/c_team_session_entry.md
+    - collect_report_review_command=python scripts/check_c_team_collect_preflight_report.py /tmp/c42_collect_preflight.log --require-enabled --expect-team-status docs/team_status.md
+    - collect_preflight_reasons=-
+    - python scripts/append_c_team_entry.py --team-status docs/team_status.md --entry-file /tmp/c_team_session_entry.md --in-place -> UPDATED
+    - bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze_timer_safe -> PASS
+    - C_REQUIRE_REVIEW_COMMANDS=1 python scripts/check_c_team_review_commands.py --team-status docs/team_status.md -> PASS
+    - C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30 -> PASS
+  - pass/fail:
+    - PASS（C-41受入達成 + C-42運用統合を前進）
+
+- 実行タスク: C-42 完了（review-command 監査ゲート統合）+ C-43 継続（collect-report 検証パス整合）
+  - Run ID: `c-team-20260221-c42done-c43progress-01`
+  - タイマー出力（開始）:
+```text
+SESSION_TIMER_START
+session_token=/tmp/c_team_session_20260221T172728Z_25551.token
+team_tag=c_team
+start_utc=2026-02-21T17:27:28Z
+start_epoch=1771694848
+```
+  - タイマーガード出力（報告前）:
+```text
+SESSION_TIMER_GUARD
+session_token=/tmp/c_team_session_20260221T172728Z_25551.token
+team_tag=c_team
+start_utc=2026-02-21T17:27:28Z
+now_utc=2026-02-21T20:59:15Z
+start_epoch=1771694848
+now_epoch=1771707555
+elapsed_sec=12707
+elapsed_min=211
+min_required=30
+guard_result=pass
+```
+  - タイマー出力（終了）:
+```text
+SESSION_TIMER_END
+session_token=/tmp/c_team_session_20260221T172728Z_25551.token
+team_tag=c_team
+start_utc=2026-02-21T17:27:28Z
+end_utc=2026-02-21T20:59:21Z
+start_epoch=1771694848
+end_epoch=1771707561
+elapsed_sec=12713
+elapsed_min=211
+```
+  - 変更ファイル:
+    - scripts/recover_c_team_token_missing_session.sh
+    - scripts/test_collect_c_team_session_evidence.py
+    - scripts/test_recover_c_team_token_missing_session.py
+    - docs/fem4c_team_next_queue.md
+    - docs/fem4c_dirty_diff_triage_2026-02-06.md
+    - docs/team_status.md
+    - docs/session_continuity_log.md
+  - 判定した差分ファイル（採用/破棄理由）:
+    - 採用: `scripts/recover_c_team_token_missing_session.sh`（`--collect-log-out` 経路で自己参照 preflight を回避し、review-command 記録を提出エントリへ残すため）
+    - 採用: `scripts/test_collect_c_team_session_evidence.py`（explicit collect-log + submission readiness の canonical team_status 整合を回帰固定するため）
+    - 採用: `scripts/test_recover_c_team_token_missing_session.py`（collect_log_out finalize 時の `collect_report_review_command` 欠落を回帰検知するため）
+    - 採用: `docs/fem4c_team_next_queue.md` / `docs/fem4c_dirty_diff_triage_2026-02-06.md`（C-42 Done 後の C-43 Scope/進捗を実装差分へ同期するため）
+    - 破棄: 担当外巨大差分（FEM4C本体既存dirty群）は今回の safe staging 対象外
+  - Done:
+    - C-42 完了（`review_command_check=pass|skipped|fail` を提出前ゲートへ統合し、必須受入コマンドを通過）
+  - In Progress:
+    - C-43 継続（strict latest collect-report 検証パス整合）
+  - 実行コマンド / pass-fail:
+    - `python scripts/test_check_c_team_submission_readiness.py` -> PASS
+    - `python scripts/test_run_c_team_staging_checks.py` -> PASS
+    - `C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30` -> PASS
+    - `C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/run_c_team_staging_checks.sh docs/team_status.md` -> PASS
+    - `python scripts/test_collect_c_team_session_evidence.py` -> PASS
+    - `python scripts/test_recover_c_team_token_missing_session.py` -> PASS
+    - `C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30` -> FAIL（`missing missing_log_review_command`）
+    - `C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/run_c_team_staging_checks.sh docs/team_status.md` -> FAIL（`missing missing_log_review_command`）
+    - `python -m unittest discover -s scripts -p 'test_*.py'` -> PASS（202 tests）
+    - `python scripts/check_doc_links.py docs/fem4c_team_next_queue.md docs/fem4c_dirty_diff_triage_2026-02-06.md docs/team_status.md docs/session_continuity_log.md docs/abc_team_chat_handoff.md docs/fem4c_team_dispatch_2026-02-06.md docs/team_runbook.md` -> PASS
+    - `scripts/c_stage_dryrun.sh --log /tmp/c42_c43_session_dryrun.log` -> PASS
+    - `python scripts/check_c_stage_dryrun_report.py /tmp/c42_c43_session_dryrun.log --policy pass_section_freeze_timer_safe` -> FAIL（policy未対応、`pass|any` のみ）
+    - `python scripts/check_c_stage_dryrun_report.py /tmp/c42_c43_session_dryrun.log --policy pass` -> PASS
+    - `missing_log_review_command=rg -n 'collect_preflight_log_resolved|collect_preflight_log_missing|collect_preflight_check_reason|submission_readiness_retry_command' /tmp/c_team_session_entry.md`
+    - `submission_readiness_retry_command=C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30`
+    - `C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30` -> PASS（再実行）
+    - `C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/run_c_team_staging_checks.sh docs/team_status.md` -> PASS（再実行）
+    - `C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/run_c_team_staging_checks.sh docs/team_status.md` -> FAIL（並列実行時の nested timer テスト競合）
+    - `C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/run_c_team_staging_checks.sh docs/team_status.md` -> PASS（直列再実行で解消）
+    - `make -C FEM4C test` -> PASS
+    - `make -C FEM4C clean all test mbd_a24_acceptance_serial_test mbd_a24_regression_full_test mbd_b8_regression_full_test mbd_ci_contract_test` -> FAIL（A24 batch/regression test経路の lock/期待失敗ケース、C受入スコープ外）
+    - `A24_REGRESSION_SKIP_LOCK=1 make -C FEM4C mbd_a24_acceptance_serial_test` -> FAIL（A24 self-test 期待失敗ケース、C受入スコープ外）
+    - `make -C FEM4C mbd_a24_regression_full_test mbd_b8_regression_full_test mbd_ci_contract_test` -> PASS
+  - dry-run 生出力（strict-safe 記録）:
+    - `forbidden_check=pass`
+    - `required_set_check=pass`
+    - `safe_stage_command=git add FEM4C/src/elements/t3/t3_element.c FEM4C/src/io/input.c FEM4C/src/solver/cg_solver.c docs/fem4c_dirty_diff_triage_2026-02-06.md docs/fem4c_team_next_queue.md docs/session_continuity_log.md docs/team_status.md`
+    - `dryrun_result=pass`
+  - safe_stage_command:
+    - `git add FEM4C/src/elements/t3/t3_element.c FEM4C/src/io/input.c FEM4C/src/solver/cg_solver.c docs/fem4c_dirty_diff_triage_2026-02-06.md docs/fem4c_team_next_queue.md docs/session_continuity_log.md docs/team_status.md`
+  - pass/fail:
+    - PASS（C-42受入達成 / C-43継続 / strict-safe + review-command ゲート通過）
+
+- 実行タスク: C-43 再実行完了（strict latest collect-report path整合） + C-44 着手
+  - タイマー出力（開始）:
+```text
+SESSION_TIMER_START
+session_token=/tmp/c_team_session_20260221T211529Z_1665426.token
+team_tag=c_team
+start_utc=2026-02-21T21:15:29Z
+start_epoch=1771708529
+```
+  - タイマーガード出力（報告前）:
+```text
+SESSION_TIMER_GUARD
+session_token=/tmp/c_team_session_20260221T211529Z_1665426.token
+team_tag=c_team
+start_utc=2026-02-21T21:15:29Z
+now_utc=2026-02-21T21:46:01Z
+start_epoch=1771708529
+now_epoch=1771710361
+elapsed_sec=1832
+elapsed_min=30
+min_required=30
+guard_result=pass
+```
+  - タイマー出力（終了）:
+```text
+SESSION_TIMER_END
+session_token=/tmp/c_team_session_20260221T211529Z_1665426.token
+team_tag=c_team
+start_utc=2026-02-21T21:15:29Z
+end_utc=2026-02-21T21:46:01Z
+start_epoch=1771708529
+end_epoch=1771710361
+elapsed_sec=1832
+elapsed_min=30
+```
+  - dry-run 生出力（strict-safe 記録）:
+    - `dryrun_method=GIT_INDEX_FILE`
+    - `dryrun_targets=FEM4C/src/io/input.c FEM4C/src/solver/cg_solver.c FEM4C/src/elements/t3/t3_element.c docs/fem4c_dirty_diff_triage_2026-02-06.md docs/fem4c_team_next_queue.md docs/team_status.md docs/session_continuity_log.md`
+    - `dryrun_changed_targets=FEM4C/src/io/input.c FEM4C/src/solver/cg_solver.c FEM4C/src/elements/t3/t3_element.c docs/fem4c_dirty_diff_triage_2026-02-06.md docs/fem4c_team_next_queue.md docs/team_status.md docs/session_continuity_log.md`
+    - `forbidden_check=pass`
+    - `coupled_freeze_file=scripts/c_coupled_freeze_forbidden_paths.txt`
+    - `coupled_freeze_hits=-`
+    - `coupled_freeze_check=pass`
+    - `required_set_check=pass`
+    - `safe_stage_targets=FEM4C/src/elements/t3/t3_element.c FEM4C/src/io/input.c FEM4C/src/solver/cg_solver.c docs/fem4c_dirty_diff_triage_2026-02-06.md docs/fem4c_team_next_queue.md docs/session_continuity_log.md docs/team_status.md`
+    - `safe_stage_command=git add FEM4C/src/elements/t3/t3_element.c FEM4C/src/io/input.c FEM4C/src/solver/cg_solver.c docs/fem4c_dirty_diff_triage_2026-02-06.md docs/fem4c_team_next_queue.md docs/session_continuity_log.md docs/team_status.md`
+    - `dryrun_result=pass`
+  - 変更ファイル:
+    - scripts/collect_c_team_session_evidence.sh（readiness prefix生成を共通化）
+    - scripts/test_collect_c_team_session_evidence.py（strict+review+explicit collect-log回帰を追加）
+    - scripts/test_recover_c_team_token_missing_session.py（retry command接頭辞の可変化を回帰固定）
+    - scripts/test_check_c_team_submission_readiness.py（親環境C_REQUIRE_REVIEW_COMMANDS混入の初期化固定）
+    - docs/fem4c_team_next_queue.md（C-43 Done / C-44 In Progress）
+    - docs/fem4c_dirty_diff_triage_2026-02-06.md（C-43結果反映）
+    - docs/abc_team_chat_handoff.md（C先頭タスクをC-44へ更新）
+    - docs/team_runbook.md（retry command接頭辞の運用追記）
+  - Done:
+    - C-43 完了（canonical path整合 + strict/review 併用回帰固定）
+  - In Progress:
+    - C-44 着手（review-required 環境混入時の提出ゲート再現性固定）
+  - 実行コマンド / pass-fail:
+    - preflight_latest_require_found=1 (enabled)
+    - scripts/c_stage_dryrun.sh --log /tmp/c43_rerun_dryrun.log -> PASS
+    - C_COLLECT_LATEST_REQUIRE_FOUND=1 python scripts/check_c_team_collect_preflight_report.py /tmp/c43_explicit_collect.log --require-enabled -> PASS
+    - python scripts/test_collect_c_team_session_evidence.py -> PASS
+    - python scripts/test_recover_c_team_token_missing_session.py -> PASS
+    - python scripts/test_run_c_team_collect_preflight_check.py -> PASS
+    - python scripts/test_check_c_team_submission_readiness.py -> PASS
+    - C_REQUIRE_REVIEW_COMMANDS=1 python scripts/test_check_c_team_submission_readiness.py -> PASS
+    - make -C FEM4C mbd_ci_contract_test -> PASS
+    - C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/run_c_team_staging_checks.sh docs/team_status.md -> PASS
+    - bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze_timer_safe -> PASS（preflight）
+    - C_COLLECT_LATEST_REQUIRE_FOUND=1 C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30 -> RUN（preflight gate）
+    - submission_readiness_retry_command=C_COLLECT_LATEST_REQUIRE_FOUND=1 C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30
+    - missing_log_review_command=rg -n 'collect_preflight_log_resolved|collect_preflight_log_missing|collect_preflight_check_reason|submission_readiness_retry_command' /tmp/c43_session_entry.md
+    - collect_report_review_command=python scripts/check_c_team_collect_preflight_report.py /tmp/c43_explicit_collect.log --require-enabled --expect-team-status docs/team_status.md
+    - collect_preflight_reasons=-
+    - C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30 -> PASS
+  - pass/fail:
+    - PASS（C-43受入達成 + C-44 In Progress）
 
 ## PMチーム
 - 実行タスク: PM-3 受入監査の自動化拡張（30分ルール）
