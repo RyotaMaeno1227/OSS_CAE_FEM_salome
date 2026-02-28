@@ -12,7 +12,10 @@ FEM4C スプリント中は **この Section 0 と `docs/fem4c_team_next_queue.m
 - 対象スコープ: `FEM4C` の Phase 2（MBD最小実装）と安全な差分整理。
 - 共通ルール:
   - 長期目標とスコープ定義は `docs/long_term_target_definition.md` を最優先で参照する。
-  - コミットは担当範囲のファイルのみ。`FEM4C/test/*` 削除群や `chrono-2d` 差分を混在させない。
+  - MBD 学習系ドキュメントを作成・更新する場合は `docs/mbd_learning_dod.md` を必ず参照する。
+  - Project Chrono 参照元は `third_party/chrono/chrono-main` のみを使用する。
+  - `third_party/chrono/chrono-C-all` は参照禁止（実装判断・受入根拠に使わない）。
+  - コミットは担当範囲のファイルのみ。`FEM4C/test/*` 削除群や legacy 資産（`chrono-2d`, `oldFile`, `.github`）差分を混在させない。
   - 生成物（`*.dat`, `*.csv`, `*.vtk`, `*.f06`）はコミットしない。
   - 作業終了時に `docs/team_status.md` と `docs/session_continuity_log.md` を更新する。
   - 連絡テンプレは `docs/fem4c_team_dispatch_2026-02-06.md` を使用する。
@@ -42,9 +45,9 @@ FEM4C スプリント中は **この Section 0 と `docs/fem4c_team_next_queue.m
   - タイマー完了まで厳格に確認する場合は `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze_timer` を使用する。
   - safe staging 記録まで厳格に確認する場合は `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze_timer_safe` を使用する。
   - 次タスク遷移の優先順（先頭完了後の迷い防止）:
-    - A: A-31 完了後は A-32 へ遷移
-    - B: B-24 完了後は B-25 へ遷移
-    - C: C-35 完了後は C-36 へ遷移
+    - A: A-40 完了後は A-41 へ遷移
+    - B: B-32 完了後は B-33 へ遷移
+    - C: C-51 完了後は C-52 へ遷移
   - 上記の優先遷移先が完了済み/候補なしの場合は `Auto-Next` を `next_queue` に追記し、同一セッションで継続する。
   - PM決定（2026-02-07）:
     - `FEM4C/src/io/input.c` の旧 `SPC/FORCE` / `NastranBalkFile` 互換は維持する（Option A）。
@@ -63,57 +66,76 @@ FEM4C スプリント中は **この Section 0 と `docs/fem4c_team_next_queue.m
 
 ### Aチーム（実装）
 - 目的: `mbd` モードを独立ソルバーとして段階的に完成させる。
-- 現在の先頭タスク: `A-32`（`docs/fem4c_team_next_queue.md` を正とする）
+- 現在の先頭タスク: `A-41`（`docs/fem4c_team_next_queue.md` を正とする）
 - 対象ファイル:
-  - `FEM4C/scripts/run_a24_acceptance_serial.sh`
-  - `FEM4C/scripts/test_run_a24_acceptance_serial.sh`
+  - `FEM4C/scripts/run_a24_regression_full.sh`
+  - `FEM4C/scripts/run_a24_batch.sh`
+  - `FEM4C/scripts/test_run_a24_regression_full.sh`
+  - `FEM4C/scripts/test_run_a24_batch.sh`
   - `FEM4C/scripts/check_ci_contract.sh`
   - `FEM4C/scripts/test_check_ci_contract.sh`
-  - 必要時のみ `FEM4C/Makefile`
+  - 必要時のみ `FEM4C/practice/README.md`
+  - 必要時のみ `FEM4C/README.md`
 - 指示:
-  1. A-32 の受入基準に沿って、A-24 serial acceptance の step-log 契約（step_log_dir/failed_log）を固定する（実装差分必須）。
-  2. `mbd_a24_acceptance_serial_test` / `mbd_ci_contract_test` / `mbd_a24_acceptance_serial` の再入失敗を潰し、失敗時に原因ログ位置を 1 行サマリで追跡できる状態を維持する。
+  1. A-41 の受入基準に沿って、A-24 wrapper の nested summary casefold/precedence 契約を static contract/self-test まで固定する（実装差分必須）。
+  2. `mbd_a24_regression_full_test` / `mbd_a24_batch_test` / `mbd_ci_contract_test` を直列で通し、A-24導線の fail-fast 運用を維持する。
   3. 先頭完了後は `next_queue` の次タスクへ同一セッションで自動遷移する。
 - 受入基準:
-  - `docs/fem4c_team_next_queue.md` の A-32 `Acceptance` を満たすこと。
+  - `docs/fem4c_team_next_queue.md` の A-41 `Acceptance` を満たすこと。
   - `docs/session_continuity_log.md` 以外に、少なくとも 1 つの実装ファイル差分があること。
 
 ### Bチーム（検証）
 - 目的: B-8 系回帰ラッパーの運用安定性を固定する。
-- 現在の先頭タスク: `B-25`（`docs/fem4c_team_next_queue.md` を正とする）
+- 現在の先頭タスク: `B-33`（`docs/fem4c_team_next_queue.md` を正とする）
 - 対象ファイル:
-  - `FEM4C/scripts/test_run_b8_regression.sh`
-  - `FEM4C/scripts/test_run_b8_regression_full.sh`
-  - `FEM4C/scripts/test_run_b8_guard_contract.sh`
-  - 必要時のみ `FEM4C/scripts/check_ci_contract.sh`
+  - `FEM4C/scripts/test_b8_knob_matrix.sh`
+  - `FEM4C/scripts/check_ci_contract.sh`
+  - 必要時のみ `FEM4C/scripts/test_check_ci_contract.sh`
+  - 必要時のみ `FEM4C/scripts/test_run_b8_regression.sh`
+  - 必要時のみ `FEM4C/scripts/test_run_b8_regression_full.sh`
 - 指示:
-  1. B-25 の受入基準に沿って、B-8 自己テストの temp-copy ディレクトリノブ契約（`B8_TEST_TMP_COPY_DIR`）を固定する。
-  2. 既定ディレクトリ、存在チェック、書込チェックと静的契約チェックを同期し、再入時の衝突余地を減らす。
+  1. B-33 の受入基準に沿って、knob matrix の static contract/self-test 欠落検知（fail-injection）を拡張する。
+  2. `check_ci_contract.sh`（必要時 `test_check_ci_contract.sh`）を同期し、matrix側マーカー欠落を静的検査で確実に検知できるようにする。
   3. 先頭完了後は `next_queue` の次タスクへ同一セッションで自動遷移する。
 - 受入基準:
-  - `docs/fem4c_team_next_queue.md` の B-25 `Acceptance` を満たすこと。
+  - `docs/fem4c_team_next_queue.md` の B-33 `Acceptance` を満たすこと。
   - 1行再現コマンドと pass/fail 根拠を `team_status` に記録すること。
 
 ### Cチーム（差分整理）
-- 目的: preflight 認証ログを staging bundle 導線へ統合し、提出前品質ゲートを固定する。
-- 現在の先頭タスク: `C-36`（`docs/fem4c_team_next_queue.md` を正とする）
+- 目的: preflight / review-command 提出ゲートを strict/default 両運用で再現可能に固定する。
+- 現在の先頭タスク: `C-52`（`docs/fem4c_team_next_queue.md` を正とする）
 - 対象ファイル:
+  - `scripts/recover_c_team_token_missing_session.sh`
   - `scripts/collect_c_team_session_evidence.sh`
   - `scripts/check_c_team_submission_readiness.sh`
-  - `scripts/run_c_team_staging_checks.sh`
+  - `scripts/check_c_team_fail_trace_order.py`
+  - `scripts/check_c_team_fail_trace_retry_consistency.py`
+  - `scripts/run_c_team_fail_trace_audit.sh`
+  - 必要時のみ `scripts/test_recover_c_team_token_missing_session.py`
+  - 必要時のみ `scripts/test_check_c_team_fail_trace_order.py`
+  - 必要時のみ `scripts/test_check_c_team_fail_trace_retry_consistency.py`
+  - 必要時のみ `scripts/test_run_c_team_fail_trace_audit.py`
+  - 必要時のみ `docs/team_runbook.md`
+  - 必要時のみ `docs/fem4c_team_dispatch_2026-02-06.md`
   - 必要時のみ `docs/fem4c_dirty_diff_triage_2026-02-06.md`
 - 指示:
-  1. C-36 の受入基準に沿って、strict latest 理由ログ運用の提出前安定化を進める。
+  1. C-52 の受入基準に沿って、strict key-required fail-fast ログの collect/recover 連携を固定する。
   2. strict-safe（timer + safe stage + placeholderなし）監査で PASS を維持する。
   3. 先頭完了後は `next_queue` の次タスクへ同一セッションで自動遷移する。
 - 受入基準:
-  - `docs/fem4c_team_next_queue.md` の C-36 `Acceptance` を満たすこと。
+  - `docs/fem4c_team_next_queue.md` の C-52 `Acceptance` を満たすこと。
+  - `team_status` に `missing_log_review_command`（`--collect-preflight-log` 指定時は `collect_report_review_command`）が残ること。
+  - strict/default の reason key と fail-step/retry command が review-required 併用時にも崩れないこと。
+  - strict/default の fail trace 出力順が `check_c_team_fail_trace_order.py` で PASS すること。
+  - `C_FAIL_TRACE_REQUIRE_RETRY_CONSISTENCY=1 scripts/run_c_team_fail_trace_audit.sh docs/team_status.md 45` が PASS すること。
+  - `C_FAIL_TRACE_REQUIRE_RETRY_CONSISTENCY=1 C_FAIL_TRACE_REQUIRE_RETRY_CONSISTENCY_KEY=1 scripts/run_c_team_fail_trace_audit.sh docs/team_status.md 45` の失敗理由が提出テンプレ（collect/recover）へ追記されること。
+  - `python scripts/check_c_team_review_commands.py --team-status docs/team_status.md` が PASS すること。
   - `scripts/c_stage_dryrun.sh` と `check_c_team_submission_readiness.sh` の結果を `team_status` に記録すること。
 
 ---
 
 ## Legacy
 - 旧 Chrono 運用の全文は以下へ退避しました（参照のみ）。
-- `docs/archive/abc_team_chat_handoff_legacy_chrono_2025-11-14.md`
+- `oldFile/docs/archive/abc_team_chat_handoff_legacy_chrono_2025-11-14.md`
 - 旧司令/計画文書とドラフトの一覧は以下を参照。
-- `docs/archive/README.md`
+- `oldFile/docs/archive/README.md`

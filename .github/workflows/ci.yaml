@@ -5,12 +5,10 @@ on:
     branches:
       - main
   pull_request:
-  schedule:
-    - cron: '0 0 * * *'
   workflow_dispatch:
 
 jobs:
-  build-and-test:
+  fem4c-build-and-test:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,139 +18,37 @@ jobs:
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y build-essential
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install pyyaml
-
-      - name: Lint doc links
-        run: |
-          mkdir -p artifacts/ci
-          {
-            echo "## Doc link check ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
-            python scripts/check_doc_links.py \
-              docs/coupled_constraint_tutorial_draft.md \
-              docs/coupled_constraint_hands_on.md \
-              docs/coupled_contact_test_notes.md
-          } | tee artifacts/ci/doc_link_report.md
-
-      - name: Check preset links (Markdown)
-        run: python scripts/check_preset_links.py
-
-      - name: Run multi-omega format tests
-        run: python -m unittest tools.tests.test_update_multi_omega_assets
-
-      - name: Build test binaries
-        working-directory: chrono-C-all
-        run: |
-          make clean
-          make tests
-
-      - name: Run regression suite
-        id: run_tests
-        working-directory: chrono-C-all
+      - name: Run FEM4C regression entrypoint
+        id: run_fem4c_tests
         continue-on-error: true
         run: |
-          rm -f ../test.log
+          rm -f fem4c_test.log
           set -o pipefail
-          if make test > ../test.log 2>&1; then
-            echo "Test run completed. Showing tail of test.log:"
-            tail -n 120 ../test.log
+          if make -C FEM4C test > fem4c_test.log 2>&1; then
+            bash FEM4C/scripts/check_fem4c_test_log_markers.sh fem4c_test.log
+            echo "FEM4C test run completed. Showing tail of fem4c_test.log:"
+            tail -n 160 fem4c_test.log
             exit 0
           else
-            echo "Test run failed. Showing tail of test.log:"
-              tail -n 400 ../test.log
-              exit 1
+            echo "FEM4C test run failed. Showing tail of fem4c_test.log:"
+            tail -n 260 fem4c_test.log
+            exit 1
           fi
 
-      - name: Enforce diagnostics ABI
-        if: always()
-        working-directory: chrono-C-all
-        run: tests/test_constraint_common_abi
+      - name: Validate FEM4C CI contract
+        run: make -C FEM4C mbd_ci_contract
 
-      - name: Capture contact Jacobian log
-        if: always()
-        working-directory: chrono-C-all
-        run: |
-          mkdir -p ../artifacts/contact
-          tests/test_island_parallel_contacts \
-            --jacobian-log ../artifacts/contact/contact_jacobian_log.csv
-
-      - name: Tag coupled/island ranges
-        if: always()
-        run: |
-          python3 tools/filter_ci_failures.py test.log --tag-input
-
-      - name: Extract coupled/island failures
-        if: always()
-        run: |
-          python3 tools/filter_ci_failures.py test.log --output test_coupled_island.log
+      - name: Validate FEM4C CI contract tests
+        run: make -C FEM4C mbd_ci_contract_test
 
       - name: Upload test log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: chrono-tests
+          name: fem4c-tests
           path: |
-            test.log
-            test_coupled_island.log
-            artifacts/ci/doc_link_report.md
-            artifacts/contact
+            fem4c_test.log
 
-      - name: Fail if tests failed
-        if: steps.run_tests.outcome == 'failure'
+      - name: Fail if FEM4C tests failed
+        if: steps.run_fem4c_tests.outcome == 'failure'
         run: exit 1
-
-      # Coupled benchmark job disabled (data/coupled_benchmark_metrics.csv not generated in current scope)
-
-  descriptor-e2e:
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        mode: [actions]
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install build dependencies
-        run: sudo apt-get update && sudo apt-get install -y build-essential
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install pyyaml
-
-      - name: Build descriptor test
-        working-directory: chrono-C-all
-        run: |
-          make clean
-          make tests/test_coupled_constraint
-
-      - name: Run descriptor mode ${{ matrix.mode }}
-        working-directory: chrono-C-all
-        run: |
-          mkdir -p ../artifacts/descriptor
-          tests/test_coupled_constraint \
-            --use-kkt-descriptor \
-            --descriptor-mode ${{ matrix.mode }} \
-            --descriptor-log ../artifacts/descriptor/kkt_descriptor_${{ matrix.mode }}_${{ github.run_id }}.csv \
-            --pivot-artifact-dir ../artifacts/descriptor/run-${{ github.run_id }}
-
-      - name: Upload descriptor artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coupled-descriptor-${{ matrix.mode }}
-          path: artifacts/descriptor

@@ -185,7 +185,7 @@ diff -u docs/chrono_2d_cases_template.csv /tmp/chrono2d_schema_sample.csv
 - アーカイブ方針: 古い Run ID/CSV を差し替える場合は `artifacts/archive/` に退避し、Changelog に移動日を記載。
 
 ### CI/運用導線（C15）
-- 実行・報告ルールは `docs/team_runbook.md` を参照し、15分スプリント/長尺バッチの区分に沿って報告する。
+- 実行・報告ルールは `docs/team_runbook.md` を参照し、30分連続実行ルールに沿って報告する。
 - 実行ログは `docs/team_status.md` の C チーム欄に追記し、Run ID/生成物/リンクチェック結果を残す。
 
 ## 図版・スクリーンショットルール

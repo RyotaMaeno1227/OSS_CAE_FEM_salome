@@ -9,10 +9,11 @@
 
 ## 2. 参照優先順位（必須）
 1. 長期目標: `docs/long_term_target_definition.md`
-2. 現行ディスパッチ: `docs/abc_team_chat_handoff.md`（Section 0 のみ）
-3. 次タスクキュー: `docs/fem4c_team_next_queue.md`
-4. 進捗報告: `docs/team_status.md`
-5. 継続ログ: `docs/session_continuity_log.md`
+2. MBD学習DoD（教材作成・学習導線時）: `docs/mbd_learning_dod.md`
+3. 現行ディスパッチ: `docs/abc_team_chat_handoff.md`（Section 0 のみ）
+4. 次タスクキュー: `docs/fem4c_team_next_queue.md`
+5. 進捗報告: `docs/team_status.md`
+6. 継続ログ: `docs/session_continuity_log.md`
 
 ## 3. スコープ
 - In Scope:
@@ -25,6 +26,11 @@
   - `coupled` モードの新規機能追加（連成仕様確定まで凍結）
   - 3D MBD 本実装
   - 通知運用・Nightly 周辺オペレーション
+
+### 3.1 Chrono参照ルール（必須）
+- MBD 実装・設計で参照する Project Chrono の一次ソースは `third_party/chrono/chrono-main` のみとする。
+- `third_party/chrono/chrono-C-all` は実装参照・仕様判断・受入根拠に使用しない。
+- 実装判断の根拠を記録する場合は、`chrono-main` 側の参照ファイル（パス）を `team_status` に残す。
 
 ## 4. チーム運用ルール
 - チャット指示が「作業を継続してください」のみの場合:
@@ -69,7 +75,7 @@
 - コミット時の制約:
   - 担当外ファイルをステージしない。
   - 生成物（`*.dat`, `*.csv`, `*.vtk`, `*.f06`）をコミットしない。
-  - `FEM4C` と `chrono-2d` の混在コミットを禁止する。
+  - `FEM4C` と legacy 資産（`chrono-2d/`, `oldFile/`, `.github/`）の混在コミットを禁止する。
 
 ## 5. A/B/C の責務（現行スプリント）
 - Aチーム（実装）:
@@ -89,6 +95,8 @@
 - GitHub Actions 実Run確認は毎セッション必須ではない。PM/ユーザーが節目で数回のみスポット実施する。
 - PM受入時は最新エントリの機械監査を実行する:
   - `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30`
+  - 既定で「同一コマンド連続実行（連続2回以上）」を自動検知して fail にする。
+  - 一時的に検知を無効化する場合のみ `--max-consecutive-same-command 0` を明示する。
   - 実装差分必須を同時監査する場合: `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30 --require-impl-changes`
   - Cチーム staging 運用の遵守監査: `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze`
   - Cチーム staging + タイマー完了の厳格監査: `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze_timer`
@@ -110,13 +118,13 @@
 
 ### 6.1 Cチーム staging dry-run（定型）
 - 目的:
-  - `FEM4C` と `chrono-2d` の混在ステージを、実 index を汚さずに毎回同じ手順で検査する。
+  - `FEM4C` と legacy 資産（`chrono-2d/`, `oldFile/`, `.github/`）の混在ステージを、実 index を汚さずに毎回同じ手順で検査する。
 - 手順:
   - `GIT_INDEX_FILE` を一時 index に切替える。
   - 対象ファイル（3実装 + C docs）のみ `git add` した後、`git diff --cached --name-status` を取得する。
   - 可能な限り `scripts/c_stage_dryrun.sh` を使用し、同一フォーマットで記録する。
 - 判定:
-  - `forbidden_check`: staged set に `chrono-2d/` と `.github/` が無いこと。
+  - `forbidden_check`: staged set に `chrono-2d/`, `oldFile/`, `.github/` が無いこと。
   - `required_set_check`: 必須対象セットがすべて staged set に含まれること。
   - `safe_stage_command`: `git add <path-list>` 形式で、`safe_stage_targets` と一致すること（`check_c_stage_dryrun_report.py --policy pass` で検査）。
   - strict-safe（timer完了監査）では最新Cエントリに `<pending>` / `token missing` / `<記入>` / `<PASS|FAIL>` などのテンプレ残骸が残っていないこと。
@@ -164,8 +172,9 @@
   - strict 失敗時は `collect_preflight_check_reason=*` を `team_status` に転記し、fail要因（`latest_not_found_strict` / `latest_invalid_report_strict`）を明示する。
   - `python scripts/check_c_team_collect_preflight_report.py /tmp/c_team_collect.log --require-enabled`（collectログの preflight 契約検証）
   - `python scripts/check_c_team_collect_preflight_report.py /tmp/c_team_collect.log --require-enabled --expect-team-status docs/team_status.md`（preflightログの `preflight_team_status` が提出対象と一致していることを検証）
+  - `python scripts/check_c_team_review_commands.py --team-status docs/team_status.md`（最新Cエントリに `missing_log_review_command` と必要時 `collect_report_review_command` が残っているか検証）
   - `C_TEAM_SKIP_STAGING_BUNDLE=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30`（テスト時のみ staging bundle を省略して elapsed 監査を確認）
-  - `scripts/c_stage_dryrun.sh --add-target chrono-2d/tests/test_coupled_constraint`（forbidden fail の再現確認）
+  - `scripts/c_stage_dryrun.sh --add-target oldFile/legacy_root/chrono-2d/tests/test_coupled_constraint.c`（forbidden fail の再現確認）
   - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass`（最新C報告の dry-run 記録監査）
   - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section`（C報告が `## Cチーム` 配下にあることも監査）
   - `bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze`（`## Cチーム` 配下 + coupled凍結ポリシー監査）
@@ -179,23 +188,70 @@
   - `C_COLLECT_PREFLIGHT_LOG=/tmp/c_team_collect.log bash scripts/run_c_team_staging_checks.sh docs/team_status.md`（collect preflight 契約ログを bundle 実行内で検証）
   - `C_COLLECT_PREFLIGHT_LOG=/tmp/c_team_collect.log C_COLLECT_EXPECT_TEAM_STATUS=docs/team_status.md bash scripts/run_c_team_staging_checks.sh docs/team_status.md`（collectログの team_status 一致まで bundle で検証）
   - `C_COLLECT_PREFLIGHT_LOG=/tmp/c_team_collect.log bash scripts/run_c_team_collect_preflight_check.sh docs/team_status.md`（collect preflight 契約検証だけを単独実行）
+  - `python scripts/extract_c_team_latest_collect_log.py --team-status docs/team_status.md --require-existing`（latest解決ログの存在まで含めて検証）
   - `C_COLLECT_PREFLIGHT_LOG=latest bash scripts/run_c_team_collect_preflight_check.sh docs/team_status.md`（最新Cエントリから collect ログを自動解決して検証）
   - `C_COLLECT_PREFLIGHT_LOG=latest` は、解決先ログが preflight 契約を満たさない場合も既定は `collect_preflight_check=skipped`（日次運用を停止しない）。
-  - latest 既定skip/strict fail の分岐理由は `collect_preflight_check_reason=*`（`latest_not_found_*`, `latest_invalid_report_*`）で追跡する。
+  - latest 既定skip/strict fail の分岐理由は `collect_preflight_check_reason=*`（`latest_not_found_*`, `latest_invalid_report_*`, `latest_resolved_log_missing_*`）で追跡する。
+  - `check_c_team_submission_readiness.sh` は collect preflight 判定を `submission_readiness_collect_preflight_check=*` / `submission_readiness_collect_preflight_reason=*` として要約出力する（提出ログの機械抽出用）。
+  - `run_c_team_staging_checks.sh` も strict latest fail 時は同じ要約キー（`submission_readiness_collect_preflight_*`）を出力し、readiness/staging で同一パーサを使えるようにする。
+  - `C_COLLECT_PREFLIGHT_LOG=/path/to/report.log` を明示指定した場合、ログ消失時は `collect_preflight_check_reason=explicit_log_missing` で即時FAILする。
   - `collect_c_team_session_evidence.sh` は preflight 判定理由が検出できた場合、`collect_preflight_check_reason=*` を `team_status` エントリの実行コマンド欄へ自動転記する。
+  - 理由が検出されない場合も `collect_preflight_reasons=-` を出力し、理由収集の有無を明示する。
+  - strict latest fail-fast で `collect` が失敗した場合は、標準エラーへ `submission_readiness_retry_command=...` を出力し、再実行コマンドを即時復元できる。
+  - 同失敗時は `submission_readiness_fail_step=collect_preflight` を出力し、review-command 監査失敗との混線を防ぐ。
+  - default latest skip では `submission_readiness_retry_command` / `submission_readiness_fail_step` を出さず、skip reason と summary のみを残す。
+  - `submission_readiness_retry_command` は常に `--team-status` で指定した実パスを指し、一時 validation ファイルの消失に影響されない。
+  - `C_REQUIRE_REVIEW_COMMANDS=1` 併用時は、`submission_readiness_retry_command` と preflight gate RUN行が同じ接頭辞（`C_COLLECT_LATEST_REQUIRE_FOUND=1` + `C_REQUIRE_REVIEW_COMMANDS=1`）で出力されることを確認する。
+  - `recover_c_team_token_missing_session.sh` の finalize 失敗時は、標準エラーに `entry_out=...`（`--collect-log-out` 指定時は `collect_log_out=...` も）を出力し、missing-log 境界キーの確認対象ファイルを即時特定できる。
+  - 同失敗時は `missing_log_review_command=rg -n 'collect_preflight_log_resolved|collect_preflight_log_missing|collect_preflight_check_reason|submission_readiness_retry_command' <entry_out>` を出力し、確認コマンドを復旧ログから直接再利用できる。
+  - `--collect-log-out` 指定時は `collect_report_review_command=python scripts/check_c_team_collect_preflight_report.py <collect_log_out> --require-enabled --expect-team-status <team_status>` も出力する。
+  - `--collect-log-out` は実行後に完成する提出証跡ログとして扱い、同一実行中の `--collect-preflight-log` 入力へ自己参照させない（preflight再検証は finalize 後に行う）。
+  - token-missing 復旧開始時に出る `next_finalize_review_keys` / `next_finalize_review_command` をそのまま提出テンプレへ転記してよい。
+  - `collect_c_team_session_evidence.sh` は preflight 有効時、`missing_log_review_command=...`（`--collect-preflight-log` 指定時は `collect_report_review_command=...` も）を `team_status` エントリへ自動転記する。
+  - strict fail 時の確認順:
+    - `entry_out` を開き、`collect_preflight_log_resolved` / `collect_preflight_log_missing` / `collect_preflight_check_reason=*` を確認する。
+    - `collect_log_out` がある場合は `python scripts/check_c_team_collect_preflight_report.py <collect_log_out> --require-enabled` で preflight 契約を再検証する。
+    - `submission_readiness_retry_command=...` を再実行し、復旧後の提出可否を確認する。
   - latest 候補が複数ある場合は `check_c_team_collect_preflight_report.py <log>` の明示コマンド由来を優先し、`collect_log_out` 由来候補より先に採用する。
   - `C_COLLECT_PREFLIGHT_LOG=latest C_COLLECT_LATEST_REQUIRE_FOUND=1 bash scripts/run_c_team_collect_preflight_check.sh docs/team_status.md`（latest 解決不能または契約不一致を FAIL にする厳格モード）
+  - latest解決後ログ消失の境界:
+    - default: `collect_preflight_check_reason=latest_resolved_log_missing_default_skip` + `collect_preflight_check=skipped`
+    - strict: `collect_preflight_check_reason=latest_resolved_log_missing_strict` + `collect_preflight_check=fail`
   - `C_SKIP_NESTED_SELFTESTS=1 bash scripts/run_c_team_staging_checks.sh docs/team_status.md`（nested self-test を省略して staging/preflight 契約だけを短時間確認）
   - `run_c_team_staging_checks.sh` は nested self-test 実行前に `C_COLLECT_LATEST_REQUIRE_FOUND` をクリアし、strict提出モード環境変数が自己テスト判定へ波及しないようにする。
   - `bash scripts/run_c_team_staging_checks.sh docs/team_status.md` は `C_COLLECT_PREFLIGHT_LOG` 未指定時に `latest` を自動解決（未検出は既定 skip）。
   - `C_COLLECT_PREFLIGHT_LOG= bash scripts/run_c_team_staging_checks.sh docs/team_status.md` で preflight 検証を明示的に無効化できる。
   - `C_COLLECT_LATEST_REQUIRE_FOUND=1 bash scripts/run_c_team_staging_checks.sh docs/team_status.md` で latest 解決不能/契約不一致を staging bundle 内で fail-fast できる。
   - `bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30`（strict-safe + C単独30分監査の提出前一括確認）
+  - `C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30`（review-command 欠落を fail-fast 検知）
   - `bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30` も `C_COLLECT_PREFLIGHT_LOG` 未指定時は `latest` 自動解決（未検出は既定 skip）。
   - `C_COLLECT_PREFLIGHT_LOG=/tmp/c_team_collect.log bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30`（提出前ゲートで collect preflight 契約を同時検証）
   - `C_COLLECT_PREFLIGHT_LOG=/tmp/c_team_collect.log C_COLLECT_EXPECT_TEAM_STATUS=docs/team_status.md bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30`（提出前ゲートで preflightログの team_status 一致を必須化）
   - `C_COLLECT_LATEST_REQUIRE_FOUND=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30` で latest 解決不能/契約不一致を提出前ゲートで fail-fast できる。
   - `C_COLLECT_PREFLIGHT_LOG= C_TEAM_SKIP_STAGING_BUNDLE=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30`（collect preflight 検証を明示的に無効化して最小監査だけ確認）
+  - readiness/staging は review-command 監査ステップで `review_command_check=pass|skipped|fail` を出力する（提出ログの判読用）。
+  - `python scripts/check_c_team_fail_trace_order.py /tmp/c47_readiness_default.log --mode default`（default skip ログの fail-trace 順序監査）
+  - `python scripts/check_c_team_fail_trace_order.py /tmp/c47_readiness_strict.log --mode strict`（strict fail ログの fail-trace 順序監査）
+  - `python scripts/check_c_team_fail_trace_order.py /tmp/c47_staging_default.log --mode default`（staging default skip ログの fail-trace 順序監査）
+  - `python scripts/check_c_team_fail_trace_order.py /tmp/c47_staging_strict.log --mode strict`（staging strict fail ログの fail-trace 順序監査）
+  - `scripts/run_c_team_fail_trace_audit.sh docs/team_status.md 30`（readiness/staging strict+default ログ採取 + fail-trace順序監査を一括実行）
+  - `C_FAIL_TRACE_REQUIRE_RETRY_CONSISTENCY=1 scripts/run_c_team_fail_trace_audit.sh docs/team_status.md 45`（fail-trace順序監査に retry consistency 監査を必須化）
+  - `C_FAIL_TRACE_REQUIRE_RETRY_CONSISTENCY=0 scripts/run_c_team_fail_trace_audit.sh docs/team_status.md 45`（retry consistency 監査を任意化し従来運用を再現）
+  - `C_FAIL_TRACE_REQUIRE_RETRY_CONSISTENCY_KEY=1` を併用すると、`fail_trace_retry_consistency_check` 記録キー欠落を fail-fast できる。
+  - key-required 失敗時は `run_c_team_fail_trace_audit.sh` が `readiness default capture failed: rc=...` と `FAIL_TRACE_AUDIT_RESULT=FAIL` を即出力するため、監査ログだけで失敗境界を追跡できる。
+  - `C_FAIL_TRACE_SKIP_NESTED_SELFTESTS=1`（既定値）で staging 監査時の nested self-test を省略し、提出前監査を短時間化できる。
+  - `collect_c_team_session_evidence.sh` は `--check-submission-readiness-minutes` 指定時に `fail_trace_audit_command=scripts/run_c_team_fail_trace_audit.sh <team_status> <minutes>` を自動追記する。
+  - `collect_c_team_session_evidence.sh --fail-trace-audit-log /tmp/c48_fail_trace_audit.log` を指定すると、`readiness/staging default+strict` の監査ログパスと `check_c_team_fail_trace_order.py` 再検証コマンドを提出エントリへ自動追記できる。
+  - 同取り込みで `fail_trace_audit_retry_command=...` を常時出力するため、監査失敗時も同じログパスで再試行できる（strict ノブ有効時は `C_FAIL_TRACE_REQUIRE_RETRY_CONSISTENCY*` の env 接頭辞付き）。
+  - 同取り込みで `fail_trace_retry_consistency_command` / `fail_trace_retry_consistency_check` / `fail_trace_retry_consistency_retry_command` と `fail_trace_retry_consistency_required` / `fail_trace_retry_consistency_require_key` / `fail_trace_retry_consistency_reasons` も出力され、提出エントリ単体で再検証導線と fail理由を追跡できる。
+  - `FAIL_TRACE_AUDIT_RESULT != PASS` または監査キー欠落時は `fail_trace_audit_retry_reason=...` / `fail_trace_audit_missing_keys=...` が提出エントリへ出力される。
+  - `python scripts/check_c_team_fail_trace_retry_consistency.py --team-status docs/team_status.md` で、提出エントリの `fail_trace_audit_retry_command` と `fail_trace_finalize_retry_command` の整合（team_status/minutes/log）を監査できる。
+  - `recover_c_team_token_missing_session.sh` start モードは `next_finalize_fail_trace_audit_command=...` を出力し、復旧直後の提出前監査コマンドを固定する。
+  - 同 start モードは `next_finalize_fail_trace_audit_log=...` と `next_finalize_command_with_fail_trace_log=...`（strict latest 版を含む）も出力し、監査ログ引き渡し付き finalize テンプレを即時取得できる。
+  - `next_finalize_fail_trace_embed_command=...`（strict latest 版を含む）を使うと、`run_c_team_fail_trace_audit.sh ... | tee <log>` から `recover ... --fail-trace-audit-log <log>` までを 1 行で実行できる。
+  - `recover_c_team_token_missing_session.sh --fail-trace-audit-log /tmp/c48_fail_trace_audit.log` は finalize モードで collect 側へ監査ログを引き渡し、復旧提出エントリにも同じ監査ログ導線を残せる。
+  - finalize 実行時に `--fail-trace-audit-log` が欠落していた場合、`fail_trace_audit_retry_command=...` と `fail_trace_finalize_retry_command=...` が標準エラーに出るため、同じログパスで再監査->再finalizeを復元できる。
+  - 上記 `fail_trace_audit_retry_command` は `C_FAIL_TRACE_REQUIRE_RETRY_CONSISTENCY` / `C_FAIL_TRACE_REQUIRE_RETRY_CONSISTENCY_KEY` が有効な場合に env 接頭辞付きで出力され、strict key-required 境界の再試行条件を保持する。
 
 ## 7. アーカイブ方針
 - 旧 Chrono 運用・旧 PM 司令文書は以下へ退避済み（参照のみ）:
