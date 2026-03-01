@@ -3,6 +3,11 @@
 
 ---
 
+## 学習ルール（このマニュアルの前提）
+1. **1章につき1題**: 章の「実装タスク」は最小例に絞る。  
+2. **検算必須**: 小さな入力で理論/既知解と一致することを確認する。  
+3. **詰まったら戻る**: 1章前に戻り、式とコードの対応表を作り直す。  
+
 このマニュアルは、以下のサイクルを繰り返しながら学ぶ構成になっている。
 
 1. **理論を整理する** – 最小限の数式と概念を確認する。  
@@ -14,6 +19,22 @@
 学習者の前提は「FEM 理論の概要と MATLAB 経験はあるが、C での本格実装は初めて」である。
 
 リポジトリには各章の練習用コードをまとめた `practice/` ディレクトリが同梱されている。`practice/README.md` で概要を確認しながら、提示された課題を自分の環境に合わせて改造していこう。
+
+### チュートリアルの要件定義（必読）
+- `docs/00_tutorial_requirements.md`: 目的、到達基準、前提、範囲、検算方針。
+- `docs/01_requirements.md`: 解析範囲・単位系・制約の整理。
+- `docs/03_design.md`: モジュール分割と入出力フローの設計メモ。
+
+### 学習ストーリーと時間目安（全体像）
+| フェーズ | ゴール | 目安時間 |
+|---------|--------|----------|
+| 1. チュートリアル読了 + 例題 | T3 解析を自作し、FEM4C の読み方を理解 | 35〜55 時間 |
+| 2. T6 実装対応 | T6 要素の剛性・荷重・検算を追加 | 14〜24 時間 |
+| 3. 複数部品対応 | 2 部品以上の入力と解析フローを構築 | 14〜28 時間 |
+| 4. parser 対応 | parser の読解・拡張・検算 | 12〜20 時間 |
+
+時間目安は、Chapter 02 の `practice/ch02/penalty.c` を自走で 10 時間程度で理解できるレベル（必要に応じて質問しながら進める前提）を想定している。
+全体合計の目安: 75〜127 時間（parser 対応を含む）。
 
 ---
 
@@ -28,12 +49,16 @@
 8. [T6 要素の剛性・荷重・検証](#chapter-08)  
 9. [入力パーサーの実装ガイド](#chapter-09)  
 10. [FEM4C の全体構成と次の一歩](#chapter-10)  
-11. [付録](#appendix)
+11. [追加開発ロードマップ](#chapter-11)  
+12. [parser チュートリアル](#chapter-12)  
+13. [付録](#appendix)
 
 ---
 
 <a id="chapter-01"></a>
 ## Chapter 01. スタートガイド
+目安時間: 理論 40分 / 実装 2時間 / FEM4C確認 40分 / 検証 60分
+目安の根拠: ビルド手順と CLI の習熟、最小実行と可視化の確認に時間を要する。
 
 ### 理論を整理する
 - FEM の離散化結果は `K d = f`。  
@@ -57,6 +82,18 @@
 - `practice/ch01/hello.c` を改造してコマンドライン引数（入力ファイル名）を表示させる。  
 - `bin/fem4c` と同じ構成で実行できる CLI の基本形を掴む。
 
+### 最小検算例（Chapter 01）
+**狙い**: 入力→解析→出力の最短経路が動くことを確認する。
+
+手順:
+1. `examples/t3_cantilever_beam.dat` を用意する。  
+2. `./bin/fem4c examples/t3_cantilever_beam.dat out.dat` を実行する。  
+3. `out.dat` に節点変位が出力されていることを確認する。  
+
+判定基準:
+- 実行ログに `Nodes`, `Elements`, `DOF` が出る。  
+- `out.dat` の変位が全てゼロではない。  
+
 ### 解析結果の確認と可視化
 - `./bin/fem4c examples/t6_cantilever_beam.dat beam_output.dat` を実行し、`beam_output.{dat,csv,vtk,f06}` が生成されることを確認する。  
 - CSV 出力は **21 列構成** で、`type,id,x,y,z,ux,uy,uz,disp_mag,n1,n2,n3,n4,n5,n6,sigma_x,sigma_y,tau_xy,von_mises,sigma_max,sigma_min` の順。  
@@ -79,6 +116,8 @@
 
 <a id="chapter-02"></a>
 ## Chapter 02. FEM 理論の復習と実装戦略
+目安時間: 理論 90分 / 実装 6時間 / FEM4C確認 60分 / 検証 90分
+目安の根拠: `practice/ch02/penalty.c` の理解に約 10 時間かかる前提から逆算。
 
 ### 理論を整理する
 - **最小ポテンシャルエネルギー原理**  
@@ -122,6 +161,8 @@
 
 <a id="chapter-03"></a>
 ## Chapter 03. T3 要素の形状関数とヤコビアン
+目安時間: 理論 2時間 / 実装 4時間 / FEM4C確認 60分 / 検証 2時間
+目安の根拠: 形状関数・ヤコビアンの導出と照合が主なボトルネック。
 
 ### 理論を整理する
 - **バリセンター（面積座標）の考え方**: 任意の三角形内部の点は節点 1〜3 からの重み付き平均として表現でき、その重みが形状関数 `N1, N2, N3` に相当する。
@@ -174,10 +215,6 @@
 - FEM4C が行っている要素健全性チェック（`t3_check_element_geometry`）を読み、detJ の符号と関連付けて説明できるようにする。
 
 ### FEM4C を読む
-- `src/elements/t3/t3_element.c`
-  - `t3_shape_functions` と `t3_jacobian_matrix` を確認。
-  - どのように配列を再利用しているか観察。
-### FEM4C を読む
 - `src/elements/t3/t3_element.c`  
   - `t3_shape_functions` と `t3_jacobian_matrix` を確認。  
   - どのように配列を再利用しているか観察。
@@ -194,6 +231,8 @@
 
 <a id="chapter-04"></a>
 ## Chapter 04. T3 要素剛性マトリクスの生成
+目安時間: 理論 2時間 / 実装 5時間 / FEM4C確認 60分 / 検証 2時間
+目安の根拠: B/D/Ke の数式対応と実装検算にまとまった時間を確保。
 
 ### 理論を整理する
 - **B マトリクス（3×6 行列）**: 2D 平面応力では
@@ -253,6 +292,8 @@
 
 <a id="chapter-05"></a>
 ## Chapter 05. 全体剛性マトリクスと境界条件
+目安時間: 理論 90分 / 実装 4時間 / FEM4C確認 60分 / 検証 90分
+目安の根拠: DOF マッピングと境界条件適用でミスが出やすい。
 
 ### 理論を整理する
 - **要素 → 全体系の組立**: 各要素剛性 `Ke` は局所自由度順 (例: [u1,v1,u2,v2,u3,v3]) で並んでいる。対応する全体系自由度 `global_dofs = [2*node_i, 2*node_i+1,...]` を使って `K(global_i, global_j) += Ke(i,j)` を行う。
@@ -313,6 +354,8 @@ Ke(i,j) の寄与は K[global_dofs[i], global_dofs[j]] へ加算する。
 
 <a id="chapter-06"></a>
 ## Chapter 06. 線形ソルバと検証（T3 完成）
+目安時間: 理論 90分 / 実装 4時間 / FEM4C確認 60分 / 検証 90分
+目安の根拠: CG の実装と収束確認に反復作業が必要。
 
 ### 理論を整理する
 - **共役勾配法 (CG)**: SPD 行列に対する反復法。基本ステップは
@@ -367,6 +410,8 @@ Ke(i,j) の寄与は K[global_dofs[i], global_dofs[j]] へ加算する。
 
 <a id="chapter-07"></a>
 ## Chapter 07. T6 要素の理論と実装ポイント
+目安時間: 理論 2時間 / 実装 4時間 / FEM4C確認 60分 / 検証 2時間
+目安の根拠: 高次形状関数と勾配の確認が中心。
 
 ### 理論を整理する
 - **二次三角形要素 (T6)**: 三角形の各辺に中間節点を持つ 6 節点要素。形状関数は 2 次式で、端点では 1、その他では 0、辺上では線形補間になる性質を持つ。
@@ -437,6 +482,8 @@ Ke(i,j) の寄与は K[global_dofs[i], global_dofs[j]] へ加算する。
 
 <a id="chapter-08"></a>
 ## Chapter 08. T6 要素の剛性・荷重・検証
+目安時間: 理論 2時間 / 実装 5時間 / FEM4C確認 60分 / 検証 2時間
+目安の根拠: ガウス積分と剛性行列の実装確認が負荷。
 
 ### 理論を整理する
 - **T6 要素剛性**: `Ke = Σ_{gp=1..3} B^T D B det(J) w_gp * t`。ガウス点が 3 つある点以外は T3 と同じ構造。
@@ -484,6 +531,8 @@ Ke(i,j) の寄与は K[global_dofs[i], global_dofs[j]] へ加算する。
 
 <a id="chapter-09"></a>
 ## Chapter 09. 入力パーサーの実装ガイド
+目安時間: 理論 60分 / 実装 3時間 / FEM4C確認 90分 / 検証 90分
+目安の根拠: 入力形式の理解と ID マッピングの追跡に時間を割く。
 
 ### 理論を整理する
 - FEM4C の解析パイプラインは「入力 → 内部メッシュ構築 → 解析 → 出力」。入力フェーズでは以下を担当する。  
@@ -512,8 +561,8 @@ Ke(i,j) の寄与は K[global_dofs[i], global_dofs[j]] へ加算する。
 
 ### FEM4C を読む
 - `src/io/input.c`, `src/io/input.h`：メインパーサーと補助関数の全体像。  
-- `docs/06_fem4c_implementation_history.md`：CSV 出力修正や ID 管理に関する履歴と注意事項。  
-- `test/data/` や `NastranBalkFile/` の入力例：多様なカード・境界条件の現物を観察。
+- `docs/implementation_guide.md`：入出力・ID管理の流れをモジュール別に確認。  
+- `examples/` や `NastranBalkFile/` の入力例：多様な入力パターンを観察。
 
 ### 検証課題
 - `examples/t6_cantilever_beam.dat` を読み込んだ直後に `g_node_ids[0]`, `g_element_ids[0]` をダンプし、入力ファイルの ID と一致するかを確認。  
@@ -535,6 +584,8 @@ Ke(i,j) の寄与は K[global_dofs[i], global_dofs[j]] へ加算する。
 
 <a id="chapter-10"></a>
 ## Chapter 10. FEM4C の全体構成と次の一歩
+目安時間: 理論 90分 / 実装 3時間 / FEM4C確認 2時間 / 検証 60分
+目安の根拠: 実コード追跡と自作コード統合の学習負荷を考慮。
 
 ### 理論を整理する
 - FEM4C は以下の層で構成される：  
@@ -553,8 +604,8 @@ Ke(i,j) の寄与は K[global_dofs[i], global_dofs[j]] へ加算する。
    - `@HINT`: FEM4C の `Makefile` を参考に `SRC`, `OBJ`, `TARGET` を定義。
 
 ### FEM4C を読む
-- `docs/05_handover_notes.md`：今後の拡張ポイント（圧力、バンド行列、ポスト処理、テスト整備など）を把握する。  
-- `docs/06_fem4c_implementation_history.md`：最新の解析ログ、CSV 仕様、既知の課題を随時更新。再着手前のブリーフィングとして活用。
+- `docs/implementation_guide.md`：各モジュールの役割と読み順を再確認する。  
+- `FEM4C_Reference_Manual.md`：全体仕様を確認する。
 
 ### 検証課題
 - T3 → T6 の移行で理解した差分を表にまとめる。  
@@ -564,6 +615,317 @@ Ke(i,j) の寄与は K[global_dofs[i], global_dofs[j]] へ加算する。
 - 分布荷重、温度荷重、ばね境界など、新しい条件を自作コードで試す。  
 - FEM4C に新しい要素（例: Q8）を追加する草案を作成。  
 - Nastran BULK（例: `NastranBalkFile/2Dmesh.dat`）を読み込ませ、`nastran_output.csv` が `beam_output.csv` と同じ 21 列構成で出力されるか確認する。異常時は Chapter 01 の Python 検証スニペットで列ズレを特定する。
+
+---
+
+<a id="chapter-11"></a>
+## Chapter 11. 追加開発ロードマップ（T6 対応と複数部品）
+目安時間: 設計 3〜4時間 / 実装 20〜34時間 / 検証 10〜14時間
+目安の根拠: T6 の完成と複数部品対応は実装・検算の工数が大きい。
+
+### 目的
+- parser は T3 のみ対応、T6 は未対応または不完全という前提で、**ソルバ側の T6 実装を完成**させる。
+- **複数部品（2 パート以上）**を扱えるように入力と解析フローを拡張する。
+
+### 開発フェーズと時間目安
+| フェーズ | 主要タスク | 目安時間 |
+|----------|------------|----------|
+| T6 完全対応 | 形状関数・B/D・剛性・荷重の整合と検算 | 10〜15時間 |
+| 複数部品対応 | 入力拡張、部品ループ、出力整理 | 10〜20時間 |
+
+### 実装タスク（T6 完全対応）
+1. **T6 形状関数とヤコビアン（2〜3時間）**  
+   - `practice/ch07/t6_shape.c` を正解表と照合し、`ΣNi=1` と勾配の妥当性を確認。  
+2. **T6 剛性・荷重の実装（6〜10時間）**  
+   - `src/elements/t6/t6_stiffness.c` の B/D/Ke の流れを追い、数式表と対応させる。  
+   - `src/elements/t6/t6_element.c` の要素情報（節点並び、面積計算）を確認する。  
+3. **アセンブリと入力連携の確認（3〜5時間）**  
+   - `src/solver/assembly.c` で T6 が組立に乗るか確認。  
+   - `src/io/input.c` の要素タイプ分岐を確認する。  
+4. **検算（3〜5時間）**  
+   - T3 と T6 の同一問題で解の傾向が一致するか比較。  
+   - 片持ち梁の先端変位が理論解のオーダーに一致することを確認。  
+
+### 実装タスク（複数部品対応）
+1. **入力設計（2〜3時間）**  
+   - `part_0001`, `part_0002` のように複数パートを扱う前提で入力を設計。  
+2. **解析フローの拡張（6〜10時間）**  
+   - `src/analysis/static.c` に部品ループを追加し、解析の繰り返しを組む。  
+   - `src/io/input.c` でパートごとの入力読み込みを切り替える。  
+3. **出力整理（2〜4時間）**  
+   - 出力ファイル名にパート名を埋め込む。  
+4. **整合性確認（2〜4時間）**  
+   - 部品間で節点 ID が衝突しないか検証。  
+   - 各部品の剛性・荷重が独立に解けることを確認。  
+
+### 命名規則とディレクトリ構成例
+**入力ディレクトリ**
+```
+run_out/
+  part_0001/
+    mesh/mesh.dat
+    material/material.dat
+    Boundary Conditions/boundary.dat
+  part_0002/
+    mesh/mesh.dat
+    material/material.dat
+    Boundary Conditions/boundary.dat
+```
+
+**出力ファイル例**
+```
+output_part_0001.dat
+output_part_0001.vtk
+output_part_0002.dat
+output_part_0002.vtk
+```
+
+### FEM4C を読む
+- `src/elements/t6/`：T6 の実装詳細。  
+- `src/analysis/static.c`：解析フローの入口。  
+- `src/io/input.c`：parser 出力の読み込みと境界条件処理。  
+
+### 検証課題
+- T6 で `ΣNi=1` と `detJ>0` を自動チェックするテストを追加。  
+- 2 部品の入力を作成し、それぞれが独立に解けることを確認。  
+- 出力ファイルが部品ごとに混ざらないことを検証。  
+
+---
+
+<a id="chapter-12"></a>
+## Chapter 12. parser チュートリアル（読解・拡張・検算）
+目安時間: 理論 2時間 / 実装 6〜10時間 / 検証 4〜6時間
+目安の根拠: 既存 parser を読み解き、T6/複数部品対応の拡張と検算まで行う想定。
+
+### 目的
+- parser のデータフロー（読み込み→内部表現→出力）を理解する。
+- T6 対応に必要なカード処理を追加できるようにする。
+- 2 部品以上の出力構成に対応できるようにする。
+
+### 事前確認
+- `parser/parser.c` を読めること。
+- 80 桁固定幅のカード読み込みと列位置の扱いを理解していること。
+
+### 追跡ガイド（読む順）
+1. **入口と全体フロー**  
+   - `main` の入出力引数と出力ディレクトリの生成を確認。  
+2. **カード読み込み**  
+   - `GRID`, `CTRIA3`, `MAT1`, `PSHELL`, `SPC`, `FORCE` の読み込み関数を追う。  
+3. **内部表現の確定**  
+   - ノード・要素・材料の格納タイミングと ID 変換を確認。  
+4. **出力生成**  
+   - `mesh/mesh.dat`, `material/material.dat`, `Boundary Conditions/boundary.dat` の生成を追う。  
+5. **surface/ridgeline**  
+   - surface 分割と ridgeline 抽出のロジックを確認。  
+
+### 実装タスク
+1. **既存フローの追跡（2時間）**  
+   - `GRID`, `CTRIA3`, `MAT1`, `PSHELL`, `SPC`, `FORCE` の読み込み位置を図にする。  
+2. **T6 対応の追加（4〜6時間）**  
+   - `CTRIA6` の節点並びと出力形式を整理し、mesh 出力へ反映する。  
+3. **boundary 出力の検算（2〜3時間）**  
+   - node/surface/ridgeline の出力が想定と一致するか確認する。  
+4. **複数部品への拡張（2〜4時間）**  
+   - 出力先ディレクトリとパート名の扱いを確認し、複数パートを想定した処理にする。  
+
+### 検証課題
+- `NastranBalkFile/3Dtria_example.dat` を入力し、`mesh/mesh.dat` と `boundary.dat` が期待どおりの内容になっているか確認する。  
+- T6 入力を用意し、節点数と要素数が一致するか確認する。  
+
+### 出力ファイルの例（抜粋）
+**mesh/mesh.dat**
+```
+nodes
+1, 0.0, 0.0, 0.0
+2, 1.0, 0.0, 0.0
+3, 0.0, 1.0, 0.0
+elements
+1, 1, 2, 3
+```
+
+### 典型入力ファイル（最小例）
+**NastranBalkFile（最小）**
+```
+$ minimal BDF for parser check
+GRID,1,,0.0,0.0,0.0
+GRID,2,,1.0,0.0,0.0
+GRID,3,,0.0,1.0,0.0
+CTRIA3,1,1,1,2,3
+MAT1,1,2.20694E+05,,0.288,7.83E-06
+PSHELL,1,1,1.0
+SPC,1,1,12,0.0
+FORCE,2,3,0,10.0,0.0,-1.0,0.0
+ENDDATA
+```
+
+**parser 出力パッケージ（最小）**
+```
+run_min/
+  mesh/mesh.dat
+  material/material.dat
+  Boundary Conditions/boundary.dat
+```
+
+**mesh/mesh.dat（最小例）**
+```
+nodes
+1, 0.0, 0.0, 0.0
+2, 1.0, 0.0, 0.0
+3, 0.0, 1.0, 0.0
+elements
+1, 1, 2, 3
+```
+
+**material/material.dat（最小例）**
+```
+Young's modulus [N/mm^2]
+2.20694e+05
+Poisson's ratio [–]
+0.288
+density [kg/mm^3]
+7.83E-06
+```
+
+**Boundary Conditions/boundary.dat（最小例）**
+```
+Fixed(1)
+Fix
+node 1 12 0.0
+Force(1)
+Force
+node 3 123456 2 -10
+```
+
+### 想定ログ（抜粋）
+```
+Detected parser output package in directory: run_out/part_0001
+  Info: boundary.dat declares UNITSYS (forces already in N)
+Problem summary:
+  Nodes: 3
+  Elements: 1
+  Materials: 1
+  DOF: 6
+Assembling global force vector...
+  Total applied force magnitude: 1.000000e+01
+Applying boundary conditions...
+  Applied 2 boundary conditions
+```
+
+**material/material.dat**
+```
+Young's modulus [N/mm^2]
+2.20694e+05
+Poisson's ratio [–]
+0.288
+density [kg/mm^3]
+7.83e-06
+```
+
+**Boundary Conditions/boundary.dat**
+```
+Fixed(1)
+Fix
+ridgeline 3 123456 0.0
+Force(1)
+Force
+node 450 123456 2 -10
+```
+
+### よくある失敗と対処
+- **節点数・要素数が合わない**  
+  - 入力の ID が未登録のまま出力されていないか確認する。  
+- **拘束・荷重が反映されない**  
+  - `boundary.dat` の `Fix` / `Force` ブロックが正しい形式か確認する。  
+- **surface/ridgeline が期待と異なる**  
+  - 2D/3D 判定（z=0 判定）と基準角度（60度）を確認する。  
+- **出力の単位が不一致**  
+  - `material.dat` の E が N/mm^2 になっているか確認する。  
+
+### 最低限の出力確認チェックリスト
+**入力ファイルを与えた直後に確認する項目**
+1. `mesh/mesh.dat`  
+   - `nodes` 行の数が想定と一致する。  
+   - `elements` 行の数が想定と一致する。  
+2. `material/material.dat`  
+   - `Young's modulus [N/mm^2]` になっている。  
+   - `density [kg/mm^3]` が正の値になっている。  
+3. `Boundary Conditions/boundary.dat`  
+   - `Fix`/`Force` がブロック形式で出力されている。  
+   - `node/surface/ridgeline` のターゲットが意図どおり。  
+
+**小さな検算（最小実行）**
+1. parser → solver 一括実行  
+   ```bash
+   ./bin/fem4c NastranBalkFile/3Dtria_example.dat run_out part_0001 output.dat
+   ```  
+2. FEM4C のログ  
+   - `Detected parser output package` が表示される。  
+   - `Total applied force magnitude` が 0 ではない。  
+3. `output.dat`  
+   - 変位が全て 0 ではない。  
+
+### よく使う確認コマンド
+```bash
+# mesh の節点数/要素数のざっくり確認
+rg -n \"^nodes$\" -n mesh/mesh.dat
+rg -n \"^elements$\" -n mesh/mesh.dat
+
+# boundary の先頭を確認
+sed -n '1,40p' \"Boundary Conditions/boundary.dat\"
+
+# material の単位確認
+sed -n '1,6p' material/material.dat
+```
+
+### ビルド方法（parser）
+```bash
+cd /home/rmaen/highperformanceFEM/FEM4C/parser
+gcc -Wall -Wextra -O2 -g parser.c -o parser -lm
+```
+Windows の場合は `parser.exe` が生成される。
+
+### デバッグの基本（parser）
+1. **ログ出力の追加**  
+   - `GRID` 数、`CTRIA3/CTRIA6` 数、`SPC/FORCE` 数を集計して出力。  
+2. **入力カードの先頭確認**  
+   - `printf(\"%s\", line);` で生の行を出し、列位置がずれていないか確認。  
+3. **差分検算**  
+   - 既存の `3Dtria_example.dat` をベースに、1枚だけ要素を追加/削除して出力差分を見る。  
+4. **gdb で追跡**  
+   ```bash
+   gdb --args ./parser NastranBalkFile/3Dtria_example.dat run_out part_0001
+   (gdb) break parse_mat1_line
+   (gdb) run
+   ```
+
+### ビルド方法（solver）
+```bash
+cd /home/rmaen/highperformanceFEM/FEM4C
+make
+```
+
+### Makefile の読み方（solver）
+Makefile は「どのソースを、どの順序で、どのオプションで」ビルドするかを定義する設計図です。  
+FEM4C では `src/` の各モジュールを `build/` にオブジェクト化し、最終的に `bin/fem4c` をリンクします。
+
+1. **ターゲットの把握**  
+   - `make` は標準ビルド、`make openmp` は OpenMP 有効化、`make debug` はデバッグ向け。  
+2. **ビルド成果物**  
+   - 実行ファイルは `bin/fem4c`、中間生成物は `build/` に出力される。  
+3. **依存関係の確認**  
+   - `src/` 以下の `.c` が `build/` の `.o` に対応していることを確認する。  
+4. **学習時の推奨**  
+   - まずは `make debug` で警告を消し、`gdb` で追跡できるようにする。  
+
+### デバッグの基本（solver）
+1. **入力判定**  
+   - `input_read_parser_package()` が呼ばれているかログで確認。  
+2. **境界条件の適用確認**  
+   - `Applied XX boundary conditions` の数が妥当か確認。  
+3. **収束の監視**  
+   - CG の残差が単調に減らない場合は、拘束条件か材料単位を再点検。  
+4. **最小問題の切り出し**  
+   - `examples/t3_cantilever_beam.dat` で再現し、差分を確認。  
 
 ---
 
@@ -586,7 +948,58 @@ Ke(i,j) の寄与は K[global_dofs[i], global_dofs[j]] へ加算する。
 
 Chapter 03・05・07 のチェックでは、本文に挿入した簡易図を参照しながら節点配置や DOF 対応を口頭で説明できるかを確認すると理解が深まる。
 
-### B. ハンズオンラボ・サンプルコード
+### B. 章末セルフテスト（詳細）
+| 章 | 章末で確認する作業 | 合格基準 |
+|----|--------------------|----------|
+| 01 | `examples/t3_cantilever_beam.dat` を実行 | 変位が 0 以外で出力される |
+| 02 | 1D バネ 2 本の Kd=f を手計算 | 手計算と C の結果が一致する |
+| 03 | T3 の形状関数と J を実装 | `det(J)` が正で一定になる |
+| 04 | T3 要素剛性を計算 | 対称行列であることを確認 |
+| 05 | 全体剛性と BC 適用 | 固定端の DOF が拘束される |
+| 06 | CG を最小問題で収束 | 反復が進み残差が減る |
+| 07 | T6 形状関数を実装 | N の総和が 1 になる |
+| 08 | T6 剛性と荷重 | 既知解と同オーダーになる |
+| 09 | 入力パーサーを追う | ID マッピングが理解できる |
+| 10 | FEM4C の流れを説明 | 入力→出力の関数を列挙できる |
+
+### C. 理論↔実装対応表（最小版）
+| 概念 | 数式/キーワード | 実装の位置 |
+|------|-----------------|------------|
+| 釣合い式 | K d = f | `FEM4C/src/solver/assembly.c` |
+| 形状関数 | N1, N2, N3 | `FEM4C/practice/ch03/t3_shape.c` |
+| ヤコビアン | J, det(J) | `FEM4C/practice/ch03/t3_shape.c` |
+| B マトリクス | ε = B d | `FEM4C/src/elements/t3/t3_stiffness.c` |
+| D マトリクス | σ = D ε | `FEM4C/src/elements/t3/t3_stiffness.c` |
+| 要素剛性 | Ke = ∫ Bᵀ D B detJ | `FEM4C/src/elements/t3/t3_stiffness.c` |
+| 組立 | K に Ke を加算 | `FEM4C/src/solver/assembly.c` |
+| 境界条件 | Dirichlet/Force | `FEM4C/src/io/input.c` |
+| CG ソルバ | 反復解法 | `FEM4C/src/solver/cg_solver.c` |
+| 出力 | 変位/応力 | `FEM4C/src/io/output.c` |
+
+### D. 最小検算入力と期待ログ
+**ケース 1: native 形式（最小確認）**  
+入力: `examples/t3_cantilever_beam.dat`  
+実行:
+```bash
+./bin/fem4c examples/t3_cantilever_beam.dat out.dat
+```
+確認ポイント:
+- `Nodes`, `Elements`, `DOF` がログに出る。
+- `Total applied force magnitude` が 0 ではない。
+- `out.dat` の変位が全て 0 ではない。
+
+**ケース 2: parser 出力パッケージ**  
+入力: `run_min/`（`mesh/material/boundary` を含む最小構成）  
+実行:
+```bash
+./bin/fem4c run_min
+```
+確認ポイント:
+- `Detected parser output package` が表示される。
+- `Total applied force magnitude` が入力に対応する。
+- `output.dat` に非ゼロ変位が出る。
+
+### E. ハンズオンラボ・サンプルコード
 `practice/` ディレクトリに各章のハンズオンコードとテストドライバを配置している。本文のサイクル（理論→実装→FEM4C確認→検証）を一巡したら、`practice/README.md` を参照しながらサンプルを実行・改造して理解を深めよう。
 
 - `ch01`〜`ch08`: Chapter 01〜08 の演習と 1:1 で対応するミニプログラム。
@@ -594,13 +1007,15 @@ Chapter 03・05・07 のチェックでは、本文に挿入した簡易図を�
 - 追加の Python スクリプトや実験コードが増えた場合も `practice/` 以下にまとめておくと、学習者が迷わずアクセスできる。
 - 特に `practice/ch03`, `ch05`, `ch07` の実装は章内の簡易図と合わせて確認すると、節点番号や自由度マッピングの意図が把握しやすい。
 
-### C. 追加資料・旧ドキュメントの活用
-- `docs/01_requirements.md`: 教科書で扱う解析範囲を俯瞰。新しい題材を検討するときの出発点。
-- `docs/05_handover_notes.md`: 圧力荷重、行列ストレージ、ポスト処理など拡張アイデアを整理。次のステップを決める際に参照。
-- `docs/RELEASE_README.md`: リリース時のフォルダ構成と配布物の説明。学習用データをどこに置くか迷ったら確認する。
-- 旧版の `FEM_LEARNING_GUIDE.md` は、MATLAB 側の観点を補完するリファレンスとして活用できる。
+### F. 追加資料・関連ドキュメント
+- `docs/01_requirements.md`: 解析範囲と前提の整理。
+- `docs/03_design.md`: モジュール分割・入出力フローの設計メモ。
+- `docs/implementation_guide.md`: 実装対応表と最小検算例。
+- `FEM4C_Reference_Manual.md`: 全体仕様のリファレンス。
 
-### D. よくある質問
+コードや演習用の実装は `practice/` に集約する。試験用や検証用のコードを追加する場合も `practice/` 配下に置く。
+
+### G. よくある質問
 - **Q. FEM4C のコードをそのまま写経すれば良い？**  
   A. 写経は理解の補助になるが、ここで提示した「理論→ヒント実装→FEM4C参照→検証」のサイクルで理解を深めることが重要。
 - **Q. T3 と T6 のどちらを先に取り組むべき？**  
@@ -608,7 +1023,7 @@ Chapter 03・05・07 のチェックでは、本文に挿入した簡易図を�
 - **Q. スカイライン行列を使わずに実装しても良い？**  
   A. 練習段階では密行列で構わない。性能を求める段階で FEM4C のスカイライン実装を取り入れると良い。
 
-### E. 参考文献
+### H. 参考文献
 - Bathe, Klaus-Jürgen: *Finite Element Procedures*.  
 - Hughes, Thomas JR: *The Finite Element Method*.  
 - 山田貴博: *高性能有限要素法*（FEM4C の原典）。  

@@ -1,0 +1,6 @@
+# Coupled-freeze forbidden paths for C-team staging audit.
+# One shell-style pattern per line.
+FEM4C/src/analysis/runner.c
+FEM4C/src/analysis/runner.h
+FEM4C/scripts/check_coupled_stub_contract.sh
+FEM4C/src/fem4c.c

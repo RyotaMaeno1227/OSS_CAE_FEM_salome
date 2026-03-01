@@ -4,6 +4,7 @@ set -euo pipefail
 TEAM_STATUS_PATH="${1:-docs/team_status.md}"
 MIN_ELAPSED="${2:-30}"
 C_DRYRUN_POLICY="${3:-pass}"
+MAX_ELAPSED="${TEAM_AUDIT_MAX_ELAPSED:-90}"
 COUPLED_FREEZE_FILE="${COUPLED_FREEZE_FILE:-scripts/c_coupled_freeze_forbidden_paths.txt}"
 TEAM_AUDIT_REQUIRE_IMPL_CHANGES="${TEAM_AUDIT_REQUIRE_IMPL_CHANGES:-0}"
 
@@ -100,6 +101,7 @@ set +e
 python scripts/audit_team_sessions.py \
   --team-status "${TEAM_STATUS_PATH}" \
   --min-elapsed "${MIN_ELAPSED}" \
+  --max-elapsed "${MAX_ELAPSED}" \
   "${TEAM_AUDIT_FLAGS[@]}" \
   --json > "${json_out}"
 audit_rc=$?

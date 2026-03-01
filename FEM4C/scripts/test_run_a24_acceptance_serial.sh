@@ -45,6 +45,46 @@ if [[ ! -s "${tmp_dir}/summary_pass.log" ]]; then
   exit 1
 fi
 
+if A24_ACCEPT_SERIAL_LOCK_DIR="${tmp_dir}/invalid_summary_out_missing_dir_lock" A24_ACCEPT_SERIAL_SUMMARY_OUT="${tmp_dir}/missing_summary_dir/summary.log" bash "FEM4C/scripts/run_a24_acceptance_serial.sh" >"${tmp_dir}/invalid_summary_out_missing_dir.log" 2>&1; then
+  echo "FAIL: run_a24_acceptance_serial should fail when summary output directory is missing" >&2
+  cat "${tmp_dir}/invalid_summary_out_missing_dir.log" >&2
+  exit 1
+fi
+
+if ! grep -q "A24 acceptance serial summary output directory does not exist" "${tmp_dir}/invalid_summary_out_missing_dir.log"; then
+  echo "FAIL: expected summary output directory diagnostic was not found" >&2
+  cat "${tmp_dir}/invalid_summary_out_missing_dir.log" >&2
+  exit 1
+fi
+
+mkdir -p "${tmp_dir}/summary_dir_path"
+if A24_ACCEPT_SERIAL_LOCK_DIR="${tmp_dir}/invalid_summary_out_dir_path_lock" A24_ACCEPT_SERIAL_SUMMARY_OUT="${tmp_dir}/summary_dir_path" bash "FEM4C/scripts/run_a24_acceptance_serial.sh" >"${tmp_dir}/invalid_summary_out_dir_path.log" 2>&1; then
+  echo "FAIL: run_a24_acceptance_serial should fail when summary output path is a directory" >&2
+  cat "${tmp_dir}/invalid_summary_out_dir_path.log" >&2
+  exit 1
+fi
+
+if ! grep -q "A24 acceptance serial summary output path must be a file" "${tmp_dir}/invalid_summary_out_dir_path.log"; then
+  echo "FAIL: expected summary output path-type diagnostic was not found" >&2
+  cat "${tmp_dir}/invalid_summary_out_dir_path.log" >&2
+  exit 1
+fi
+
+printf 'readonly\n' > "${tmp_dir}/summary_readonly.log"
+chmod 444 "${tmp_dir}/summary_readonly.log"
+if A24_ACCEPT_SERIAL_LOCK_DIR="${tmp_dir}/invalid_summary_out_readonly_lock" A24_ACCEPT_SERIAL_SUMMARY_OUT="${tmp_dir}/summary_readonly.log" bash "FEM4C/scripts/run_a24_acceptance_serial.sh" >"${tmp_dir}/invalid_summary_out_readonly.log" 2>&1; then
+  echo "FAIL: run_a24_acceptance_serial should fail when summary output path is not writable" >&2
+  cat "${tmp_dir}/invalid_summary_out_readonly.log" >&2
+  exit 1
+fi
+chmod 644 "${tmp_dir}/summary_readonly.log"
+
+if ! grep -q "cannot write A24 acceptance serial summary output" "${tmp_dir}/invalid_summary_out_readonly.log"; then
+  echo "FAIL: expected summary output writable diagnostic was not found" >&2
+  cat "${tmp_dir}/invalid_summary_out_readonly.log" >&2
+  exit 1
+fi
+
 if A24_ACCEPT_SERIAL_LOCK_DIR="${tmp_dir}/invalid_knob_lock" A24_ACCEPT_SERIAL_RETRY_ON_137=2 bash "FEM4C/scripts/run_a24_acceptance_serial.sh" >"${tmp_dir}/invalid_knob.log" 2>&1; then
   echo "FAIL: run_a24_acceptance_serial should fail when retry knob is invalid" >&2
   cat "${tmp_dir}/invalid_knob.log" >&2

@@ -102,16 +102,33 @@ make -C FEM4C mbd_a24_acceptance_serial_test
 `mbd_a24_batch_test` → `mbd_ci_contract_test` を直列実行し、
 `A24_ACCEPT_SERIAL_SUMMARY` で結果を1行要約します。
 
+`mbd_a24_regression` 側の主な lock ノブ:
+- `A24_REGRESSION_SKIP_LOCK=0|1`（既定: `0`）
+- `A24_REGRESSION_LOCK_DIR=<path>`（既定: `/tmp/fem4c_a24_regression.lock`）
+
 主な運用ノブ:
 - `A24_ACCEPT_SERIAL_RETRY_ON_137=0|1`（既定: `1`）
 - `A24_ACCEPT_SERIAL_FAKE_137_STEP=none|full_test|batch_test|ci_contract_test`（自己テスト用途）
-- `A24_ACCEPT_SERIAL_SUMMARY_OUT=<path>`（summary 1行をファイル出力）
+- `A24_ACCEPT_SERIAL_SUMMARY_OUT=<path>`（summary 1行をファイル出力。親ディレクトリ未作成/ディレクトリ指定は fail-fast）
 - `A24_ACCEPT_SERIAL_STEP_LOG_DIR=<dir>`（ステップログを保存し、失敗時 `failed_log` で参照可能。既存ファイル指定や非 writable ディレクトリは fail-fast）
 
 `mbd_b8_guard` 系は既定で `B8_LOCAL_TARGET=mbd_checks` を使い、再帰 make 呼び出し時に
 `MAKEFLAGS/MFLAGS` を隔離して安定化しています。`mbd_b8_regression` 系は
 `B8_B14_TARGET=mbd_ci_contract` を既定値にして B-14 連結を軽量化しつつ、必要時は
 `B8_B14_TARGET=mbd_b14_regression` で重い経路へ切替できます。
+さらに `mbd_b8_regression` / `mbd_b8_regression_full` は nested self-test 実行時に
+`B8_LOCAL_TARGET` / `B8_B14_TARGET` / `B8_RUN_B14_REGRESSION` を隔離し、最終 guard 実行経路にのみ
+ノブを受け渡すことで、自己テスト連鎖の再入安定性を維持します。
+`B8_REGRESSION_SKIP_LOCK=0|1`（既定: `0`）と `B8_REGRESSION_LOCK_SCOPE=repo|global`（既定: `repo`）、
+`B8_REGRESSION_LOCK_DIR=<path>`（任意 override）で再入ロック挙動を制御できます。
+`B8_MAKE_TIMEOUT_SEC=<seconds>`（既定: `0` = 無効）を指定すると、`mbd_b8_regression` /
+`mbd_b8_regression_full` の内部 make 呼び出しを fail-fast timeout で停止できます。
+`repo` 既定では `/tmp/fem4c_b8_regression.<repo_hash>.lock` を使って別ワークツリー間の競合を避け、
+`global` 指定時は `/tmp/fem4c_b8_regression.lock` を使います。
+実行サマリには `lock_dir=<path>` と `lock_dir_source=env|scope_repo_default|scope_global_default`
+（full wrapper は `b8_lock_dir_source=...`）を出力し、ロック経路の判定根拠を追跡できます。
+`mbd_b8_regression_full` でも clean/all/test から lockノブを隔離したうえで、
+最終 `mbd_b8_regression` 呼び出しにのみ受け渡します。
 `mbd_ci_contract_test` では B-8自己テストの一時スクリプト生成契約
 （`b8_regression_test_temp_copy_marker` など）に加えて、
 `B8_TEST_TMP_COPY_DIR` の既定値/存在チェック/書込チェック契約

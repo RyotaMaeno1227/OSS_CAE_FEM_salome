@@ -75,6 +75,8 @@ make -C FEM4C mbd_checks
 #   - steps_requested/steps_executed
 # CLI options: --mbd-integrator, --mbd-newmark-beta, --mbd-newmark-gamma, --mbd-hht-alpha, --mbd-dt, --mbd-steps
 # env vars: FEM4C_MBD_INTEGRATOR, FEM4C_MBD_NEWMARK_BETA, FEM4C_MBD_NEWMARK_GAMMA, FEM4C_MBD_HHT_ALPHA, FEM4C_MBD_DT, FEM4C_MBD_STEPS
+# optional test-only override: FEM4C_MBD_BIN=<path-to-fem4c-binary>
+#   - if path is missing/non-executable, checker fails fast with non-zero + explicit preflight error
 # mbd-prefixed CLI options update only FEM4C_MBD_* keys (coupled env keys are not mutated)
 make -C FEM4C mbd_integrator_checks
 # `make -C FEM4C mbd_checks` and `make -C FEM4C test` also run mbd_integrator_checks
@@ -111,6 +113,8 @@ make -C FEM4C mbd_ci_contract
 #   integrator_fallback: newmark_beta=cli newmark_gamma=cli hht_alpha=cli
 #   newmark_beta_source_status,cli
 #   dt_source_status,env_invalid_fallback
+# also checks mbd integrator binary preflight markers:
+#   FEM4C_BIN_DEFAULT/FEM4C_MBD_BIN override + preflight error message
 #   mbd_step=1/3
 #   steps_trace: requested=3 executed=3
 #   steps_requested,3
@@ -125,9 +129,13 @@ make -C FEM4C mbd_a21_regression_test
 # one-command A-24 regression (step-trace runtime/static contract + self-tests)
 make -C FEM4C mbd_a24_regression
 # run emits one machine-readable summary line:
-#   A24_REGRESSION_SUMMARY contract_test=<0|1> integrator_attempts=<n> ci_contract_attempts=<n> ci_contract_test_attempts=<n> overall=<pass|fail> failed_step=<...> failed_cmd=<...>
+#   A24_REGRESSION_SUMMARY contract_test=<0|1> lock=<not_used|acquired|acquired_stale_recovered|held|skipped> integrator_attempts=<n> ci_contract_attempts=<n> ci_contract_test_attempts=<n> overall=<pass|fail> failed_step=<...> failed_cmd=<...>
 # optional: skip nested ci-contract self-test (useful for wrapper-focused smoke/debug)
 A24_RUN_CONTRACT_TEST=0 make -C FEM4C mbd_a24_regression
+# optional: skip regression lock acquisition (for nested wrapper orchestration/debug)
+A24_REGRESSION_SKIP_LOCK=1 make -C FEM4C mbd_a24_regression
+# optional: override regression lock path (default: /tmp/fem4c_a24_regression.lock)
+A24_REGRESSION_LOCK_DIR=/tmp/custom_a24_regression.lock make -C FEM4C mbd_a24_regression
 # optional: persist the same summary line to a file for report reuse
 A24_REGRESSION_SUMMARY_OUT=/tmp/a24_regression_summary.log make -C FEM4C mbd_a24_regression
 # self-test for A-24 regression wrapper (pass + expected fail path)
@@ -136,6 +144,8 @@ make -C FEM4C mbd_a24_regression_test
 make -C FEM4C mbd_a24_regression_full
 # full run emits one machine-readable summary line:
 #   A24_FULL_SUMMARY lock=<...> retry_on_137=<0|1> retry_used=<0|1> clean=<...> clean_attempts=<...> build=<...> build_attempts=<...> regression=<...> regression_attempts=<...> overall=<pass|fail> failed_step=<...> failed_cmd=<...>
+# if nested `mbd_a24_regression` fails with its own summary marker, full wrapper propagates:
+#   failed_step=regression_<nested_failed_step> / failed_cmd=<nested_failed_cmd>
 # optional: retry rc=137 once per step (default `A24_FULL_RETRY_ON_137=1`, set `0` to disable)
 A24_FULL_RETRY_ON_137=0 make -C FEM4C mbd_a24_regression_full
 # optional: persist the same summary line to a file for report reuse
@@ -149,6 +159,8 @@ make -C FEM4C mbd_a24_batch
 #   full: A24_FULL_LOCK_DIR, batch: A24_BATCH_LOCK_DIR, shared default via A24_SERIAL_LOCK_DIR)
 # batch run emits one machine-readable summary line:
 #   A24_BATCH_SUMMARY lock=<...> retry_on_137=<0|1> retry_used=<0|1> regression=<...> regression_attempts=<...> regression_test=<...> regression_test_attempts=<...> regression_full_test=<...> regression_full_test_attempts=<...> overall=<pass|fail> failed_step=<...> failed_cmd=<...>
+# if nested `mbd_a24_regression` fails with its own summary marker, batch wrapper propagates:
+#   failed_step=regression_<nested_failed_step> / failed_cmd=<nested_failed_cmd>
 # optional: retry rc=137 once per sub-step (default `A24_BATCH_RETRY_ON_137=1`, set `0` to disable)
 A24_BATCH_RETRY_ON_137=0 make -C FEM4C mbd_a24_batch
 # optional: persist the same summary line to a file for report reuse
@@ -164,6 +176,7 @@ A24_ACCEPT_SERIAL_RETRY_ON_137=0 make -C FEM4C mbd_a24_acceptance_serial
 # optional: inject deterministic rc=137 on first attempt of one step (for wrapper self-check)
 A24_ACCEPT_SERIAL_FAKE_137_STEP=batch_test make -C FEM4C mbd_a24_acceptance_serial
 # optional: persist the same summary line to a file for report reuse
+# (summary path must be a writable file path under an existing directory)
 A24_ACCEPT_SERIAL_SUMMARY_OUT=/tmp/a24_acceptance_serial_summary.log make -C FEM4C mbd_a24_acceptance_serial
 # optional: capture per-step logs and include failed_log path in summary
 # (step-log path must be a writable directory; file path/non-writable dir fails fast)
@@ -184,14 +197,28 @@ make -C FEM4C mbd_b8_guard
 make -C FEM4C mbd_b8_guard RUN_B14_REGRESSION=1
 # one-command B-8 regression (contract + self-tests + guard with B-14 chain)
 make -C FEM4C mbd_b8_regression
+# override B-14 target while keeping local path lightweight
+make -C FEM4C mbd_b8_regression B8_B14_TARGET=mbd_ci_contract_test B8_LOCAL_TARGET=mbd_ci_contract
 # disable B-14 chain from make entrypoint
 make -C FEM4C mbd_b8_regression B8_RUN_B14_REGRESSION=0
+# optional: skip lock check in wrapper-focused runs (default lock scope: repo)
+make -C FEM4C mbd_b8_regression B8_REGRESSION_SKIP_LOCK=1
+# optional: force global lock scope (/tmp/fem4c_b8_regression.lock)
+make -C FEM4C mbd_b8_regression B8_REGRESSION_LOCK_SCOPE=global
+# optional: fail-fast timeout for wrapper-internal make calls (seconds)
+make -C FEM4C mbd_b8_regression B8_MAKE_TIMEOUT_SEC=120
 # self-test for the B-8 regression wrapper (pass + expected fail path)
 make -C FEM4C mbd_b8_regression_test
 # full path from clean rebuild
 make -C FEM4C mbd_b8_regression_full
 # disable B-14 chain from full wrapper entrypoint
 make -C FEM4C mbd_b8_regression_full B8_RUN_B14_REGRESSION=0
+# optional: force global lock scope from full wrapper entrypoint
+make -C FEM4C mbd_b8_regression_full B8_REGRESSION_LOCK_SCOPE=global
+# optional: pass custom lock path to full wrapper -> mbd_b8_regression path
+make -C FEM4C mbd_b8_regression_full B8_REGRESSION_SKIP_LOCK=1 B8_REGRESSION_LOCK_DIR=/tmp/fem4c_b8_regression_custom.lock
+# optional: fail-fast timeout for clean/all/test + nested mbd_b8_regression (seconds)
+make -C FEM4C mbd_b8_regression_full B8_MAKE_TIMEOUT_SEC=180
 # self-test for the full wrapper (pass + expected fail path)
 make -C FEM4C mbd_b8_regression_full_test
 # knob matrix test (0/1 + invalid knob/make-command fail-fast)
@@ -223,18 +250,36 @@ make -C FEM4C mbd_b8_guard RUN_SPOT=1 RUN_ID=21773820916 SPOT_STRICT=1
 #   B8_LOCAL_TARGET=<target> (default: mbd_checks)
 #   B8_B14_TARGET=<target> (default: mbd_b14_regression for mbd_b8_guard*)
 #   mbd_b8_regression/_full wrappers use B8_B14_TARGET=mbd_ci_contract as default
+#   B8_REGRESSION_SKIP_LOCK=0|1 (default: 0 for mbd_b8_regression/_full wrappers)
+#   invalid B8_REGRESSION_SKIP_LOCK values fail fast with non-zero exit
+#   B8_REGRESSION_LOCK_SCOPE=repo|global (default: repo)
+#   invalid B8_REGRESSION_LOCK_SCOPE values fail fast with non-zero exit
+#   B8_REGRESSION_LOCK_DIR=<path> (optional override; repo scope default: /tmp/fem4c_b8_regression.<repo_hash>.lock)
+#   B8_MAKE_TIMEOUT_SEC=<seconds> (default: 0 = disabled; non-numeric values fail fast)
+#   wrapper summary trace: lock_dir=<path>, lock_dir_source=env|scope_repo_default|scope_global_default
+#   full wrapper summary trace: b8_lock_dir_source=env|scope_repo_default|scope_global_default
 #   B8_SPOT_TARGET=<target> (default: mbd_ci_evidence)
 #   B8_TEST_TMP_COPY_DIR=<dir> (default: ${root_dir}/FEM4C/scripts in B-8 self-tests)
 # stability contract:
 #   mbd_b8_guard / mbd_b8_guard_contract / run_b8_regression sanitize parent make env via
 #   `env -u MAKEFLAGS -u MFLAGS` before recursive make calls.
 #   this keeps `mbd_b8_regression_test` stable even when called from nested wrappers.
+#   run_b8_regression/_full also isolate `B8_LOCAL_TARGET` and B14 knobs
+#   (`B8_B14_TARGET`, `B8_RUN_B14_REGRESSION`) from nested self-tests, and pass them only
+#   to the final guard execution path.
+#   run_b8_regression_full also isolates lock knobs from clean/all/test and forwards
+#   `B8_REGRESSION_SKIP_LOCK` / `B8_REGRESSION_LOCK_SCOPE` / `B8_REGRESSION_LOCK_DIR`
+#   only to final `mbd_b8_regression`.
 # CI static checks:
 #   make -C FEM4C mbd_ci_contract
 #   (checks `mbd_b8_local_target_default`, `b8_guard_makeflags_isolation`,
 #    `b8_regression_b14_target_default`, `b8_regression_makeflags_isolation`,
+#    `b8_regression_b14_target_isolation`, `b8_regression_b14_knob_isolation`,
+#    `b8_regression_local_target_isolation`, `b8_regression_local_target_pass_through`,
+#    `b8_full_regression_local_target_isolation`, `b8_full_regression_local_target_pass_through`,
 #    `b8_regression_test_temp_copy_marker`, `b8_full_test_temp_copy_marker`,
 #    `b8_guard_contract_test_temp_copy_marker`,
+#    `b8_regression_test_b14_target_override_case_marker`,
 #    `b8_*_temp_copy_dir_knob_marker`, `b8_*_temp_copy_dir_validate_marker`,
 #    `b8_*_temp_copy_dir_writable_marker`)
 # self-test for guard behavior (B-14 chaining + strict/non-strict spot)

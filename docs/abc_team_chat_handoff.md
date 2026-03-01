@@ -29,6 +29,8 @@ FEM4C スプリント中は **この Section 0 と `docs/fem4c_team_next_queue.m
   - 30分は「開発前進」に使う。実装系ファイル差分（コード差分）を毎セッション必須とする。
   - 長時間の反復ソーク/耐久ループで時間を消費する運用は禁止（PM明示指示時のみ例外）。
   - 検証は短時間スモークに限定し、最大3コマンド程度で受入を確認する。
+  - 検証は「今回変更した実装に直結する受入コマンド」を優先し、全体回帰（例: `python -m unittest discover -s scripts -p 'test_*.py'`, `make -C FEM4C test`）は受入条件または障害切り分けで必要な場合のみ実行する。
+  - 30分条件を満たすための検証コマンド積み増しは禁止（時間充足目的の回帰実行は不合格）。
   - 動的自走プロトコル:
     - 先頭タスクを完了したら、同一セッション内で次の `Todo` / `In Progress` へ自動遷移する（PM確認不要）。
     - 次タスク候補が無い場合は、同一スコープで `Auto-Next`（最小実装タスク）を自分で定義し、`next_queue` へ追記して継続する。
@@ -103,7 +105,7 @@ FEM4C スプリント中は **この Section 0 と `docs/fem4c_team_next_queue.m
 
 ### Cチーム（差分整理）
 - 目的: preflight / review-command 提出ゲートを strict/default 両運用で再現可能に固定する。
-- 現在の先頭タスク: `C-52`（`docs/fem4c_team_next_queue.md` を正とする）
+- 現在の先頭タスク: `C-53`（`docs/fem4c_team_next_queue.md` を正とする）
 - 対象ファイル:
   - `scripts/recover_c_team_token_missing_session.sh`
   - `scripts/collect_c_team_session_evidence.sh`
@@ -119,11 +121,11 @@ FEM4C スプリント中は **この Section 0 と `docs/fem4c_team_next_queue.m
   - 必要時のみ `docs/fem4c_team_dispatch_2026-02-06.md`
   - 必要時のみ `docs/fem4c_dirty_diff_triage_2026-02-06.md`
 - 指示:
-  1. C-52 の受入基準に沿って、strict key-required fail-fast ログの collect/recover 連携を固定する。
+  1. C-53 の受入基準に沿って、strict-key token-missing 復旧テンプレの監査再実行導線（ノブ/ログパス/minutes）を submission readiness/staging 監査で固定する。
   2. strict-safe（timer + safe stage + placeholderなし）監査で PASS を維持する。
   3. 先頭完了後は `next_queue` の次タスクへ同一セッションで自動遷移する。
 - 受入基準:
-  - `docs/fem4c_team_next_queue.md` の C-52 `Acceptance` を満たすこと。
+  - `docs/fem4c_team_next_queue.md` の C-53 `Acceptance` を満たすこと。
   - `team_status` に `missing_log_review_command`（`--collect-preflight-log` 指定時は `collect_report_review_command`）が残ること。
   - strict/default の reason key と fail-step/retry command が review-required 併用時にも崩れないこと。
   - strict/default の fail trace 出力順が `check_c_team_fail_trace_order.py` で PASS すること。

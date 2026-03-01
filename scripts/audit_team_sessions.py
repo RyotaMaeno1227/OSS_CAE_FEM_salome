@@ -34,6 +34,11 @@ START_BLOCK_RE = re.compile(
     r"SESSION_TIMER_START(?P<body>.*?)(?=SESSION_TIMER_START|SESSION_TIMER_GUARD|SESSION_TIMER_END|$)",
     re.DOTALL,
 )
+GUARD_BLOCK_RE = re.compile(
+    r"SESSION_TIMER_GUARD(?P<body>.*?)(?=SESSION_TIMER_START|SESSION_TIMER_GUARD|SESSION_TIMER_END|$)",
+    re.DOTALL,
+)
+GUARD_RESULT_RE = re.compile(r"guard_result\s*[:=]\s*`?(pass|block)`?", re.IGNORECASE)
 SLEEP_RE = re.compile(r"(^|[`\s])sleep\s+\d+", re.IGNORECASE)
 BACKTICK_BLOCK_RE = re.compile(r"`([^`\n]+)`")
 TOP_FIELD_RE = re.compile(r"^\s{0,2}-\s")
@@ -83,6 +88,7 @@ class EntryAudit:
     has_impl_changes: bool
     has_commands: bool
     has_passfail: bool
+    latest_guard_result: str | None
     max_same_command_run: int
     repeated_command: str | None
     changed_paths: list[str]
@@ -91,6 +97,7 @@ class EntryAudit:
     def failure_reasons(
         self,
         min_elapsed: int,
+        max_elapsed: int,
         require_evidence: bool,
         require_impl_changes: bool,
         max_consecutive_same_command: int = 1,
@@ -104,8 +111,12 @@ class EntryAudit:
             reasons.append("missing elapsed_min")
         elif self.elapsed_min < min_elapsed:
             reasons.append(f"elapsed_min<{min_elapsed}")
+        elif max_elapsed > 0 and self.elapsed_min > max_elapsed:
+            reasons.append(f"elapsed_min>{max_elapsed}")
         if self.has_sleep:
             reasons.append("artificial wait command detected")
+        if self.latest_guard_result == "block" and (self.elapsed_min is None or self.elapsed_min < min_elapsed):
+            reasons.append("latest guard_result=block (ended before guard pass)")
         if require_evidence:
             if not self.has_changes:
                 reasons.append("missing changes evidence")
@@ -126,6 +137,7 @@ class EntryAudit:
     def verdict(
         self,
         min_elapsed: int,
+        max_elapsed: int,
         require_evidence: bool,
         require_impl_changes: bool,
         max_consecutive_same_command: int = 1,
@@ -134,6 +146,7 @@ class EntryAudit:
             "PASS"
             if not self.failure_reasons(
                 min_elapsed,
+                max_elapsed,
                 require_evidence,
                 require_impl_changes,
                 max_consecutive_same_command,
@@ -144,6 +157,7 @@ class EntryAudit:
     def to_dict(
         self,
         min_elapsed: int,
+        max_elapsed: int,
         require_evidence: bool,
         require_impl_changes: bool,
         max_consecutive_same_command: int = 1,
@@ -160,17 +174,20 @@ class EntryAudit:
             "has_impl_changes": self.has_impl_changes,
             "has_commands": self.has_commands,
             "has_passfail": self.has_passfail,
+            "latest_guard_result": self.latest_guard_result,
             "max_same_command_run": self.max_same_command_run,
             "repeated_command": self.repeated_command,
             "changed_paths": self.changed_paths,
             "verdict": self.verdict(
                 min_elapsed,
+                max_elapsed,
                 require_evidence,
                 require_impl_changes,
                 max_consecutive_same_command,
             ),
             "reasons": self.failure_reasons(
                 min_elapsed,
+                max_elapsed,
                 require_evidence,
                 require_impl_changes,
                 max_consecutive_same_command,
@@ -215,6 +232,52 @@ def split_entries(section_lines: list[str]) -> list[list[str]]:
     return entries
 
 
+def split_entries_with_headings(lines: list[str]) -> list[tuple[str | None, list[str]]]:
+    entries: list[tuple[str | None, list[str]]] = []
+    current: list[str] = []
+    current_heading: str | None = None
+    entry_heading: str | None = None
+
+    for line in lines:
+        if line.startswith("## "):
+            current_heading = line.strip()
+        if ENTRY_START_RE.match(line):
+            if current:
+                entries.append((entry_heading, current))
+                current = []
+            entry_heading = current_heading
+        if current or ENTRY_START_RE.match(line):
+            if not current:
+                entry_heading = current_heading
+            current.append(line)
+    if current:
+        entries.append((entry_heading, current))
+    return entries
+
+
+def detect_team_from_heading(heading: str | None) -> str | None:
+    if heading is None:
+        return None
+    for team, team_heading in TEAM_HEADINGS.items():
+        if heading == team_heading:
+            return team
+    return None
+
+
+def detect_team_from_title(title: str) -> str | None:
+    text = title.strip()
+    if text.startswith("- 実行タスク:"):
+        text = text[len("- 実行タスク:") :].strip()
+
+    if re.search(r"(^|[\s(])A-team($|[\s)])|Aチーム|^A-", text):
+        return "A"
+    if re.search(r"(^|[\s(])B-team($|[\s)])|Bチーム|^B-", text):
+        return "B"
+    if re.search(r"(^|[\s(])C-team($|[\s)])|Cチーム|^C-", text):
+        return "C"
+    return None
+
+
 def extract_elapsed_min(text: str) -> int | None:
     """Return elapsed_min using the latest SESSION_TIMER_END block.
 
@@ -245,6 +308,18 @@ def extract_start_epoch(text: str) -> int | None:
     if not matches:
         return None
     return int(matches[-1].group(1))
+
+
+def extract_latest_guard_result(text: str) -> str | None:
+    guard_blocks = list(GUARD_BLOCK_RE.finditer(text))
+    for block in reversed(guard_blocks):
+        match = GUARD_RESULT_RE.search(block.group("body"))
+        if match:
+            return match.group(1).lower()
+    matches = list(GUARD_RESULT_RE.finditer(text))
+    if not matches:
+        return None
+    return matches[-1].group(1).lower()
 
 
 def _looks_like_path(text: str) -> bool:
@@ -414,6 +489,7 @@ def audit_entry(team: str, lines: list[str]) -> EntryAudit:
         has_impl_changes=has_impl_changes,
         has_commands=("実行コマンド" in text or "1行再現コマンド" in text),
         has_passfail=("pass/fail" in text.lower() or "PASS" in text or "FAIL" in text),
+        latest_guard_result=extract_latest_guard_result(text),
         max_same_command_run=max_same_run,
         repeated_command=repeated_command,
         changed_paths=changed_paths,
@@ -430,12 +506,22 @@ def choose_latest(audits: list[EntryAudit]) -> EntryAudit:
 
 def collect_latest_audits(markdown: str, teams: Iterable[str]) -> list[EntryAudit]:
     lines = markdown.splitlines()
+    requested = set(teams)
+    by_team: dict[str, list[EntryAudit]] = {team: [] for team in requested}
+
+    for heading, entry in split_entries_with_headings(lines):
+        if not entry:
+            continue
+        title = entry[0].strip()
+        team = detect_team_from_title(title) or detect_team_from_heading(heading)
+        if team not in requested:
+            continue
+        by_team[team].append(audit_entry(team, entry))
+
     audits: list[EntryAudit] = []
     for team in teams:
-        heading = TEAM_HEADINGS[team]
-        section = section_slice(lines, heading)
-        entries = split_entries(section)
-        if not entries:
+        candidates = by_team.get(team, [])
+        if not candidates:
             audits.append(
                 EntryAudit(
                     team=team,
@@ -448,31 +534,37 @@ def collect_latest_audits(markdown: str, teams: Iterable[str]) -> list[EntryAudi
                     has_impl_changes=False,
                     has_commands=False,
                     has_passfail=False,
+                    latest_guard_result=None,
                     changed_paths=[],
                     start_epoch=None,
                 )
             )
             continue
-        audited = [audit_entry(team, e) for e in entries]
-        audits.append(choose_latest(audited))
+        audits.append(choose_latest(candidates))
     return audits
 
 
 def print_report(
     audits: list[EntryAudit],
     min_elapsed: int,
+    max_elapsed: int,
     require_evidence: bool,
     require_impl_changes: bool,
     max_consecutive_same_command: int,
 ) -> int:
-    print(f"AUDIT_TARGET: latest entries (A/B/C)  threshold=elapsed_min>={min_elapsed}")
+    if max_elapsed > 0:
+        elapsed_threshold = f"{min_elapsed}<=elapsed_min<={max_elapsed}"
+    else:
+        elapsed_threshold = f"elapsed_min>={min_elapsed}"
+    print(f"AUDIT_TARGET: latest entries (A/B/C)  threshold={elapsed_threshold}")
     print("-" * 112)
-    print("team  verdict  elapsed  timer  sleep  changes  impl  commands  pass/fail  same_cmd  start_epoch  entry")
+    print("team  verdict  elapsed  timer  guard  sleep  changes  impl  commands  pass/fail  same_cmd  start_epoch  entry")
     print("-" * 112)
     failed = False
     for a in audits:
         verdict = a.verdict(
             min_elapsed,
+            max_elapsed,
             require_evidence,
             require_impl_changes,
             max_consecutive_same_command,
@@ -483,14 +575,16 @@ def print_report(
         elapsed = "-" if a.elapsed_min is None else str(a.elapsed_min)
         start_epoch = "-" if a.start_epoch is None else str(a.start_epoch)
         same_cmd = "-" if a.max_same_command_run <= 1 else str(a.max_same_command_run)
+        guard = a.latest_guard_result if a.latest_guard_result else "-"
         print(
-            f"{a.team:>4}  {verdict:<7}  {elapsed:>7}  {timer:<7}  "
+            f"{a.team:>4}  {verdict:<7}  {elapsed:>7}  {timer:<7}  {guard:<5}  "
             f"{str(a.has_sleep):<5}  {str(a.has_changes):<7}  "
             f"{str(a.has_impl_changes):<4}  {str(a.has_commands):<8}  {str(a.has_passfail):<9}  {same_cmd:>8}  "
             f"{start_epoch:>11}  {a.title}"
         )
         reasons = a.failure_reasons(
             min_elapsed,
+            max_elapsed,
             require_evidence,
             require_impl_changes,
             max_consecutive_same_command,
@@ -517,6 +611,12 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         type=int,
         default=30,
         help="Minimum elapsed_min threshold (default: 30)",
+    )
+    parser.add_argument(
+        "--max-elapsed",
+        type=int,
+        default=0,
+        help="Maximum elapsed_min threshold (default: 0 = disabled)",
     )
     parser.add_argument(
         "--teams",
@@ -575,16 +675,25 @@ def main(argv: list[str] | None = None) -> int:
     if bad:
         print(f"ERROR: unknown team(s): {', '.join(bad)}", file=sys.stderr)
         return 2
+    if args.max_elapsed > 0 and args.max_elapsed < args.min_elapsed:
+        print(
+            f"ERROR: --max-elapsed must be 0 or >= --min-elapsed "
+            f"(got min={args.min_elapsed}, max={args.max_elapsed})",
+            file=sys.stderr,
+        )
+        return 2
     audits = collect_latest_audits(markdown, teams)
     if args.json:
         payload = {
             "threshold_min_elapsed": args.min_elapsed,
+            "threshold_max_elapsed": args.max_elapsed,
             "require_evidence": args.require_evidence,
             "require_impl_changes": args.require_impl_changes,
             "max_consecutive_same_command": args.max_consecutive_same_command,
             "results": [
                 a.to_dict(
                     args.min_elapsed,
+                    args.max_elapsed,
                     args.require_evidence,
                     args.require_impl_changes,
                     args.max_consecutive_same_command,
@@ -601,6 +710,7 @@ def main(argv: list[str] | None = None) -> int:
     return print_report(
         audits,
         args.min_elapsed,
+        args.max_elapsed,
         args.require_evidence,
         args.require_impl_changes,
         args.max_consecutive_same_command,

@@ -977,9 +977,500 @@ C_COLLECT_PREFLIGHT_LOG=/tmp/c35_preflight_seed.log C_COLLECT_EXPECT_TEAM_STATUS
   - strict fail時の理由キーを提出ログへ自動転記でき、C-35 の受入条件を充足。
   - strict提出モード環境変数による nested self-test 誤失敗を解消。
 
-## 34) C-36 strict latest 理由ログ運用の提出前安定化（In Progress, 2026-02-16）
+## 34) C-36 strict latest 理由ログ運用の提出前安定化（Done, 2026-02-16）
 - 目的:
   - strict latest 失敗時に、理由キーと再実行コマンドを提出ログから一意に追跡できる運用を固定する。
 - 進捗:
   - C-35 完了後の Auto-Next として C-36 を起票し、`docs/fem4c_team_next_queue.md` / `docs/abc_team_chat_handoff.md` の C先頭タスク参照を C-36 へ更新。
-  - dispatch/runbook テンプレを C-36 起点へ同期。次は failログの再実行導線（必須コマンド）を collect 出力へ標準化する。
+  - `scripts/collect_c_team_session_evidence.sh` に `submission_readiness_retry_command=...` 出力を追加し、strict fail 時に再実行コマンドをログへ自動提示するよう更新。
+  - 同スクリプトの事前埋め込みコマンド表記を `-> RUN（preflight gate）` へ変更し、失敗時に PASS 誤表示されないよう修正。
+  - strict fail 経路で `collect_preflight_check_reason=*` を標準エラーへ再掲し、理由キーの見落としを防止。
+  - `scripts/collect_c_team_session_evidence.sh` に `collect_preflight_reasons=*` 集約出力（未検出時は `-`）を追加し、理由収集有無の判別を標準化。
+  - 回帰更新: `scripts/test_collect_c_team_session_evidence.py` / `scripts/test_recover_c_team_token_missing_session.py` に retry_command 出力検証を追加。
+  - 回帰更新: `scripts/test_collect_c_team_session_evidence.py` に `collect_preflight_reasons=-` / strict理由集約の検証を追加。
+  - 回帰更新: `scripts/test_run_c_team_staging_checks.py` に strict env隔離（`unset C_COLLECT_LATEST_REQUIRE_FOUND`）の契約テストを追加。
+  - `scripts/collect_c_team_session_evidence.sh` の strict失敗時 `submission_readiness_retry_command=...` を安定パス化し、一時validationファイルではなく `team_status` の実パスを返すよう修正。
+  - 回帰更新: `scripts/test_collect_c_team_session_evidence.py` / `scripts/test_recover_c_team_token_missing_session.py` に retry_command が `team_status` 実パスを指すことを追加。
+- 実行コマンド:
+```bash
+python scripts/test_collect_c_team_session_evidence.py
+python scripts/test_recover_c_team_token_missing_session.py
+python scripts/test_check_c_team_submission_readiness.py
+C_COLLECT_PREFLIGHT_LOG=latest C_REQUIRE_COLLECT_PREFLIGHT_ENABLED=1 C_COLLECT_EXPECT_TEAM_STATUS=docs/team_status.md C_COLLECT_LATEST_REQUIRE_FOUND=1 bash scripts/run_c_team_collect_preflight_check.sh docs/team_status.md
+C_TEAM_SKIP_STAGING_BUNDLE=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30
+```
+- 結果:
+  - strict失敗時に理由キー（`latest_invalid_report_strict`）と再実行コマンドを追跡でき、retry command の安定パス化まで完了。
+  - default運用では同条件で `collect_preflight_check=skipped` を維持し、strict/default 境界の挙動を再確認。
+
+## 35) C-37 latest preflight strict運用の欠落ログ境界固定（Done, 2026-02-16）
+- 目的:
+  - `latest` 解決先が消失ログを指す場合でも、strict/default 境界の判定理由を提出ログから誤読なく追跡できる形へ固定する。
+- 進捗:
+  - Auto-Next として C-37 を起票し、`docs/fem4c_team_next_queue.md` / `docs/abc_team_chat_handoff.md` の C先頭タスク参照を C-37 へ更新。
+  - `scripts/run_c_team_collect_preflight_check.sh` に latest解決後の存在確認を追加し、解決先ログが消失している場合は `collect_preflight_log_missing=...` を出力するよう更新。
+  - latest解決後ログ消失の境界キーを追加:
+    - default: `collect_preflight_check_reason=latest_resolved_log_missing_default_skip`
+    - strict: `collect_preflight_check_reason=latest_resolved_log_missing_strict`
+  - explicitログ指定（`C_COLLECT_PREFLIGHT_LOG=/path.log`）でログ消失時は `collect_preflight_check_reason=explicit_log_missing` を返す fail-fast を追加。
+  - 回帰更新:
+    - `scripts/test_run_c_team_collect_preflight_check.py` に missing-log の default skip / strict fail ケースを追加。
+    - `scripts/test_check_c_team_submission_readiness.py` に missing-log の default skip / strict fail ケースを追加。
+    - `scripts/test_run_c_team_staging_checks.py` に missing-log の default skip / strict fail ケースを追加。
+    - `scripts/test_collect_c_team_session_evidence.py` / `scripts/test_recover_c_team_token_missing_session.py` に missing-log strict 経路の回帰を追加。
+    - `scripts/test_extract_c_team_latest_collect_log.py` に `--require-existing` の missing/pass 回帰を追加。
+  - 運用文書同期: `docs/team_runbook.md` と `docs/fem4c_team_next_queue.md` へ `latest_resolved_log_missing_*` reason key を追記。
+  - `scripts/extract_c_team_latest_collect_log.py` に `--require-existing` を追加し、latest解決先ログの存在有無（`collect_log_exists=0|1`）を helper単体で判定できるよう更新。
+- 実行コマンド:
+```bash
+python scripts/test_run_c_team_collect_preflight_check.py
+python scripts/test_check_c_team_submission_readiness.py
+python scripts/test_run_c_team_staging_checks.py
+python scripts/test_collect_c_team_session_evidence.py
+python scripts/test_recover_c_team_token_missing_session.py
+python scripts/test_extract_c_team_latest_collect_log.py
+C_COLLECT_PREFLIGHT_LOG=latest C_REQUIRE_COLLECT_PREFLIGHT_ENABLED=1 C_COLLECT_EXPECT_TEAM_STATUS=docs/team_status.md C_COLLECT_LATEST_REQUIRE_FOUND=1 bash scripts/run_c_team_collect_preflight_check.sh docs/team_status.md
+C_COLLECT_PREFLIGHT_LOG=latest C_REQUIRE_COLLECT_PREFLIGHT_ENABLED=1 C_COLLECT_EXPECT_TEAM_STATUS=docs/team_status.md bash scripts/run_c_team_collect_preflight_check.sh docs/team_status.md
+C_COLLECT_PREFLIGHT_LOG=/tmp/c37_explicit_missing.log C_REQUIRE_COLLECT_PREFLIGHT_ENABLED=1 C_COLLECT_EXPECT_TEAM_STATUS=docs/team_status.md bash scripts/run_c_team_collect_preflight_check.sh docs/team_status.md
+```
+- 結果:
+  - missing-log 条件で strict/default が `latest_resolved_log_missing_*` に分離され、提出ログから境界を誤読なく追跡できる状態を確認。
+  - explicitログ指定欠落で `collect_preflight_check_reason=explicit_log_missing` の fail-fast を確認。
+  - C-37 を Done 化し、Auto-Next として C-38（missing-log 境界の提出エントリ固定）を起票。
+
+## 36) C-38 missing-log 境界の提出エントリ固定（Done, 2026-02-19）
+- 目的:
+  - C-37で確定した reason key と欠落ログパスを `team_status` エントリへ常時残し、提出ログのみで strict/default 境界を追跡できる状態を固定する。
+- 進捗:
+  - `scripts/collect_c_team_session_evidence.sh` の preflight probe 解析を拡張し、`collect_preflight_log_resolved=*` / `collect_preflight_log_missing=*` を `command_lines` として `team_status` エントリへ転記するよう更新。
+  - 回帰 `scripts/test_collect_c_team_session_evidence.py` に explicit missing-log ケースを追加し、`collect_preflight_log_missing` と `collect_preflight_check_reason=explicit_log_missing` の転記を固定。
+  - 回帰 `scripts/test_collect_c_team_session_evidence.py` に latest resolved missing の default skip / strict fail ケースを追加し、`collect_preflight_log_resolved` / `collect_preflight_log_missing` と reason key の同時転記を固定。
+  - 回帰 `scripts/test_render_c_team_session_entry.py` に missing-log 境界キーの出力検証を追加し、entry 生成段階の欠落を検知可能にした。
+- 実行コマンド:
+```bash
+python scripts/test_collect_c_team_session_evidence.py
+python scripts/test_render_c_team_session_entry.py
+python scripts/test_check_c_team_submission_readiness.py
+```
+- 結果:
+  - latest resolved missing（strict/default）と explicit missing の3経路で、境界キーが提出エントリへ残ることを確認（PASS）。
+  - C-38 を Done 化し、Auto-Next として C-39（missing-log 境界ログの失敗経路固定）を起票。
+
+## 37) C-39 missing-log 境界ログの失敗経路固定（Done, 2026-02-19）
+- 目的:
+  - strict fail 経路でも missing-log 境界キーを復旧導線へ残し、`token missing` 復旧時に判定材料を欠落させない。
+- 進捗:
+  - `scripts/recover_c_team_token_missing_session.sh` を更新し、finalize 失敗時に `entry_out=...`（`--collect-log-out` 指定時は `collect_log_out=...` も）を stderr へ出力して復旧ログ探索を固定。
+  - `scripts/test_recover_c_team_token_missing_session.py` を更新し、strict fail 時に `entry_out` の存在と missing-log 境界キー（`collect_preflight_log_resolved` / `collect_preflight_log_missing` / `collect_preflight_check_reason=*`）が entry に残ることを回帰固定。
+  - strict latest missing の precheck seed を追加し、`latest_not_found_strict` ではなく `latest_resolved_log_missing_strict` を確実に通る失敗経路をテストで固定。
+- 実行コマンド:
+```bash
+python scripts/test_recover_c_team_token_missing_session.py
+python scripts/test_collect_c_team_session_evidence.py
+python scripts/test_render_c_team_session_entry.py
+python scripts/test_check_c_team_submission_readiness.py
+```
+- 結果:
+  - recover strict fail 時に復旧ログ（stdout/stderr）と entry_out の両方で missing-log 境界キーが復元できることを確認（PASS）。
+  - C-39 を Done 化し、Auto-Next として C-40（missing-log 境界ログの提出テンプレ固定）を起票。
+
+## 38) C-40 missing-log 境界ログの提出テンプレ固定（Done, 2026-02-21）
+- 目的:
+  - C-39 で固定した失敗経路ログの確認手順を runbook/dispatch/handoff へ同期し、運用時の見落としを防ぐ。
+- 進捗:
+  - `scripts/recover_c_team_token_missing_session.sh` に review command 出力を追加し、finalize 失敗時に `missing_log_review_command=...`（`--collect-log-out` 指定時は `collect_report_review_command=...` も）を stderr へ出力するよう更新。
+  - 同スクリプトの token-missing 復旧開始出力へ `next_finalize_review_keys` / `next_finalize_review_command` を追加し、提出テンプレ側の確認キーを即時参照できるよう固定。
+  - 回帰 `scripts/test_recover_c_team_token_missing_session.py` を更新し、start/finalize strict fail の両経路で review command 出力を検知するようにした。
+  - `docs/team_runbook.md`, `docs/fem4c_team_dispatch_2026-02-06.md`, `docs/abc_team_chat_handoff.md` を C-40 受入基準へ同期した。
+- 実行コマンド:
+```bash
+python scripts/test_recover_c_team_token_missing_session.py
+python scripts/test_collect_c_team_session_evidence.py
+python scripts/check_doc_links.py docs/team_runbook.md docs/fem4c_team_dispatch_2026-02-06.md docs/abc_team_chat_handoff.md
+```
+- 結果:
+  - recover strict fail の確認対象（`entry_out` / `collect_log_out` / `submission_readiness_retry_command` / review command）が復旧ログから一意に復元できることを確認（PASS）。
+  - C-40 を Done 化し、Auto-Next として C-41（missing-log 境界確認コマンドの提出エントリ連携）を起票。
+
+## 39) C-41 missing-log 境界確認コマンドの提出エントリ連携（Done, 2026-02-21）
+- 目的:
+  - C-40 で固定した review command を `team_status` 提出エントリ運用へ接続し、復旧時の手作業再構成を不要化する。
+- 進捗:
+  - `scripts/collect_c_team_session_evidence.sh` に `missing_log_review_command=...` の自動転記を追加し、preflight 有効時は提出エントリへ review command を残すよう更新。
+  - `--collect-preflight-log` 指定時は `collect_report_review_command=python scripts/check_c_team_collect_preflight_report.py <log> --require-enabled --expect-team-status <team_status>` を同エントリへ追記するよう更新。
+  - 回帰 `scripts/test_collect_c_team_session_evidence.py` を更新し、submission readiness / strict fail / collect-log 経路で review command が entry に残ることを固定。
+  - `scripts/check_c_team_review_commands.py` と `scripts/test_check_c_team_review_commands.py` を追加し、最新Cエントリの review command 欠落を機械検出できるようにした。
+  - `docs/team_runbook.md` / `docs/fem4c_team_dispatch_2026-02-06.md` / `docs/abc_team_chat_handoff.md` を C-41 前提へ同期した。
+- 実行コマンド:
+```bash
+python scripts/test_collect_c_team_session_evidence.py
+python scripts/test_recover_c_team_token_missing_session.py
+python scripts/test_render_c_team_session_entry.py
+python scripts/test_check_c_team_review_commands.py
+```
+- 結果:
+  - 提出エントリから missing-log 境界確認コマンドを直接再実行できる状態を確認（PASS）。
+  - C-41 を Done 化し、Auto-Next として C-42（review-command 監査の提出前ゲート統合）を起票。
+
+## 40) C-42 review-command 監査の提出前ゲート統合（Done, 2026-02-21）
+- 目的:
+  - C-41 で追加した review-command 監査を readiness/staging の提出前ゲートへ組み込み、必要時に fail-fast できる運用を固定する。
+- 進捗:
+  - `scripts/check_c_team_submission_readiness.sh` に `C_REQUIRE_REVIEW_COMMANDS=1` を追加し、指定時は `check_c_team_review_commands.py` を提出前ゲートで実行するよう更新。
+  - `scripts/run_c_team_staging_checks.sh` に optional review-command 監査ステップを追加し、`C_REQUIRE_REVIEW_COMMANDS=1` で bundle 実行内監査が可能になった。
+  - 同スクリプトの nested self-test に `scripts/test_check_c_team_review_commands.py` を追加し、bundle 実行時の退行検知を補強。
+  - 回帰 `scripts/test_check_c_team_submission_readiness.py` / `scripts/test_run_c_team_staging_checks.py` を更新し、監査有効時の pass/fail 境界を固定。
+  - `review_command_check=pass|skipped|fail` を readiness/staging 両スクリプトへ追加し、監査有効/無効の判定をログ上で明示できるようにした。
+- 実行コマンド:
+```bash
+python scripts/test_check_c_team_submission_readiness.py
+python scripts/test_run_c_team_staging_checks.py
+python scripts/test_check_c_team_review_commands.py
+C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30
+C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/run_c_team_staging_checks.sh docs/team_status.md
+```
+- 結果:
+  - review-command 監査を有効化した提出前ゲートの pass/fail 分岐、および `review_command_check` 出力を確認（PASS）。
+  - C-42 を Done 化し、Auto-Next として C-43（strict latest collect-report 検証パス整合）を起票。
+
+## 41) C-43 strict latest collect-report 検証パス整合（Done, 2026-02-21）
+- 目的:
+  - `collect_c_team_session_evidence.sh` の validation用一時 `team_status` と strict latest preflight 検証（`--collect-preflight-log`）の期待パス不一致を解消し、`latest_invalid_report_strict` の誤検知を防ぐ。
+- 進捗:
+  - `scripts/collect_c_team_session_evidence.sh` の submission readiness 呼び出しを更新し、`--collect-preflight-log` 指定時は expected team_status を canonical `team_status` 側へ合わせるようにした（validation一時ファイルとの不一致を回避）。
+  - `scripts/recover_c_team_token_missing_session.sh` を更新し、`--collect-log-out` 利用時に実行中ログの自己参照 preflight を避けつつ、`collect_report_review_command` を提出エントリへ明示的に残すようにした。
+  - `scripts/collect_c_team_session_evidence.sh` の readiness prefix 生成を共通化し、strict latest + review-required 併用時の retry/prefill command 記録が同一規約で出力されるようにした。
+  - `scripts/test_collect_c_team_session_evidence.py` に canonical team_status を使う回帰に加えて、strict latest + explicit collect-log + review-required 併用の再発防止ケースを追加した。
+  - `scripts/test_recover_c_team_token_missing_session.py` の strict retry-command 期待値を review-required 併用でも崩れない形へ修正した。
+  - `scripts/test_check_c_team_submission_readiness.py` の `run_script` で `C_REQUIRE_REVIEW_COMMANDS=0` を初期化し、親環境変数混入による偽陽性を防止した。
+- 実行コマンド:
+```bash
+python scripts/test_collect_c_team_session_evidence.py
+python scripts/test_recover_c_team_token_missing_session.py
+python scripts/test_run_c_team_collect_preflight_check.py
+python scripts/test_check_c_team_submission_readiness.py
+C_REQUIRE_REVIEW_COMMANDS=1 python scripts/test_check_c_team_submission_readiness.py
+```
+- 結果:
+  - C-43 受入条件（canonical path整合、strict fail-fast維持、review-required併用、回帰固定）を満たしたため Done 判定。
+  - Auto-Next として C-44（review-required 環境混入時の提出ゲート再現性固定）へ遷移。
+
+## 42) C-44 review-required 環境混入時の提出ゲート再現性固定（Done, 2026-02-22）
+- 目的:
+  - 提出前ゲート回帰が親シェル環境（`C_REQUIRE_REVIEW_COMMANDS=1`, strict/preflight 変数）に依存せず再現するように初期化境界を固定する。
+- 進捗:
+  - `scripts/test_check_c_team_submission_readiness.py` の `run_script` に環境サニタイズを追加し、外部環境混入（`C_COLLECT_PREFLIGHT_LOG`, `C_COLLECT_EXPECT_TEAM_STATUS`, `C_REQUIRE_REVIEW_COMMANDS`, `C_REQUIRE_COLLECT_PREFLIGHT_ENABLED`, `C_COLLECT_LATEST_REQUIRE_FOUND`）をデフォルト初期化で遮断した。
+  - 同テストへ親環境汚染ケースを追加し、sanitization 後に `latest_not_found_default_skip` + `review_command_check=skipped` + `PASS` が維持されることを固定した。
+  - 最新Cエントリを対象に `C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30` を再実行し、review-command 監査・strict-safe 監査・elapsed監査の共存 PASS を確認した。
+- 実行コマンド:
+```bash
+python scripts/test_check_c_team_submission_readiness.py
+C_REQUIRE_REVIEW_COMMANDS=1 python scripts/test_check_c_team_submission_readiness.py
+python scripts/test_collect_c_team_session_evidence.py
+C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30
+```
+- 結果:
+  - C-44 受入条件（親環境混入耐性、strict/review 併用整合、提出ゲート共存）を満たしたため Done 判定。
+  - Auto-Next として C-45（latest preflight 一時ログ消失時の提出ゲート境界固定）へ遷移。
+
+## 43) C-45 latest preflight 一時ログ消失時の提出ゲート境界固定（Done, 2026-02-22）
+- 目的:
+  - latest 解決先ログが `/tmp` から消失した境界で、strict/default 判定と review-command 監査結果を提出ログから機械的に追跡できる状態を固定する。
+- 進捗:
+  - `scripts/check_c_team_submission_readiness.sh` を更新し、collect preflight 判定要約を `submission_readiness_collect_preflight_check` / `submission_readiness_collect_preflight_reason` として常時出力するようにした。
+  - 同スクリプトの strict fail 経路へ `submission_readiness_retry_command=...` と `submission_readiness_fail_step=collect_preflight` を追加し、reason + retry + fail-step の3点を提出ログへ残すようにした。
+  - `scripts/test_check_c_team_submission_readiness.py` を更新し、latest resolved missing の default/strict（`C_REQUIRE_REVIEW_COMMANDS=1` 併用を含む）で reason/retry/fail-step 境界が固定される回帰を追加した。
+  - strict fail 時の出力経路変更（stderr）に合わせ、collect preflight 失敗系テストを `stdout+stderr` 判定へ調整した。
+- 実行コマンド:
+```bash
+python scripts/test_check_c_team_submission_readiness.py
+C_REQUIRE_REVIEW_COMMANDS=1 python scripts/test_check_c_team_submission_readiness.py
+python scripts/test_run_c_team_collect_preflight_check.py
+C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30
+C_COLLECT_LATEST_REQUIRE_FOUND=1 C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30
+bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze_timer_safe
+```
+- 結果:
+  - default missing-log で `latest_resolved_log_missing_default_skip` + review監査PASS を維持し、strict missing-log で fail-fast + reason/retry/fail-step 出力を確認した。
+  - C-45 受入条件（strict/default 境界、review-required 併用、retry trace 欠落防止）を満たしたため Done 判定。
+  - Auto-Next として C-46（strict latest fail-step/retry trace の提出ログ固定）を起票。
+
+## 44) C-46 strict latest fail-step/retry trace の提出ログ固定（Done, 2026-02-22）
+- 目的:
+  - strict latest fail-fast の追跡キー（reason/summary/retry/fail-step）を readiness/staging 両経路で揃え、監査導線の機械抽出を安定化する。
+- 進捗:
+  - `scripts/run_c_team_staging_checks.sh` の strict fail 経路に `submission_readiness_collect_preflight_check` / `submission_readiness_collect_preflight_reason` 要約出力を追加。
+  - 同スクリプトの strict fail 経路で `submission_readiness_retry_command=...` と `submission_readiness_fail_step=collect_preflight` を出力し、readiness 側と同じ再実行導線を固定した。
+  - `scripts/test_run_c_team_staging_checks.py` に default missing（review-required 併用）で retry/fail-step 非出力、strict missing で retry/fail-step 出力となる回帰を追加。
+  - `scripts/test_check_c_team_submission_readiness.py` に default missing 経路で retry/fail-step を出さない回帰を追加し、strict/default 境界の対称性を補強した。
+- 実行コマンド:
+```bash
+python scripts/test_check_c_team_submission_readiness.py
+C_REQUIRE_REVIEW_COMMANDS=1 python scripts/test_check_c_team_submission_readiness.py
+python scripts/test_run_c_team_staging_checks.py
+python scripts/test_run_c_team_collect_preflight_check.py
+C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30
+C_COLLECT_LATEST_REQUIRE_FOUND=1 C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30
+C_COLLECT_LATEST_REQUIRE_FOUND=1 C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/run_c_team_staging_checks.sh docs/team_status.md
+bash scripts/check_c_team_dryrun_compliance.sh docs/team_status.md pass_section_freeze_timer_safe
+```
+- 結果:
+  - default missing で skip reason + summary を維持し、retry/fail-step が非出力であることを確認。
+  - strict missing で readiness/staging とも `submission_readiness_retry_command` + `submission_readiness_fail_step=collect_preflight` が出力されることを確認。
+  - C-46 受入条件（strict/default 境界、review-required 併用、fail-step/retry trace 同期）を満たしたため Done 判定。
+  - Auto-Next として C-47（strict latest fail trace 出力順の提出ログ固定）を起票。
+
+## 45) C-47 strict latest fail trace 出力順の提出ログ固定（Done, 2026-02-22）
+- 目的:
+  - strict/default の fail trace を監査側で同一パーサ抽出できるよう、readiness/staging の出力順を固定する。
+- 進捗:
+  - `scripts/check_c_team_fail_trace_order.py` を新規追加し、strict/default ログの必須キー有無と出力順を機械判定できるようにした。
+  - `scripts/test_check_c_team_fail_trace_order.py` を追加し、strict pass/fail と default pass/fail の回帰を固定した。
+  - `scripts/test_check_c_team_submission_readiness.py` / `scripts/test_run_c_team_staging_checks.py` に strict経路の順序アサーション（reason -> summary -> retry -> fail-step）を追加した。
+  - `scripts/check_c_team_fail_trace_order.py` に review-command 出力境界チェックを追加し、fail-trace ブロックへの混線を検知可能にした。
+  - `scripts/test_check_c_team_fail_trace_order.py` に review trace 混線ケースを追加し、strict/default 双方で FAIL を固定した。
+  - `scripts/run_c_team_fail_trace_audit.sh` に `C_FAIL_TRACE_SKIP_NESTED_SELFTESTS`（既定1）を追加し、短時間で安定した strict/default ログ採取を固定した。
+  - `scripts/test_run_c_team_fail_trace_audit.py` を更新し、staging 呼び出し時に `C_SKIP_NESTED_SELFTESTS=1` が必須で伝播することを回帰固定した。
+  - `docs/fem4c_team_next_queue.md` / `docs/abc_team_chat_handoff.md` / `docs/team_runbook.md` に fail trace 順序監査コマンドを追記した。
+- 実行コマンド:
+```bash
+python scripts/test_check_c_team_fail_trace_order.py
+python scripts/test_check_c_team_submission_readiness.py
+python scripts/test_run_c_team_staging_checks.py
+C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30 > /tmp/c47_readiness_default.log 2>&1
+C_COLLECT_LATEST_REQUIRE_FOUND=1 C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30 > /tmp/c47_readiness_strict.log 2>&1
+C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/run_c_team_staging_checks.sh docs/team_status.md > /tmp/c47_staging_default.log 2>&1
+C_COLLECT_LATEST_REQUIRE_FOUND=1 C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/run_c_team_staging_checks.sh docs/team_status.md > /tmp/c47_staging_strict.log 2>&1
+python scripts/check_c_team_fail_trace_order.py /tmp/c47_readiness_default.log --mode default
+python scripts/check_c_team_fail_trace_order.py /tmp/c47_readiness_strict.log --mode strict
+python scripts/check_c_team_fail_trace_order.py /tmp/c47_staging_default.log --mode default
+python scripts/check_c_team_fail_trace_order.py /tmp/c47_staging_strict.log --mode strict
+```
+- 現状:
+  - readiness/staging の strict/default ログで fail trace 順序監査は PASS（review-required 併用を含む）。
+  - C-47 受入条件（strict/default 境界、順序一致、review混線なし）を満たしたため Done 判定。
+  - Auto-Next として C-48（collect/recover 提出ログへの fail-trace 監査導線固定）へ遷移。
+
+## 46) C-48 collect/recover 提出ログへの fail-trace 監査導線固定（Done, 2026-02-23）
+- 目的:
+  - collect/recover 経由で生成される提出エントリに fail-trace order 監査導線を固定し、token-missing 復旧後でも strict/latest 境界を同じ手順で再検証できる状態にする。
+- 進捗:
+  - `scripts/collect_c_team_session_evidence.sh` に `fail_trace_audit_command=scripts/run_c_team_fail_trace_audit.sh <team_status> <minutes>` の自動追記を追加した。
+  - `scripts/collect_c_team_session_evidence.sh` に `--fail-trace-audit-log` を追加し、fail-trace監査ログから `readiness/staging default+strict` のログパスと再検証コマンドを提出エントリへ自動転記できるようにした。
+  - `scripts/recover_c_team_token_missing_session.sh` start モード出力へ `next_finalize_fail_trace_audit_command=...` を追加し、復旧直後の監査導線を固定した。
+  - `scripts/recover_c_team_token_missing_session.sh` finalize モードへ `--fail-trace-audit-log` を追加し、collect へ監査ログを引き渡せるようにした。
+  - `scripts/recover_c_team_token_missing_session.sh` start モードへ `next_finalize_fail_trace_audit_log=...` / `next_finalize_command_with_fail_trace_log=...` / `next_finalize_fail_trace_embed_command=...`（strict latest 版含む）を追加し、token-missing 復旧テンプレから fail-trace 監査結果埋め込みまでを 1 系列コマンドで再現可能にした。
+  - `scripts/test_collect_c_team_session_evidence.py` / `scripts/test_recover_c_team_token_missing_session.py` を更新し、監査導線出力と監査ログ取り込みを回帰で固定した。
+  - `docs/team_runbook.md` / `docs/abc_team_chat_handoff.md` / `docs/fem4c_team_next_queue.md` を C-48 先頭タスクへ同期した。
+- 判定:
+  - C-48 の受入条件（collect/recover の fail-trace 導線固定 + token-missing finalize テンプレへの監査結果埋め込み）を満たしたため Done。
+  - Auto-Next は C-49（token-missing 復旧 finalize テンプレの fail-trace 失敗時再試行導線固定）へ遷移。
+
+## 47) C-49 token-missing 復旧 finalize テンプレの fail-trace 失敗時再試行導線固定（Done, 2026-02-23）
+- 目的:
+  - fail-trace 監査ログが不完全/失敗でも、token-missing 復旧 finalize の提出ログから再実行導線を即時復元できるようにする。
+- 進捗:
+  - `scripts/collect_c_team_session_evidence.sh` を更新し、`--fail-trace-audit-log` 指定時に `fail_trace_audit_retry_command=scripts/run_c_team_fail_trace_audit.sh <team_status> <minutes> | tee <log>` を提出エントリへ自動追記するようにした。
+  - 同処理で `FAIL_TRACE_AUDIT_RESULT != PASS` の場合は `fail_trace_audit_retry_reason=...` を出力し、再試行理由をログで機械判読できるようにした。
+  - `readiness/staging` 監査キー欠落時は `fail_trace_audit_missing_keys=...` を自動追記するようにした。
+  - `scripts/recover_c_team_token_missing_session.sh` の finalize 失敗（`--fail-trace-audit-log` 欠落）時に `fail_trace_audit_retry_command=...` と `fail_trace_finalize_retry_command=...` を標準エラーへ出力するよう更新した。
+  - 回帰更新:
+    - `scripts/test_collect_c_team_session_evidence.py` に fail-trace 監査ログ不完全ケース（`FAIL` + キー欠落）を追加。
+    - `scripts/test_recover_c_team_token_missing_session.py` に finalize 出力で retry command が残ることを追加。
+    - `scripts/test_recover_c_team_token_missing_session.py` に missing fail-trace log の strict/latest retry command 回帰を追加。
+- 実行コマンド:
+```bash
+python scripts/test_collect_c_team_session_evidence.py
+python scripts/test_recover_c_team_token_missing_session.py
+python scripts/test_run_c_team_fail_trace_audit.py
+bash scripts/run_c_team_fail_trace_audit.sh docs/team_status.md 30
+```
+- 判定:
+  - C-49 の受入条件（fail-trace 監査欠落時 retry テンプレ提示 + strict latest 併用回帰固定 + required tests PASS）を満たしたため Done。
+  - Auto-Next は C-50（fail-trace retry 導線の提出エントリ整合監査固定）へ遷移。
+
+## 48) C-50 fail-trace retry 導線の提出エントリ整合監査固定（Done, 2026-02-28）
+- 目的:
+  - recover finalize 失敗ログの retry 導線と、collect で team_status に記録される retry 導線を同一規約で追跡できるようにする。
+- 進捗:
+  - `scripts/check_c_team_fail_trace_retry_consistency.py` を追加し、retry 導線（audit/finalize）の整合を latest C entry から機械判定できるようにした。
+  - `scripts/test_check_c_team_fail_trace_retry_consistency.py` を追加し、欠落/不整合/許容モードの回帰を固定した。
+  - `scripts/check_c_team_submission_readiness.sh` / `scripts/run_c_team_staging_checks.sh` に retry consistency 監査を統合し、提出前ゲート/日次bundle双方で同一判定を返すようにした。
+  - `scripts/run_c_team_fail_trace_audit.sh` を 9-step 化し、fail-trace order 監査の末尾で retry consistency 監査を実行するようにした。
+  - `scripts/collect_c_team_session_evidence.sh` の fail-trace 監査ログ取り込みへ `fail_trace_retry_consistency_*` 記録キーを追加し、提出エントリ単体で再検証導線を追跡できるようにした。
+  - 回帰更新:
+    - `scripts/test_run_c_team_fail_trace_audit.py` に retry consistency 必須/任意の境界テストを追加。
+    - `scripts/test_collect_c_team_session_evidence.py` に retry consistency 記録キーの取り込み検証を追加。
+  - `python -m unittest discover -s scripts -p 'test_*c_team*.py'` で C-team 系の総合回帰（189 tests）PASS を確認した。
+- 実行コマンド:
+```bash
+python scripts/test_check_c_team_fail_trace_retry_consistency.py
+python scripts/test_check_c_team_submission_readiness.py
+python scripts/test_run_c_team_staging_checks.py
+python scripts/test_collect_c_team_session_evidence.py
+python scripts/test_recover_c_team_token_missing_session.py
+python scripts/test_run_c_team_fail_trace_audit.py
+bash scripts/run_c_team_fail_trace_audit.sh docs/team_status.md 30
+python scripts/check_c_team_fail_trace_retry_consistency.py --team-status docs/team_status.md
+```
+- 判定:
+  - C-50 の受入条件（retry 導線整合監査 + strict/default 境界回帰 + 提出導線統合）を満たしたため Done。
+  - Auto-Next は C-51（fail-trace retry consistency 証跡の strict/default 境界固定）へ遷移。
+
+## 49) C-51 fail-trace retry consistency 証跡の strict/default 境界固定（Done, 2026-02-28）
+- 目的:
+  - fail-trace 監査ログで retry consistency 証跡が欠落/不整合な場合の strict/default 提出判断境界を、提出ログのみで追跡可能にする。
+- 進捗:
+  - `scripts/run_c_team_fail_trace_audit.sh` の `C_FAIL_TRACE_REQUIRE_RETRY_CONSISTENCY=0|1` 運用境界を固定し、readiness/staging へ同一ノブを伝搬するよう更新した。
+  - `C_FAIL_TRACE_REQUIRE_RETRY_CONSISTENCY_KEY=0|1` / `C_REQUIRE_FAIL_TRACE_RETRY_CONSISTENCY_KEY=0|1` を追加し、`fail_trace_retry_consistency_check` 記録キー欠落を strict で fail-fast できるようにした。
+  - `scripts/check_c_team_fail_trace_retry_consistency.py` に `--require-retry-consistency-check-key` を追加し、key 欠落/不正/fail 値を明示失敗として固定した。
+  - `scripts/check_c_team_submission_readiness.sh` / `scripts/run_c_team_staging_checks.sh` で strict key-required 判定を統一し、`missing fail_trace_retry_consistency_check` 理由で fail-fast することを確認した。
+  - `scripts/collect_c_team_session_evidence.sh` に `fail_trace_retry_consistency_command/check/retry_command` の常時追記を追加し、提出エントリへ strict 判定に必要なキーを先行付与できるようにした。
+  - `scripts/run_c_team_fail_trace_audit.sh` の default capture 失敗時に fail理由とログパス (`readiness_default_log` / `staging_default_log`) を即出力し、`FAIL_TRACE_AUDIT_RESULT=FAIL` を残すよう改善した。
+  - `scripts/test_run_c_team_fail_trace_audit.py` に default capture 失敗コンテキスト出力の回帰を追加した。
+- 実行コマンド:
+```bash
+python scripts/test_run_c_team_fail_trace_audit.py
+python scripts/test_check_c_team_fail_trace_retry_consistency.py
+python scripts/test_check_c_team_submission_readiness.py
+python scripts/test_run_c_team_staging_checks.py
+python scripts/test_collect_c_team_session_evidence.py
+python scripts/test_recover_c_team_token_missing_session.py
+python -m unittest discover -s scripts -p 'test_*c_team*.py'
+C_FAIL_TRACE_REQUIRE_RETRY_CONSISTENCY=1 bash scripts/run_c_team_fail_trace_audit.sh docs/team_status.md 45
+C_FAIL_TRACE_REQUIRE_RETRY_CONSISTENCY=0 bash scripts/run_c_team_fail_trace_audit.sh docs/team_status.md 45
+C_FAIL_TRACE_REQUIRE_RETRY_CONSISTENCY=1 C_FAIL_TRACE_REQUIRE_RETRY_CONSISTENCY_KEY=1 bash scripts/run_c_team_fail_trace_audit.sh docs/team_status.md 45
+```
+- 判定:
+  - C-51 の受入条件（strict/default 境界固定、key-required fail-fast、readiness/staging/audit 判定整合）を満たしたため Done。
+  - Auto-Next は C-52（strict-key fail-fast ログの collect/recover 連携固定）へ遷移。
+
+## 50) C-52 strict-key fail-fast ログの collect/recover 連携固定（Done, 2026-02-28）
+- 目的:
+  - strict key-required 失敗時の fail理由・再試行導線を collect/recover 提出テンプレへ欠落なく埋め込み、token-missing 復旧後も提出ログ単体で再実行手順を誤読なく追跡できるようにする。
+- 進捗:
+  - `scripts/collect_c_team_session_evidence.sh` の fail-trace 取り込みで生成する `fail_trace_finalize_retry_command` に strict ノブ（`C_FAIL_TRACE_REQUIRE_RETRY_CONSISTENCY` / `C_FAIL_TRACE_REQUIRE_RETRY_CONSISTENCY_KEY`）を引き継ぐよう更新した。
+  - `scripts/recover_c_team_token_missing_session.sh` の start 出力へ strict-key 運用テンプレを追加し、`next_finalize_fail_trace_audit_command_strict_key` / `next_finalize_fail_trace_embed_command_strict_key` / `next_finalize_fail_trace_embed_command_strict_latest_strict_key` を固定した。
+  - `scripts/test_collect_c_team_session_evidence.py` で strict-key 再試行文脈の `fail_trace_finalize_retry_command` 出力を回帰固定した。
+  - `scripts/test_recover_c_team_token_missing_session.py` で token-missing start 出力の strict-key テンプレを回帰固定した。
+- 実行コマンド:
+```bash
+python scripts/test_collect_c_team_session_evidence.py
+python scripts/test_recover_c_team_token_missing_session.py
+python scripts/test_run_c_team_fail_trace_audit.py
+C_FAIL_TRACE_REQUIRE_RETRY_CONSISTENCY=1 C_FAIL_TRACE_REQUIRE_RETRY_CONSISTENCY_KEY=1 bash scripts/run_c_team_fail_trace_audit.sh docs/team_status.md 45
+```
+- 判定:
+  - C-52 の受入条件（strict-key fail-fast 理由の collect/recover 連携、retry 導線の同一ログパス維持、回帰固定）を満たしたため Done。
+  - Auto-Next は C-53（strict-key token-missing 復旧テンプレの監査再実行導線固定）へ遷移。
+
+## 51) C-53 strict-key token-missing 復旧テンプレの監査再実行導線固定（Done, 2026-02-28）
+- 目的:
+  - token-missing 復旧テンプレの strict-key 経路で、監査再実行コマンド（audit/recover）の環境ノブ・ログパス・minutes が常に一致することを提出前ゲートで機械監査できるようにする。
+- 進捗:
+  - `scripts/check_c_team_fail_trace_retry_consistency.py` に `--require-strict-env-prefix-match` を追加し、`C_FAIL_TRACE_REQUIRE_RETRY_CONSISTENCY*` の env prefix と entry key の不一致を fail-fast できるようにした。
+  - `scripts/run_c_team_fail_trace_audit.sh` に `C_FAIL_TRACE_REQUIRE_RETRY_CONSISTENCY_STRICT_ENV=0|1` を追加し、retry consistency checker へ strict-env 一致監査ノブを配線した。
+  - `scripts/check_c_team_submission_readiness.sh` / `scripts/run_c_team_staging_checks.sh` に `C_REQUIRE_FAIL_TRACE_RETRY_CONSISTENCY_STRICT_ENV=0|1` を追加し、提出前ゲート/staging bundle 双方で同じ strict-env 条件を渡せるようにした。
+  - `scripts/collect_c_team_session_evidence.sh` の fail-trace 監査ログ取り込みを拡張し、`fail_trace_require_retry_consistency_strict_env` を `fail_trace_retry_consistency_command` / retry command / audit retry/finalize retry へ伝搬するようにした。
+  - 回帰更新:
+    - `scripts/test_check_c_team_fail_trace_retry_consistency.py`
+    - `scripts/test_run_c_team_fail_trace_audit.py`
+    - `scripts/test_check_c_team_submission_readiness.py`
+    - `scripts/test_run_c_team_staging_checks.py`
+    - `scripts/test_collect_c_team_session_evidence.py`
+- 実行コマンド:
+```bash
+python scripts/test_check_c_team_fail_trace_retry_consistency.py
+python scripts/test_run_c_team_fail_trace_audit.py
+python scripts/test_check_c_team_submission_readiness.py
+python scripts/test_run_c_team_staging_checks.py
+python scripts/test_collect_c_team_session_evidence.py
+python scripts/test_recover_c_team_token_missing_session.py
+```
+- 判定:
+  - C-53 の受入条件（strict-key retry/finalize ノブ不一致の fail-fast、submission readiness/staging fail理由の一致、回帰PASS）を満たしたため Done。
+  - Auto-Next は C-54（strict-env fail-fast 理由の collect/recover 提出ログ境界固定）へ遷移。
+
+## 52) C-54 strict-env fail-fast 理由の collect/recover 提出ログ境界固定（Done, 2026-02-28）
+- 目的:
+  - strict-env 必須運用（`C_FAIL_TRACE_REQUIRE_RETRY_CONSISTENCY_STRICT_ENV=1`）で fail-trace 監査が失敗した場合に、collect/recover が生成する提出ログ単体で fail理由と再試行導線を再現可能にする。
+- 進捗:
+  - `scripts/check_c_team_fail_trace_retry_consistency.py` に `reason_codes=` 出力を追加し、strict-env fail-fast 理由を機械可読キーで残せるようにした。
+  - `scripts/run_c_team_fail_trace_audit.sh` で `fail_trace_retry_consistency_retry_command` / `fail_trace_retry_consistency_reasons` / `fail_trace_retry_consistency_reason_codes` を出力し、fail時の再試行導線と理由コードを監査ログへ固定した。
+  - `scripts/check_c_team_submission_readiness.sh` / `scripts/run_c_team_staging_checks.sh` で reason/reason_codes/retry_command の出力契約を同期し、strict-env 欠落境界の fail-fast 理由を一致させた。
+  - `scripts/collect_c_team_session_evidence.sh` の fail-trace 取り込みに `reason_codes=` を追加し、監査ブロック欠落時も top-level fallback で復元できるようにした。
+  - `scripts/recover_c_team_token_missing_session.sh` の finalize missing-log 診断に `fail_trace_retry_consistency_retry_command` を追加し、strict-env 条件つき再試行導線を欠落なく提示できるようにした。
+- 実行コマンド:
+```bash
+python scripts/test_check_c_team_fail_trace_retry_consistency.py
+python scripts/test_run_c_team_fail_trace_audit.py
+python scripts/test_collect_c_team_session_evidence.py
+python scripts/test_recover_c_team_token_missing_session.py
+python scripts/test_check_c_team_submission_readiness.py
+python scripts/test_run_c_team_staging_checks.py
+bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30
+```
+- 判定:
+  - C-54 の受入条件（strict-env fail-fast 理由の collect/recover 提出ログ境界固定、readiness/staging 判定整合、回帰PASS）を満たしたため Done。
+  - Auto-Next は C-55（strict-env fail-fast 理由コードの latest/preflight 境界固定）へ遷移。
+
+## 53) C-55 strict-env fail-fast 理由コードの latest/preflight 境界固定（Done, 2026-02-28）
+- 目的:
+  - latest preflight 解決先の欠落/不一致時にも、strict-env fail-fast 理由コード（`fail_trace_retry_consistency_reason_codes`）と再試行コマンドを提出ログから一意に復元できるようにする。
+- 進捗:
+  - `scripts/check_c_team_submission_readiness.sh` で collect preflight strict fail 時に fallback を追加し、`fail_trace_retry_consistency_reasons` / `fail_trace_retry_consistency_reason_codes` / `fail_trace_retry_consistency_retry_command` を `submission_readiness_fail_step=collect_preflight` より前に出力するよう更新。
+  - `scripts/run_c_team_staging_checks.sh` へ同じ fallback 契約を追加し、readiness/staging で reason_codes の命名規約（`collect_preflight_<reason>_before_retry_consistency`）を統一。
+  - 回帰更新:
+    - `scripts/test_check_c_team_submission_readiness.py`
+    - `scripts/test_run_c_team_staging_checks.py`
+  - 新規回帰で `latest_resolved_log_missing_strict` 経路の fail 出力に reason/reason_codes/retry_command が欠落しないことを固定。
+- 実行コマンド:
+```bash
+python scripts/test_check_c_team_submission_readiness.py
+python scripts/test_run_c_team_staging_checks.py
+```
+- 判定:
+  - C-55 の受入条件（latest/preflight 境界で reason_codes 契約維持、readiness/staging strict-env 経路整合、指定2テストPASS）を満たしたため Done。
+  - Auto-Next は C-56（collect/recover への preflight strict-fail 理由コード転写固定）へ遷移。
+
+## 54) C-56 collect/recover への preflight strict-fail 理由コード転写固定（Done, 2026-03-01）
+- 目的:
+  - preflight strict-fail で readiness/staging が終了した場合でも、collect/recover 提出テンプレへ reason_codes/retry_command を欠落なく転写し、token-missing 復旧後も同一境界を再現できるようにする。
+- 進捗:
+  - C-55 で readiness/staging の fallback reason_codes 契約を確定済み。次段で collect/recover 転写経路へ同等キーを連携する。
+  - `collect_c_team_session_evidence.sh` / `recover_c_team_token_missing_session.sh` の strict-fail 失敗経路を起点に、reason_codes の復元手順を整理した。
+  - `scripts/collect_c_team_session_evidence.sh` の既定 dryrun 出力を `mktemp` 化し、nested 回帰で `/tmp` 固定パス競合により strict-fail 診断が欠落する不安定要因を除去した。
+  - `scripts/run_c_team_staging_checks.sh` が nested self-test 実行前に retry-consistency 系 env を `unset` するよう更新し、親環境混入による collect/recover 回帰の揺らぎを抑止した。
+  - `scripts/test_recover_c_team_token_missing_session.py` の strict latest retry command 期待値を可変 prefix 許容へ更新し、追加 env ノブを含む collect/recover 連携経路でも回帰が落ちないようにした。
+- 実行コマンド:
+```bash
+python scripts/test_collect_c_team_session_evidence.py
+python scripts/test_recover_c_team_token_missing_session.py
+```
+- 判定:
+  - C-56 の受入条件（collect/recover strict-fail ログから `fail_trace_retry_consistency_reason_codes` / `fail_trace_retry_consistency_retry_command` を復元記録、指定2テストPASS）を満たしたため Done。
+  - Auto-Next は C-57（collect/recover finalize strict-safe elapsed 算出境界の固定）へ遷移。
+
+## 55) C-57 collect/recover finalize strict-safe elapsed 算出境界の固定（In Progress, 2026-03-01）
+- 目的:
+  - finalize エントリで guard/end の両タイマー出力を保持した場合でも、strict-safe 監査の elapsed 算出が一貫するように記録境界を固定する。
+- 進捗:
+  - C-56 完了時点で latest Cエントリの strict-safe 監査は PASS 済み（`pass_section_freeze_timer_safe`）。
+  - C-57 では collect/recover の最終テンプレで elapsed 抽出に影響するタイマーブロック順序を固定化する。
+  - `scripts/audit_c_team_staging.py` を更新し、`end_epoch` / `elapsed_min` を最新一致で抽出するように変更（途中 guard 値より終端タイマー値を優先）。
+  - `scripts/test_audit_c_team_staging.py` と `scripts/test_check_c_team_dryrun_compliance.py` に、複数 `elapsed_min` / `end_epoch` を含む Cエントリ境界ケースの回帰を追加。
+  - `scripts/render_c_team_session_entry.py` を更新し、`SESSION_TIMER_END` / `SESSION_TIMER_GUARD` の「最新かつ完全な」ブロックを優先抽出するように変更（複数ブロック混在や末尾不完全ブロックを許容）。
+  - `scripts/test_render_c_team_session_entry.py` に、複数 end/guard ブロック混在と最新不完全 end/guard ブロック混在の回帰を追加。
+  - `scripts/collect_c_team_session_evidence.sh` / `scripts/recover_c_team_token_missing_session.sh` に `--guard-checkpoint-minutes`（複数指定可）を追加し、中間guardは block を許容して記録、最終guardのみ厳格判定する finalize 境界を実装。
+  - checkpoint 指定時は `guard_checkpoints=<csv>` を提出エントリへ自動転記するよう更新し、提出ログ単体で checkpoint 実施条件を追跡可能化。
+  - `scripts/test_collect_c_team_session_evidence.py` / `scripts/test_recover_c_team_token_missing_session.py` に guard-checkpoint 混在の回帰を追加。
+  - `scripts/test_check_c_team_dryrun_compliance.py` に最新 `SESSION_TIMER_END` が不完全な場合の fallback 回帰を追加し、strict-safe 判定の終端値採用を補強。
+  - C-57再実行セッション（`/tmp/c_team_session_20260301T130243Z_3408716.token`）で `session_timer_guard 10/20/30` と `session_timer end` を同一tokenで取得し、`elapsed_min=30` 証跡を `docs/team_status.md` へ反映。
+- 実行コマンド:
+```bash
+python scripts/test_audit_c_team_staging.py
+python scripts/test_check_c_team_dryrun_compliance.py
+python scripts/test_render_c_team_session_entry.py
+python scripts/test_collect_c_team_session_evidence.py
+python scripts/test_recover_c_team_token_missing_session.py
+```

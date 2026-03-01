@@ -27,19 +27,46 @@
 
 ### 1.1 FEM4Cとは
 
-FEM4C（Finite Element Method for C）は、山田貴博氏の著書「高性能有限要素法」に基づいて開発された、C言語による高性能有限要素法プログラムです。本システムは以下の特徴を持ちます：
+FEM4C（Finite Element Method for C）は、山田貴博氏の著書「高性能有限要素法」に基づいて開発された、C言語による有限要素法プログラムです。本プロジェクトは「研究者(初心者)が自分でFEMを実装できるようになる」ことを目的とした練習用マテリアルであり、学習しやすさと実装の追体験を重視しています。本システムは以下の特徴を持ちます：
 
-- **高性能**: OpenMP並列化による高速計算
-- **互換性**: Nastran入出力形式のサポート
+- **学習志向**: 重要な処理を見通しよく追える構成
+- **互換性**: Nastran Bulk入力の一部カードに対応
 - **拡張性**: モジュラー設計による要素追加の容易さ
 - **精度**: 高精度数値解析アルゴリズム
 
 ### 1.2 対象読者
 
-- 有限要素法の理論を理解している研究者・技術者
-- 高性能計算に興味のあるプログラマー
-- Nastranユーザーでオープンソース代替を求める方
-- 有限要素法プログラムの内部構造を学びたい学生
+- 有限要素法を自分で実装して理解したい研究者・学生
+- C言語での数値計算実装に慣れたい方
+- FEMの入力/出力やアセンブリ処理の流れを学びたい方
+
+### 1.3 読む順番（概要→実装）
+1. 本書（このファイル）で全体像を把握  
+2. `docs/implementation_guide.md` でモジュール別の読み順を確認  
+3. `docs/tutorial_manual.md` の章立てで実装演習  
+
+### 1.4 最小検算例（全体確認）
+**目的**: solver が「入力→解→出力」の流れで動くことを確認する。  
+
+入力例（native 形式）:
+```
+Minimal T3
+3 1
+1 0.0 0.0
+2 1.0 0.0
+3 0.0 1.0
+1 1 2 3
+2.0e11 0.3
+1 1 1 0.0 0.0 0.0
+2 1 1 0.0 0.0 0.0
+point loads
+3 0.0 1000.0 0.0
+end
+```
+
+チェック:
+- 実行ログで `Nodes=3, Elements=1, DOF=6` が表示される。  
+- `output.dat` に非ゼロの変位が出る。  
 
 ### 1.3 前提知識
 
@@ -68,9 +95,10 @@ FEM4C システム構成
 ├── ソルバー
 │   ├── アセンブリシステム
 │   ├── 共役勾配法ソルバー
-│   └── 並列化機能
+│   └── OpenMP対応（オプション）
 ├── 入出力
 │   ├── Nastran形式読み込み
+│   ├── parser出力パッケージ読み込み
 │   ├── VTK形式出力
 │   └── F06形式出力
 └── 解析制御
@@ -99,8 +127,8 @@ FEM4Cは段階的に開発されました：
 - メモリ効率化
 
 **Phase 4**: 並列化とNastran対応
-- OpenMP並列化
-- Nastran入力形式サポート
+- OpenMP並列化（準備）
+- Nastran入力形式サポート（カードの一部）
 - F06出力形式実装
 
 ---
@@ -675,6 +703,8 @@ fem_error_t assembly_parallel_stiffness_matrix(void) {
 
 ## 7. Nastran互換性
 
+本プロジェクトは学習用の実装であり、Nastran互換性は「必要最低限のカードに限定したサブセット対応」です。実運用のNastran全カードを網羅することは目的としていません。
+
 ### 7.1 入力形式
 
 #### 7.1.1 サポート済みカード
@@ -902,6 +932,10 @@ fem_error_t input_detect_format(const char *filename, input_format_t *format) {
 }
 ```
 
+**補足**:
+- parser出力パッケージの場合は「ディレクトリ指定」で検出します。
+- Nastranはサブセット対応です。対応カードは「Nastran互換性」章を参照してください。
+
 ### 8.2 マルチ出力対応
 
 ```c
@@ -952,7 +986,24 @@ fem_error_t static_write_results(const char* output_filename) {
 }
 ```
 
-### 8.3 VTK出力実装
+### 8.3 parser出力パッケージ入力
+
+parserが生成するディレクトリ構成（`mesh/material/boundary`）を直接読み込みます。
+Nastran入力を与えた場合は、`fem4c` が parser を実行してからこの形式を読み込みます。
+
+```
+<out_root>/<part_name>/
+  ├── mesh/mesh.dat
+  ├── material/material.dat
+  └── Boundary Conditions/boundary.dat
+```
+
+主な読み込みルール:
+- 2D解析を前提とし、Z方向の拘束・荷重は無視します。
+- 材料厚さは unit thickness (1.0) を採用します。
+- `material/material.dat` の E は N/mm^2、密度は kg/mm^3 を想定します。
+
+### 8.4 VTK出力実装
 
 ```c
 fem_error_t output_write_vtk_file(const char *filename) {
@@ -1096,12 +1147,15 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c | $(OBJDIR)
 # 基本実行
 ./bin/fem4c input.dat output.out
 
-# Nastranファイル実行
-./bin/fem4c model.nas results.out
+# Nastran入力を一括実行（parser → solver）
+./bin/fem4c model.nas run_out part_0001 results.out
 
-# 環境変数でスレッド数制御
+# parser出力パッケージ実行
+./bin/fem4c <parser出力ディレクトリ>
+
+# 環境変数でスレッド数制御（OpenMPビルド時のみ）
 export OMP_NUM_THREADS=4
-./bin/fem4c large_model.nas results.out
+./bin/fem4c large_model.nas run_out part_0001 results.out
 ```
 
 #### 9.2.2 入力ファイル例
@@ -1563,9 +1617,9 @@ FEM4C/
 │   │   ├── static.h     # 静解析
 │   │   └── static.c     # 静解析実装
 │   └── fem4c.c         # メインプログラム
-├── test/               # テストファイル
-│   └── data/           # テストデータ
 ├── docs/               # ドキュメント
+├── examples/           # 入力例
+├── practice/           # 学習用ハンズオン
 ├── Makefile           # ビルド設定
 └── README.md          # プロジェクト概要
 ```
@@ -1633,12 +1687,12 @@ fem_error_t elements_initialize(void) {
 }
 ```
 
-### 12.3 テスト実装
+### 12.3 検証のすすめ
 
-#### 12.3.1 単体テスト例
+#### 12.3.1 単体検証例
 
 ```c
-// test/test_t3_element.c
+// practice/tests/test_t3_element.c
 
 #include "../src/elements/t3/t3_element.h"
 #include <assert.h>
@@ -1678,15 +1732,15 @@ int main(void) {
 }
 ```
 
-#### 12.3.2 統合テスト
+#### 12.3.2 統合検証
 
 ```c
-// test/test_integration.c
+// practice/tests/test_integration.c
 
 void test_cantilever_beam(void) {
     // 標準的な片持ち梁問題
-    const char *input_file = "test/data/cantilever.nas";
-    const char *output_file = "test/output/cantilever.out";
+    const char *input_file = "examples/t6_cantilever_beam.dat";
+    const char *output_file = "cantilever.out";
 
     fem_error_t err = static_analysis(input_file, output_file);
     assert(err == FEM_SUCCESS);

@@ -38,7 +38,9 @@ static int input_parser_is_directory(const char *path);
 static int input_parser_has_mesh_root(const char *path);
 static fem_error_t input_read_parser_mesh(const char *mesh_path);
 static fem_error_t input_read_parser_material(const char *material_path);
-static fem_error_t input_read_parser_boundary(const char *boundary_path);
+static fem_error_t input_read_parser_boundary(const char *boundary_path, const char *base_dir);
+static fem_error_t input_parse_parser_legacy_spc(const char *line);
+static fem_error_t input_parse_parser_legacy_force(const char *line);
 static void input_parser_trim(char *text);
 static int input_parser_is_label(const char *line, const char *label);
 static int input_parser_split_tokens(const char *line, char tokens[][64], int max_tokens);
@@ -1107,6 +1109,106 @@ static int input_parser_split_tokens(const char *line, char tokens[][64], int ma
     return count;
 }
 
+typedef struct {
+    int *data;
+    int size;
+    int cap;
+} parser_list_t;
+
+static void parser_list_init(parser_list_t *list)
+{
+    list->data = NULL;
+    list->size = 0;
+    list->cap = 0;
+}
+
+static void parser_list_push(parser_list_t *list, int value)
+{
+    if (list->size == list->cap) {
+        int new_cap = list->cap ? list->cap * 2 : 16;
+        int *tmp = realloc(list->data, (size_t)new_cap * sizeof(int));
+        if (!tmp) {
+            perror("realloc");
+            exit(1);
+        }
+        list->data = tmp;
+        list->cap = new_cap;
+    }
+    list->data[list->size++] = value;
+}
+
+static void parser_list_free(parser_list_t *list)
+{
+    free(list->data);
+    list->data = NULL;
+    list->size = 0;
+    list->cap = 0;
+}
+
+static int input_parser_element_node_count(int element_type)
+{
+    if (element_type == ELEMENT_T3) return 3;
+    if (element_type == ELEMENT_T6) return 6;
+    if (element_type == ELEMENT_Q4) return 4;
+    return 0;
+}
+
+static fem_error_t input_parser_load_id_map(const char *path, parser_list_t **lists, int *list_count)
+{
+    FILE *fp = fopen(path, "r");
+    if (!fp) {
+        return FEM_SUCCESS; /* optional file */
+    }
+
+    char line[256];
+    int max_id = *list_count - 1;
+
+    while (fgets(line, sizeof(line), fp)) {
+        input_parser_trim(line);
+        if (line[0] == '\0') continue;
+        if (strncmp(line, "angle=", 6) == 0) continue;
+        int id = 0;
+        int elem_id = 0;
+        if (sscanf(line, "%d %d", &id, &elem_id) != 2) {
+            continue;
+        }
+        if (id <= 0) continue;
+        if (id > max_id) {
+            int new_count = id + 1;
+            parser_list_t *tmp = realloc(*lists, (size_t)new_count * sizeof(parser_list_t));
+            if (!tmp) {
+                fclose(fp);
+                return error_set(FEM_ERROR_MEMORY_ALLOCATION, "Failed to resize id map");
+            }
+            for (int i = *list_count; i < new_count; ++i) {
+                parser_list_init(&tmp[i]);
+            }
+            *lists = tmp;
+            *list_count = new_count;
+            max_id = new_count - 1;
+        }
+
+        int elem_index = -1;
+        if (elem_id >= 0 && elem_id < g_element_id_capacity) {
+            elem_index = g_element_id_to_index[elem_id];
+        }
+        if (elem_index < 0 || elem_index >= g_num_elements) {
+            continue;
+        }
+
+        int node_count = input_parser_element_node_count(g_element_type[elem_index]);
+        for (int k = 0; k < node_count; ++k) {
+            int node_idx = g_element_nodes[elem_index][k];
+            if (node_idx >= 0 && node_idx < g_num_nodes) {
+                parser_list_push(&(*lists)[id], node_idx);
+            }
+        }
+    }
+
+    fclose(fp);
+    return FEM_SUCCESS;
+}
+
 static fem_error_t input_parser_read_int(FILE *fp, const char *context, int *out)
 {
     char line[256];
@@ -1289,111 +1391,360 @@ static fem_error_t input_read_parser_material(const char *material_path)
     return FEM_SUCCESS;
 }
 
-static fem_error_t input_read_parser_boundary(const char *boundary_path)
+static fem_error_t input_parse_parser_legacy_spc(const char *line)
 {
+    int node_id = -1;
+    double disp = 0.0;
+    char component_field[16] = {0};
+    char normalized[512];
+    char tok[32][64];
+    int nt = 0;
     fem_error_t err;
+
+    if (line == NULL) {
+        return FEM_ERROR_INVALID_INPUT;
+    }
+
+    strncpy(normalized, line, sizeof(normalized) - 1);
+    normalized[sizeof(normalized) - 1] = '\0';
+    for (size_t i = 0; normalized[i] != '\0'; ++i) {
+        if (normalized[i] == '=' || normalized[i] == ',' ||
+            normalized[i] == '(' || normalized[i] == ')') {
+            normalized[i] = ' ';
+        }
+    }
+
+    nt = input_parser_split_tokens(normalized, tok, 32);
+    if (nt < 2 || strcmp(tok[0], "SPC") != 0) {
+        return FEM_ERROR_FILE_READ;
+    }
+    for (int i = 1; i < nt; ++i) {
+        if (strcmp(tok[i], "G") == 0 && i + 1 < nt) {
+            node_id = atoi(tok[++i]);
+        } else if (strcmp(tok[i], "C") == 0 && i + 1 < nt) {
+            strncpy(component_field, tok[++i], sizeof(component_field) - 1);
+            component_field[sizeof(component_field) - 1] = '\0';
+        } else if (strcmp(tok[i], "D") == 0 && i + 1 < nt) {
+            disp = atof(tok[++i]);
+        }
+    }
+    if (node_id <= 0 || component_field[0] == '\0') {
+        return FEM_ERROR_FILE_READ;
+    }
+
+    int node_index = -1;
+    err = input_get_node_index(node_id, &node_index);
+    CHECK_ERROR(err);
+
+    for (size_t i = 0; i < strlen(component_field); ++i) {
+        char comp = component_field[i];
+        if (comp == '1') {
+            g_node_bc_flags[node_index][0] = 1;
+            g_node_displ[node_index][0] = disp;
+        } else if (comp == '2') {
+            g_node_bc_flags[node_index][1] = 1;
+            g_node_displ[node_index][1] = disp;
+        } else if (comp == '3') {
+            g_node_bc_flags[node_index][2] = 1;
+            g_node_displ[node_index][2] = disp;
+        }
+    }
+
+    return FEM_SUCCESS;
+}
+
+static fem_error_t input_parse_parser_legacy_force(const char *line)
+{
+    int node_id = -1;
+    double force = 0.0;
+    double n1 = 1.0, n2 = 0.0, n3 = 0.0;
+    int have_force = 0;
+    int have_n = 0;
+    char normalized[512];
+    char tok[32][64];
+    int nt = 0;
+    fem_error_t err;
+
+    if (line == NULL) {
+        return FEM_ERROR_INVALID_INPUT;
+    }
+
+    strncpy(normalized, line, sizeof(normalized) - 1);
+    normalized[sizeof(normalized) - 1] = '\0';
+    for (size_t i = 0; normalized[i] != '\0'; ++i) {
+        if (normalized[i] == '=' || normalized[i] == ',' ||
+            normalized[i] == '(' || normalized[i] == ')') {
+            normalized[i] = ' ';
+        }
+    }
+
+    nt = input_parser_split_tokens(normalized, tok, 32);
+    if (nt < 2 || strcmp(tok[0], "FORCE") != 0) {
+        return FEM_ERROR_FILE_READ;
+    }
+    for (int i = 1; i < nt; ++i) {
+        if (strcmp(tok[i], "G") == 0 && i + 1 < nt) {
+            node_id = atoi(tok[++i]);
+        } else if (strcmp(tok[i], "F") == 0 && i + 1 < nt) {
+            force = atof(tok[++i]);
+            have_force = 1;
+        } else if (strcmp(tok[i], "N") == 0 && i + 3 < nt) {
+            n1 = atof(tok[++i]);
+            n2 = atof(tok[++i]);
+            n3 = atof(tok[++i]);
+            have_n = 1;
+        }
+    }
+    if (node_id <= 0 || !have_force || !have_n) {
+        return FEM_ERROR_FILE_READ;
+    }
+
+    int node_index = -1;
+    err = input_get_node_index(node_id, &node_index);
+    CHECK_ERROR(err);
+
+    g_node_force[node_index][0] += force * n1;
+    g_node_force[node_index][1] += force * n2;
+    g_node_force[node_index][2] += force * n3;
+
+    return FEM_SUCCESS;
+}
+
+static fem_error_t input_read_parser_boundary(const char *boundary_path, const char *base_dir)
+{
+    fem_error_t err = FEM_SUCCESS;
+    char line[512];
+    int line_no = 0;
+    enum { MODE_NONE, MODE_FIX, MODE_FORCE } mode = MODE_NONE;
+    int legacy_spc_count = 0;
+    int legacy_force_count = 0;
+    int fixed_spc_count = 0;
+    int fixed_force_count = 0;
     FILE *fp = fopen(boundary_path, "r");
     CHECK_FILE(fp, boundary_path);
 
-    char line[512];
+    parser_list_t *surface_lists = NULL;
+    parser_list_t *ridge_lists = NULL;
+    int surface_count = 0;
+    int ridge_count = 0;
+
+    char surface_path[1024];
+    char ridge_path[1024];
+    snprintf(surface_path, sizeof(surface_path), "%s/mesh/surface.dat", base_dir);
+    snprintf(ridge_path, sizeof(ridge_path), "%s/mesh/ridgeline.dat", base_dir);
+    err = input_parser_load_id_map(surface_path, &surface_lists, &surface_count);
+    if (err != FEM_SUCCESS) {
+        goto cleanup;
+    }
+    err = input_parser_load_id_map(ridge_path, &ridge_lists, &ridge_count);
+    if (err != FEM_SUCCESS) {
+        goto cleanup;
+    }
+
     while (fgets(line, sizeof(line), fp)) {
+        line_no++;
         input_parser_trim(line);
         if (line[0] == '\0') continue;
 
         if (strncmp(line, "Total number of Boundary Conditions", 35) == 0) {
-            fgets(line, sizeof(line), fp);
+            if (!fgets(line, sizeof(line), fp)) {
+                break;
+            }
             continue;
         }
         if (strncmp(line, "UNITSYS", 7) == 0) {
             printf("  Info: boundary.dat declares UNITSYS (forces already in N)\n");
             continue;
         }
-
         if (strncmp(line, "SPC", 3) == 0) {
-            char tok[12][64];
-            int nt = input_parser_split_tokens(line, tok, 12);
-            int gid = 0;
-            char comp[32] = "";
-            double disp = 0.0;
-            for (int i = 0; i < nt; ++i) {
-                if (strncmp(tok[i], "G=", 2) == 0) {
-                    gid = atoi(tok[i] + 2);
-                } else if (strncmp(tok[i], "C=", 2) == 0) {
-                    snprintf(comp, sizeof(comp), "%s", tok[i] + 2);
-                } else if (strncmp(tok[i], "D=", 2) == 0) {
-                    disp = atof(tok[i] + 2);
+            if (strstr(line, "SID=") || strstr(line, "G=") || strstr(line, "C=")) {
+                err = input_parse_parser_legacy_spc(line);
+                if (err == FEM_SUCCESS) {
+                    legacy_spc_count++;
+                }
+            } else {
+                err = input_parse_nastran_spc(NULL, line);
+                if (err == FEM_SUCCESS) {
+                    fixed_spc_count++;
                 }
             }
-            if (gid <= 0 || comp[0] == '\0') {
-                fclose(fp);
-                return error_set(FEM_ERROR_INVALID_INPUT,
-                                 "Malformed SPC entry in %s", boundary_path);
-            }
-            int node_index = -1;
-            err = input_get_node_index(gid, &node_index);
-            CHECK_ERROR_CLEANUP(err, fclose(fp));
-            for (size_t k = 0; k < strlen(comp); ++k) {
-                int c = comp[k] - '0';
-                if (c == 1 || c == 2) {
-                    g_node_bc_flags[node_index][c - 1] = 1;
-                    g_node_displ[node_index][c - 1] = disp;
-                } else if (c == 3) {
-                    printf("  Warning: SPC with z-direction constraint ignored for G=%d\n", gid);
+            if (err != FEM_SUCCESS) {
+                err = input_parse_parser_legacy_spc(line);
+                if (err != FEM_SUCCESS) {
+                    err = error_set(FEM_ERROR_FILE_READ,
+                                    "Failed to parse SPC card at %s:%d",
+                                    boundary_path, line_no);
+                    goto cleanup;
                 }
+                legacy_spc_count++;
+            }
+            continue;
+        }
+        if (strncmp(line, "FORCE", 5) == 0) {
+            if (strstr(line, "SID=") || strstr(line, "G=") || strstr(line, "N=(")) {
+                err = input_parse_parser_legacy_force(line);
+                if (err == FEM_SUCCESS) {
+                    legacy_force_count++;
+                }
+            } else {
+                err = input_parse_nastran_force(NULL, line);
+                if (err == FEM_SUCCESS) {
+                    fixed_force_count++;
+                }
+            }
+            if (err != FEM_SUCCESS) {
+                err = input_parse_parser_legacy_force(line);
+                if (err != FEM_SUCCESS) {
+                    err = error_set(FEM_ERROR_FILE_READ,
+                                    "Failed to parse FORCE card at %s:%d",
+                                    boundary_path, line_no);
+                    goto cleanup;
+                }
+                legacy_force_count++;
             }
             continue;
         }
 
-        if (strncmp(line, "FORCE", 5) == 0) {
-            char tok[12][64];
-            int nt = input_parser_split_tokens(line, tok, 12);
-            int gid = 0;
-            double F = 0.0, n1 = 0.0, n2 = 0.0, n3 = 0.0;
-            for (int i = 0; i < nt; ++i) {
-                if (strncmp(tok[i], "G=", 2) == 0) {
-                    gid = atoi(tok[i] + 2);
-                } else if (strncmp(tok[i], "F=", 2) == 0) {
-                    F = atof(tok[i] + 2);
-                } else if (tok[i][0] == 'N' && tok[i][1] == '=') {
-                    char buf[192];
-                    buf[0] = '\0';
-                    for (int j = i; j < nt && j < i + 3; ++j) {
-                        if (buf[0]) {
-                            strncat(buf, " ", sizeof(buf) - strlen(buf) - 1);
-                        }
-                        strncat(buf, tok[j], sizeof(buf) - strlen(buf) - 1);
-                        if (strchr(tok[j], ')')) {
-                            i = j; /* consume up to j */
-                            break;
+        if (input_parser_is_label(line, "Fix")) {
+            mode = MODE_FIX;
+            continue;
+        }
+        if (input_parser_is_label(line, "Force")) {
+            mode = MODE_FORCE;
+            continue;
+        }
+        if (line[0] != '\0' && isalpha((unsigned char)line[0]) &&
+            (strstr(line, "(") || input_parser_is_label(line, "Fixed"))) {
+            mode = MODE_NONE;
+            continue;
+        }
+
+        if (mode == MODE_FIX) {
+            char tok[8][64];
+            int nt = input_parser_split_tokens(line, tok, 8);
+            if (nt < 4) continue;
+            const char *target = tok[0];
+            int tid = atoi(tok[1]);
+            const char *mask = tok[2];
+            double disp = atof(tok[3]);
+
+            int *mark = calloc((size_t)g_num_nodes, sizeof(int));
+            if (!mark) {
+                err = error_set(FEM_ERROR_MEMORY_ALLOCATION, "Failed to allocate mark array");
+                goto cleanup;
+            }
+
+            if (strcmp(target, "node") == 0) {
+                int node_index = -1;
+                err = input_get_node_index(tid, &node_index);
+                if (err == FEM_SUCCESS) {
+                    for (size_t k = 0; k < strlen(mask); ++k) {
+                        int c = mask[k] - '0';
+                        if (c == 1 || c == 2) {
+                            g_node_bc_flags[node_index][c - 1] = 1;
+                            g_node_displ[node_index][c - 1] = disp;
                         }
                     }
-                    for (char *p = buf; *p; ++p) {
-                        if (*p == ',') *p = ' ';
+                }
+            } else if (strcmp(target, "surface") == 0 && tid < surface_count) {
+                parser_list_t *lst = &surface_lists[tid];
+                for (int i = 0; i < lst->size; ++i) {
+                    int node_index = lst->data[i];
+                    if (node_index < 0 || node_index >= g_num_nodes || mark[node_index]) continue;
+                    mark[node_index] = 1;
+                    for (size_t k = 0; k < strlen(mask); ++k) {
+                        int c = mask[k] - '0';
+                        if (c == 1 || c == 2) {
+                            g_node_bc_flags[node_index][c - 1] = 1;
+                            g_node_displ[node_index][c - 1] = disp;
+                        }
                     }
-                    double a = 0.0, b = 0.0, c = 0.0;
-                    if (sscanf(buf, "N=(%lf %lf %lf)", &a, &b, &c) == 3 ||
-                        sscanf(buf, "N=%lf %lf %lf", &a, &b, &c) == 3) {
-                        n1 = a; n2 = b; n3 = c;
+                }
+            } else if (strcmp(target, "ridgeline") == 0 && tid < ridge_count) {
+                parser_list_t *lst = &ridge_lists[tid];
+                for (int i = 0; i < lst->size; ++i) {
+                    int node_index = lst->data[i];
+                    if (node_index < 0 || node_index >= g_num_nodes || mark[node_index]) continue;
+                    mark[node_index] = 1;
+                    for (size_t k = 0; k < strlen(mask); ++k) {
+                        int c = mask[k] - '0';
+                        if (c == 1 || c == 2) {
+                            g_node_bc_flags[node_index][c - 1] = 1;
+                            g_node_displ[node_index][c - 1] = disp;
+                        }
                     }
                 }
             }
-            if (gid <= 0) {
-                fclose(fp);
-                return error_set(FEM_ERROR_INVALID_INPUT,
-                                 "Malformed FORCE entry in %s", boundary_path);
+            free(mark);
+            continue;
+        }
+
+        if (mode == MODE_FORCE) {
+            char tok[8][64];
+            int nt = input_parser_split_tokens(line, tok, 8);
+            if (nt < 5) continue;
+            const char *target = tok[0];
+            int tid = atoi(tok[1]);
+            int axis = atoi(tok[3]);
+            double value = atof(tok[4]);
+
+            int *mark = calloc((size_t)g_num_nodes, sizeof(int));
+            if (!mark) {
+                err = error_set(FEM_ERROR_MEMORY_ALLOCATION, "Failed to allocate mark array");
+                goto cleanup;
             }
-            int node_index = -1;
-            err = input_get_node_index(gid, &node_index);
-            CHECK_ERROR_CLEANUP(err, fclose(fp));
-            g_node_force[node_index][0] += F * n1;
-            g_node_force[node_index][1] += F * n2;
-            g_node_force[node_index][2] += F * n3;
+
+            if (strcmp(target, "node") == 0) {
+                int node_index = -1;
+                err = input_get_node_index(tid, &node_index);
+                if (err == FEM_SUCCESS) {
+                    if (axis == 1) g_node_force[node_index][0] += value;
+                    if (axis == 2) g_node_force[node_index][1] += value;
+                    if (axis == 3) g_node_force[node_index][2] += value;
+                }
+            } else if (strcmp(target, "surface") == 0 && tid < surface_count) {
+                parser_list_t *lst = &surface_lists[tid];
+                for (int i = 0; i < lst->size; ++i) {
+                    int node_index = lst->data[i];
+                    if (node_index < 0 || node_index >= g_num_nodes || mark[node_index]) continue;
+                    mark[node_index] = 1;
+                    if (axis == 1) g_node_force[node_index][0] += value;
+                    if (axis == 2) g_node_force[node_index][1] += value;
+                    if (axis == 3) g_node_force[node_index][2] += value;
+                }
+            } else if (strcmp(target, "ridgeline") == 0 && tid < ridge_count) {
+                parser_list_t *lst = &ridge_lists[tid];
+                for (int i = 0; i < lst->size; ++i) {
+                    int node_index = lst->data[i];
+                    if (node_index < 0 || node_index >= g_num_nodes || mark[node_index]) continue;
+                    mark[node_index] = 1;
+                    if (axis == 1) g_node_force[node_index][0] += value;
+                    if (axis == 2) g_node_force[node_index][1] += value;
+                    if (axis == 3) g_node_force[node_index][2] += value;
+                }
+            }
+            free(mark);
             continue;
         }
     }
 
+cleanup:
     fclose(fp);
-    return FEM_SUCCESS;
+    for (int i = 0; i < surface_count; ++i) {
+        parser_list_free(&surface_lists[i]);
+    }
+    for (int i = 0; i < ridge_count; ++i) {
+        parser_list_free(&ridge_lists[i]);
+    }
+    free(surface_lists);
+    free(ridge_lists);
+    if (err == FEM_SUCCESS &&
+        (legacy_spc_count > 0 || fixed_spc_count > 0 ||
+         legacy_force_count > 0 || fixed_force_count > 0)) {
+        printf("  parser boundary cards: SPC legacy=%d fixed=%d, FORCE legacy=%d fixed=%d\n",
+               legacy_spc_count, fixed_spc_count, legacy_force_count, fixed_force_count);
+    }
+    return err;
 }
 
 fem_error_t input_read_parser_package(const char *directory)
@@ -1415,7 +1766,7 @@ fem_error_t input_read_parser_package(const char *directory)
     CHECK_ERROR(err);
     err = input_read_parser_material(material_path);
     CHECK_ERROR(err);
-    err = input_read_parser_boundary(boundary_path);
+    err = input_read_parser_boundary(boundary_path, directory);
     CHECK_ERROR(err);
 
     g_analysis.num_nodes = g_num_nodes;

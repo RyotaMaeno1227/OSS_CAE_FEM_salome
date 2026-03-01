@@ -55,10 +55,21 @@ FEM4C/output_*.dat
 FEM4C/output_*.csv
 FEM4C/output_*.vtk
 FEM4C/output_*.f06
+FEM4C/out_*.dat
+FEM4C/out_*.csv
+FEM4C/out_*.vtk
+FEM4C/out_*.f06
 FEM4C/examples/*_results.dat
 FEM4C/examples/*_results.vtk
 FEM4C/examples/*_results.f06
+FEM4C/test/output/
 FEM4C/run_out/
 FEM4C/result/
 FEM4C/parser/parser
 FEM4C/parser/parser.exe
+
+# Local/temporary artifacts
+.vscode/
+tmp*.md
+scripts/__pycache__/
+FEM4C/scripts/.tmp_*.sh

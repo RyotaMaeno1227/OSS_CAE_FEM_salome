@@ -88,7 +88,7 @@ PM-3 依頼です。今回スプリントは FEM4C の巨大 dirty 差分の整�
 - 全チーム共通で、まず `docs/abc_team_chat_handoff.md` の Section 0 を読む。
 - 進捗は `docs/team_status.md`、セッション引継ぎは `docs/session_continuity_log.md`。
 - 混在コミット回避のため、担当範囲外ファイルはステージしない。
-- PM受入の機械監査: `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30`
+- PM受入の機械監査: `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30 --max-elapsed 90`
 - 外部CI未接続時は、日次受入をローカル3コマンドで完結する:
   - `make -C FEM4C test`
   - `make -C FEM4C mbd_ci_contract`
@@ -121,9 +121,12 @@ PM-3 依頼です。今回スプリントは FEM4C の巨大 dirty 差分の整�
 
 [実行ルール]
 - 30分以上を必須とし、30-45分を推奨レンジとして連続実行する。
+- 上限目安は60分。`elapsed_min > 90` の報告はトークン使い回し/中断混在の疑いとして原則不合格。
 - 30分は実装前進に使い、実装系ファイル差分を1件以上必須とする。
 - 長時間反復ソーク/耐久ループは禁止（PM明示指示時のみ例外）。
 - 検証は短時間スモークに限定し、最大3コマンド程度で受入確認する。
+- 検証は「今回変更した実装に直結する受入コマンド」を優先し、全体回帰（例: `python -m unittest discover -s scripts -p 'test_*.py'`, `make -C FEM4C test`）は受入条件または障害切り分けで必要な場合のみ実行する。
+- 30分条件を満たすための検証コマンド積み増しは禁止（時間充足目的の回帰実行は不合格）。
 - 先頭タスク完了時は同セッションで次タスクへ自動遷移する（PM確認不要）。
 - 次タスクが無い場合は `Auto-Next`（最小実装タスク）を `next_queue` に追記して継続する。
 - 同一コマンドの反復実行だけで時間を使わない（コード変更なしの連続反復は禁止）。
@@ -132,10 +135,13 @@ PM-3 依頼です。今回スプリントは FEM4C の巨大 dirty 差分の整�
 - session_continuity_log だけ更新した報告は不合格。
 - 開始時に `scripts/session_timer.sh start <team_tag>` を実行し、`session_token` を取得する。
 - 報告直前に `bash scripts/session_timer_guard.sh <session_token> 30` を実行し、`guard_result=pass` を確認する。
+- 中間証跡として `bash scripts/session_timer_guard.sh <session_token> 10` / `20` を実行し、出力を `team_status` に転記する。
 - 終了時に `scripts/session_timer.sh end <session_token>` を実行し、出力を team_status に貼る。
+- PMのIDE観測で実稼働が30分未満と判断された場合は報告無効。新規 `session_token` で同タスクを再実行する。
 - 手入力の `start_at/end_at/elapsed_min` だけの報告は不合格。
 - `sleep` 等の人工待機で elapsed を満たす行為は禁止（不合格）。
 - `elapsed_min >= 30` を満たさない終了報告は原則不合格（PM事前承認の緊急停止のみ例外）。
+- `elapsed_min > 90` の終了報告は、合理的な継続理由が明記されない限り不合格。
 - `elapsed_min < 30` の途中報告は禁止（30分到達まで同セッションで継続）。
 - 外部CI未接続時でも、ローカル3コマンド（`test` / `mbd_ci_contract` / `mbd_ci_contract_test`）は必須で実行する。
 
@@ -161,6 +167,7 @@ PM-3 依頼です。今回スプリントは FEM4C の巨大 dirty 差分の整�
 - PM への追加確認は blocker 発生時のみ許可する。
 - 受入判定は `scripts/session_timer.sh` 出力と `scripts/session_timer_guard.sh` の `guard_result=pass` を含む報告のみ有効とする。
 - `elapsed_min >= 30` を満たさない報告は原則差し戻す。
+- `elapsed_min > 90` の報告も原則差し戻す（合理的な継続理由の明記がある場合のみ例外）。
 - 人工待機（`sleep` 等）を含む報告は無効とする。
 
 ## 新規チャット移行時のPM初回送信テンプレ（コピペ用）
@@ -182,137 +189,179 @@ PM-3 依頼です。今回スプリントは FEM4C の巨大 dirty 差分の整�
 
 ---
 
-## PMレビュー後の次ラウンド指示（2026-02-15, 最新コピペ用）
+## PMレビュー後の次ラウンド指示（2026-02-21, 最新コピペ用）
 
 以下の3本をそのまま送信してください。  
-次回以降は原則「作業を継続してください」の1行運用に戻して構いません（省略指示モード）。
+前回提出は「実稼働時間の整合不一致」として不受理扱いです。今回は再実行ラウンドです。
 
 ### Team A
 
 ```
 @A-team
-作業を継続してください（30分以上、推奨30-45分の連続実行）。
+前回提出は PM 判定で不受理です（実稼働時間の整合が取れないため）。A-38 を再実行してください。
 
-[今回のゴール]
-- `docs/fem4c_team_next_queue.md` の Aチーム先頭 `In Progress`（A-31）を `Done` に近づける。
-- 先頭完了後は同セッションで次タスクを `In Progress` にして継続する。
+[対象]
+- docs/fem4c_team_next_queue.md の A-38（In Progress）
 
-[今回の着手タスク]
-- docs/fem4c_team_next_queue.md の Aチーム先頭 `Todo` / `In Progress` から開始
-- A先頭タスクの完了条件を満たす差分を優先（`--mode=mbd` 対象のコード差分必須）
+[必須]
+- 新規セッションで開始: scripts/session_timer.sh start a_team
+- 30分以上の連続実作業（待機・放置・sleep禁止）
+- 先頭タスク完了後も同一セッションで A-38 スコープの次実装を継続
+- 報告前: bash scripts/session_timer_guard.sh <session_token> 30
+- 終了: scripts/session_timer.sh end <session_token>
 
-[時間証跡コマンド]
-- 開始: `scripts/session_timer.sh start a_team`
-- 報告可否判定: `bash scripts/session_timer_guard.sh <session_token> 30`
-- 終了: `scripts/session_timer.sh end <session_token>`
+[検証]
+- make -C FEM4C mbd_a24_regression_full_test
+- make -C FEM4C mbd_a24_batch_test
+- make -C FEM4C mbd_ci_contract_test
 
-[Aチーム専用: 動的自走ルール（必須）]
-- `elapsed_min < 30` の途中報告は禁止。30分到達まで同セッションで実装を継続する。
-- A-31 が早く完了した場合は、同セッションで次タスク（`Todo` / `In Progress`）へ自動遷移する。
-- 次タスク候補が無い場合は `Auto-Next` を `docs/fem4c_team_next_queue.md` に追記して継続する。
-- 報告直前に自己監査を実行し、FAILなら継続する:
-  - `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30 --teams A`
-- `session_timer_guard` が `guard_result=block` の間はチャット報告せず、同一セッションで次実装へ進む。
-
-[禁止事項]
-- 長時間反復ソーク/耐久ループで時間を消費しない。
-- `sleep` 等の人工待機をしない。
-- 反復検証のみで終了しない。
-
-[必須成果]
-- 実装差分ファイル（docsのみは不可）
-- A先頭タスクの `Acceptance` を満たすこと。
-- 検証は短時間スモーク（最大3コマンド）で行うこと。
-- 実行コマンド
-- 受入判定 pass/fail
-- `scripts/session_timer.sh` の出力一式（`session_token/start_utc/end_utc/start_epoch/end_epoch/elapsed_min`）
-- `scripts/session_timer_guard.sh` の出力（`guard_result=pass`）
-- `elapsed_min >= 30`（未満は原則差し戻し）
-
-[報告先]
-- docs/team_status.md
-- docs/session_continuity_log.md（4項目）
+[報告]
+- docs/team_status.md に新規エントリを追記（変更ファイル/コマンド/pass-fail/タイマー原文）
+- docs/session_continuity_log.md の4項目更新
 ```
 
 ### Team B
 
 ```
 @B-team
-作業を継続してください（30分以上、推奨30-45分の連続実行）。
+前回提出は PM 判定で不受理です（実稼働時間の整合が取れないため）。B-32 を再実行してください。
 
-[今回のゴール]
-- B-24（B-8自己テスト一時ファイル衝突の静的契約固定）を実装で前進させる。
-- 先頭完了後は同セッションで次タスクを `In Progress` にして継続する。
+[対象]
+- docs/fem4c_team_next_queue.md の B-32（In Progress）
 
-[今回の着手タスク]
-- docs/fem4c_team_next_queue.md の Bチーム先頭 `Todo` / `In Progress` から開始
-- B-24 の完了条件を満たす差分を優先（自己テスト用一時スクリプト名の衝突回避 + 静的契約同期）
-- 先頭完了後は同セッションで次タスクへ自動遷移（候補が無ければ `Auto-Next` を追記）
+[必須]
+- 新規セッションで開始: scripts/session_timer.sh start b_team
+- 30分以上の連続実作業（待機・放置・sleep禁止）
+- 報告前: bash scripts/session_timer_guard.sh <session_token> 30
+- 終了: scripts/session_timer.sh end <session_token>
 
-[時間証跡コマンド]
-- 開始: `scripts/session_timer.sh start b_team`
-- 終了: `scripts/session_timer.sh end <session_token>`
+[検証]
+- make -C FEM4C mbd_b8_knob_matrix_test
+- make -C FEM4C mbd_ci_contract_test
+- make -C FEM4C mbd_b8_regression_test
 
-[禁止事項]
-- 長時間反復ソーク/耐久ループで時間を消費しない。
-- `sleep` 等の人工待機をしない。
-- B-8系の耐久反復だけで終了しない。
-
-[注意]
-- docs更新のみで終了しないこと（無効報告）
-
-[必須成果]
-- 変更ファイル（Makefile/README/probe など実装差分を含む）
-- B-24（B-8自己テスト一時ファイル衝突の静的契約固定）を前進させること。
-- 検証は短時間スモーク（最大3コマンド）で行うこと。
-- 1行再現コマンド
-- pass/fail と閾値
-- `scripts/session_timer.sh` の出力一式（`session_token/start_utc/end_utc/start_epoch/end_epoch/elapsed_min`）
-- `elapsed_min >= 30`（未満は原則差し戻し）
-
-[報告先]
-- docs/team_status.md
-- docs/session_continuity_log.md（4項目）
+[報告]
+- docs/team_status.md に新規エントリを追記（変更ファイル/コマンド/pass-fail/タイマー原文）
+- docs/session_continuity_log.md の4項目更新
 ```
 
 ### Team C
 
 ```
 @C-team
-作業を継続してください（30分以上、推奨30-45分の連続実行）。
+前回提出は PM 判定で不受理です（同一コマンド連続実行検知あり）。C-43 を再実行してください。
 
-[今回のゴール]
-- C-35（strict latest 失敗理由の提出ログ固定）を前進させる。
-- 先頭完了後は同セッションで次タスクを `In Progress` にして継続する。
+[対象]
+- docs/fem4c_team_next_queue.md の C-43（In Progress）
 
-[今回の着手タスク]
-- docs/fem4c_team_next_queue.md の Cチーム先頭 `Todo` / `In Progress` から開始
-- C-35 の完了条件を満たす差分を優先（`collect_preflight_check_reason=*` の提出ログ固定）
-- 先頭完了後は同セッションで次タスクへ自動遷移（候補が無ければ `Auto-Next` を追記）
+[必須]
+- 新規セッションで開始: scripts/session_timer.sh start c_team
+- 30分以上の連続実作業（待機・放置・sleep禁止）
+- 同一コマンドの連続実行は禁止（同じコマンドを続けて打たない）
+- 報告前: bash scripts/session_timer_guard.sh <session_token> 30
+- 終了: scripts/session_timer.sh end <session_token>
 
-[時間証跡コマンド]
-- 開始: `scripts/session_timer.sh start c_team`
-- 終了: `scripts/session_timer.sh end <session_token>`
+[検証]
+- python scripts/test_collect_c_team_session_evidence.py
+- python scripts/test_recover_c_team_token_missing_session.py
+- python scripts/test_run_c_team_collect_preflight_check.py
+- C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/check_c_team_submission_readiness.sh docs/team_status.md 30
 
-[禁止事項]
-- 長時間反復ソーク/耐久ループで時間を消費しない。
-- `sleep` 等の人工待機をしない。
+[報告]
+- docs/team_status.md に新規エントリを追記（変更ファイル/コマンド/pass-fail/タイマー原文）
+- docs/session_continuity_log.md の4項目更新
+```
 
-[必須成果]
-- 最終判定が入った triage 文書差分
-- C-35 は strict latest fail-fast 時の理由キー（`collect_preflight_check_reason=*`）を提出ログへ残し、判定理由を追跡可能にすること。
-- 検証は短時間スモーク（最大3コマンド）で行うこと。
-- 具体的コマンド（必要なら .gitignore 更新）
-- pass/fail 判定
-- `scripts/c_stage_dryrun.sh` の結果（`dryrun_result`）
-- `safe_stage_command=git add <path-list>` の記録（strict-safe 判定用）
-- strict latest 提出テンプレ（必須）:
-  - `bash scripts/collect_c_team_session_evidence.sh --task-title "<task>" --session-token <token> --guard-minutes 30 --team-status docs/team_status.md --append-to-team-status --check-compliance-policy pass_section_freeze_timer_safe --check-submission-readiness-minutes 30 --collect-latest-require-found 1`
-  - `bash scripts/recover_c_team_token_missing_session.sh --team-status docs/team_status.md --finalize-session-token <session_token> --task-title "<task>" --guard-minutes 30 --check-compliance-policy pass_section_freeze_timer_safe --check-submission-readiness-minutes 30 --collect-latest-require-found 1`
-- `scripts/session_timer.sh` の出力一式（`session_token/start_utc/end_utc/start_epoch/end_epoch/elapsed_min`）
-- `elapsed_min >= 30`（未満は原則差し戻し）
+---
 
-[報告先]
-- docs/team_status.md
-- docs/session_continuity_log.md（4項目）
+## 時間未達の差し戻しテンプレ（2026-03-01 / A-53, B-45, C-58）
+
+以下は、`elapsed_min < 30` で不受理だった直後にそのまま送るテンプレです。
+
+### Team A（A-53 再開）
+
+```
+@A-team
+前回ランは elapsed 未達のため不受理。A-53を同一タスクで再開してください。
+
+[必須]
+- 新規開始: scripts/session_timer.sh start a_team
+- 中間: bash scripts/session_timer_guard.sh <token> 10
+- 中間: bash scripts/session_timer_guard.sh <token> 20
+- 終了前: bash scripts/session_timer_guard.sh <token> 30 （pass必須）
+- 終了: scripts/session_timer.sh end <token>
+
+[終了禁止条件]
+- guard30 が block の間は終了報告禁止
+- docs更新だけで終了禁止（実装差分必須）
+- 同一コマンド反復で時間消化禁止
+
+[実装対象]
+- A-53: canonical pair marker（owner_pid, lock_wait_sec）を check/test の static + fail-injection で固定
+
+[受入]
+- make -C FEM4C mbd_ci_contract_test
+- make -C FEM4C mbd_a24_regression_full_test
+- make -C FEM4C mbd_a24_batch_test
+- すべてPASS + elapsed_min>=30
+```
+
+### Team B（B-45 再開）
+
+```
+@B-team
+前回ランは elapsed 未達のため不受理。B-45を同一タスクで再開してください。
+
+[必須]
+- 新規開始: scripts/session_timer.sh start b_team
+- 中間: bash scripts/session_timer_guard.sh <token> 10
+- 中間: bash scripts/session_timer_guard.sh <token> 20
+- 終了前: bash scripts/session_timer_guard.sh <token> 30 （pass必須）
+- 終了: scripts/session_timer.sh end <token>
+
+[終了禁止条件]
+- guard30 が block の間は終了報告禁止
+- docs更新だけで終了禁止（実装差分必須）
+- 同一コマンド反復で時間消化禁止
+
+[実装対象]
+- B-45: LOCK_WAIT_SEC_MAX 契約の再同期
+- 受入4コマンドの前後で sha256sum FEM4C/scripts/test_check_ci_contract.sh を記録
+
+[受入]
+- make -C FEM4C mbd_ci_contract_test
+- make -C FEM4C mbd_b8_knob_matrix_test
+- make -C FEM4C mbd_b8_regression_full_test
+- make -C FEM4C mbd_b8_regression_test
+- すべてPASS + elapsed_min>=30
+```
+
+### Team C（C-58 再開）
+
+```
+@C-team
+前回ランは elapsed 未達のため不受理。C-58を同一タスクで再開してください。
+
+[必須]
+- 新規開始: scripts/session_timer.sh start c_team
+- 中間: bash scripts/session_timer_guard.sh <token> 10
+- 中間: bash scripts/session_timer_guard.sh <token> 20
+- 終了前: bash scripts/session_timer_guard.sh <token> 30 （pass必須）
+- 終了: scripts/session_timer.sh end <token>
+
+[終了禁止条件]
+- guard30 が block の間は終了報告禁止
+- docs更新だけで終了禁止（実装差分必須）
+- 同一コマンド反復で時間消化禁止
+
+[実装対象]
+- C-58: C_REQUIRE_REVIEW_COMMANDS=1 必須モードで collect/recover/readiness/staging の整合固定
+
+[受入]
+- C_REQUIRE_REVIEW_COMMANDS=1 bash scripts/run_c_team_staging_checks.sh docs/team_status.md
+- bash scripts/run_c_team_staging_checks.sh docs/team_status.md
+- python scripts/test_run_c_team_staging_checks.py
+- python scripts/test_collect_c_team_session_evidence.py
+- python scripts/test_recover_c_team_token_missing_session.py
+- すべてPASS + elapsed_min>=30
 ```

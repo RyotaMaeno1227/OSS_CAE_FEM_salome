@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import re
 import subprocess
 import sys
 
@@ -149,6 +150,34 @@ def parse_kv_lines(text: str) -> dict[str, str]:
         key, value = line.split("=", 1)
         values[key.strip()] = value.strip()
     return values
+
+
+def parse_latest_timer_values(
+    text: str,
+    marker: str,
+    required_keys: tuple[str, ...],
+) -> dict[str, str]:
+    """Parse key-values from the latest complete timer block.
+
+    Timer artifacts can include multiple START/GUARD/END blocks if command
+    outputs are concatenated. Prefer the latest block for the requested marker
+    that contains all required keys; fallback to latest matching block and then
+    whole-text parsing for backward compatibility.
+    """
+    block_re = re.compile(
+        rf"{re.escape(marker)}(?P<body>.*?)(?=SESSION_TIMER_START|SESSION_TIMER_GUARD|SESSION_TIMER_END|$)",
+        re.DOTALL,
+    )
+    matches = list(block_re.finditer(text))
+    if not matches:
+        return parse_kv_lines(text)
+
+    for match in reversed(matches):
+        block_values = parse_kv_lines(match.group(0))
+        if all(key in block_values for key in required_keys):
+            return block_values
+
+    return parse_kv_lines(matches[-1].group(0))
 
 
 def collect_timer_end_text(session_token: str) -> str:
@@ -338,7 +367,7 @@ def main() -> int:
         if not args.timer_end_file:
             raise SystemExit("ERROR: --timer-end-file or --collect-timer-end is required")
         end_text = read_text(Path(args.timer_end_file))
-    end_values = parse_kv_lines(end_text)
+    end_values = parse_latest_timer_values(end_text, "SESSION_TIMER_END", REQUIRED_END_KEYS)
     guard_lines: list[str] = []
     if args.collect_timer_guard:
         guard_text = collect_timer_guard_text(str(token_path), args.guard_minutes)
@@ -355,7 +384,11 @@ def main() -> int:
     else:
         guard_text = ""
     if guard_text:
-        guard_values = parse_kv_lines(guard_text)
+        guard_values = parse_latest_timer_values(
+            guard_text,
+            "SESSION_TIMER_GUARD",
+            REQUIRED_GUARD_KEYS,
+        )
         guard_lines = render_guard_block(guard_values)
     start_lines = render_start_block(str(token_path), token_values)
     end_lines = render_end_block(end_values)

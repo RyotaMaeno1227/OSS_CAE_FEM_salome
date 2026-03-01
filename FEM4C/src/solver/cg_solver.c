@@ -73,8 +73,8 @@ fem_error_t cg_solve(double *A, double *b, double *x, int n,
         err = cg_dot_product(p, Ap, n, &pAp);
         CHECK_ERROR_CLEANUP(err, goto cleanup);
         
-        if (fabs(pAp) < TOLERANCE) {
-            printf("  CG Debug: iteration %d, pAp = %.6e, tolerance = %.6e\n", iter, pAp, TOLERANCE);
+        if (fabs(pAp) < 1.0e-14) {
+            printf("  CG Debug: iteration %d, pAp = %.6e, tolerance = %.6e\n", iter, pAp, 1.0e-14);
             printf("  Search direction p[0:5]: ");
             for (int i = 0; i < (n < 6 ? n : 6); i++) {
                 printf("%.3e ", p[i]);

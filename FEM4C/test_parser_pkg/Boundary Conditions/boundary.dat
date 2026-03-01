@@ -1,6 +1,0 @@
-Total number of Boundary Conditions [–]
-2
-Constraint: SPC set
-SPC SID=1 G=1 C=12 D=0.0
-Load: FORCE set
-FORCE SID=1 G=3 CID=0 F=1000 N=(0,1,0)

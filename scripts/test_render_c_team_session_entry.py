@@ -203,6 +203,113 @@ class RenderCTeamSessionEntryTest(unittest.TestCase):
         self.assertIn("SESSION_TIMER_GUARD", proc.stdout)
         self.assertIn("guard_result=pass", proc.stdout)
 
+    def test_render_uses_latest_complete_end_block(self):
+        token_path = write_temp(self.sample_token(), ".token")
+        end_text = textwrap.dedent(
+            f"""\
+            SESSION_TIMER_END
+            session_token={token_path}
+            team_tag=c_team
+            start_utc=2026-02-09T10:00:00Z
+            end_utc=2026-02-09T10:10:00Z
+            start_epoch=1770631200
+            end_epoch=1770631800
+            elapsed_sec=600
+            elapsed_min=10
+            SESSION_TIMER_GUARD
+            session_token={token_path}
+            team_tag=c_team
+            start_utc=2026-02-09T10:00:00Z
+            now_utc=2026-02-09T10:20:00Z
+            start_epoch=1770631200
+            now_epoch=1770632400
+            elapsed_sec=1200
+            elapsed_min=20
+            min_required=30
+            guard_result=block
+            SESSION_TIMER_END
+            session_token={token_path}
+            team_tag=c_team
+            start_utc=2026-02-09T10:00:00Z
+            end_utc=2026-02-09T10:30:00Z
+            start_epoch=1770631200
+            end_epoch=1770633000
+            elapsed_sec=1800
+            elapsed_min=30
+            """
+        )
+        end_path = write_temp(end_text, ".txt")
+        proc = self.run_script(token_path, end_path)
+        self.assertEqual(proc.returncode, 0, msg=proc.stdout + proc.stderr)
+        self.assertIn("end_epoch=1770633000", proc.stdout)
+        self.assertIn("elapsed_min=30", proc.stdout)
+        self.assertNotIn("end_epoch=1770631800", proc.stdout)
+
+    def test_render_ignores_incomplete_latest_end_block(self):
+        token_path = write_temp(self.sample_token(), ".token")
+        end_text = textwrap.dedent(
+            f"""\
+            SESSION_TIMER_END
+            session_token={token_path}
+            team_tag=c_team
+            start_utc=2026-02-09T10:00:00Z
+            end_utc=2026-02-09T10:30:00Z
+            start_epoch=1770631200
+            end_epoch=1770633000
+            elapsed_sec=1800
+            elapsed_min=30
+            SESSION_TIMER_END
+            session_token={token_path}
+            team_tag=c_team
+            start_utc=2026-02-09T10:00:00Z
+            end_utc=2026-02-09T10:31:00Z
+            start_epoch=1770631200
+            end_epoch=1770633060
+            elapsed_sec=1860
+            """
+        )
+        end_path = write_temp(end_text, ".txt")
+        proc = self.run_script(token_path, end_path)
+        self.assertEqual(proc.returncode, 0, msg=proc.stdout + proc.stderr)
+        self.assertIn("end_epoch=1770633000", proc.stdout)
+        self.assertIn("elapsed_min=30", proc.stdout)
+        self.assertNotIn("end_epoch=1770633060", proc.stdout)
+
+    def test_render_uses_latest_complete_guard_block(self):
+        token_path = write_temp(self.sample_token(), ".token")
+        end_path = write_temp(self.sample_end(token_path), ".txt")
+        guard_text = textwrap.dedent(
+            f"""\
+            SESSION_TIMER_GUARD
+            session_token={token_path}
+            team_tag=c_team
+            start_utc=2026-02-09T10:00:00Z
+            now_utc=2026-02-09T10:30:00Z
+            start_epoch=1770631200
+            now_epoch=1770633000
+            elapsed_sec=1800
+            elapsed_min=30
+            min_required=30
+            guard_result=pass
+            SESSION_TIMER_GUARD
+            session_token={token_path}
+            team_tag=c_team
+            start_utc=2026-02-09T10:00:00Z
+            now_utc=2026-02-09T10:31:00Z
+            start_epoch=1770631200
+            now_epoch=1770633060
+            elapsed_sec=1860
+            elapsed_min=31
+            min_required=30
+            """
+        )
+        guard_path = write_temp(guard_text, ".txt")
+        proc = self.run_script(token_path, end_path, guard_path=guard_path)
+        self.assertEqual(proc.returncode, 0, msg=proc.stdout + proc.stderr)
+        self.assertIn("guard_result=pass", proc.stdout)
+        self.assertIn("now_utc=2026-02-09T10:30:00Z", proc.stdout)
+        self.assertNotIn("now_utc=2026-02-09T10:31:00Z", proc.stdout)
+
     def test_output_file(self):
         token_path = write_temp(self.sample_token(), ".token")
         end_path = write_temp(self.sample_end(token_path), ".txt")
@@ -311,6 +418,28 @@ class RenderCTeamSessionEntryTest(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, msg=proc.stdout + proc.stderr)
         self.assertIn("変更ファイル", proc.stdout)
         self.assertIn("scripts/recover_c_team_token_missing_session.sh", proc.stdout)
+
+    def test_render_with_missing_log_boundary_command_lines(self):
+        token_path = write_temp(self.sample_token(), ".token")
+        end_path = write_temp(self.sample_end(token_path), ".txt")
+        proc = self.run_script(
+            token_path,
+            end_path,
+            command_lines=[
+                "collect_preflight_log_resolved=/tmp/c38_missing.log",
+                "collect_preflight_log_missing=/tmp/c38_missing.log",
+                "collect_preflight_check_reason=latest_resolved_log_missing_strict",
+            ],
+            collect_latest_require_found="1",
+        )
+        self.assertEqual(proc.returncode, 0, msg=proc.stdout + proc.stderr)
+        self.assertIn("preflight_latest_require_found=1 (enabled)", proc.stdout)
+        self.assertIn("collect_preflight_log_resolved=/tmp/c38_missing.log", proc.stdout)
+        self.assertIn("collect_preflight_log_missing=/tmp/c38_missing.log", proc.stdout)
+        self.assertIn(
+            "collect_preflight_check_reason=latest_resolved_log_missing_strict",
+            proc.stdout,
+        )
 
 
 if __name__ == "__main__":

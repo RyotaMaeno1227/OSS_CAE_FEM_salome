@@ -472,6 +472,8 @@ char g_output_filename[MAX_FILENAME_LEN];
 
 /* OpenMP control */
 int g_num_threads = 1;
+/* T3 orientation policy: 0=auto-correct (default), 1=strict-fail */
+int g_t3_strict_orientation = 0;
 
 /* Initialize global variables */
 fem_error_t globals_initialize(void)

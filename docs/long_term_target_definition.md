@@ -12,6 +12,9 @@
 - PM決定（2026-02-08）:
   - 連成（`coupled`）仕様が未確定の間は、`coupled` をスタブ維持とし新規機能追加を凍結する。
   - 直近実装は FEM / MBD を独立ソルバーとして前進させる。
+- PM決定（2026-03-01）:
+  - MBD 実装時の参照元は `third_party/chrono/chrono-main` のみを使用する。
+  - `chrono-C-all` は参照・比較対象として使用しない（過去試行失敗のため）。
 
 ## 2. 完成系（Definition of Done）
 1. FEM ソルバー完成:
@@ -71,6 +74,7 @@
 
 ## 7. 優先参照ドキュメント
 - 長期目標（本書）: `docs/long_term_target_definition.md`
+- MBD学習DoD（最終完成版向け）: `docs/mbd_learning_dod.md`
 - 現行チーム運用: `docs/abc_team_chat_handoff.md`
 - 次タスクキュー: `docs/fem4c_team_next_queue.md`
 - セッション継続ログ: `docs/session_continuity_log.md`

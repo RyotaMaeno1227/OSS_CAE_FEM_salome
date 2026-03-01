@@ -15,6 +15,10 @@ ENTRY_START_RE = re.compile(r"^- 実行タスク")
 START_EPOCH_RE = re.compile(r"start_epoch\s*[:=]\s*`?(\d+)`?")
 END_EPOCH_RE = re.compile(r"end_epoch\s*[:=]\s*`?(\d+)`?")
 ELAPSED_MIN_RE = re.compile(r"elapsed_min\s*[:=]\s*`?(\d+)`?")
+END_BLOCK_RE = re.compile(
+    r"SESSION_TIMER_END(?P<body>.*?)(?=SESSION_TIMER_START|SESSION_TIMER_GUARD|SESSION_TIMER_END|$)",
+    re.DOTALL,
+)
 DRYRUN_RESULT_RE = re.compile(r"dryrun_result\s*[:=]\s*([A-Za-z_\-]+)", re.IGNORECASE)
 PATH_RE = re.compile(r"(?:FEM4C|docs|scripts|chrono-2d|oldFile)/[A-Za-z0-9_.\-/]+")
 SAFE_STAGE_GIT_ADD_RE = re.compile(r"^git\s+add(?:\s+--)?\s+\S+")
@@ -303,18 +307,39 @@ def parse_start_epoch(text: str) -> int | None:
     return int(match.group(1))
 
 
+def _latest_complete_end_block_match(text: str) -> tuple[re.Match[str], re.Match[str]] | None:
+    end_blocks = list(END_BLOCK_RE.finditer(text))
+    for block in reversed(end_blocks):
+        body = block.group("body")
+        end_match = END_EPOCH_RE.search(body)
+        elapsed_match = ELAPSED_MIN_RE.search(body)
+        if end_match and elapsed_match:
+            return end_match, elapsed_match
+    return None
+
+
 def parse_end_epoch(text: str) -> int | None:
-    match = END_EPOCH_RE.search(text)
-    if not match:
+    complete = _latest_complete_end_block_match(text)
+    if complete is not None:
+        end_match, _ = complete
+        return int(end_match.group(1))
+    matches = END_EPOCH_RE.findall(text)
+    if not matches:
         return None
-    return int(match.group(1))
+    # Prefer the latest timer completion evidence when multiple values exist.
+    return int(matches[-1])
 
 
 def parse_elapsed_min(text: str) -> int | None:
-    match = ELAPSED_MIN_RE.search(text)
-    if not match:
+    complete = _latest_complete_end_block_match(text)
+    if complete is not None:
+        _, elapsed_match = complete
+        return int(elapsed_match.group(1))
+    matches = ELAPSED_MIN_RE.findall(text)
+    if not matches:
         return None
-    return int(match.group(1))
+    # Prefer the latest elapsed value (e.g. final guard/end block).
+    return int(matches[-1])
 
 
 def parse_dryrun_results(text: str) -> list[str]:

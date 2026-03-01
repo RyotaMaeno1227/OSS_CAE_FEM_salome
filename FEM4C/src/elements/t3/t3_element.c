@@ -354,11 +354,34 @@ fem_error_t t3_validate_element(int element_id)
     error = t3_jacobian_matrix(element_id, 1.0/3.0, 1.0/3.0, J, &det_J);
     if (error != FEM_SUCCESS) return error;
 
-    /* Area should be positive */
-    if (det_J <= TOLERANCE) {
+    /* Area magnitude should be non-zero; fix orientation if needed */
+    if (fabs(det_J) <= TOLERANCE) {
         error_set(FEM_ERROR_INVALID_INPUT, "t3_validate_element",
-                     "Element has invalid geometry (negative or zero area)");
+                     "Element has invalid geometry (near-zero area)");
         return FEM_ERROR_INVALID_INPUT;
+    }
+    if (det_J < 0.0) {
+        if (g_t3_strict_orientation) {
+            error_set(FEM_ERROR_INVALID_INPUT, "t3_validate_element",
+                      "Element %d has clockwise orientation (strict mode)", element_id + 1);
+            return FEM_ERROR_INVALID_INPUT;
+        }
+        int tmp = g_element_nodes[element_id][0];
+        g_element_nodes[element_id][0] = g_element_nodes[element_id][1];
+        g_element_nodes[element_id][1] = tmp;
+        static int warned = 0;
+        if (!warned) {
+            printf("  Warning: T3 element orientation corrected (clockwise -> CCW). ");
+            printf("Use --strict-t3-orientation to fail instead.\n");
+            warned = 1;
+        }
+        error = t3_jacobian_matrix(element_id, 1.0/3.0, 1.0/3.0, J, &det_J);
+        if (error != FEM_SUCCESS) return error;
+        if (fabs(det_J) <= TOLERANCE) {
+            error_set(FEM_ERROR_INVALID_INPUT, "t3_validate_element",
+                         "Element has invalid geometry after orientation fix");
+            return FEM_ERROR_INVALID_INPUT;
+        }
     }
 
     return FEM_SUCCESS;

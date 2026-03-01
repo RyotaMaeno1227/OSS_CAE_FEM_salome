@@ -205,6 +205,22 @@
 | `docs/archive/drafts/*` | 実装前ドラフトを退避（`docs/archive/drafts/chrono_2d_ci_plan.md`, `docs/archive/drafts/ci_ops_selfserve_plan.md`, `docs/archive/drafts/coupled_condition_gap_report.md`） | PM-3 | 現行運用では参照のみ |
 | `docs/archive/README.md` | アーカイブ分類と移動済みファイル一覧を追加 | PM-3 | 退避先の参照導線を明確化 |
 
+## 2026-02-16 更新
+
+| ドキュメント | 主な変更内容 | 担当 | 備考 |
+|--------------|--------------|------|------|
+| `docs/mbd_learning_dod.md` | 最終完成版を前提に、2D-MBD 学習DoD（前提知識、到達条件、3Dへの橋渡し、文書作成ルール）を新規追加 | PM-3 | 「スクリプトは実行せず参照用」という運用前提を明文化 |
+| `docs/long_term_target_definition.md` | 優先参照ドキュメントに `docs/mbd_learning_dod.md` を追加 | PM-3 | 長期目標から学習DoDへ直接導線を追加 |
+| `docs/team_runbook.md` | 参照優先順位に `docs/mbd_learning_dod.md` を追加 | PM-3 | 教材作成時の参照漏れを防止 |
+| `docs/abc_team_chat_handoff.md` | Section 0 共通ルールに、MBD学習系ドキュメント更新時の `docs/mbd_learning_dod.md` 参照必須を追加 | PM-3 | 各チーム運用へ反映 |
+
+## 2026-02-21 更新
+
+| ドキュメント | 主な変更内容 | 担当 | 備考 |
+|--------------|--------------|------|------|
+| `docs/team_runbook.md` | PM受入監査に「同一コマンド連続実行の自動検知（連続2回以上でfail）」を追記 | PM-3 | 例外時のみ `--max-consecutive-same-command 0` を使用 |
+| `docs/fem4c_team_next_queue.md` | 継続運用ルールに上記監査補足を追加し、反復検証のみの時間消費を抑止 | PM-3 | 受入コマンドは `audit_team_sessions.py` を継続使用 |
+
 Slack summary (2025-11-10, #chrono-docs / #chrono-constraints):
 - Preset PDF remains provisional (Pandoc unavailable); checklist + README note added.  
 - KPI snapshot synced to 83 / 73 / 50 across pm_status / migration plan / 3D abstraction.  

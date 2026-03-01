@@ -43,6 +43,21 @@ if [[ -n "${step_log_dir}" ]]; then
         exit 1
     fi
 fi
+if [[ -n "${summary_out}" ]]; then
+    summary_out_dir="$(dirname "${summary_out}")"
+    if [[ ! -d "${summary_out_dir}" ]]; then
+        echo "FAIL: A24 acceptance serial summary output directory does not exist (${summary_out_dir})" >&2
+        exit 1
+    fi
+    if [[ -d "${summary_out}" ]]; then
+        echo "FAIL: A24 acceptance serial summary output path must be a file (${summary_out})" >&2
+        exit 1
+    fi
+    if ! : >"${summary_out}" 2>/dev/null; then
+        echo "FAIL: cannot write A24 acceptance serial summary output (${summary_out})" >&2
+        exit 1
+    fi
+fi
 
 emit_summary() {
     local line="$1"
