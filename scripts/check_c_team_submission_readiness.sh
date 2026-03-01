@@ -73,6 +73,7 @@ emit_review_command_failure_context() {
   local review_output="${1:-}"
   local review_reasons
   local review_reason_codes
+  local review_reason_codes_source
   local prefixed_reason_codes
   local reason_codes_source="fallback"
   review_reasons="$(
@@ -83,13 +84,19 @@ emit_review_command_failure_context() {
     printf '%s\n' "${review_output}" \
       | awk -F= '/^reason_codes=/{value=substr($0, index($0, "=") + 1)} END{print value}'
   )"
+  review_reason_codes_source="$(
+    printf '%s\n' "${review_output}" \
+      | awk -F= '/^reason_codes_source=/{value=substr($0, index($0, "=") + 1)} END{print value}'
+  )"
   if [[ -z "${review_reasons}" ]]; then
     review_reasons="unknown_review_command_reason"
   fi
   prefixed_reason_codes="$(
     c_team_build_prefixed_reason_codes "review_command_" "${review_reason_codes}" "${review_reasons}"
   )"
-  if [[ -n "${review_reason_codes}" && "${review_reason_codes}" != "-" ]]; then
+  if [[ -n "${review_reason_codes_source}" ]]; then
+    reason_codes_source="${review_reason_codes_source}"
+  elif [[ -n "${review_reason_codes}" && "${review_reason_codes}" != "-" ]]; then
     reason_codes_source="checker"
   fi
   echo "review_command_fail_reason=${review_reasons}" >&2

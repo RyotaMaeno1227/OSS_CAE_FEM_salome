@@ -779,7 +779,7 @@ check_pattern_in_file "ci_contract_test_selftest_lock_wait_runtime_smoke_wait_tr
 check_pattern_in_file "ci_contract_test_selftest_lock_wait_runtime_smoke_pair_trace_message_marker" "lock wait runtime smoke did not emit owner/wait pair trace" "$ci_contract_test_script_path"
 check_pattern_in_file "ci_contract_test_selftest_lock_wait_runtime_smoke_pair_expected_marker" 'expected_runtime_pair="$(build_lock_pair_fragment "$$" "0")"' "$ci_contract_test_script_path"
 check_pattern_in_file "ci_contract_test_selftest_lock_wait_runtime_smoke_pair_call_order_marker" 'expected_runtime_pair="$(build_lock_pair_fragment "$$" "0")"' "$ci_contract_test_script_path"
-check_absence_in_file "ci_contract_test_selftest_lock_wait_runtime_smoke_pair_literal_fallback_absence_marker" 'expected_runtime_pair="$(printf ' "$ci_contract_test_script_path"
+check_absence_in_file "ci_contract_test_selftest_lock_wait_runtime_smoke_pair_literal_fallback_absence_marker" '  expected_runtime_pair="$(printf ' "$ci_contract_test_script_path"
 check_pattern_in_file "ci_contract_test_selftest_lock_wait_runtime_smoke_pair_grep_marker" 'grep -Fq "${expected_runtime_pair}" "${runtime_log}"' "$ci_contract_test_script_path"
 check_pattern_in_file "ci_contract_test_selftest_lock_wait_runtime_smoke_lock_dir_pair_trace_message_marker" "lock wait runtime smoke did not emit lock-dir anchored pair trace" "$ci_contract_test_script_path"
 check_pattern_in_file "ci_contract_test_selftest_lock_wait_runtime_smoke_expected_line_marker" 'expected_runtime_busy_line="$(build_lock_busy_message "${runtime_lock_dir}" "$$" "0")"' "$ci_contract_test_script_path"

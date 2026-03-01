@@ -119,6 +119,10 @@ def main(argv: list[str] | None = None) -> int:
         reasons.append("missing collect_report_review_command")
 
     reason_codes = [reason_to_code(reason) for reason in reasons]
+    if reasons:
+        reason_codes_source = "checker" if reason_codes else "fallback"
+    else:
+        reason_codes_source = "-"
     verdict = "PASS" if not reasons else "FAIL"
     report = {
         "entry": title,
@@ -130,6 +134,7 @@ def main(argv: list[str] | None = None) -> int:
         "verdict": verdict,
         "reasons": reasons,
         "reason_codes": reason_codes,
+        "reason_codes_source": reason_codes_source,
     }
 
     if args.json:
@@ -154,9 +159,11 @@ def main(argv: list[str] | None = None) -> int:
         if reasons:
             print("reasons=" + "; ".join(reasons))
             print("reason_codes=" + "; ".join(reason_codes))
+            print(f"reason_codes_source={reason_codes_source}")
         else:
             print("reasons=-")
             print("reason_codes=-")
+            print("reason_codes_source=-")
     return 0 if verdict == "PASS" else 1
 
 

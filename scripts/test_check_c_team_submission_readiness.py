@@ -35,6 +35,7 @@ class CheckCTeamSubmissionReadinessTest(unittest.TestCase):
         env["C_REQUIRE_REVIEW_COMMANDS"] = "0"
         env["C_REQUIRE_COLLECT_PREFLIGHT_ENABLED"] = "1"
         env["C_COLLECT_LATEST_REQUIRE_FOUND"] = "0"
+        env.setdefault("C_TEAM_SKIP_STAGING_BUNDLE", "1")
         if extra_env:
             env.update(extra_env)
         return subprocess.run(

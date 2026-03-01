@@ -45,6 +45,7 @@ class CheckCTeamReviewCommandsTest(unittest.TestCase):
         self.assertIn("verdict=PASS", proc.stdout)
         self.assertIn("reasons=-", proc.stdout)
         self.assertIn("reason_codes=-", proc.stdout)
+        self.assertIn("reason_codes_source=-", proc.stdout)
 
     def test_fail_without_missing_log_review_command(self) -> None:
         markdown = textwrap.dedent(
@@ -60,6 +61,7 @@ class CheckCTeamReviewCommandsTest(unittest.TestCase):
         self.assertNotEqual(proc.returncode, 0)
         self.assertIn("missing missing_log_review_command", proc.stdout)
         self.assertIn("reason_codes=missing_missing_log_review_command", proc.stdout)
+        self.assertIn("reason_codes_source=checker", proc.stdout)
 
     def test_fail_when_collect_report_command_missing_if_collect_check_exists(self) -> None:
         markdown = textwrap.dedent(
@@ -75,6 +77,7 @@ class CheckCTeamReviewCommandsTest(unittest.TestCase):
         self.assertNotEqual(proc.returncode, 0)
         self.assertIn("missing collect_report_review_command", proc.stdout)
         self.assertIn("reason_codes=missing_collect_report_review_command", proc.stdout)
+        self.assertIn("reason_codes_source=checker", proc.stdout)
 
     def test_pass_without_collect_report_when_collect_check_absent(self) -> None:
         markdown = textwrap.dedent(
@@ -89,6 +92,7 @@ class CheckCTeamReviewCommandsTest(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, msg=proc.stdout + proc.stderr)
         self.assertIn("verdict=PASS", proc.stdout)
         self.assertIn("reason_codes=-", proc.stdout)
+        self.assertIn("reason_codes_source=-", proc.stdout)
 
     def test_pass_when_collect_report_requirement_disabled(self) -> None:
         markdown = textwrap.dedent(
@@ -104,6 +108,7 @@ class CheckCTeamReviewCommandsTest(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, msg=proc.stdout + proc.stderr)
         self.assertIn("verdict=PASS", proc.stdout)
         self.assertIn("reason_codes=-", proc.stdout)
+        self.assertIn("reason_codes_source=-", proc.stdout)
 
     def test_json_output_includes_reason_codes(self) -> None:
         markdown = textwrap.dedent(
@@ -118,6 +123,7 @@ class CheckCTeamReviewCommandsTest(unittest.TestCase):
         self.assertNotEqual(proc.returncode, 0)
         self.assertIn('"reason_codes": [', proc.stdout)
         self.assertIn('"missing_missing_log_review_command"', proc.stdout)
+        self.assertIn('"reason_codes_source": "checker"', proc.stdout)
 
     def test_json_output_pass_has_empty_reason_codes(self) -> None:
         markdown = textwrap.dedent(
@@ -131,6 +137,7 @@ class CheckCTeamReviewCommandsTest(unittest.TestCase):
         proc = self.run_script(markdown, "--json")
         self.assertEqual(proc.returncode, 0, msg=proc.stdout + proc.stderr)
         self.assertIn('"reason_codes": []', proc.stdout)
+        self.assertIn('"reason_codes_source": "-"', proc.stdout)
 
 
 if __name__ == "__main__":
