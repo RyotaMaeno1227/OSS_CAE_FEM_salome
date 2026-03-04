@@ -85,6 +85,9 @@ MBD_INTEGRATOR_SCRIPT = scripts/check_mbd_integrators.sh
 MBD_INTEGRATOR_TEST_SCRIPT = scripts/test_check_mbd_integrators.sh
 FEM4C_TEST_LOG_MARKER_SCRIPT = scripts/check_fem4c_test_log_markers.sh
 FEM4C_TEST_LOG_MARKER_TEST_SCRIPT = scripts/test_check_fem4c_test_log_markers.sh
+MBD_B45_SHA_WATCH_SCRIPT = scripts/run_b45_sha_watch.sh
+MBD_B45_ACCEPTANCE_SCRIPT = scripts/run_b45_acceptance.sh
+TEAM_ACCEPTANCE_GATE_SCRIPT = scripts/run_team_acceptance_gate.sh
 
 # Parser target (parser.exe on Windows, parser on POSIX)
 PARSER_SRC = $(PARSERDIR)/parser.c
@@ -169,6 +172,11 @@ mbd_ci_contract_lock_wait_sync:
 	 FEM4C_CI_CONTRACT_LOCK_WAIT_MAX_MODE=strict_present \
 	 bash $(MBD_CI_CONTRACT_SCRIPT)
 
+# Strict lock_wait_max check-only contract (during test-side edit freeze)
+mbd_ci_contract_lock_wait_check_only:
+	@FEM4C_CI_CONTRACT_LOCK_WAIT_MAX_MODE=compat \
+	 bash $(MBD_CI_CONTRACT_SCRIPT)
+
 # One-command B-14 regression (mbd entry integration + contract + self-tests)
 mbd_b14_regression:
 	@bash $(MBD_B14_REGRESSION_SCRIPT)
@@ -245,8 +253,26 @@ mbd_a24_acceptance_serial_test:
 mbd_ci_contract_test:
 	@bash -n $(MBD_CI_CONTRACT_TEST_SCRIPT)
 	@bash -n $(MBD_CI_CONTRACT_SCRIPT)
-	@bash $(MBD_CI_CONTRACT_TEST_SCRIPT)
+	@FEM4C_CI_CONTRACT_LOCK_WAIT_MAX_REQUIRE_SYNC=1 \
+	 FEM4C_CI_CONTRACT_LOCK_WAIT_MAX_MODE=strict_present \
+	 bash $(MBD_B45_SHA_WATCH_SCRIPT) FEM4C/scripts/test_check_ci_contract.sh \
+	 bash FEM4C/$(MBD_CI_CONTRACT_TEST_SCRIPT)
 	@bash $(FEM4C_TEST_LOG_MARKER_TEST_SCRIPT)
+
+# Team acceptance gate (elapsed/timer/evidence/impl-change)
+mbd_team_acceptance_gate:
+	@cd .. && bash $(TEAM_ACCEPTANCE_GATE_SCRIPT) \
+		$(if $(TEAM_STATUS),$(TEAM_STATUS),docs/team_status.md) \
+		$(if $(MIN_ELAPSED),$(MIN_ELAPSED),30)
+
+# B-45 helper: run ci_contract_test under sha watch for test_check_ci_contract.sh
+mbd_ci_contract_test_sha_watch:
+	@bash $(MBD_B45_SHA_WATCH_SCRIPT) FEM4C/scripts/test_check_ci_contract.sh \
+	 make -C FEM4C mbd_ci_contract_test
+
+# B-45 acceptance helper: run required four commands with sha trace around them
+mbd_b45_acceptance:
+	@bash $(MBD_B45_ACCEPTANCE_SCRIPT)
 
 # Verify T3 orientation behavior in default/strict modes
 t3_orientation_checks: $(TARGET)
@@ -445,6 +471,7 @@ help:
 	@echo "  mbd_ci_evidence - Fetch CI run evidence with strict acceptance (step+artifact)"
 	@echo "  mbd_ci_contract - Validate required FEM4C CI contract in .github/workflows/ci.yaml"
 	@echo "  mbd_ci_contract_lock_wait_sync - Enforce strict lock_wait_max sync contract"
+	@echo "  mbd_ci_contract_lock_wait_check_only - Run lock_wait_max check-only contract in compat mode"
 	@echo "  mbd_b14_regression - Run B-14 one-command regression (contract + self-tests + local test entry)"
 	@echo "  mbd_b8_regression - Run B-8 one-command regression (contract + self-tests + guard+b14 chain)"
 	@echo "  mbd_b8_regression_test - Self-test for B-8 regression wrapper"
@@ -463,6 +490,9 @@ help:
 	@echo "  mbd_a24_acceptance_serial - Run A-24 serial acceptance (full_test + batch_test + ci_contract_test)"
 	@echo "  mbd_a24_acceptance_serial_test - Self-test for A-24 serial acceptance wrapper"
 	@echo "  mbd_ci_contract_test - Verify CI contract checker + log-marker checker pass/fail behavior"
+	@echo "  mbd_team_acceptance_gate - Audit latest A/B/C session gate (elapsed>=30 + impl changes)"
+	@echo "  mbd_ci_contract_test_sha_watch - Run mbd_ci_contract_test with test_check_ci_contract.sh sha watchdog"
+	@echo "  mbd_b45_acceptance - Run B-45 acceptance (sha pre/post + ci_contract/knob/full/regression tests)"
 	@echo "  t3_orientation_checks - Verify default correction + strict expected-fail for clockwise T3"
 	@echo "  parser_compat - Verify legacy parser package + Nastran parser compatibility"
 	@echo "  parser_compat_fallback - Verify parser compatibility with built-in legacy fallback fixture"
@@ -485,7 +515,7 @@ $(BUILDDIR)/common/globals.o: $(SRCDIR)/common/globals.c $(SRCDIR)/common/global
 $(BUILDDIR)/common/error.o: $(SRCDIR)/common/error.c $(SRCDIR)/common/error.h $(SRCDIR)/common/types.h
 
 # Phony targets
-.PHONY: all release debug openmp test unit_test clean clean_all install docs format analyze memcheck profile mbd_probe mbd_regression mbd_consistency mbd_negative mbd_checks mbd_ci_evidence mbd_ci_contract mbd_ci_contract_lock_wait_sync mbd_b14_regression mbd_b8_regression mbd_b8_regression_test mbd_b8_regression_full mbd_b8_regression_full_test mbd_b8_knob_matrix_test mbd_b8_knob_matrix_smoke_test mbd_a21_regression mbd_a21_regression_test mbd_a24_regression mbd_a24_regression_test mbd_a24_regression_full mbd_a24_regression_full_test mbd_a24_batch mbd_a24_batch_test mbd_a24_acceptance_serial mbd_a24_acceptance_serial_test mbd_ci_contract_test t3_orientation_checks parser_compat parser_compat_fallback coupled_stub_check integrator_checks mbd_integrator_checks mbd_integrator_checks_test fem4c_test_log_markers fem4c_test_log_markers_test mbd_b8_guard mbd_b8_guard_test mbd_b8_guard_contract mbd_b8_guard_contract_test mbd_b8_syntax mbd_b8_guard_output_test help
+.PHONY: all release debug openmp test unit_test clean clean_all install docs format analyze memcheck profile mbd_probe mbd_regression mbd_consistency mbd_negative mbd_checks mbd_ci_evidence mbd_ci_contract mbd_ci_contract_lock_wait_sync mbd_ci_contract_lock_wait_check_only mbd_b14_regression mbd_b8_regression mbd_b8_regression_test mbd_b8_regression_full mbd_b8_regression_full_test mbd_b8_knob_matrix_test mbd_b8_knob_matrix_smoke_test mbd_a21_regression mbd_a21_regression_test mbd_a24_regression mbd_a24_regression_test mbd_a24_regression_full mbd_a24_regression_full_test mbd_a24_batch mbd_a24_batch_test mbd_a24_acceptance_serial mbd_a24_acceptance_serial_test mbd_ci_contract_test mbd_team_acceptance_gate mbd_ci_contract_test_sha_watch mbd_b45_acceptance t3_orientation_checks parser_compat parser_compat_fallback coupled_stub_check integrator_checks mbd_integrator_checks mbd_integrator_checks_test fem4c_test_log_markers fem4c_test_log_markers_test mbd_b8_guard mbd_b8_guard_test mbd_b8_guard_contract mbd_b8_guard_contract_test mbd_b8_syntax mbd_b8_guard_output_test help
 
 # Print variables for debugging
 print-%:
