@@ -95,6 +95,8 @@
 - GitHub Actions 実Run確認は毎セッション必須ではない。PM/ユーザーが節目で数回のみスポット実施する。
 - PM受入時は最新エントリの機械監査を実行する:
   - `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30`
+  - `bash scripts/run_team_acceptance_gate.sh docs/team_status.md 30`
+  - `make -C FEM4C mbd_team_acceptance_gate`
   - 既定で「同一コマンド連続実行（連続2回以上）」を自動検知して fail にする。
   - 一時的に検知を無効化する場合のみ `--max-consecutive-same-command 0` を明示する。
   - 実装差分必須を同時監査する場合: `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30 --require-impl-changes`

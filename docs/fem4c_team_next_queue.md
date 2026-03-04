@@ -43,6 +43,8 @@
 - 16. `sleep` 等の人工待機で elapsed を満たす行為は不合格。
 - 17. `elapsed_min < 30` の終了報告は原則不合格（PM事前承認の緊急停止のみ例外）。
 - 18. PM受入時は `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 30` を実行し、最新 A/B/C エントリの機械監査結果を確認する（実装差分必須を強制する場合は `--require-impl-changes` を付与）。
+  - 受入ゲート標準コマンド: `bash scripts/run_team_acceptance_gate.sh docs/team_status.md 30`（`elapsed_min>=30` + 実装差分必須 + 同一コマンド連続実行検知を一括監査）。
+  - Makefile エイリアス: `make -C FEM4C mbd_team_acceptance_gate`。
 - 19. 差し戻し文面を即作成する場合は `bash scripts/run_team_audit.sh docs/team_status.md 30 pass_section_freeze` を実行し、出力されたチーム別文面をそのまま送る（同時に C-team staging 監査 JSON も出力される）。
 - 20. 30分は「開発前進」に使う。実装系ファイル差分を1件以上必須とし、docs単独更新での完了を禁止する。
 - 21. 長時間反復ソーク/耐久ループは禁止（PM明示指示時のみ例外）。検証は短時間スモーク（最大3コマンド）を原則とする。

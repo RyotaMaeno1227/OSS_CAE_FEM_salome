@@ -54,6 +54,7 @@ MBD_CONSISTENCY_SCRIPT = scripts/check_mbd_equation_consistency.sh
 MBD_NEGATIVE_SCRIPT = scripts/check_mbd_invalid_inputs.sh
 MBD_CI_EVIDENCE_SCRIPT = scripts/fetch_fem4c_ci_evidence.py
 MBD_CI_CONTRACT_SCRIPT = scripts/check_ci_contract.sh
+TEAM_ACCEPTANCE_GATE_SCRIPT = scripts/run_team_acceptance_gate.sh
 
 # Parser target (parser.exe on Windows, parser on POSIX)
 PARSER_SRC = $(PARSERDIR)/parser.c
@@ -127,6 +128,12 @@ mbd_ci_evidence:
 # Check CI workflow contract locally (no run_id dependency)
 mbd_ci_contract:
 	@bash $(MBD_CI_CONTRACT_SCRIPT)
+
+# Team acceptance gate (elapsed/timer/evidence/impl-change)
+mbd_team_acceptance_gate:
+	@cd .. && bash $(TEAM_ACCEPTANCE_GATE_SCRIPT) \
+		$(if $(TEAM_STATUS),$(TEAM_STATUS),docs/team_status.md) \
+		$(if $(MIN_ELAPSED),$(MIN_ELAPSED),30)
 
 # Object file compilation
 $(BUILDDIR)/%.o: $(SRCDIR)/%.c
@@ -236,6 +243,7 @@ help:
 	@echo "  mbd_checks - Run all MBD checks (probe/regression/consistency/negative)"
 	@echo "  mbd_ci_evidence - Fetch CI run evidence with strict acceptance (step+artifact)"
 	@echo "  mbd_ci_contract - Validate required FEM4C CI contract in .github/workflows/ci.yaml"
+	@echo "  mbd_team_acceptance_gate - Audit latest A/B/C session gate (elapsed>=30 + impl changes)"
 	@echo "  help      - Show this help message"
 
 # Dependencies
@@ -243,7 +251,7 @@ $(BUILDDIR)/common/globals.o: $(SRCDIR)/common/globals.c $(SRCDIR)/common/global
 $(BUILDDIR)/common/error.o: $(SRCDIR)/common/error.c $(SRCDIR)/common/error.h $(SRCDIR)/common/types.h
 
 # Phony targets
-.PHONY: all release debug openmp test unit_test clean clean_all install docs format analyze memcheck profile mbd_probe mbd_regression mbd_consistency mbd_negative mbd_checks mbd_ci_evidence mbd_ci_contract help
+.PHONY: all release debug openmp test unit_test clean clean_all install docs format analyze memcheck profile mbd_probe mbd_regression mbd_consistency mbd_negative mbd_checks mbd_ci_evidence mbd_ci_contract mbd_team_acceptance_gate help
 
 # Print variables for debugging
 print-%:
