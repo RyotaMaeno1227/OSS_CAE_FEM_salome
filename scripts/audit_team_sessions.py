@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Audit latest A/B/C team session compliance from docs/team_status.md.
+"""Audit latest A/B/C/D/E team session compliance from docs/team_status.md.
 
 Checks (default):
 - SESSION_TIMER_START / SESSION_TIMER_END markers exist
-- elapsed_min >= threshold (default: 30)
+- elapsed_min >= threshold (default: 60)
 - no obvious artificial wait command (`sleep`) in the entry text
 - practical evidence fields exist (changes / commands / pass-fail)
 """
@@ -21,6 +21,8 @@ TEAM_HEADINGS = {
     "A": "## Aチーム",
     "B": "## Bチーム",
     "C": "## Cチーム",
+    "D": "## Dチーム",
+    "E": "## Eチーム",
 }
 
 ENTRY_START_RE = re.compile(r"^- 実行タスク")
@@ -275,6 +277,10 @@ def detect_team_from_title(title: str) -> str | None:
         return "B"
     if re.search(r"(^|[\s(])C-team($|[\s)])|Cチーム|^C-", text):
         return "C"
+    if re.search(r"(^|[\s(])D-team($|[\s)])|Dチーム|^D-", text):
+        return "D"
+    if re.search(r"(^|[\s(])E-team($|[\s)])|Eチーム|^E-", text):
+        return "E"
     return None
 
 
@@ -429,11 +435,23 @@ def extract_changed_paths(lines: list[str]) -> list[str]:
     in_change_block = False
     for line in lines:
         stripped = line.strip()
+        line_has_path = False
+        for match in BACKTICK_BLOCK_RE.finditer(line):
+            token = _normalize_path_token(match.group(1).strip())
+            if _looks_like_path(token):
+                line_has_path = True
+                break
+        if not line_has_path:
+            for match in RAW_PATH_RE.finditer(line):
+                token = _normalize_path_token(match.group("path"))
+                if _looks_like_path(token):
+                    line_has_path = True
+                    break
 
         if TOP_FIELD_RE.match(line):
             if any(marker in stripped for marker in ("変更ファイル", "判定した差分ファイル", "変更対象")):
                 in_change_block = True
-            elif in_change_block:
+            elif in_change_block and not line_has_path:
                 in_change_block = False
 
         if not in_change_block:
@@ -556,7 +574,8 @@ def print_report(
         elapsed_threshold = f"{min_elapsed}<=elapsed_min<={max_elapsed}"
     else:
         elapsed_threshold = f"elapsed_min>={min_elapsed}"
-    print(f"AUDIT_TARGET: latest entries (A/B/C)  threshold={elapsed_threshold}")
+    team_labels = "/".join(a.team for a in audits)
+    print(f"AUDIT_TARGET: latest entries ({team_labels})  threshold={elapsed_threshold}")
     print("-" * 112)
     print("team  verdict  elapsed  timer  guard  sleep  changes  impl  commands  pass/fail  same_cmd  start_epoch  entry")
     print("-" * 112)
@@ -600,7 +619,7 @@ def print_report(
 
 
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Audit A/B/C session compliance from team_status.md")
+    parser = argparse.ArgumentParser(description="Audit A/B/C/D/E session compliance from team_status.md")
     parser.add_argument(
         "--team-status",
         default="docs/team_status.md",
@@ -609,8 +628,8 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--min-elapsed",
         type=int,
-        default=30,
-        help="Minimum elapsed_min threshold (default: 30)",
+        default=60,
+        help="Minimum elapsed_min threshold (default: 60)",
     )
     parser.add_argument(
         "--max-elapsed",
@@ -620,8 +639,8 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--teams",
-        default="A,B,C",
-        help="Comma-separated teams to audit (subset of A,B,C). default: A,B,C",
+        default="A,B,C,D,E",
+        help="Comma-separated teams to audit (subset of A,B,C,D,E). default: A,B,C,D,E",
     )
     parser.add_argument(
         "--json",

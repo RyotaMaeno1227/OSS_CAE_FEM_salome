@@ -1,6 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+STATE_ROOT="${SESSION_TIMER_STATE_ROOT:-/tmp/codex_team_control}"
+ACTIVE_DIR="${STATE_ROOT}/active"
+LAST_DIR="${STATE_ROOT}/last"
+
+write_state_file() {
+  local path="$1"
+  shift
+  mkdir -p "$(dirname "${path}")"
+  {
+    for line in "$@"; do
+      printf '%s\n' "${line}"
+    done
+  } > "${path}"
+}
+
 usage() {
   cat <<'EOF'
 Usage:
@@ -33,6 +48,14 @@ if [[ "${cmd}" == "start" ]]; then
     printf 'start_utc=%s\n' "${now_utc}"
     printf 'start_epoch=%s\n' "${now_epoch}"
   } > "${token}"
+
+  mkdir -p "${ACTIVE_DIR}" "${LAST_DIR}"
+  write_state_file "${ACTIVE_DIR}/${team_tag}.env" \
+    "status=active" \
+    "session_token=${token}" \
+    "team_tag=${team_tag}" \
+    "start_utc=${now_utc}" \
+    "start_epoch=${now_epoch}"
 
   echo "SESSION_TIMER_START"
   echo "session_token=${token}"
@@ -72,6 +95,24 @@ if [[ "${cmd}" == "end" ]]; then
     elapsed_sec=0
   fi
   elapsed_min=$((elapsed_sec / 60))
+
+  mkdir -p "${ACTIVE_DIR}" "${LAST_DIR}"
+  write_state_file "${LAST_DIR}/${team_tag}.env" \
+    "status=ended" \
+    "session_token=${token}" \
+    "team_tag=${team_tag}" \
+    "start_utc=${start_utc}" \
+    "end_utc=${end_utc}" \
+    "start_epoch=${start_epoch}" \
+    "end_epoch=${end_epoch}" \
+    "elapsed_sec=${elapsed_sec}" \
+    "elapsed_min=${elapsed_min}"
+  if [[ -f "${ACTIVE_DIR}/${team_tag}.env" ]]; then
+    active_token="$(sed -n 's/^session_token=//p' "${ACTIVE_DIR}/${team_tag}.env" | head -n1 || true)"
+    if [[ -z "${active_token}" || "${active_token}" == "${token}" ]]; then
+      rm -f "${ACTIVE_DIR}/${team_tag}.env"
+    fi
+  fi
 
   echo "SESSION_TIMER_END"
   echo "session_token=${token}"

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 TEAM_STATUS_PATH="${1:-docs/team_status.md}"
-MIN_ELAPSED="${2:-30}"
+MIN_ELAPSED="${2:-60}"
 C_DRYRUN_POLICY="${3:-pass}"
 MAX_ELAPSED="${TEAM_AUDIT_MAX_ELAPSED:-90}"
 COUPLED_FREEZE_FILE="${COUPLED_FREEZE_FILE:-scripts/c_coupled_freeze_forbidden_paths.txt}"
