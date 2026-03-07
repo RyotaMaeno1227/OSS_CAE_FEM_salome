@@ -14,6 +14,7 @@ import json
 import re
 import sys
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
 
@@ -28,6 +29,7 @@ TEAM_HEADINGS = {
 ENTRY_START_RE = re.compile(r"^- 実行タスク")
 ELAPSED_RE = re.compile(r"elapsed_min\s*[:=]\s*`?(\d+)`?")
 START_EPOCH_RE = re.compile(r"start_epoch\s*[:=]\s*`?(\d+)`?")
+START_UTC_RE = re.compile(r"start_utc\s*[:=]\s*`?([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z)`?")
 END_BLOCK_RE = re.compile(
     r"SESSION_TIMER_END(?P<body>.*?)(?=SESSION_TIMER_START|SESSION_TIMER_GUARD|SESSION_TIMER_END|$)",
     re.DOTALL,
@@ -40,7 +42,13 @@ GUARD_BLOCK_RE = re.compile(
     r"SESSION_TIMER_GUARD(?P<body>.*?)(?=SESSION_TIMER_START|SESSION_TIMER_GUARD|SESSION_TIMER_END|$)",
     re.DOTALL,
 )
+DECLARE_BLOCK_RE = re.compile(
+    r"SESSION_TIMER_DECLARE(?P<body>.*?)(?=SESSION_TIMER_START|SESSION_TIMER_GUARD|SESSION_TIMER_DECLARE|SESSION_TIMER_END|$)",
+    re.DOTALL,
+)
 GUARD_RESULT_RE = re.compile(r"guard_result\s*[:=]\s*`?(pass|block)`?", re.IGNORECASE)
+DECLARED_PRIMARY_RE = re.compile(r"primary_task\s*[:=]\s*`?([^`\n]+)`?")
+DECLARED_SECONDARY_RE = re.compile(r"secondary_task\s*[:=]\s*`?([^`\n]+)`?")
 SLEEP_RE = re.compile(r"(^|[`\s])sleep\s+\d+", re.IGNORECASE)
 BACKTICK_BLOCK_RE = re.compile(r"`([^`\n]+)`")
 TOP_FIELD_RE = re.compile(r"^\s{0,2}-\s")
@@ -90,6 +98,9 @@ class EntryAudit:
     has_impl_changes: bool
     has_commands: bool
     has_passfail: bool
+    has_plan_declare: bool
+    declared_primary_task: str | None
+    declared_secondary_task: str | None
     latest_guard_result: str | None
     max_same_command_run: int
     repeated_command: str | None
@@ -103,6 +114,7 @@ class EntryAudit:
         require_evidence: bool,
         require_impl_changes: bool,
         max_consecutive_same_command: int = 1,
+        require_plan_declare: bool = False,
     ) -> list[str]:
         reasons: list[str] = []
         if not self.has_start:
@@ -128,6 +140,13 @@ class EntryAudit:
                 reasons.append("missing command evidence")
             if not self.has_passfail:
                 reasons.append("missing pass/fail evidence")
+        if require_plan_declare:
+            if not self.has_plan_declare:
+                reasons.append("missing SESSION_TIMER_DECLARE")
+            if not self.declared_primary_task:
+                reasons.append("missing primary_task in SESSION_TIMER_DECLARE")
+            if not self.declared_secondary_task:
+                reasons.append("missing secondary_task in SESSION_TIMER_DECLARE")
         if max_consecutive_same_command > 0 and self.max_same_command_run > max_consecutive_same_command:
             repeated = self.repeated_command or "(unknown)"
             reasons.append(
@@ -143,6 +162,7 @@ class EntryAudit:
         require_evidence: bool,
         require_impl_changes: bool,
         max_consecutive_same_command: int = 1,
+        require_plan_declare: bool = False,
     ) -> str:
         return (
             "PASS"
@@ -152,6 +172,7 @@ class EntryAudit:
                 require_evidence,
                 require_impl_changes,
                 max_consecutive_same_command,
+                require_plan_declare,
             )
             else "FAIL"
         )
@@ -163,6 +184,7 @@ class EntryAudit:
         require_evidence: bool,
         require_impl_changes: bool,
         max_consecutive_same_command: int = 1,
+        require_plan_declare: bool = False,
     ) -> dict[str, object]:
         return {
             "team": self.team,
@@ -176,6 +198,9 @@ class EntryAudit:
             "has_impl_changes": self.has_impl_changes,
             "has_commands": self.has_commands,
             "has_passfail": self.has_passfail,
+            "has_plan_declare": self.has_plan_declare,
+            "declared_primary_task": self.declared_primary_task,
+            "declared_secondary_task": self.declared_secondary_task,
             "latest_guard_result": self.latest_guard_result,
             "max_same_command_run": self.max_same_command_run,
             "repeated_command": self.repeated_command,
@@ -186,6 +211,7 @@ class EntryAudit:
                 require_evidence,
                 require_impl_changes,
                 max_consecutive_same_command,
+                require_plan_declare,
             ),
             "reasons": self.failure_reasons(
                 min_elapsed,
@@ -193,6 +219,7 @@ class EntryAudit:
                 require_evidence,
                 require_impl_changes,
                 max_consecutive_same_command,
+                require_plan_declare,
             ),
         }
 
@@ -257,12 +284,40 @@ def split_entries_with_headings(lines: list[str]) -> list[tuple[str | None, list
     return entries
 
 
+def split_heading_blocks(lines: list[str]) -> list[tuple[str, list[str]]]:
+    blocks: list[tuple[str, list[str]]] = []
+    current_heading: str | None = None
+    current_lines: list[str] = []
+    for line in lines:
+        if line.startswith("## "):
+            if current_heading is not None:
+                blocks.append((current_heading, current_lines))
+            current_heading = line.strip()
+            current_lines = [line]
+            continue
+        if current_heading is not None:
+            current_lines.append(line)
+    if current_heading is not None:
+        blocks.append((current_heading, current_lines))
+    return blocks
+
+
 def detect_team_from_heading(heading: str | None) -> str | None:
     if heading is None:
         return None
     for team, team_heading in TEAM_HEADINGS.items():
         if heading == team_heading:
             return team
+    if re.search(r"(^|[\s/])A-team($|[\s(])|Aチーム", heading):
+        return "A"
+    if re.search(r"(^|[\s/])B-team($|[\s(])|Bチーム", heading):
+        return "B"
+    if re.search(r"(^|[\s/])C-team($|[\s(])|Cチーム", heading):
+        return "C"
+    if re.search(r"(^|[\s/])D-team($|[\s(])|Dチーム", heading):
+        return "D"
+    if re.search(r"(^|[\s/])E-team($|[\s(])|Eチーム", heading):
+        return "E"
     return None
 
 
@@ -291,11 +346,13 @@ def extract_elapsed_min(text: str) -> int | None:
     elapsed_min below threshold before the final SESSION_TIMER_END value.
     For compliance, we must evaluate the final session end value.
     """
-    end_blocks = list(END_BLOCK_RE.finditer(text))
-    for block in reversed(end_blocks):
+    end_values: list[int] = []
+    for block in END_BLOCK_RE.finditer(text):
         match = ELAPSED_RE.search(block.group("body"))
         if match:
-            return int(match.group(1))
+            end_values.append(int(match.group(1)))
+    if end_values:
+        return end_values[-1]
 
     matches = list(ELAPSED_RE.finditer(text))
     if not matches:
@@ -309,11 +366,18 @@ def extract_start_epoch(text: str) -> int | None:
         match = START_EPOCH_RE.search(block.group("body"))
         if match:
             return int(match.group(1))
+        utc_match = START_UTC_RE.search(block.group("body"))
+        if utc_match:
+            return int(datetime.strptime(utc_match.group(1), "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).timestamp())
 
     matches = list(START_EPOCH_RE.finditer(text))
-    if not matches:
-        return None
-    return int(matches[-1].group(1))
+    if matches:
+        return int(matches[-1].group(1))
+
+    utc_matches = list(START_UTC_RE.finditer(text))
+    if utc_matches:
+        return int(datetime.strptime(utc_matches[-1].group(1), "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).timestamp())
+    return None
 
 
 def extract_latest_guard_result(text: str) -> str | None:
@@ -326,6 +390,28 @@ def extract_latest_guard_result(text: str) -> str | None:
     if not matches:
         return None
     return matches[-1].group(1).lower()
+
+
+def extract_latest_plan_declare(text: str) -> tuple[bool, str | None, str | None]:
+    declare_blocks = list(DECLARE_BLOCK_RE.finditer(text))
+    if declare_blocks:
+        body = declare_blocks[-1].group("body")
+        primary_match = DECLARED_PRIMARY_RE.search(body)
+        secondary_match = DECLARED_SECONDARY_RE.search(body)
+        return (
+            True,
+            primary_match.group(1).strip() if primary_match else None,
+            secondary_match.group(1).strip() if secondary_match else None,
+        )
+    primary_matches = list(DECLARED_PRIMARY_RE.finditer(text))
+    secondary_matches = list(DECLARED_SECONDARY_RE.finditer(text))
+    if not primary_matches and not secondary_matches:
+        return (False, None, None)
+    return (
+        True,
+        primary_matches[-1].group(1).strip() if primary_matches else None,
+        secondary_matches[-1].group(1).strip() if secondary_matches else None,
+    )
 
 
 def _looks_like_path(text: str) -> bool:
@@ -451,7 +537,7 @@ def extract_changed_paths(lines: list[str]) -> list[str]:
         if TOP_FIELD_RE.match(line):
             if any(marker in stripped for marker in ("変更ファイル", "判定した差分ファイル", "変更対象")):
                 in_change_block = True
-            elif in_change_block and not line_has_path:
+            elif in_change_block:
                 in_change_block = False
 
         if not in_change_block:
@@ -496,6 +582,7 @@ def audit_entry(team: str, lines: list[str]) -> EntryAudit:
     has_impl_changes = any(path_is_impl(path) for path in changed_paths)
     command_sequence = extract_command_sequence(lines)
     max_same_run, repeated_command = analyze_consecutive_same_command(command_sequence)
+    has_plan_declare, declared_primary_task, declared_secondary_task = extract_latest_plan_declare(text)
     return EntryAudit(
         team=team,
         title=title,
@@ -507,6 +594,9 @@ def audit_entry(team: str, lines: list[str]) -> EntryAudit:
         has_impl_changes=has_impl_changes,
         has_commands=("実行コマンド" in text or "1行再現コマンド" in text),
         has_passfail=("pass/fail" in text.lower() or "PASS" in text or "FAIL" in text),
+        has_plan_declare=has_plan_declare,
+        declared_primary_task=declared_primary_task,
+        declared_secondary_task=declared_secondary_task,
         latest_guard_result=extract_latest_guard_result(text),
         max_same_command_run=max_same_run,
         repeated_command=repeated_command,
@@ -536,6 +626,17 @@ def collect_latest_audits(markdown: str, teams: Iterable[str]) -> list[EntryAudi
             continue
         by_team[team].append(audit_entry(team, entry))
 
+    for heading, block in split_heading_blocks(lines):
+        team = detect_team_from_heading(heading)
+        if team not in requested:
+            continue
+        if any(ENTRY_START_RE.match(line) for line in block):
+            continue
+        block_text = "\n".join(block)
+        if "SESSION_TIMER_END" not in block_text:
+            continue
+        by_team[team].append(audit_entry(team, block))
+
     audits: list[EntryAudit] = []
     for team in teams:
         candidates = by_team.get(team, [])
@@ -552,6 +653,9 @@ def collect_latest_audits(markdown: str, teams: Iterable[str]) -> list[EntryAudi
                     has_impl_changes=False,
                     has_commands=False,
                     has_passfail=False,
+                    has_plan_declare=False,
+                    declared_primary_task=None,
+                    declared_secondary_task=None,
                     latest_guard_result=None,
                     changed_paths=[],
                     start_epoch=None,
@@ -569,6 +673,7 @@ def print_report(
     require_evidence: bool,
     require_impl_changes: bool,
     max_consecutive_same_command: int,
+    require_plan_declare: bool,
 ) -> int:
     if max_elapsed > 0:
         elapsed_threshold = f"{min_elapsed}<=elapsed_min<={max_elapsed}"
@@ -577,7 +682,7 @@ def print_report(
     team_labels = "/".join(a.team for a in audits)
     print(f"AUDIT_TARGET: latest entries ({team_labels})  threshold={elapsed_threshold}")
     print("-" * 112)
-    print("team  verdict  elapsed  timer  guard  sleep  changes  impl  commands  pass/fail  same_cmd  start_epoch  entry")
+    print("team  verdict  elapsed  timer  guard  plan  sleep  changes  impl  commands  pass/fail  same_cmd  start_epoch  entry")
     print("-" * 112)
     failed = False
     for a in audits:
@@ -595,8 +700,9 @@ def print_report(
         start_epoch = "-" if a.start_epoch is None else str(a.start_epoch)
         same_cmd = "-" if a.max_same_command_run <= 1 else str(a.max_same_command_run)
         guard = a.latest_guard_result if a.latest_guard_result else "-"
+        plan = "ok" if a.has_plan_declare else "missing"
         print(
-            f"{a.team:>4}  {verdict:<7}  {elapsed:>7}  {timer:<7}  {guard:<5}  "
+            f"{a.team:>4}  {verdict:<7}  {elapsed:>7}  {timer:<7}  {guard:<5}  {plan:<7}  "
             f"{str(a.has_sleep):<5}  {str(a.has_changes):<7}  "
             f"{str(a.has_impl_changes):<4}  {str(a.has_commands):<8}  {str(a.has_passfail):<9}  {same_cmd:>8}  "
             f"{start_epoch:>11}  {a.title}"
@@ -607,6 +713,7 @@ def print_report(
             require_evidence,
             require_impl_changes,
             max_consecutive_same_command,
+            require_plan_declare,
         )
         if reasons:
             print(f"      reasons: {', '.join(reasons)}")
@@ -682,6 +789,19 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
             "(default: 1, set 0 to disable)"
         ),
     )
+    parser.add_argument(
+        "--require-plan-declare",
+        dest="require_plan_declare",
+        action="store_true",
+        default=False,
+        help="Require SESSION_TIMER_DECLARE with primary_task/secondary_task evidence (default: off)",
+    )
+    parser.add_argument(
+        "--no-require-plan-declare",
+        dest="require_plan_declare",
+        action="store_false",
+        help="Disable SESSION_TIMER_DECLARE requirement",
+    )
     return parser.parse_args(argv)
 
 
@@ -709,6 +829,7 @@ def main(argv: list[str] | None = None) -> int:
             "require_evidence": args.require_evidence,
             "require_impl_changes": args.require_impl_changes,
             "max_consecutive_same_command": args.max_consecutive_same_command,
+            "require_plan_declare": args.require_plan_declare,
             "results": [
                 a.to_dict(
                     args.min_elapsed,
@@ -716,6 +837,7 @@ def main(argv: list[str] | None = None) -> int:
                     args.require_evidence,
                     args.require_impl_changes,
                     args.max_consecutive_same_command,
+                    args.require_plan_declare,
                 )
                 for a in audits
             ],
@@ -733,6 +855,7 @@ def main(argv: list[str] | None = None) -> int:
         args.require_evidence,
         args.require_impl_changes,
         args.max_consecutive_same_command,
+        args.require_plan_declare,
     )
 
 

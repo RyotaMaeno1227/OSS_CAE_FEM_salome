@@ -28,10 +28,17 @@
 - 1セッションは 60-90分を基本とし、最低 60分。実装系ファイル差分を必須とする。
 - 同一コマンド反復や時間稼ぎ目的の重い回帰は禁止。
 - `scripts/session_timer.sh start <team_tag>` / `bash scripts/session_timer_guard.sh <token> 10|20|30|60` / `scripts/session_timer.sh end <token>` を必ず使う。
+- `start` 後 10 分以内に `scripts/session_timer_declare.sh <token> <primary_task> <secondary_task> ["plan_note"]` を実行し、`SESSION_TIMER_DECLARE` を `docs/team_status.md` に残す。
 - PMからの追加連絡、短時間ラン是正、超過ラン是正、再開点、禁止コマンドは、原則チャットではなく `docs/fem4c_team_next_queue.md` の `PM運用メモ` を正本とする。
 - 各チームはセッション開始前に `docs/fem4c_team_next_queue.md` の `PM運用メモ` を必ず確認する。
+- 監視上 `STALE_NO_GUARD` / `STALE_BEFORE_60` と判定されたセッションは短時間停止ランとして無効とし、queue を進めず同一タスクを新規 `session_token` でやり直す。
+- `start` から 10 分を超えても `SESSION_TIMER_DECLARE` が無い session は `PLAN_MISSING` として扱う。停止済みなら stale 扱い、継続中なら即 `primary/secondary` を宣言する。
+- `start` から 12 分以内に guard が無い run、または最後の guard/heartbeat から 12 分以上更新が無いまま `elapsed_min < 60` の run は short stale run とみなす。
 - PM は `python scripts/team_control_tower.py` で one-shot 監視し、必要なら `bash scripts/watch_team_control_tower.sh 60 /tmp/team_control_tower_snapshot.md` で連続監視する。
 - ユーザーから Codex への基本トリガーは `確認してください` とする。特記が無ければ、control tower / `docs/team_status.md` / `docs/session_continuity_log.md` / `docs/fem4c_team_next_queue.md` を確認し、受理判定と次アクション整理を行う。
+- 5チーム全員の終了を待つ必要はない。3-4チームが終了し、残りが `RUNNING` / `READY_TO_WRAP` / `ACTIVE_UNCONFIRMED` の段階でも、ユーザーは `確認してください` を送ってよい。
+- `確認してください` を受けた PM は、終了済みチームから先に受理/差し戻しを処理し、稼働中チームは継続中として扱う。
+- `ACTIVE_UNCONFIRMED` のチームについてユーザーが停止済みと確認した場合は、旧 session を stale 扱いとして破棄し、queue 先頭タスクを新規 `session_token` で再開させる。
 - 終了時は `docs/team_status.md` と `docs/session_continuity_log.md` を更新する。
 - `D/E` チームは `docs/team_status.md` に見出しが無ければ自分で `## Dチーム` / `## Eチーム` を追加してよい。
 - RecurDyn / AdamsFlex の実データはまだ無い。今は compare schema 固定が優先で、実データ未投入は blocker にしない。

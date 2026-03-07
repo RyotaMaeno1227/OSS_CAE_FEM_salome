@@ -1,6 +1,38 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+STATE_ROOT="${SESSION_TIMER_STATE_ROOT:-/tmp/codex_team_control}"
+ACTIVE_DIR="${STATE_ROOT}/active"
+
+write_state_file() {
+  local path="$1"
+  shift
+  mkdir -p "$(dirname "${path}")"
+  {
+    for line in "$@"; do
+      printf '%s\n' "${line}"
+    done
+  } > "${path}"
+}
+
+upsert_state_file() {
+  local path="$1"
+  shift
+  local tmp
+  tmp="$(mktemp)"
+  if [[ -f "${path}" ]]; then
+    cat "${path}" > "${tmp}"
+  fi
+  for kv in "$@"; do
+    local key="${kv%%=*}"
+    grep -v "^${key}=" "${tmp}" > "${tmp}.next" || true
+    mv "${tmp}.next" "${tmp}"
+    printf '%s\n' "${kv}" >> "${tmp}"
+  done
+  mkdir -p "$(dirname "${path}")"
+  mv "${tmp}" "${path}"
+}
+
 usage() {
   cat <<'EOF'
 Usage:
@@ -64,10 +96,27 @@ echo "elapsed_sec=${elapsed_sec}"
 echo "elapsed_min=${elapsed_min}"
 echo "min_required=${min_elapsed}"
 
+guard_result="pass"
 if (( elapsed_min < min_elapsed )); then
-  echo "guard_result=block"
-  exit 1
+  guard_result="block"
 fi
 
-echo "guard_result=pass"
+upsert_state_file "${ACTIVE_DIR}/${team_tag}.env" \
+  "status=active" \
+  "session_token=${token}" \
+  "team_tag=${team_tag}" \
+  "start_utc=${start_utc}" \
+  "start_epoch=${start_epoch}" \
+  "last_seen_utc=${now_utc}" \
+  "last_seen_epoch=${now_epoch}" \
+  "last_seen_source=guard" \
+  "last_guard_utc=${now_utc}" \
+  "last_guard_epoch=${now_epoch}" \
+  "last_guard_min_required=${min_elapsed}" \
+  "last_guard_result=${guard_result}"
+
+echo "guard_result=${guard_result}"
+if [[ "${guard_result}" == "block" ]]; then
+  exit 1
+fi
 exit 0

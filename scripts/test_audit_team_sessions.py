@@ -262,6 +262,43 @@ class AuditTeamSessionsTest(unittest.TestCase):
         self.assertEqual(audit.max_same_command_run, 1)
         self.assertEqual(audit.verdict(30, 0, True, True), "PASS")
 
+    def test_require_plan_declare_fails_without_declare_block(self):
+        markdown = """## Aチーム
+- 実行タスク: no declare
+  - SESSION_TIMER_START
+  - SESSION_TIMER_END
+  - start_epoch=100
+  - elapsed_min=60
+  - 変更ファイル: `scripts/session_timer_declare.sh`
+  - 実行コマンド: `bash scripts/session_timer_declare.sh /tmp/a.token A-13 A-14`
+  - pass/fail: PASS
+"""
+        audit = MOD.collect_latest_audits(markdown, ["A"])[0]
+        self.assertEqual(audit.verdict(60, 90, True, True, require_plan_declare=True), "FAIL")
+        self.assertIn(
+            "missing SESSION_TIMER_DECLARE",
+            audit.failure_reasons(60, 90, True, True, require_plan_declare=True),
+        )
+
+    def test_require_plan_declare_passes_with_primary_and_secondary(self):
+        markdown = """## Bチーム
+- 実行タスク: with declare
+  - SESSION_TIMER_START
+  - SESSION_TIMER_DECLARE
+  - primary_task=B-08
+  - secondary_task=B-09
+  - SESSION_TIMER_END
+  - start_epoch=100
+  - elapsed_min=60
+  - 変更ファイル: `scripts/session_timer_declare.sh`
+  - 実行コマンド: `bash scripts/session_timer_declare.sh /tmp/b.token B-08 B-09`
+  - pass/fail: PASS
+"""
+        audit = MOD.collect_latest_audits(markdown, ["B"])[0]
+        self.assertEqual(audit.declared_primary_task, "B-08")
+        self.assertEqual(audit.declared_secondary_task, "B-09")
+        self.assertEqual(audit.verdict(60, 90, True, True, require_plan_declare=True), "PASS")
+
     def test_max_elapsed_fails_when_exceeded(self):
         markdown = """## Cチーム
 - 実行タスク: suspiciously long
