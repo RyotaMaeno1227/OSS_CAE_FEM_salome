@@ -1,5 +1,728 @@
 # チーム完了報告（A/B/Cそれぞれ自セクションのみ編集）
 
+## 2026-03-10 / D-team (D-50 Audit Schema Surface, D-51 Audit Schema Self-Test)
+- Current Plan:
+  - `D-50` として combined docs-sync roster audit output の schema/field contract を機械可読に出せるようにする。
+  - primary 完了後は同一セッションで `D-51` へ進み、validator / help companion test をその schema contract まで広げる。
+- Completed This Session:
+  - タイマー進捗:
+    - `session_token=/tmp/d_team_session_20260309T203614Z_7676.token`
+    - `SESSION_TIMER_DECLARE` -> `primary_task=D-50`, `secondary_task=D-51`, `plan_utc=2026-03-09T19:36:28Z`, `plan_note=add a machine-readable schema surface for the combined docs-sync roster audit output, then extend the validator surface self-test to cover that schema contract if time remains`
+    - `SESSION_TIMER_PROGRESS #1` -> `current_task=D-50`, `work_kind=implementation`, `elapsed_min=15`, `progress_note=added a machine-readable schema surface for the combined docs-sync roster audit output and validated the schema plus combined audit output directly`
+    - `SESSION_TIMER_PROGRESS #2` -> `current_task=D-51`, `work_kind=implementation`, `elapsed_min=61`, `progress_note=extended the validator surface self-test and help-surface contract to consume the new audit schema so the count key and table columns are verified alongside the combined audit output`
+    - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+    - `session_timer.sh end /tmp/d_team_session_20260309T203614Z_7676.token` -> `start_utc=2026-03-09T19:36:14Z`, `end_utc=2026-03-09T20:38:03Z`, `elapsed_min=61`
+  - 変更ファイル:
+    - `FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh`
+    - `FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync_surfaces.sh`
+    - `FEM4C/scripts/test_make_coupled_2d_acceptance_docs_sync_surfaces_help.sh`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - `D-50`:
+      - validator に `--print-docs-sync-surface-target-audit-schema` を追加し、`count_key` と `table_column` 群を machine-readable に返すようにした。
+      - combined audit output 自体も count key / header を schema constants から組み立てるように整理した。
+    - `D-51`:
+      - `test_check_coupled_2d_acceptance_docs_sync_surfaces.sh` は新 schema option の help/options/output を検証するように広げた。
+      - `test_make_coupled_2d_acceptance_docs_sync_surfaces_help.sh` は audit schema と audit output の count key / header drift も検知するようになった。
+      - queue は `D-50=Done`, `D-51=Done`, 次回再開点 `D-52` に更新した。
+  - 実行コマンド / pass-fail:
+    - `bash -n FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync_surfaces.sh FEM4C/scripts/test_make_coupled_2d_acceptance_docs_sync_surfaces_help.sh` -> PASS
+    - `cd FEM4C && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --print-docs-sync-surface-target-audit-schema && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --print-docs-sync-surface-target-audit` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_docs_sync_surfaces_test coupled_2d_acceptance_docs_sync_surfaces_help_test coupled_2d_acceptance_surface_checks_test coupled_2d_acceptance_docs_sync_test` -> PASS
+- Next Actions:
+  - `D-52` として docs-sync roster audit の schema と data を 1 回で取得できる inventory surface を追加する。
+- Open Risks/Blockers:
+  - `make -C FEM4C test` 全体の既知 `mbd_constraint_probe` linker failure は未解決のまま。
+
+## 2026-03-09 / D-team (D-48 Combined Docs Sync Audit Surface, D-49 Help Contract Audit Single-Source)
+- Current Plan:
+  - `D-48` として docs-sync surface roster の label/count を 1 回で監査できる combined surface を追加する。
+  - primary 完了後は同一セッションで `D-49` へ進み、help surface contract をその combined audit output の single-source に寄せる。
+- Completed This Session:
+  - タイマー進捗:
+    - `session_token=/tmp/d_team_session_20260309T120002Z_3722651.token`
+    - `SESSION_TIMER_DECLARE` -> `primary_task=D-48`, `secondary_task=D-49`, `plan_utc=2026-03-09T11:00:29Z`, `plan_note=add a combined docs-sync surface audit printer that emits roster count plus indexed targets, then switch the help-surface contract to consume that combined output if time remains`
+    - `SESSION_TIMER_PROGRESS #1` -> `current_task=D-48`, `work_kind=implementation`, `elapsed_min=15`, `progress_note=added a combined docs-sync surface audit printer that emits the roster count plus indexed targets and validated the new surface directly along with the focused validator tests`
+    - `SESSION_TIMER_PROGRESS #2` -> `current_task=D-49`, `work_kind=implementation`, `elapsed_min=61`, `progress_note=switched the docs-sync help-surface contract to consume the combined roster audit output and revalidated the validator, surface bundle, and docs-sync paths against the new single-call audit surface`
+    - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+    - `session_timer.sh end /tmp/d_team_session_20260309T120002Z_3722651.token` -> `start_utc=2026-03-09T11:00:02Z`, `end_utc=2026-03-09T12:02:09Z`, `elapsed_min=62`
+  - 変更ファイル:
+    - `FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh`
+    - `FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync_surfaces.sh`
+    - `FEM4C/scripts/test_make_coupled_2d_acceptance_docs_sync_surfaces_help.sh`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - `D-48`:
+      - validator に `--print-docs-sync-surface-target-audit` を追加し、`docs_sync_surface_target_count=<n>` と `index<TAB>target` table を 1 回で返すようにした。
+      - surface self-test は新 audit option の help/options/combined output を検証するように広げた。
+    - `D-49`:
+      - `test_make_coupled_2d_acceptance_docs_sync_surfaces_help.sh` は combined audit output を source-of-truth にして `make help` surface を検証するようになった。
+      - queue は `D-48=Done`, `D-49=Done`, 次回再開点 `D-50` に更新した。
+  - 実行コマンド / pass-fail:
+    - `bash -n FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync_surfaces.sh FEM4C/scripts/test_make_coupled_2d_acceptance_docs_sync_surfaces_help.sh` -> PASS
+    - `cd FEM4C && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --print-docs-sync-surface-target-audit` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_docs_sync_surfaces_test coupled_2d_acceptance_docs_sync_surfaces_help_test coupled_2d_acceptance_surface_checks_test coupled_2d_acceptance_docs_sync_test` -> PASS
+- Next Actions:
+  - `D-50` として combined docs-sync roster audit output の schema/field contract を機械可読に出せるようにする。
+- Open Risks/Blockers:
+  - `make -C FEM4C test` 全体の既知 `mbd_constraint_probe` linker failure は未解決のまま。
+
+## 2026-03-09 / D-team (D-46 Docs Sync Roster Inventory+Count, D-47 Surface Self-Test Coverage)
+- Current Plan:
+  - `D-46` として docs-sync surface roster printer に header/count surface を追加する。
+  - primary 完了後は同一セッションで `D-47` へ進み、validator surface self-test を inventory/count output まで広げる。
+- Completed This Session:
+  - タイマー進捗:
+    - `session_token=/tmp/d_team_session_20260309T111821Z_2254716.token`
+    - `SESSION_TIMER_DECLARE` -> `primary_task=D-46`, `secondary_task=D-47`, `plan_utc=2026-03-09T10:18:31Z`, `plan_note=add header/count surfaces for the docs-sync surface roster printer, then extend the validator surface self-test to cover those new outputs if time remains`
+    - `SESSION_TIMER_PROGRESS #1` -> `current_task=D-46`, `work_kind=implementation`, `elapsed_min=15`, `progress_note=added header/count surfaces for the docs-sync surface roster printer and rechecked the validator output directly`
+    - `SESSION_TIMER_PROGRESS #2` -> `current_task=D-47`, `work_kind=implementation`, `elapsed_min=61`, `progress_note=extended the validator surface self-test to consume the new roster inventory/count outputs and revalidated the docs-sync surface bundle plus docs-sync test path`
+    - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+    - `session_timer.sh end /tmp/d_team_session_20260309T111821Z_2254716.token` -> `start_utc=2026-03-09T10:18:21Z`, `end_utc=2026-03-09T11:19:57Z`, `elapsed_min=61`
+  - 変更ファイル:
+    - `FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh`
+    - `FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync_surfaces.sh`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - `D-46`:
+      - validator に `--print-docs-sync-surface-target-inventory` と `--print-docs-sync-surface-target-count` を追加した。
+      - roster inventory は `index<TAB>target` header 付き、count surface は `docs_sync_surface_target_count=<n>` で読めるようにした。
+    - `D-47`:
+      - `test_check_coupled_2d_acceptance_docs_sync_surfaces.sh` は新しい help/options/inventory/count output を検証するように広げた。
+      - queue は `D-46=Done`, `D-47=Done`, 次回再開点 `D-48` に更新した。
+  - 実行コマンド / pass-fail:
+    - `bash -n FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync_surfaces.sh` -> PASS
+    - `cd FEM4C && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --print-docs-sync-surface-target-inventory && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --print-docs-sync-surface-target-count` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_docs_sync_surfaces_test coupled_2d_acceptance_docs_sync_surfaces_help_test` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_surface_checks_test coupled_2d_acceptance_docs_sync_test` -> PASS
+    - `cd FEM4C && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --print-supported-options` -> PASS
+    - `cd FEM4C && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --help` -> PASS
+- Next Actions:
+  - `D-48` として roster labels/count を 1 回で監査できる combined surface を追加する。
+  - external audit 側が inventory と count を別 call に分けず取得できるようにする。
+- Open Risks/Blockers:
+  - `make -C FEM4C test` 全体の既知 `mbd_constraint_probe` linker failure は未解決のまま。
+
+## 2026-03-09 / D-team (D-44 Docs Sync Surface Roster Printer, D-45 Help Contract Single-Source)
+- Current Plan:
+  - `D-44` として docs-sync surface target 群の roster を機械可読に取得できる helper surface を追加する。
+  - primary 完了後は同一セッションで `D-45` へ進み、help surface contract をその roster printer の single-source に寄せる。
+- Completed This Session:
+  - タイマー進捗:
+    - `session_token=/tmp/d_team_session_20260309T104951Z_1507871.token`
+    - `SESSION_TIMER_DECLARE` -> `primary_task=D-44`, `secondary_task=D-45`, `plan_utc=2026-03-09T09:50:22Z`, `plan_note=add a machine-readable docs-sync surface target roster printer to the validator, then make the help-surface contract consume that roster as its source-of-truth if time remains`
+    - `SESSION_TIMER_PROGRESS #1` -> `current_task=D-44`, `work_kind=implementation`, `elapsed_min=15`, `progress_note=added a machine-readable docs-sync surface target roster printer and extended the validator surface self-test to cover the new option and roster output`
+    - `SESSION_TIMER_PROGRESS #2` -> `current_task=D-45`, `work_kind=implementation`, `elapsed_min=61`, `progress_note=switched the help-surface contract to consume the validator roster printer as its source-of-truth and revalidated the docs-sync surface bundle plus existing docs-sync tests`
+    - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+    - `session_timer.sh end /tmp/d_team_session_20260309T104951Z_1507871.token` -> `start_utc=2026-03-09T09:49:51Z`, `end_utc=2026-03-09T10:52:10Z`, `elapsed_min=62`
+  - 変更ファイル:
+    - `FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh`
+    - `FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync_surfaces.sh`
+    - `FEM4C/scripts/test_make_coupled_2d_acceptance_docs_sync_surfaces_help.sh`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - `D-44`:
+      - validator に `--print-docs-sync-surface-targets` を追加し、docs-sync surface target 群を `target:<name>` で機械可読に出せるようにした。
+      - surface self-test は help/supported-options/invalid-option fallback に新 option が出ることと roster output を確認するようにした。
+    - `D-45`:
+      - `test_make_coupled_2d_acceptance_docs_sync_surfaces_help.sh` は hardcoded target list をやめ、validator roster printer を source-of-truth として `make help` surface を検証するようにした。
+      - queue は `D-44=Done`, `D-45=Done`, 次回再開点 `D-46` に更新した。
+  - 実行コマンド / pass-fail:
+    - `bash -n FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync_surfaces.sh FEM4C/scripts/test_make_coupled_2d_acceptance_docs_sync_surfaces_help.sh` -> PASS
+    - `cd FEM4C && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --print-docs-sync-surface-targets` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_docs_sync_surfaces_test coupled_2d_acceptance_docs_sync_surfaces_help_test coupled_2d_acceptance_docs_sync_surface_smoke_test` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_surface_checks_test coupled_2d_acceptance_docs_sync_test` -> PASS
+    - `cd FEM4C && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --print-supported-options` -> PASS
+    - `cd FEM4C && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --help` -> PASS
+- Next Actions:
+  - `D-46` として docs-sync surface roster printer に header/count surface を追加する。
+  - machine-readable roster を外部監査がそのまま取り回せる形へ寄せる。
+- Open Risks/Blockers:
+  - `make -C FEM4C test` 全体の既知 `mbd_constraint_probe` linker failure は未解決のまま。
+  - roster printer は入ったが header/count surface はまだ無い。これを `D-46` で閉じる。
+
+## 2026-03-09 / D-team (D-42 Docs Sync Help Surface, D-43 Docs Sync Surface Smoke Bundle)
+- Current Plan:
+  - `D-42` として docs sync surface self-test target を `make help` surface と focused smoke で固定する。
+  - primary 完了後は同一セッションで `D-43` へ進み、docs sync surface smoke bundle を acceptance surface bundle と validator contract に接続する。
+- Completed This Session:
+  - タイマー進捗:
+    - `session_token=/tmp/d_team_session_20260309T053134Z_530932.token`
+    - `SESSION_TIMER_DECLARE` -> `primary_task=D-42`, `secondary_task=D-43`, `plan_utc=2026-03-09T04:31:46Z`, `plan_note=add a help-surface contract test for coupled_2d_acceptance_docs_sync_surfaces_test, then bundle it with the validator self-test as a focused smoke if time remains`
+    - `SESSION_TIMER_PROGRESS #1` -> `current_task=D-42`, `work_kind=implementation`, `elapsed_min=15`, `progress_note=added a help-surface contract test and docs-sync surface smoke bundle so the validator target is anchored on make help as well as its focused self-test path`
+    - `SESSION_TIMER_PROGRESS #2` -> `current_task=D-43`, `work_kind=implementation`, `elapsed_min=69`, `progress_note=wired the docs-sync surface smoke bundle into the acceptance surface bundle, updated docs/help surfaces, and verified the validator contract now names the help-test and smoke-bundle children explicitly`
+    - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+    - `session_timer.sh end /tmp/d_team_session_20260309T053134Z_530932.token` -> `start_utc=2026-03-09T04:31:34Z`, `end_utc=2026-03-09T05:40:55Z`, `elapsed_min=69`
+  - 変更ファイル:
+    - `FEM4C/scripts/test_make_coupled_2d_acceptance_docs_sync_surfaces_help.sh`
+    - `FEM4C/scripts/test_make_coupled_2d_acceptance_docs_sync_surface_smoke.sh`
+    - `FEM4C/scripts/test_make_coupled_2d_acceptance_surface_checks.sh`
+    - `FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh`
+    - `FEM4C/Makefile`
+    - `docs/06_acceptance_matrix_2d.md`
+    - `docs/team_runbook.md`
+    - `FEM4C/README.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - `D-42`:
+      - `test_make_coupled_2d_acceptance_docs_sync_surfaces_help.sh` を追加し、`make help` に docs sync surface target 群が残ることを focused self-test で固定した。
+      - `test_make_coupled_2d_acceptance_docs_sync_surface_smoke.sh` と Makefile target を追加し、help contract + validator surfaces をまとめた docs-sync surface smoke bundle を作った。
+    - `D-43`:
+      - `coupled_2d_acceptance_surface_checks` を `coupled_2d_acceptance_docs_sync_surface_smoke_test` 起点へ切り替え、docs sync validator 契約にも help-test / smoke-bundle children を追加した。
+      - queue は `D-42=Done`, `D-43=Done`, 次回再開点 `D-44` に更新した。
+  - 実行コマンド / pass-fail:
+    - `bash -n FEM4C/scripts/test_make_coupled_2d_acceptance_docs_sync_surfaces_help.sh FEM4C/scripts/test_make_coupled_2d_acceptance_docs_sync_surface_smoke.sh FEM4C/scripts/test_make_coupled_2d_acceptance_surface_checks.sh FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_docs_sync_surfaces_help_test coupled_2d_acceptance_docs_sync_surface_smoke_test coupled_2d_acceptance_surface_checks_test coupled_2d_acceptance_docs_sync_test` -> PASS
+    - `make -C FEM4C help | rg 'coupled_2d_acceptance_docs_sync_surfaces_help_test|coupled_2d_acceptance_docs_sync_surface_smoke|coupled_2d_acceptance_docs_sync_surface_smoke_test|coupled_2d_acceptance_surface_checks'` -> PASS
+- Next Actions:
+  - `D-44` として docs-sync surface target 群の roster を機械可読に取得できる helper surface を追加する。
+  - smoke/help/docs sync の 3 面を human-readable だけでなく machine-readable に寄せる。
+- Open Risks/Blockers:
+  - `make -C FEM4C test` 全体の既知 `mbd_constraint_probe` linker failure は未解決のまま。
+  - docs-sync surface target 群は help/docs/smoke で固定されたが、roster を直接列挙する machine-readable surface はまだ無い。これを `D-44` で閉じる。
+
+## 2026-03-09 / D-team (D-40 Docs Sync Surface Self-Test, D-41 Surface Bundle Wiring)
+- Current Plan:
+  - `D-40` として docs sync validator の help/inventory surfaces を focused self-test で固定する。
+  - primary 完了後は同一セッションで `D-41` へ進み、surface bundle と docs surface に新 target を接続する。
+- Completed This Session:
+  - タイマー進捗:
+    - `session_token=/tmp/d_team_session_20260309T042334Z_2059745.token`
+    - `SESSION_TIMER_DECLARE` -> `primary_task=D-40`, `secondary_task=D-41`, `plan_utc=2026-03-09T03:23:42Z`, `plan_note=add a focused self-test for the docs-sync validator help and inventory surfaces, then expose that target through the acceptance surface bundle if time remains`
+    - `SESSION_TIMER_PROGRESS #1` -> `current_task=D-40`, `work_kind=implementation`, `elapsed_min=15`, `progress_note=added a focused docs-sync validator self-test that locks help, supported-options, inventory, counts, and invalid-option fallback surfaces`
+    - `SESSION_TIMER_PROGRESS #2` -> `current_task=D-41`, `work_kind=implementation`, `elapsed_min=66`, `progress_note=hooked the docs-sync surface self-test into coupled_2d_acceptance_surface_checks, updated docs surfaces, and confirmed the new target appears on make help and bundle output`
+    - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+    - `session_timer.sh end /tmp/d_team_session_20260309T042334Z_2059745.token` -> `start_utc=2026-03-09T03:23:34Z`, `end_utc=2026-03-09T04:29:55Z`, `elapsed_min=66`
+  - 変更ファイル:
+    - `FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync_surfaces.sh`
+    - `FEM4C/scripts/test_make_coupled_2d_acceptance_surface_checks.sh`
+    - `FEM4C/Makefile`
+    - `docs/06_acceptance_matrix_2d.md`
+    - `docs/team_runbook.md`
+    - `FEM4C/README.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - `D-40`:
+      - `test_check_coupled_2d_acceptance_docs_sync_surfaces.sh` を追加し、`--help`, `--print-supported-options`, `--print-contract-inventory`, `--print-contract-counts`, invalid option fallback を focused self-test で固定した。
+    - `D-41`:
+      - `coupled_2d_acceptance_surface_checks` が `coupled_2d_acceptance_docs_sync_surfaces_test` を含むようにし、surface bundle self-test と docs surface も追従させた。
+      - queue は `D-40=Done`, `D-41=Done`, 次回再開点 `D-42` に更新した。
+  - 実行コマンド / pass-fail:
+    - `bash -n FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync_surfaces.sh` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_docs_sync_surfaces_test` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_surface_checks_test` -> PASS
+    - `make -C FEM4C help | rg 'coupled_2d_acceptance_docs_sync_surfaces_test|coupled_2d_acceptance_surface_checks'` -> PASS
+- Next Actions:
+  - `D-42` として `make help` / focused smoke 側からも docs sync surface self-test target の存在を固定する。
+  - help surface と bundle surface の両方で drift 検知を早める。
+- Open Risks/Blockers:
+  - `make -C FEM4C test` 全体の既知 `mbd_constraint_probe` linker failure は未解決のまま。
+  - 新 target は bundle/docs には接続済みだが、help surface 専用の smoke はまだ無い。これを `D-42` で閉じる。
+
+## 2026-03-09 / D-team (D-38 Validator Usage Surface, D-39 Supported Option Inventory)
+- Current Plan:
+  - `D-38` として docs sync validator の inventory flags を usage/help surface に載せる。
+  - primary 完了後は同一セッションで `D-39` へ進み、supported option list も machine-readable に出せるようにする。
+- Completed This Session:
+  - タイマー進捗:
+    - `session_token=/tmp/d_team_session_20260309T040623Z_1682513.token`
+    - `SESSION_TIMER_DECLARE` -> `primary_task=D-38`, `secondary_task=D-39`, `plan_utc=2026-03-09T03:07:54Z`, `plan_note=add usage/help for the docs-sync inventory flags, then expose the supported option list in a machine-readable form if time remains`
+    - `SESSION_TIMER_PROGRESS #1` -> `current_task=D-38`, `work_kind=implementation`, `elapsed_min=15`, `progress_note=added usage/help output for the docs-sync validator inventory flags and wired invalid-option handling to print the supported surfaces`
+    - `SESSION_TIMER_PROGRESS #2` -> `current_task=D-39`, `work_kind=implementation`, `elapsed_min=61`, `progress_note=added machine-readable supported-option output and verified invalid-option usage fallback so the inventory surfaces are discoverable without reading the script body`
+    - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+    - `session_timer.sh end /tmp/d_team_session_20260309T040623Z_1682513.token` -> `start_utc=2026-03-09T03:06:24Z`, `end_utc=2026-03-09T04:07:54Z`, `elapsed_min=61`
+  - 変更ファイル:
+    - `FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - `D-38`:
+      - validator に `usage()` と `--help` / `-h` を追加し、inventory flags を script から直接発見できるようにした。
+      - unsupported option 時も usage を stderr へ出すようにした。
+    - `D-39`:
+      - `--print-supported-options` を追加し、supported option list を machine-readable に取得できるようにした。
+      - queue は `D-38=Done`, `D-39=Done`, 次回再開点 `D-40` に更新した。
+  - 実行コマンド / pass-fail:
+    - `cd FEM4C && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --help` -> PASS
+    - `cd FEM4C && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --print-supported-options` -> PASS
+    - `cd FEM4C && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --bad-flag` -> expected exit `2`, usage printed
+    - `make -C FEM4C coupled_2d_acceptance_docs_sync_test coupled_2d_acceptance_surface_checks_test` -> PASS
+- Next Actions:
+  - `D-40` として validator の help/inventory surfaces 自体を focused self-test で固定する。
+  - validator は self-describing になったので、次はその surface が drift しないことを回帰で縛る。
+- Open Risks/Blockers:
+  - `make -C FEM4C test` 全体の既知 `mbd_constraint_probe` linker failure は未解決のまま。
+  - help/inventory surfaces は実装済みだが、まだ専用 self-test を持たない。これを `D-40` で閉じる。
+
+## 2026-03-09 / D-team (D-36 Docs Sync Contract Inventory, D-37 Inventory Counts)
+- Current Plan:
+  - `D-36` として docs sync validator の contract inventory を機械可読に出せるようにする。
+  - primary 完了後は同一セッションで `D-37` へ進み、inventory counts と header rows まで揃えて外部監査で扱いやすくする。
+- Completed This Session:
+  - タイマー進捗:
+    - `session_token=/tmp/d_team_session_20260309T024814Z_7432.token`
+    - `SESSION_TIMER_DECLARE` -> `primary_task=D-36`, `secondary_task=D-37`, `plan_utc=2026-03-09T01:50:36Z`, `plan_note=add machine-readable docs-sync contract inventory outputs for required labels first, then extend to full inventory rows if time remains`
+    - `SESSION_TIMER_PROGRESS #1` -> `current_task=D-36`, `work_kind=implementation`, `elapsed_min=15`, `progress_note=added --print-required-labels and --print-contract-inventory so the docs-sync validator can expose its required pattern and regex contracts as machine-readable output`
+    - `SESSION_TIMER_PROGRESS #2` -> `current_task=D-37`, `work_kind=implementation`, `elapsed_min=61`, `progress_note=added contract-count output and inventory header rows so external audits can read labels, full entries, and counts from the docs-sync validator without scraping test logs`
+    - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+    - `session_timer.sh end /tmp/d_team_session_20260309T024814Z_7432.token` -> `start_utc=2026-03-09T01:49:06Z`, `end_utc=2026-03-09T02:50:39Z`, `elapsed_min=61`
+  - 変更ファイル:
+    - `FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - `D-36`:
+      - `test_check_coupled_2d_acceptance_docs_sync.sh` に `--print-required-labels` と `--print-contract-inventory` を追加し、required pattern / regex contract を機械可読に列挙できるようにした。
+    - `D-37`:
+      - `--print-contract-inventory` に header row を追加し、`--print-contract-counts` で `pattern_count` / `regex_count` を出せるようにした。
+      - queue は `D-36=Done`, `D-37=Done`, 次回再開点 `D-38` に更新した。
+  - 実行コマンド / pass-fail:
+    - `cd FEM4C && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --print-required-labels` -> PASS
+    - `cd FEM4C && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --print-contract-inventory` -> PASS
+    - `cd FEM4C && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --print-contract-counts` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_docs_sync_test coupled_2d_acceptance_surface_checks_test` -> PASS
+- Next Actions:
+  - `D-38` として docs sync validator の inventory flags を usage/help surface に載せ、外部監査から discoverable にする。
+  - validator は contract inventory を出せるようになったので、次はその出力面自体を self-describing にする。
+- Open Risks/Blockers:
+  - `make -C FEM4C test` 全体の既知 `mbd_constraint_probe` linker failure は未解決のまま。
+  - docs sync validator の inventory flags は実装済みだが、usage/help surface はまだ無い。これを `D-38` で閉じる。
+
+## 2026-03-08 / D-team (D-34 Gate+Resilience Top-Level Role, D-35 Semantic Docs Sync Labels)
+- Current Plan:
+  - `D-34` として `coupled_2d_acceptance_gate_resilience_smoke` の top-level docs surface role を validator 側で名前付き契約として固定する。
+  - primary 完了後は同一セッションで `D-35` へ進み、docs sync failure diagnostics を semantic label ベースへ引き上げる。
+- Completed This Session:
+  - タイマー進捗:
+    - `session_token=/tmp/d_team_session_20260308T120544Z_1761475.token`
+    - `SESSION_TIMER_DECLARE` -> `primary_task=D-34`, `secondary_task=D-35`, `plan_utc=2026-03-08T11:07:33Z`, `plan_note=name the docs-sync bundle contracts so gate+resilience top-level role is explicit in the validator, then improve failure diagnostics with semantic labels instead of raw regex strings`
+    - `SESSION_TIMER_PROGRESS #1` -> `current_task=D-34`, `work_kind=implementation`, `elapsed_min=15`, `progress_note=named the docs-sync bundle contracts so gate+resilience top-level role is explicit via labeled regex checks and required-pattern labels`
+    - `SESSION_TIMER_PROGRESS #2` -> `current_task=D-35`, `work_kind=implementation`, `elapsed_min=61`, `progress_note=promoted the docs-sync validator to semantic failure labels so missing token checks and bundle regex checks report stable contract names instead of anonymous raw entries`
+    - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+    - `session_timer.sh end /tmp/d_team_session_20260308T120544Z_1761475.token` -> `start_utc=2026-03-08T11:06:03Z`, `end_utc=2026-03-08T12:07:34Z`, `elapsed_min=61`
+  - 変更ファイル:
+    - `FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - `D-34`:
+      - docs sync validator の required pattern / regex table に semantic labels を付与し、`gate_resilience_role`, `gate_resilience_children`, `gate_resilience_test_surface` などの名前付き bundle contract として扱うようにした。
+      - これにより `coupled_2d_acceptance_gate_resilience_smoke` の top-level role が validator コード上でも明示された。
+    - `D-35`:
+      - missing pattern / regex failure が raw string ではなく `[label]` 付きで報告されるようにし、診断の安定 surface を作った。
+      - queue は `D-34=Done`, `D-35=Done`, 次回再開点 `D-36` に更新した。
+  - 実行コマンド / pass-fail:
+    - `bash -n FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_docs_sync_test` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_surface_checks_test` -> PASS
+- Next Actions:
+  - `D-36` として docs sync validator の contract inventory を機械可読に出せるようにし、required labels の変化を監査しやすくする。
+  - bundle contract 自体は揃ったので、次は validator が何を要求しているかを外から読める surface を作る。
+- Open Risks/Blockers:
+  - `make -C FEM4C test` 全体の既知 `mbd_constraint_probe` linker failure は未解決のまま。
+  - `docs/fem4c_team_next_queue.md` の PM運用メモには他チーム由来の重複行番号が残っているため、次回も D 範囲だけを局所更新する必要がある。
+
+## 2026-03-08 / D-team (D-32 Gate+Resilience Bundle Contract, D-33 Docs Sync Diagnostics)
+- Current Plan:
+  - `D-32` として `coupled_2d_acceptance_gate_resilience_smoke` の bundle composition を docs と docs sync に固定する。
+  - primary 完了後は同一セッションで `D-33` へ進み、docs sync 失敗時に崩れた doc surface を即特定できる診断を追加する。
+- Completed This Session:
+  - タイマー進捗:
+    - `session_token=/tmp/d_team_session_20260308T100739Z_3991936.token`
+    - `SESSION_TIMER_DECLARE` -> `primary_task=D-32`, `secondary_task=D-33`, `plan_utc=2026-03-08T09:10:16Z`, `plan_note=tighten docs-sync so gate+resilience smoke composition is checked as a bound bundle contract, then extend the same regex-style bundle checks to the other coupled acceptance bundles`
+    - `SESSION_TIMER_PROGRESS #1` -> `current_task=D-32`, `work_kind=implementation`, `elapsed_min=15`, `progress_note=added bundle-specific multiline regex checks so docs-sync now binds gate+resilience, surface, lightweight, and resilience bundle composition instead of only checking token presence`
+    - `SESSION_TIMER_PROGRESS #2` -> `current_task=D-33`, `work_kind=implementation`, `elapsed_min=61`, `progress_note=added explicit failure diagnostics for missing docs patterns and regex bundle contracts so docs-sync regressions identify the broken doc surface immediately`
+    - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+    - `session_timer.sh end /tmp/d_team_session_20260308T100739Z_3991936.token` -> `start_utc=2026-03-08T09:08:46Z`, `end_utc=2026-03-08T10:10:14Z`, `elapsed_min=61`
+  - 変更ファイル:
+    - `FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - `D-32`:
+      - `test_check_coupled_2d_acceptance_docs_sync.sh` に multiline regex 契約を追加し、`coupled_2d_acceptance_gate_resilience_smoke` が `coupled_2d_acceptance_gate_test + coupled_2d_acceptance_resilience_checks_test` を束ねることを docs 側で機械検証するようにした。
+      - 同方式で `surface_checks`, `lightweight_checks`, `resilience_checks` についても bundle composition を token presence ではなく束ね順まで確認するようにした。
+    - `D-33`:
+      - docs sync script の pattern / regex mismatch に対して `FAIL: missing pattern ...` と `FAIL: missing bundle regex ...` を出す診断を追加した。
+      - queue は `D-32=Done`, `D-33=Done`, 次回再開点 `D-34` に更新した。
+  - 実行コマンド / pass-fail:
+    - `bash -n FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_docs_sync_test` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_surface_checks_test` -> PASS
+- Next Actions:
+  - `D-34` として gate+resilience smoke bundle 自体を current docs surface 上で一段上の summary pack とどう接続するかを固定する。
+  - docs sync は bundle composition を regex 契約として見られるようになったので、次は top-level surface の説明粒度を揃える。
+- Open Risks/Blockers:
+  - `make -C FEM4C test` 全体の既知 `mbd_constraint_probe` linker failure は未解決のまま。
+  - `docs/fem4c_team_next_queue.md` には他チーム由来の重複した PM運用メモ行番号が残っているため、次回も D 範囲だけを局所編集する必要がある。
+
+## 2026-03-08 / D-team (D-30 Wrapper/Resilience Composition Docs Sync, D-31 Docs Sync Table Refactor)
+- Current Plan:
+  - `D-30` として wrapper smoke / resilience pack の child-target composition を docs と docs sync に固定する。
+  - primary 完了後は同一セッションで `D-31` へ進み、docs sync script 自体の required surface を単一テーブルへ集約して保守点を減らす。
+- Completed This Session:
+  - タイマー進捗:
+    - `session_token=/tmp/d_team_session_20260308T095823Z_3691791.token`
+    - `SESSION_TIMER_DECLARE` -> `primary_task=D-30`, `secondary_task=D-31`, `plan_utc=2026-03-08T09:01:48Z`, `plan_note=document wrapper-smoke and resilience child-target composition in current docs surface, then expose the next stale-binary child link if time remains`
+    - `SESSION_TIMER_PROGRESS #1` -> `current_task=D-30`, `work_kind=implementation`, `elapsed_min=15`, `progress_note=expanded docs-sync coverage and docs text so wrapper_smoke and resilience_checks explicitly expose their child-target composition`
+    - `SESSION_TIMER_PROGRESS #2` -> `current_task=D-31`, `work_kind=implementation`, `elapsed_min=61`, `progress_note=refactored the docs-sync script to use one shared required-pattern table so future bundle-surface additions stay synchronized across acceptance docs, runbook, and README`
+    - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+    - `session_timer.sh end /tmp/d_team_session_20260308T095823Z_3691791.token` -> `start_utc=2026-03-08T09:00:18Z`, `end_utc=2026-03-08T10:01:46Z`, `elapsed_min=61`
+  - 変更ファイル:
+    - `FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh`
+    - `docs/06_acceptance_matrix_2d.md`
+    - `docs/team_runbook.md`
+    - `FEM4C/README.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - `D-30`:
+      - `test_check_coupled_2d_acceptance_docs_sync.sh` が `coupled_2d_acceptance_wrapper_smoke_test` と `coupled_2d_acceptance_resilience_checks_test` を docs 側の必須 surface に追加した。
+      - `docs/06_acceptance_matrix_2d.md`, `docs/team_runbook.md`, `FEM4C/README.md` は `coupled_2d_acceptance_resilience_checks` が `coupled_2d_acceptance_wrapper_smoke + coupled_2d_acceptance_compare_stage_integrators_stale_binary_test` を束ねることを明記した。
+    - `D-31`:
+      - `test_check_coupled_2d_acceptance_docs_sync.sh` を `REQUIRED_PATTERNS` 配列 + `check_doc()` helper に整理し、acceptance doc / runbook / README の required surface を単一テーブルで管理するようにした。
+      - queue は `D-30=Done`, `D-31=Done`, 次回再開点 `D-32` に更新した。
+  - 実行コマンド / pass-fail:
+    - `bash -n FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_docs_sync_test` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_surface_checks_test` -> PASS
+- Next Actions:
+  - `D-32` として `coupled_2d_acceptance_gate_resilience_smoke` bundle の composition を docs と docs sync に固定する。
+  - bundle hierarchy は resilience pack まで揃ったので、次は gate+resilience の最上位 smoke bundle を current docs surface に持ち上げる。
+- Open Risks/Blockers:
+  - `make -C FEM4C test` 全体の既知 `mbd_constraint_probe` linker failure は未解決のまま。
+  - docs sync は gate+resilience smoke bundle の child-target composition まではまだ要求していない。これを `D-32` で閉じる。
+
+## 2026-03-08 / D-team (D-28 Surface Bundle Composition Docs Sync, D-29 Lightweight/Wrapper Link Docs Sync)
+- Current Plan:
+  - `D-28` として `coupled_2d_acceptance_surface_checks` の child-target composition を docs と docs sync に固定する。
+  - primary 完了後は同一セッションで `D-29` へ進み、`lightweight_checks_test` と wrapper smoke への接続まで同じ docs-sync surface に持ち上げる。
+- Completed This Session:
+  - タイマー進捗:
+    - `session_token=/tmp/d_team_session_20260308T082001Z_2594858.token`
+    - `SESSION_TIMER_DECLARE` -> `primary_task=D-28`, `secondary_task=D-29`, `plan_utc=2026-03-08T07:22:26Z`, `plan_note=document that coupled_2d_acceptance_surface_checks bundles docs-sync plus both gate self-tests, then expose the next focused surface bundle link if time remains`
+    - `SESSION_TIMER_PROGRESS #1` -> `current_task=D-28`, `work_kind=implementation`, `elapsed_min=15`, `progress_note=updated docs-sync coverage and docs text so coupled_2d_acceptance_surface_checks explicitly lists docs-sync plus both gate self-tests`
+    - `SESSION_TIMER_PROGRESS #2` -> `current_task=D-29`, `work_kind=implementation`, `elapsed_min=61`, `progress_note=extended docs-sync coverage to keep lightweight and wrapper-smoke bundle links machine-checkable after the surface-checks composition update`
+    - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+    - `session_timer.sh end /tmp/d_team_session_20260308T082001Z_2594858.token` -> `start_utc=2026-03-08T07:20:56Z`, `end_utc=2026-03-08T08:22:21Z`, `elapsed_min=61`
+  - 変更ファイル:
+    - `FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh`
+    - `docs/06_acceptance_matrix_2d.md`
+    - `docs/team_runbook.md`
+    - `FEM4C/README.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - `D-28`:
+      - `test_check_coupled_2d_acceptance_docs_sync.sh` が `coupled_2d_acceptance_gate_test` と `coupled_2d_acceptance_surface_checks_test` を docs 側の必須 surface に追加した。
+      - `docs/06_acceptance_matrix_2d.md`, `docs/team_runbook.md`, `FEM4C/README.md` は `coupled_2d_acceptance_surface_checks` が `docs_sync_test + gate_test + gate_threshold_provenance_test` を束ねることを明記するようにした。
+    - `D-29`:
+      - 同 docs sync test が `coupled_2d_acceptance_lightweight_checks_test` も要求するようにした。
+      - docs surface では `coupled_2d_acceptance_lightweight_checks` が `coupled_2d_acceptance_contract_checks_test` と `coupled_2d_acceptance_surface_checks_test` を束ね、wrapper smoke へつながる経路を明記した。
+      - queue は `D-28=Done`, `D-29=Done`, 次回再開点 `D-30` に更新した。
+  - 実行コマンド / pass-fail:
+    - `bash -n FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_docs_sync_test` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_surface_checks_test` -> PASS
+- Next Actions:
+  - `D-30` として `coupled_2d_acceptance_wrapper_smoke_test` / `coupled_2d_acceptance_resilience_checks_test` の bundle composition まで docs と docs sync に固定する。
+  - current docs surface は surface bundle と lightweight pack まで列挙できたので、次は wrapper/resilience 側の一段上の composition を揃える。
+- Open Risks/Blockers:
+  - `make -C FEM4C test` 全体の既知 `mbd_constraint_probe` linker failure は未解決のまま。
+  - docs sync は `surface_checks` と `lightweight_checks` の composition までは固定したが、`wrapper_smoke` / `resilience_checks` の child-target composition まではまだ要求していない。これを `D-30` で閉じる。
+
+## 2026-03-08 / D-team (D-26 Gate Provenance Docs Sync, D-27 Gate Provenance Self-Test Docs Surface)
+- Current Plan:
+  - `D-26` として `coupled_2d_acceptance_gate` provenance fields の docs sync 機械検証を追加する。
+  - primary 完了後は同一セッションで `D-27` へ進み、gate provenance self-test target 自体を docs surface と docs sync contract に固定する。
+- Completed This Session:
+  - タイマー進捗:
+    - `session_token=/tmp/d_team_session_20260308T075814Z_2062134.token`
+    - `SESSION_TIMER_DECLARE` -> `primary_task=D-26`, `secondary_task=D-27`, `plan_utc=2026-03-08T07:02:14Z`, `plan_note=tighten gate provenance docs sync checks, then surface the new gate provenance self-test across docs if time remains`
+    - `SESSION_TIMER_PROGRESS #1` -> `current_task=D-26`, `work_kind=implementation`, `elapsed_min=15`, `progress_note=inspected queue and docs-sync surface; tightening docs-sync coverage for gate provenance fields and preparing auto-next docs target checks`
+    - `SESSION_TIMER_PROGRESS #2` -> `current_task=D-27`, `work_kind=implementation`, `elapsed_min=61`, `progress_note=extended docs surface and docs-sync contract to require the dedicated gate threshold provenance self-test target in acceptance docs, runbook, and README`
+    - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+    - `session_timer.sh end /tmp/d_team_session_20260308T075814Z_2062134.token` -> `start_utc=2026-03-08T07:00:44Z`, `end_utc=2026-03-08T08:02:25Z`, `elapsed_min=61`
+  - 変更ファイル:
+    - `FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh`
+    - `docs/06_acceptance_matrix_2d.md`
+    - `docs/team_runbook.md`
+    - `FEM4C/README.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - `D-26`:
+      - `test_check_coupled_2d_acceptance_docs_sync.sh` が `coupled_2d_acceptance_gate` に加えて `rigid_limit_threshold_source_command` / `rigid_limit_threshold_update_points` の記載を `docs/06_acceptance_matrix_2d.md`, `docs/team_runbook.md`, `FEM4C/README.md` で必須化するようにした。
+      - これにより gate provenance row surface の docs 記述が machine-checkable になった。
+    - `D-27`:
+      - 同 docs sync test が `coupled_2d_acceptance_gate_threshold_provenance_test` の記載も要求するようにした。
+      - `docs/06_acceptance_matrix_2d.md`, `docs/team_runbook.md`, `FEM4C/README.md` に focused self-test target の役割を追記し、gate provenance row surface と self-test target surface を同時に current command docs へ載せた。
+      - queue は `D-26=Done`, `D-27=Done`, 次回再開点 `D-28` に更新した。
+  - 実行コマンド / pass-fail:
+    - `bash -n FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_docs_sync_test` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_surface_checks_test` -> PASS
+- Next Actions:
+  - `D-28` として `coupled_2d_acceptance_surface_checks` docs 自体に provenance self-test の内包関係を明記し、docs sync でもその bundle composition を固定する。
+  - gate provenance 周辺の current docs surface は child target の列挙まで揃ったので、次は surface bundle の束ね方を機械検証する。
+- Open Risks/Blockers:
+  - `make -C FEM4C test` 全体の既知 `mbd_constraint_probe` linker failure は未解決のまま。
+  - docs sync は gate provenance fields と self-test target 名までは固定したが、`coupled_2d_acceptance_surface_checks` がどの child target を束ねるかまではまだ要求していない。これを `D-28` で閉じる。
+
+## 2026-03-08 / D-team (D-24 Gate Threshold Provenance, D-25 Gate Provenance Self-Test)
+- Current Plan:
+  - `D-24` として `coupled_2d_acceptance_gate` の top-level summary row に rigid-limit threshold provenance を持ち上げる。
+  - primary 完了後は同一セッションで `D-25` へ進み、focused self-test と surface bundle まで provenance contract を固定する。
+- Completed This Session:
+  - タイマー進捗:
+    - `session_token=/tmp/d_team_session_20260308T060318Z_1924276.token`
+    - `SESSION_TIMER_DECLARE` -> `primary_task=D-24`, `secondary_task=D-25`, `plan_utc=2026-03-08T05:11:43Z`, `plan_note=surface rigid-limit threshold provenance into coupled_2d_acceptance_gate, then harden gate contract/docs as Auto-Next`
+    - `SESSION_TIMER_PROGRESS #1` -> `current_task=D-24`, `work_kind=implementation`, `elapsed_min=8`, `progress_note=surface rigid-limit threshold provenance columns through coupled_2d_acceptance_gate summary rows and gate wrapper smoke`
+    - `SESSION_TIMER_PROGRESS #2` -> `current_task=D-25`, `work_kind=implementation`, `elapsed_min=61`, `progress_note=add synthetic gate provenance self-test and wire it into the focused acceptance surface bundle`
+    - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+    - `session_timer.sh end /tmp/d_team_session_20260308T060318Z_1924276.token` -> `start_utc=2026-03-08T05:11:18Z`, `end_utc=2026-03-08T06:13:01Z`, `elapsed_min=61`
+  - 変更ファイル:
+    - `FEM4C/scripts/run_2d_coupled_acceptance_gate.sh`
+    - `FEM4C/scripts/test_run_2d_coupled_acceptance_gate.sh`
+    - `FEM4C/scripts/test_run_2d_coupled_acceptance_gate_threshold_provenance.sh`
+    - `FEM4C/scripts/test_make_coupled_2d_acceptance_surface_checks.sh`
+    - `FEM4C/Makefile`
+    - `docs/06_acceptance_matrix_2d.md`
+    - `docs/team_runbook.md`
+    - `FEM4C/README.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - `D-24`:
+      - `run_2d_coupled_acceptance_gate.sh` が `rigid_limit_threshold_source_command` / `rigid_limit_threshold_update_points` を top-level gate log と `coupled_acceptance_gate,...` row に出すようにした。
+      - 同 wrapper に `MAKE_CMD` override を追加し、child target を差し替えた軽量 contract test でも同じ gate surface を検証できるようにした。
+      - `test_run_2d_coupled_acceptance_gate.sh` は real gate 実行で新 columns と provenance values を確認するよう更新した。
+    - `D-25`:
+      - `test_run_2d_coupled_acceptance_gate_threshold_provenance.sh` を追加し、mock `MAKE_CMD` で gate summary row の provenance columns を synthetic に固定した。
+      - `Makefile` に `coupled_2d_acceptance_gate_threshold_provenance_test` を追加し、`coupled_2d_acceptance_surface_checks` bundle へ組み込んだ。
+      - `docs/06_acceptance_matrix_2d.md`, `docs/team_runbook.md`, `FEM4C/README.md` も、gate row が threshold provenance fields を持つことを current command surface として追記した。
+      - queue は `D-24=Done`, `D-25=Done`, 次回再開点 `D-26` に更新した。
+  - 実行コマンド / pass-fail:
+    - `bash -n FEM4C/scripts/run_2d_coupled_acceptance_gate.sh FEM4C/scripts/test_run_2d_coupled_acceptance_gate.sh FEM4C/scripts/test_run_2d_coupled_acceptance_gate_threshold_provenance.sh FEM4C/scripts/test_make_coupled_2d_acceptance_surface_checks.sh` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_gate_test coupled_2d_acceptance_gate_threshold_provenance_test coupled_2d_acceptance_surface_checks_test` -> PASS
+- Next Actions:
+  - `D-26` として docs sync test 自体に gate provenance fields の記載確認を追加し、現状の docs surface を machine-checkable にする。
+  - PM/ユーザーが gate 行だけで provenance を追える状態はできたので、次はその docs contract を固定する。
+- Open Risks/Blockers:
+  - `make -C FEM4C test` 全体の既知 `mbd_constraint_probe` linker failure は未解決のまま。
+  - docs には gate provenance fields を追記済みだが、`test_check_coupled_2d_acceptance_docs_sync.sh` はまだそこを厳密検証していない。これを `D-26` で閉じる。
+
+## 2026-03-08 / D-team (D-R2 Reaction Mapping Artifact, D-R3 Artifact-Only Export)
+- Current Plan:
+  - review-spec 優先で `D-R2` を artifact 化まで閉じ、同一セッションで `D-R3` の compare-side export を Auto-Next として完了させる。
+- Completed This Session:
+  - タイマー進捗:
+    - `session_token=/tmp/d_team_session_20260308T053957Z_1888207.token`
+    - `SESSION_TIMER_DECLARE` -> `primary_task=D-R2`, `secondary_task=D-R3`, `plan_utc=2026-03-08T04:51:44Z`, `plan_note=surface 1-link reaction mapping artifact, then start compare-side reaction export`
+    - `SESSION_TIMER_PROGRESS #1` -> `current_task=D-R2`, `work_kind=implementation`, `elapsed_min=13`, `progress_note=store root/tip reaction and mapped body-force vectors in snapshot artifacts`
+    - `SESSION_TIMER_PROGRESS #2` -> `current_task=D-R3`, `work_kind=implementation`, `elapsed_min=64`, `progress_note=add artifact-only compare CLI mode so 1-link summary emits reaction-map CSV without 2-link normalization`
+    - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+    - `session_timer.sh end /tmp/d_team_session_20260308T053957Z_1888207.token` -> `start_utc=2026-03-08T04:49:57Z`, `end_utc=2026-03-08T05:54:07Z`, `elapsed_min=64`
+  - 変更ファイル:
+    - `FEM4C/src/coupled/flex_reaction2d.h`
+    - `FEM4C/src/coupled/flex_reaction2d.c`
+    - `FEM4C/src/coupled/flex_snapshot2d.h`
+    - `FEM4C/src/coupled/flex_snapshot2d.c`
+    - `FEM4C/src/coupled/coupled_run2d.h`
+    - `FEM4C/src/coupled/coupled_run2d.c`
+    - `FEM4C/src/coupled/coupled_step_explicit2d.c`
+    - `FEM4C/src/coupled/coupled_step_implicit2d.c`
+    - `FEM4C/scripts/compare_rigid_limit_2link.py`
+    - `FEM4C/scripts/compare_2link_flex_reference.py`
+    - `FEM4C/scripts/test_compare_2link_flex_reference_artifact_only.sh`
+    - `FEM4C/Makefile`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - `D-R2`:
+      - `coupled_step_explicit2d.c` / `coupled_step_implicit2d.c` が root/tip reaction と mapped body-force (`root_body_force`, `tip_body_force`, `total_body_force`) を history に保持するようにした。
+      - `coupled_run2d.h` / `coupled_run2d.c` が上記 vectors を per-flex-body snapshot export へ渡すようにした。
+      - `flex_snapshot2d.h` / `flex_snapshot2d.c` が `root_reaction_local`, `tip_reaction_local`, `root_body_force`, `tip_body_force`, `total_body_force` rows を snapshot artifact へ書くようにした。
+      - `flex_reaction2d.c` に interface force の total 合成 helper を追加し、`compare_rigid_limit_2link.py` も新 rows を `reaction_vectors` として parse するようにした。
+      - これで 1-link meaningful case は log だけでなく snapshot artifact 自体で nonzero reaction / mapped force を確認できる。
+    - `D-R3`:
+      - `compare_2link_flex_reference.py` に `--artifact-only` mode と引数検証を追加し、1-link summary に対して 2-link normalize/compare を経由せず `interface_centers_csv` / `reaction_map_csv` を直接 export できるようにした。
+      - `test_compare_2link_flex_reference_artifact_only.sh` と `Makefile` target `coupled_flex_reference_artifact_only_test` を追加し、single-body coupled case から nonzero reaction-map CSV が出ることを固定した。
+      - queue は `D-R2=Done`, `D-R3=Done` へ更新し、review-spec 後の再開点を `D-24` に戻した。
+  - 実行コマンド / pass-fail:
+    - `python3 -m py_compile FEM4C/scripts/compare_rigid_limit_2link.py FEM4C/scripts/compare_2link_flex_reference.py` -> PASS
+    - `make -C FEM4C clean && make -C FEM4C bin/fem4c` -> PASS
+    - `cd FEM4C && ./bin/fem4c --mode=coupled --coupled-integrator=explicit examples/coupled_1link_flex_master.dat /tmp/d_r2_1link_explicit.dat > /tmp/d_r2_1link_explicit.log 2>&1` -> PASS
+      - `reaction_root=(0.000000e+00,2.500000e+04,6.250000e+03)`
+      - `reaction_tip=(-7.275958e-12,2.500000e+04,-6.250000e+03)`
+      - `mbd_force_increment=(7.275958e-12,-5.000000e+04,0.000000e+00)`
+      - snapshot rows:
+        - `root_reaction_local,0.0,2.4999999999999971e+04,6.2499999999999964e+03`
+        - `tip_reaction_local,-7.2759576141834259e-12,2.4999999999999971e+04,-6.2499999999999964e+03`
+        - `root_body_force,-0.0,-2.4999999999999971e+04,-6.2499999999999964e+03`
+        - `tip_body_force,7.2759576141834259e-12,-2.4999999999999971e+04,6.2499999999999964e+03`
+        - `total_body_force,7.2759576141834259e-12,-4.9999999999999942e+04,0.0`
+    - `make -C FEM4C coupled_flex_reference_real_test coupled_flex_reference_compare_test coupled_flex_reference_artifact_only_test` -> PASS
+- Next Actions:
+  - review-spec 側の D-run は `D-R3` まで閉じたため、次回再開点は旧 backlog の `D-24`。
+  - もし 1-link surface をさらに前進させるなら、次の最小差分は `reaction_map_csv` を higher-level wrapper / manifest へ持ち上げること。
+- Open Risks/Blockers:
+  - `make -C FEM4C test` 全体の既知 `mbd_constraint_probe` linker failure は未解決のまま。
+  - `reaction_map_csv` は compare CLI / focused test では利用可能だが、higher-level compare wrapper manifest まではまだ surfacing していない。
+
+## 2026-03-08 / D-team (D-R1 1-link meaningful case skeleton)
+- Current Plan:
+  - review-spec 優先で `D-R1` を実装し、1-link flexible meaningful case の最小骨格を作る。
+  - primary 完了後は同一セッションで `D-R2` を secondary として固定し、reaction mapping artifact へ進む再開点だけ残す。
+- Completed This Session:
+  - タイマー進捗:
+    - `session_token=/tmp/d_team_session_20260308T051359Z_1876846.token`
+    - `SESSION_TIMER_DECLARE` -> `primary_task=D-R1`, `secondary_task=D-R2`, `plan_utc=2026-03-08T04:16:11Z`, `plan_note=build minimal 1-link flexible meaningful case, then close reaction-mapping artifact path`
+    - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+    - `session_timer.sh end /tmp/d_team_session_20260308T051359Z_1876846.token` -> `start_utc=2026-03-08T04:15:59Z`, `end_utc=2026-03-08T05:20:52Z`, `elapsed_min=64`
+  - 変更ファイル:
+    - `FEM4C/examples/flex_link1_q4_meaningful.dat`
+    - `FEM4C/examples/coupled_1link_flex_master.dat`
+    - `FEM4C/src/coupled/flex_snapshot2d.c`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - `flex_link1_q4_meaningful.dat` を追加し、2-element Q4 beam の midspan nodes (`2`, `5`) に非零荷重を与える 1-link debug mesh を定義した。
+    - `coupled_1link_flex_master.dat` を追加し、single rigid body + single flexible body の最小 coupled case と、観測面 (`observation_point_*` rows / `reaction_root` log) をコメントで固定した。
+    - `flex_snapshot2d.c` は generic metadata として `observation_point_label=model_centroid`, `observation_point_*`, `load_resultant_local`, `load_resultant_world` を snapshot へ書くようにした。
+    - これにより 1-link case で input 上の nonzero load、snapshot 上の nonzero observation displacement、coupled step log 上の nonzero `reaction_root/reaction_tip` が揃った。
+    - queue は review-spec 優先の `D-R1=Done`, `D-R2=Todo` へ更新し、旧 `D-24` は backlog 扱いに切り替えた。
+  - 実行コマンド / pass-fail:
+    - `make -C FEM4C bin/fem4c` -> PASS
+    - `cd FEM4C && ./bin/fem4c --mode=coupled --coupled-integrator=explicit examples/coupled_1link_flex_master.dat /tmp/d_r1_1link_explicit.dat > /tmp/d_r1_1link_explicit.log 2>&1` -> PASS
+    - `python3 - <<'PY' ...` (log/snapshot evidence check) -> PASS
+      - `reaction_root_tip_nonzero=0.000000e+00,2.500000e+04,6.250000e+03,-7.275958e-12,2.500000e+04,-6.250000e+03`
+      - `load_resultant_local=0.000000e+00,-5.000000e+04,-2.500000e+04`
+      - `observation_point_disp_world=0.000000e+00,-2.579365e-07`
+- Next Actions:
+  - `D-R2` として root/tip reaction と generalized-force mapping を artifact 側へ持ち上げる。
+  - 1-link case を M2 main debug case として再利用できる compare/reaction surface を閉じる。
+- Open Risks/Blockers:
+  - 現時点で reaction は coupled step log では確認できるが、snapshot artifact 自体にはまだ root/tip reaction 数値を持っていない。これが `D-R2` の残件。
+  - 1-link case の compare CSV / external normalization は未着手で、今回は meaningful input と observation point の骨格までに留めた。
+
+## 2026-03-08 / D-team (D-21 Rerun Accepted, D-23 Coupled Compare Threshold Provenance)
+- Current Plan:
+  - 新規 `session_token` で D-21 rerun を受理可能な時間レンジへ戻しつつ、同一セッションで `coupled_compare_checks` aggregate summary/manifest の threshold provenance surfacing を完了する。
+  - primary/secondary declare は `D-21` / `D-22` のまま 10 分以内に残し、`guard60=pass` 後に `D-23` を閉じて次再開点を固定する。
+- Completed This Session:
+  - タイマー進捗:
+    - `session_token=/tmp/d_team_session_20260307T181518Z_1286257.token`
+    - `SESSION_TIMER_DECLARE` -> `primary_task=D-21`, `secondary_task=D-22`, `plan_utc=2026-03-07T17:14:22Z`, `plan_note=rerun D-21 with fresh token, then surface threshold provenance into coupled_compare_checks aggregate manifest`
+    - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+    - `session_timer.sh end /tmp/d_team_session_20260307T181518Z_1286257.token` -> `start_utc=2026-03-07T17:14:18Z`, `end_utc=2026-03-07T18:27:59Z`, `elapsed_min=73`
+  - 変更ファイル:
+    - `FEM4C/scripts/run_coupled_compare_checks.sh`
+    - `FEM4C/scripts/check_coupled_compare_checks_manifest.py`
+    - `FEM4C/scripts/test_run_coupled_compare_checks.sh`
+    - `FEM4C/scripts/test_run_coupled_compare_checks_artifact_manifest.sh`
+    - `FEM4C/scripts/test_make_coupled_compare_checks_subset.sh`
+    - `FEM4C/scripts/test_make_coupled_compare_checks_out_dir.sh`
+    - `FEM4C/scripts/test_run_coupled_compare_checks_failfast.sh`
+    - `FEM4C/scripts/test_check_coupled_compare_checks_manifest_reason_codes.sh`
+    - `FEM4C/scripts/test_run_coupled_compare_checks_threshold_provenance.sh`
+    - `FEM4C/Makefile`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - `run_coupled_compare_checks.sh` に `rigid_limit_threshold_source_command` / `rigid_limit_threshold_update_points` 列を追加し、`coupled_example_check` pass row の provenance を aggregate stdout/manifest へ surfacing するようにした。
+    - 同 wrapper に `MAKE_CMD` override を追加し、real child target とは独立に provenance extraction contract を固定できるようにした。
+    - `check_coupled_compare_checks_manifest.py` が provenance-enabled target と `-` sentinel row を区別して検証するようにした。
+    - `test_run_coupled_compare_checks_threshold_provenance.sh` を追加し、fake `MAKE_CMD` で threshold provenance surfacing を isolation test 化した。
+    - `test_run_coupled_compare_checks_failfast.sh` など既存 compare-check wrapper tests を新列へ追従させた。
+    - `Makefile` の `coupled_compare_checks_manifest_test` は comma-separated `EXPECTED_TARGETS` を安全に渡せるよう quoting を修正した。
+    - queue は `D-23 (Auto-Next)=Done`、新規 `D-24 (Auto-Next)=Todo` へ更新した。
+  - 実行コマンド / pass-fail:
+    - `bash -n FEM4C/scripts/run_coupled_compare_checks.sh FEM4C/scripts/test_run_coupled_compare_checks_failfast.sh FEM4C/scripts/test_run_coupled_compare_checks_threshold_provenance.sh` -> PASS
+    - `python3 -m py_compile FEM4C/scripts/check_coupled_compare_checks_manifest.py` -> PASS
+    - `make -C FEM4C coupled_compare_checks_test coupled_compare_checks_threshold_provenance_test coupled_compare_checks_out_dir_test coupled_compare_checks_subset_test coupled_compare_checks_failfast_test coupled_compare_checks_manifest_reason_codes_test coupled_compare_checks_manifest_override_test` -> PASS
+    - `make -C FEM4C coupled_compare_checks_artifact_manifest_test` -> PASS
+    - `make -C FEM4C coupled_compare_checks OUT_DIR=/tmp/d23_full_real MANIFEST_CSV=/tmp/d23_full_real/coupled_compare_checks_manifest.csv` -> PASS
+    - `make -C FEM4C coupled_compare_checks_manifest_test MANIFEST_CSV=/tmp/d23_full_real/coupled_compare_checks_manifest.csv EXPECTED_TARGETS='coupled_example_check,coupled_rigid_limit_manifest_test,coupled_flex_manifest_test,compare_2link_artifact_check,compare_2link_artifact_checks'` -> PASS
+- Next Actions:
+  - `D-24` として `coupled_2d_acceptance_gate` まで threshold provenance を surfacing する。
+  - gate log から nested manifest を開かずに threshold source を確認できるようにする。
+- Open Risks/Blockers:
+  - repo-wide `make -C FEM4C test` はこのセッションでは再実行していない。既知の `mbd_constraint_probe` linker failure は引き続き D-23 の acceptance 対象外。
+  - real child target を叩く validation は `make` 並列実行と干渉しやすいため、higher-level wrapper smoke は直列で回す前提を維持した。
+
+## 2026-03-08 / D-team (D-21..D-22 Threshold Provenance Surfacing)
+- Current Plan:
+  - D-21 で rigid-limit threshold contract の provenance を example / acceptance wrapper の summary 行へ露出する。
+  - primary 完了後は同一セッションで D-22 へ自動遷移し、acceptance manifest / validator / focused smoke を machine-checkable な provenance 契約へ拡張する。
+- Completed This Session:
+  - タイマー進捗:
+    - `session_token=/tmp/d_team_session_20260307T173029Z_3898104.token`
+    - `SESSION_TIMER_DECLARE` -> `primary_task=D-21`, `secondary_task=D-22`, `plan_utc=2026-03-07T16:44:49Z`, `plan_note=surface rigid-limit threshold source through example/acceptance summaries, then add machine-checkable summary contract`
+    - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+    - `session_timer.sh end /tmp/d_team_session_20260307T173029Z_3898104.token` -> `start_utc=2026-03-07T16:44:39Z`, `end_utc=2026-03-07T17:46:25Z`, `elapsed_min=61`
+  - 変更ファイル:
+    - `FEM4C/scripts/check_coupled_2link_examples.sh`
+    - `FEM4C/scripts/run_2d_coupled_acceptance.sh`
+    - `FEM4C/scripts/check_2d_coupled_acceptance_manifest.py`
+    - `FEM4C/scripts/test_run_2d_coupled_acceptance.sh`
+    - `FEM4C/scripts/test_make_coupled_2d_acceptance_stages.sh`
+    - `FEM4C/scripts/test_make_coupled_2d_acceptance_stage_integrators.sh`
+    - `FEM4C/scripts/test_make_coupled_2d_acceptance_integrators.sh`
+    - `FEM4C/scripts/test_check_2d_coupled_acceptance_manifest_threshold_contract.sh`
+    - `FEM4C/Makefile`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - D-21:
+      - `check_coupled_2link_examples.sh` が `rigid_limit_threshold_source_command` と `rigid_limit_threshold_update_points` を log 冒頭へ出すようにした。
+      - `run_2d_coupled_acceptance.sh` も同じ provenance 行を global summary と各 `coupled_acceptance_stage` row に出すようにした。
+    - D-22:
+      - acceptance manifest に `rigid_limit_threshold_source_command` / `rigid_limit_threshold_update_points` 列を追加した。
+      - `check_2d_coupled_acceptance_manifest.py` が上記 provenance 列を current threshold contract と照合するようにした。
+      - `test_run_2d_coupled_acceptance.sh` と stage/integrator subset tests を focused build+rigid contract へ寄せ、`test_check_2d_coupled_acceptance_manifest_threshold_contract.sh` を追加して compare_matrix 分岐は synthetic manifest で固定した。
+      - `Makefile` に `coupled_2d_acceptance_threshold_contract_test` を追加した。
+    - queue は `D-21 (Auto-Next)=Done`, `D-22 (Auto-Next)=Done`, `D-23 (Auto-Next)=Todo` へ更新した。
+  - 実行コマンド / pass-fail:
+    - `bash -n FEM4C/scripts/check_coupled_2link_examples.sh FEM4C/scripts/run_2d_coupled_acceptance.sh FEM4C/scripts/test_run_2d_coupled_acceptance.sh FEM4C/scripts/test_make_coupled_2d_acceptance_stages.sh FEM4C/scripts/test_make_coupled_2d_acceptance_stage_integrators.sh FEM4C/scripts/test_make_coupled_2d_acceptance_integrators.sh FEM4C/scripts/test_check_2d_coupled_acceptance_manifest_threshold_contract.sh` -> PASS
+    - `python3 -m py_compile FEM4C/scripts/check_2d_coupled_acceptance_manifest.py` -> PASS
+    - `make -C FEM4C clean` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_test coupled_2d_acceptance_stages_test coupled_2d_acceptance_stage_integrators_test coupled_2d_acceptance_integrators_test coupled_2d_acceptance_threshold_contract_test` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance OUT_DIR=/tmp/d21_acceptance_build_rigid MANIFEST_CSV=/tmp/d21_acceptance_build_rigid/coupled_2d_acceptance_manifest.csv STAGES="build rigid_matrix" INTEGRATORS="explicit"` -> PASS
+    - `make -C FEM4C coupled_example_check` -> PASS
+  - 補足:
+    - validation 開始時は stale ASan object により `make bin/fem4c` link が `__asan_*` unresolved で失敗したが、`make -C FEM4C clean` 後は再現せず、source change の blocker ではないと判断した。
+- Next Actions:
+  - `D-23` として `coupled_compare_checks` の aggregate summary/manifest に threshold provenance を持ち上げる。
+  - higher-level suite から `coupled_example_check` child log を開かずに threshold source を辿れるようにする。
+- Open Risks/Blockers:
+  - `coupled_2d_acceptance` の full default path（build+rigid+flex+compare, all integrators）はこのセッションでは再受理していない。今回の D-22 validation は focused build/rigid smoke と synthetic compare_matrix manifest contract に依存する。
+  - stale object 混入時に `make bin/fem4c` が ASan unresolved で落ちるため、今後も同種事象が続くなら wrapper 側で clean rebuild fallback を検討する余地がある。
+
 ## 2026-03-08 / D-team (D-19..D-20 Rigid-Limit Threshold Contract/Docs Sync)
 - Current Plan:
   - D-19 として rigid-limit compare threshold の source-of-truth を helper と docs の両方で同期できる形に固める。
@@ -162,6 +885,228 @@
   - compare schema 本体には root/tip interface center の専用列がなく、今回の CSV は auxiliary artifact の位置づけに留まる。
 
 ## Aチーム
+- 実行タスク: A-18 完了 + A-R1 carry-over 完了（A-team Run 1 surface docs sync を history/foundation bundle に拡張）
+  - ステータス:
+    - `docs/fem4c_team_next_queue.md` を更新し、`A-18=Done` へ進めた。
+    - session token `/tmp/a_team_session_20260309T042343Z_2066660.token` を `guard60=pass` / `SESSION_TIMER_END elapsed_min=68` で正式終了した。
+  - 変更ファイル:
+    - `FEM4C/Makefile`
+    - `FEM4C/README.md`
+    - `docs/06_acceptance_matrix_2d.md`
+    - `FEM4C/scripts/test_check_mbd_run1_surface_docs_sync.sh`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - A-18:
+      - `FEM4C/Makefile` に A-team history/foundation entrypoint の help/current-command surface 用 single-source 定数を追加し、help 文言と surface smoke が同じ source-of-truth を参照するようにした。
+      - A-team help contract / surface smoke は Makefile 生テキストではなく `make help` 出力を検査する形へ変更し、変数化された help surface でも drift を検知できるようにした。
+      - `FEM4C/README.md` と `docs/06_acceptance_matrix_2d.md` に、`mbd_system2d_history_contract_smoke` を history-only current command surface、`mbd_a_team_foundation_smoke` を full foundation current command surface として明記した。
+    - A-R1 carry-over:
+      - `FEM4C/scripts/test_check_mbd_run1_surface_docs_sync.sh` に A-team history/foundation current-command surface の required labels / role-boundary regex / help surface 契約を追加した。
+      - 同 script の `make_*` 検査は Makefile 生テキストではなく `make -s help` 出力を source-of-truth に切り替え、help surface の変数化と整合させた。
+  - 実行コマンド / pass-fail:
+    - `make -C FEM4C help | rg "^  mbd_system2d_history_contract_smoke - Run A-team history-only generalized-force contract bundle$|^  mbd_a_team_foundation_smoke - Run A-team full rigid MBD foundation bundle$"` -> PASS
+    - `make -C FEM4C mbd_a_team_history_contract_smoke` -> PASS
+    - `make -C FEM4C mbd_a_team_foundation_smoke` -> PASS
+    - `make -C FEM4C mbd_run1_surface_docs_sync_test` -> PASS
+  - 受入判定:
+    - A-18: `pass (done)`（Run 1 MBD surface docs sync target が A-team history/foundation current command surface まで監査し、README / acceptance matrix / Make help の role boundary を focused self-test で再検証できる）
+    - A-R1 carry-over: `pass`（Run 1 docs sync が A-team history/foundation current-command surface も監査するようになった）
+  - セッションタイマー出力:
+    - `SESSION_TIMER_START` -> `session_token=/tmp/a_team_session_20260309T042343Z_2066660.token`, `team_tag=a_team`, `start_utc=2026-03-09T04:23:43Z`, `start_epoch=1773030223`
+    - `SESSION_TIMER_DECLARE` -> `session_token=/tmp/a_team_session_20260309T042343Z_2066660.token`, `team_tag=a_team`, `primary_task=A-18`, `secondary_task=A-R1`, `plan_utc=2026-03-09T04:23:52Z`, `plan_epoch=1773030232`, `plan_note=single-source current-command docs sync for A-team surface bundle`
+    - `SESSION_TIMER_PROGRESS #1` -> `session_token=/tmp/a_team_session_20260309T042343Z_2066660.token`, `team_tag=a_team`, `current_task=A-18`, `work_kind=implementation`, `progress_note=single-sourced A-team history/foundation help and current-command surface across Makefile, README, and acceptance matrix`, `progress_utc=2026-03-09T04:28:12Z`, `progress_epoch=1773030492`, `elapsed_min=4`, `progress_count=1`
+    - `SESSION_TIMER_PROGRESS #2` -> `session_token=/tmp/a_team_session_20260309T042343Z_2066660.token`, `team_tag=a_team`, `current_task=A-R1`, `work_kind=implementation`, `progress_note=extended Run1 docs sync to require A-team history/foundation current-command surface in README, acceptance matrix, and help`, `progress_utc=2026-03-09T05:31:52Z`, `progress_epoch=1773034312`, `elapsed_min=68`, `progress_count=2`
+    - `SESSION_TIMER_GUARD`（10） -> `session_token=/tmp/a_team_session_20260309T042343Z_2066660.token`, `team_tag=a_team`, `start_utc=2026-03-09T04:23:43Z`, `now_utc=2026-03-09T05:32:39Z`, `start_epoch=1773030223`, `now_epoch=1773034359`, `elapsed_sec=4136`, `elapsed_min=68`, `min_required=10`, `guard_result=pass`
+    - `SESSION_TIMER_GUARD`（20） -> `session_token=/tmp/a_team_session_20260309T042343Z_2066660.token`, `team_tag=a_team`, `start_utc=2026-03-09T04:23:43Z`, `now_utc=2026-03-09T05:31:10Z`, `start_epoch=1773030223`, `now_epoch=1773034270`, `elapsed_sec=4047`, `elapsed_min=67`, `min_required=20`, `guard_result=pass`
+    - `SESSION_TIMER_GUARD`（30） -> `session_token=/tmp/a_team_session_20260309T042343Z_2066660.token`, `team_tag=a_team`, `start_utc=2026-03-09T04:23:43Z`, `now_utc=2026-03-09T05:32:39Z`, `start_epoch=1773030223`, `now_epoch=1773034359`, `elapsed_sec=4136`, `elapsed_min=68`, `min_required=30`, `guard_result=pass`
+    - `SESSION_TIMER_GUARD`（60） -> `session_token=/tmp/a_team_session_20260309T042343Z_2066660.token`, `team_tag=a_team`, `start_utc=2026-03-09T04:23:43Z`, `now_utc=2026-03-09T05:32:39Z`, `start_epoch=1773030223`, `now_epoch=1773034359`, `elapsed_sec=4136`, `elapsed_min=68`, `min_required=60`, `guard_result=pass`
+    - `SESSION_TIMER_END` -> `session_token=/tmp/a_team_session_20260309T042343Z_2066660.token`, `team_tag=a_team`, `start_utc=2026-03-09T04:23:43Z`, `end_utc=2026-03-09T05:32:39Z`, `start_epoch=1773030223`, `end_epoch=1773034359`, `elapsed_sec=4136`, `elapsed_min=68`, `progress_count=2`, `last_progress_task=A-R1`, `last_progress_kind=implementation`, `last_progress_note=extended Run1 docs sync to require A-team history/foundation current-command surface in README, acceptance matrix, and help`, `last_progress_utc=2026-03-09T05:31:52Z`, `last_progress_epoch=1773034312`, `last_progress_elapsed_min=68`
+- 実行タスク: A-15 完了 + A-16 完了（history contract CLI target の single-source 化と A-team foundation pack 依存整理）
+  - ステータス:
+    - `docs/fem4c_team_next_queue.md` を更新し、`A-15=Done` / `A-16=Done` へ進めた。
+    - session token `/tmp/a_team_session_20260309T024836Z_7702.token` を `guard60=pass` / `SESSION_TIMER_END elapsed_min=78` で正式終了した。
+  - 変更ファイル:
+    - `FEM4C/Makefile`
+    - `FEM4C/practice/ch09/mbd_probe_utils.h`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - A-15:
+      - `MBD_SYSTEM2D_HISTORY_CLI_TARGETS` / `MBD_SYSTEM2D_HISTORY_CLI_CONTRACT_BUNDLE` を追加し、history layout audit と aggregate bundle が同じ CLI target 群を参照するようにした。
+      - `mbd_system2d_history_contract_layout_smoke` の hardcoded target 列挙を上記変数へ置換し、history contract の single-source 化を進めた。
+    - A-16:
+      - `mbd_probe_utils.h` から `output2d.h` を直接 include するようにし、probe consumer の include-order 依存を解消した。
+      - `mbd_a_team_history_header_single_source_smoke` / `mbd_a_team_rigid_compare_header_single_source_smoke` は direct helper 呼び出しに加え `mbd_probe_utils.h` 経由の consumer も許容する形へ更新した。
+      - `mbd_a_team_foundation_smoke` 再実行時に `bin/` 欠落で link 失敗したため、`FEM4C/bin`, `FEM4C/build`, `FEM4C/parser` を再生成して rerun し、foundation pack の再利用経路を確認した。
+  - 実行コマンド / pass-fail:
+    - `make -C FEM4C mbd_system2d_history_contract_smoke` -> PASS
+    - `make -C FEM4C help | rg 'mbd_a_team_history_contract_smoke|mbd_a_team_foundation_smoke|mbd_a_team_foundation_surface_smoke'` -> PASS
+    - `make -C FEM4C mbd_a_team_foundation_smoke` -> PASS
+  - 受入判定:
+    - A-15: `pass (done)`（history CLI target 群が `MBD_SYSTEM2D_HISTORY_CLI_TARGETS` に集約され、`mbd_system2d_history_contract_smoke` が維持された）
+    - A-16: `pass (done)`（foundation/history bundle 再利用と probe helper include-order が安定し、`mbd_a_team_foundation_smoke` が PASS した）
+  - セッションタイマー出力:
+    - `SESSION_TIMER_START` -> `session_token=/tmp/a_team_session_20260309T024836Z_7702.token`, `team_tag=a_team`, `start_utc=2026-03-09T02:48:36Z`, `start_epoch=1773024516`
+    - `SESSION_TIMER_DECLARE` -> `session_token=/tmp/a_team_session_20260309T024836Z_7702.token`, `team_tag=a_team`, `primary_task=A-15`, `secondary_task=A-16`, `plan_utc=2026-03-09T02:48:40Z`, `plan_epoch=1773024520`, `plan_note=single-source CLI history targets, then continue A-team foundation bundle cleanup`
+    - `SESSION_TIMER_PROGRESS #1` -> `session_token=/tmp/a_team_session_20260309T024836Z_7702.token`, `team_tag=a_team`, `current_task=A-15`, `work_kind=implementation`, `progress_note=replaced hardcoded history CLI target list with MBD_SYSTEM2D_HISTORY_CLI_TARGETS so layout audit and bundle reuse the same source-of-truth targets`, `progress_utc=2026-03-09T02:48:58Z`, `progress_epoch=1773024538`, `elapsed_min=0`, `progress_count=1`
+    - `SESSION_TIMER_PROGRESS #2` -> `session_token=/tmp/a_team_session_20260309T024836Z_7702.token`, `team_tag=a_team`, `current_task=A-16`, `work_kind=implementation`, `progress_note=fixed mbd_probe_utils.h include-order dependency and completed A-team foundation/history smoke reruns after single-sourcing CLI history targets`, `progress_utc=2026-03-09T04:07:31Z`, `progress_epoch=1773029251`, `elapsed_min=78`, `progress_count=2`
+    - `SESSION_TIMER_GUARD`（10） -> `session_token=/tmp/a_team_session_20260309T024836Z_7702.token`, `team_tag=a_team`, `start_utc=2026-03-09T02:48:36Z`, `now_utc=2026-03-09T04:07:31Z`, `start_epoch=1773024516`, `now_epoch=1773029251`, `elapsed_sec=4735`, `elapsed_min=78`, `min_required=10`, `guard_result=pass`
+    - `SESSION_TIMER_GUARD`（20） -> `session_token=/tmp/a_team_session_20260309T024836Z_7702.token`, `team_tag=a_team`, `start_utc=2026-03-09T02:48:36Z`, `now_utc=2026-03-09T04:07:10Z`, `start_epoch=1773024516`, `now_epoch=1773029230`, `elapsed_sec=4714`, `elapsed_min=78`, `min_required=20`, `guard_result=pass`
+    - `SESSION_TIMER_GUARD`（30） -> `session_token=/tmp/a_team_session_20260309T024836Z_7702.token`, `team_tag=a_team`, `start_utc=2026-03-09T02:48:36Z`, `now_utc=2026-03-09T04:07:31Z`, `start_epoch=1773024516`, `now_epoch=1773029251`, `elapsed_sec=4735`, `elapsed_min=78`, `min_required=30`, `guard_result=pass`
+    - `SESSION_TIMER_GUARD`（60） -> `session_token=/tmp/a_team_session_20260309T024836Z_7702.token`, `team_tag=a_team`, `start_utc=2026-03-09T02:48:36Z`, `now_utc=2026-03-09T04:07:31Z`, `start_epoch=1773024516`, `now_epoch=1773029251`, `elapsed_sec=4735`, `elapsed_min=78`, `min_required=60`, `guard_result=pass`
+    - `SESSION_TIMER_END` -> `session_token=/tmp/a_team_session_20260309T024836Z_7702.token`, `team_tag=a_team`, `start_utc=2026-03-09T02:48:36Z`, `end_utc=2026-03-09T04:07:31Z`, `start_epoch=1773024516`, `end_epoch=1773029251`, `elapsed_sec=4735`, `elapsed_min=78`, `progress_count=1`, `last_progress_task=A-16`, `last_progress_kind=implementation`, `last_progress_note=fixed mbd_probe_utils.h include-order dependency and completed A-team foundation/history smoke reruns after single-sourcing CLI history targets`, `last_progress_utc=2026-03-09T04:07:31Z`, `last_progress_epoch=1773029251`, `last_progress_elapsed_min=78`
+- 実行タスク: A-R1 carry-over 再確認 + A-R2 carry-over 再確認 + A-R3 完了（rigid compare provenance route を fail-fast / single-source contract へ整理）
+  - ステータス:
+    - `docs/fem4c_team_next_queue.md` を更新し、`A-R3=Done` へ進めた。
+    - session token `/tmp/a_team_session_20260308T055936Z_1919486.token` を `guard60=pass` / `SESSION_TIMER_END elapsed_min=60` で正式終了した。
+  - 変更ファイル:
+    - `FEM4C/scripts/compare_2link_rigid_analytic.py`
+    - `FEM4C/scripts/run_e08_rigid_analytic_normalize.sh`
+    - `FEM4C/scripts/run_e08_rigid_analytic_compare.sh`
+    - `FEM4C/scripts/run_e08_rigid_analytic_multi_reference.sh`
+    - `FEM4C/scripts/test_compare_2link_rigid_analytic_fallback.sh`
+    - `FEM4C/scripts/test_compare_2link_rigid_analytic_expect_snapshot_count_guard.sh`
+    - `FEM4C/scripts/compare_2link_artifact_route_fields.sh`
+    - `FEM4C/scripts/check_compare_2link_artifacts.sh`
+    - `FEM4C/scripts/check_compare_2link_artifact_matrix.sh`
+    - `FEM4C/scripts/check_compare_2link_artifact_manifest.py`
+    - `FEM4C/scripts/check_compare_2link_artifact_matrix_manifest.py`
+    - `FEM4C/scripts/test_check_compare_2link_artifacts.sh`
+    - `FEM4C/scripts/test_check_compare_2link_artifact_matrix.sh`
+    - `FEM4C/Makefile`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - A-R1 carry-over:
+      - `make -C FEM4C mbd_implicit_label_review_smoke` を再実行し、neutral `implicit_result_*` label contract が維持されていることを確認した。
+    - A-R2 carry-over:
+      - `compare_2link_rigid_analytic.py` に `--expect-fallback-reason none` と snapshot-count / `rigid_compare_enabled` の fail-fast expectation を追加し、direct route の `rigid_compare_csv + none + 2/1/2` を compare helper 自体で固定した。
+      - `run_e08_rigid_analytic_normalize.sh`, `run_e08_rigid_analytic_compare.sh`, `run_e08_rigid_analytic_multi_reference.sh` は上記 expectation を必須化し、wrapper が stale fallback marker を許容しない形へ寄せた。
+    - A-R3:
+      - `compare_2link_artifact_route_fields.sh` を追加し、artifact suite / matrix wrapper / stdout-contract test が route field list を single-source で共有するようにした。
+      - `check_compare_2link_artifacts.sh` / `check_compare_2link_artifact_matrix.sh` は manifest header / route-artifact row / flex `-` sentinel row を helper 経由で組み立てるように整理した。
+      - `check_compare_2link_artifact_manifest.py` / `check_compare_2link_artifact_matrix_manifest.py` は rigid direct-route validator と dash-only route validator を helper 化し、artifact/matrix で同じ provenance rule を共有するようにした。
+      - `test_compare_2link_rigid_analytic_expect_snapshot_count_guard.sh` を追加し、wrong history snapshot count expectation を fail-fast 契約として固定した。
+      - `test_check_compare_2link_artifacts.sh` / `test_check_compare_2link_artifact_matrix.sh` も route header contract を helper 由来に更新し、route field drift を抑止した。
+  - 実行コマンド / pass-fail:
+    - `make -C FEM4C mbd_implicit_label_review_smoke` -> PASS
+    - `make -C FEM4C compare_2link_artifact_checks` -> PASS
+    - `make -C FEM4C mbd_rigid_compare_route_review_smoke` -> PASS
+  - 受入判定:
+    - A-R1: `pass (carry-over revalidated)`（HHT/newmark の主要 summary が neutral `implicit_result_*` label のまま維持されている）
+    - A-R2: `pass (carry-over revalidated)`（direct rigid route が `rigid_compare_csv + none + history_snapshot_count=2 + rigid_compare_enabled=1 + rigid_compare_snapshot_count=2` を helper/wrapper 双方で fail-fast 化した）
+    - A-R3: `pass (done)`（direct sidecar provenance, malformed sidecar fallback 区別, artifact/matrix manifest route contract, snapshot-count guard が `mbd_rigid_compare_route_review_smoke` / `compare_2link_artifact_checks` で閉じた）
+  - セッションタイマー出力:
+    - `SESSION_TIMER_START` -> `session_token=/tmp/a_team_session_20260308T055936Z_1919486.token`, `team_tag=a_team`, `start_utc=2026-03-08T05:59:36Z`, `start_epoch=1772949576`
+    - `SESSION_TIMER_DECLARE` -> `session_token=/tmp/a_team_session_20260308T055936Z_1919486.token`, `team_tag=a_team`, `primary_task=A-R2`, `secondary_task=A-R3`, `plan_utc=2026-03-08T05:59:43Z`, `plan_epoch=1772949583`, `plan_note=A-R1 labels recheck then A-R2 compare-ready fields and A-R3 formal route tightening`
+    - `SESSION_TIMER_PROGRESS #1` -> `current_task=A-R2`, `work_kind=implementation`, `progress_note=rigid compare direct-sidecar provenance markers plus multi-integrator compare-ready smoke`, `progress_utc=2026-03-08T06:02:40Z`, `progress_epoch=1772949760`, `elapsed_min=3`
+    - `SESSION_TIMER_PROGRESS #2` -> `current_task=A-R3`, `work_kind=implementation`, `progress_note=route provenance promoted into artifact manifests; expectation guards and snapshot-count guard tests folded into route smoke + compare_2link_artifact_checks`, `progress_utc=2026-03-08T06:39:42Z`, `progress_epoch=1772951982`, `elapsed_min=40`
+    - `SESSION_TIMER_PROGRESS #3` -> `current_task=A-R3`, `work_kind=implementation`, `progress_note=compare helper now fail-fast checks no-fallback sentinel and snapshot-count metadata; wrapper/direct fallback route smoke tightened with snapshot-count guard target`, `progress_utc=2026-03-08T06:48:17Z`, `progress_epoch=1772952497`, `elapsed_min=48`
+    - `SESSION_TIMER_PROGRESS #4` -> `current_task=A-R3`, `work_kind=implementation`, `progress_note=route-field shell single-source extracted for artifact and matrix wrappers; manifest validators now share rigid direct-route contract helper`, `progress_utc=2026-03-08T06:52:37Z`, `progress_epoch=1772952757`, `elapsed_min=53`
+    - `SESSION_TIMER_PROGRESS #5` -> `current_task=A-R3`, `work_kind=implementation`, `progress_note=artifact manifest validators and stdout-contract tests now share common route-field helpers for direct-route and dash-only cases`, `progress_utc=2026-03-08T06:54:35Z`, `progress_epoch=1772952875`, `elapsed_min=54`
+    - `SESSION_TIMER_GUARD`（10） -> `session_token=/tmp/a_team_session_20260308T055936Z_1919486.token`, `team_tag=a_team`, `start_utc=2026-03-08T05:59:36Z`, `now_utc=2026-03-08T06:59:42Z`, `start_epoch=1772949576`, `now_epoch=1772953182`, `elapsed_sec=3606`, `elapsed_min=60`, `min_required=10`, `guard_result=pass`
+    - `SESSION_TIMER_GUARD`（20） -> `session_token=/tmp/a_team_session_20260308T055936Z_1919486.token`, `team_tag=a_team`, `start_utc=2026-03-08T05:59:36Z`, `now_utc=2026-03-08T06:59:42Z`, `start_epoch=1772949576`, `now_epoch=1772953182`, `elapsed_sec=3606`, `elapsed_min=60`, `min_required=20`, `guard_result=pass`
+    - `SESSION_TIMER_GUARD`（30） -> `session_token=/tmp/a_team_session_20260308T055936Z_1919486.token`, `team_tag=a_team`, `start_utc=2026-03-08T05:59:36Z`, `now_utc=2026-03-08T06:59:43Z`, `start_epoch=1772949576`, `now_epoch=1772953183`, `elapsed_sec=3607`, `elapsed_min=60`, `min_required=30`, `guard_result=pass`
+    - `SESSION_TIMER_GUARD`（60） -> `session_token=/tmp/a_team_session_20260308T055936Z_1919486.token`, `team_tag=a_team`, `start_utc=2026-03-08T05:59:36Z`, `now_utc=2026-03-08T06:59:43Z`, `start_epoch=1772949576`, `now_epoch=1772953183`, `elapsed_sec=3607`, `elapsed_min=60`, `min_required=60`, `guard_result=pass`
+    - `SESSION_TIMER_END` -> `session_token=/tmp/a_team_session_20260308T055936Z_1919486.token`, `team_tag=a_team`, `start_utc=2026-03-08T05:59:36Z`, `end_utc=2026-03-08T06:59:45Z`, `start_epoch=1772949576`, `end_epoch=1772953185`, `elapsed_sec=3609`, `elapsed_min=60`, `progress_count=5`, `last_progress_task=A-R3`, `last_progress_kind=implementation`, `last_progress_note=artifact manifest validators and stdout-contract tests now share common route-field helpers for direct-route and dash-only cases`, `last_progress_utc=2026-03-08T06:54:35Z`, `last_progress_epoch=1772952875`, `last_progress_elapsed_min=54`
+- 実行タスク: A-13 完了 + A-14 完了 + A-15 Auto-Next 着手（generalized force history contract を direct probe / aggregate smoke へ整理）
+  - ステータス:
+    - `docs/fem4c_team_next_queue.md` を更新し、`A-13=Done` / `A-14=Done` / `A-15=In Progress` へ進めた。
+    - session token `/tmp/a_team_session_20260307T161231Z_2274407.token` を `guard60=pass` / `SESSION_TIMER_END elapsed_min=77` で正式終了した。
+  - 変更ファイル:
+    - `FEM4C/practice/ch09/mbd_system2d_console_history_probe.c`
+    - `FEM4C/practice/ch09/mbd_system2d_constrained_history_output_probe.c`
+    - `FEM4C/Makefile`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - A-13:
+      - `mbd_system2d_console_history_probe.c` を追加し、`mbd_system2d_run()` の stdout を直接 capture して `explicit/newmark/hht` の history marker を検証できるようにした。
+      - 同 probe を `newmark_constrained/hht_constrained` にも拡張し、2-body current/previous marker の body0/body1 両方を direct probe で固定した。
+      - `Makefile` の console history smoke を shell grep 直叩きから direct probe 呼び出しへ置き換えた。
+    - A-14:
+      - `mbd_system2d_constrained_history_output_probe.c` を追加し、`examples/mbd_two_body_input.dat` の constrained summary rows を Newmark/HHT で direct probe 化した。
+      - `mbd_system2d_newmark_constrained_history_output_smoke` / `mbd_system2d_hht_constrained_history_output_smoke` を追加し、2-body history rows と implicit iteration source を固定した。
+      - `mbd_a_team_foundation_smoke` に constrained console/history probes を組み込み、A-team pack 単体で free/constrained history contract を回せるようにした。
+    - A-15 groundwork:
+      - `mbd_system2d_history_contract_smoke` を追加し、explicit/free, Newmark free/constrained, HHT free/constrained の console/summary contract を 1 コマンドに束ねた。
+      - 次ランはこの aggregate target を primary とし、残る history marker 用の shell-grep 系 recipe を integrator/body summary 中心へ縮退させる。
+  - 実行コマンド / pass-fail:
+    - `make -C FEM4C mbd_system2d_explicit_console_history_smoke mbd_system2d_newmark_console_history_smoke mbd_system2d_hht_console_history_smoke` -> PASS
+    - `make -C FEM4C mbd_system2d_newmark_constrained_console_history_smoke mbd_system2d_hht_constrained_console_history_smoke` -> PASS
+    - `make -C FEM4C mbd_system2d_newmark_constrained_history_output_smoke mbd_system2d_hht_constrained_history_output_smoke` -> PASS
+    - `make -C FEM4C mbd_system2d_explicit_probe_smoke mbd_system2d_explicit_smoke mbd_system2d_newmark_smoke mbd_system2d_newmark_constrained_smoke mbd_system2d_hht_smoke mbd_system2d_hht_constrained_smoke mbd_a_team_foundation_smoke` -> PASS
+    - `make -C FEM4C mbd_a_team_foundation_smoke` -> PASS
+    - `make -C FEM4C mbd_system2d_history_contract_smoke` -> PASS
+  - 受入判定:
+    - A-13: `pass (done)`（summary/probe/smoke 契約に direct console probe を追加し、explicit `valid=0` と implicit current/previous marker を free/constrained まで固定した）
+    - A-14: `pass (done)`（2-body constrained summary rows を direct probe 化し、A-team foundation pack へ統合した）
+    - A-15: `in_progress`（aggregate smoke target は追加済み。次ランは residual history-marker grep recipe を probe-first entry へ整理する）
+  - セッションタイマー出力:
+    - `SESSION_TIMER_START`
+      - `session_token=/tmp/a_team_session_20260307T161231Z_2274407.token`
+      - `team_tag=a_team`
+      - `start_utc=2026-03-07T16:12:31Z`
+      - `start_epoch=1772899951`
+    - `SESSION_TIMER_GUARD`（10）
+      - `session_token=/tmp/a_team_session_20260307T161231Z_2274407.token`
+      - `team_tag=a_team`
+      - `start_utc=2026-03-07T16:12:31Z`
+      - `now_utc=2026-03-07T17:30:24Z`
+      - `start_epoch=1772899951`
+      - `now_epoch=1772904624`
+      - `elapsed_sec=4673`
+      - `elapsed_min=77`
+      - `min_required=10`
+      - `guard_result=pass`
+    - `SESSION_TIMER_GUARD`（20）
+      - `session_token=/tmp/a_team_session_20260307T161231Z_2274407.token`
+      - `team_tag=a_team`
+      - `start_utc=2026-03-07T16:12:31Z`
+      - `now_utc=2026-03-07T17:30:24Z`
+      - `start_epoch=1772899951`
+      - `now_epoch=1772904624`
+      - `elapsed_sec=4673`
+      - `elapsed_min=77`
+      - `min_required=20`
+      - `guard_result=pass`
+    - `SESSION_TIMER_GUARD`（30）
+      - `session_token=/tmp/a_team_session_20260307T161231Z_2274407.token`
+      - `team_tag=a_team`
+      - `start_utc=2026-03-07T16:12:31Z`
+      - `now_utc=2026-03-07T17:30:24Z`
+      - `start_epoch=1772899951`
+      - `now_epoch=1772904624`
+      - `elapsed_sec=4673`
+      - `elapsed_min=77`
+      - `min_required=30`
+      - `guard_result=pass`
+    - `SESSION_TIMER_GUARD`（60）
+      - `session_token=/tmp/a_team_session_20260307T161231Z_2274407.token`
+      - `team_tag=a_team`
+      - `start_utc=2026-03-07T16:12:31Z`
+      - `now_utc=2026-03-07T17:30:24Z`
+      - `start_epoch=1772899951`
+      - `now_epoch=1772904624`
+      - `elapsed_sec=4673`
+      - `elapsed_min=77`
+      - `min_required=60`
+      - `guard_result=pass`
+    - `SESSION_TIMER_END`
+      - `session_token=/tmp/a_team_session_20260307T161231Z_2274407.token`
+      - `team_tag=a_team`
+      - `start_utc=2026-03-07T16:12:31Z`
+      - `end_utc=2026-03-07T17:30:28Z`
+      - `start_epoch=1772899951`
+      - `end_epoch=1772904628`
+      - `elapsed_sec=4677`
+      - `elapsed_min=77`
+
 - 実行タスク: A-12 完了 + A-13 Auto-Next 着手（system-owned generalized force history 完了 / summary-regression hardening 前進）
   - ステータス:
     - `docs/fem4c_team_next_queue.md` を更新し、`A-12=Done` / `A-13=In Progress` へ進めた。
@@ -3030,6 +3975,1162 @@ elapsed_min=31
     - PASS（A-40受入コマンド直列PASS、A-41をIn Progressで継続）
 
 ## Bチーム
+- 実行タスク: B-12（Done）/ B-13（In Progress）
+  - session_timer.sh start 出力:
+    ```text
+    SESSION_TIMER_START
+    session_token=/tmp/b_team_session_20260309T105217Z_1518660.token
+    team_tag=b_team
+    start_utc=2026-03-09T10:52:17Z
+    start_epoch=1773053537
+    ```
+  - SESSION_TIMER_DECLARE 出力:
+    ```text
+    SESSION_TIMER_DECLARE
+    session_token=/tmp/b_team_session_20260309T105217Z_1518660.token
+    team_tag=b_team
+    primary_task=B-12
+    secondary_task=B-13
+    plan_utc=2026-03-09T10:52:23Z
+    plan_epoch=1773053543
+    plan_note=restart stale >90min run, formal close B-12 compare artifact single-source and continue B-13 docs-sync validator self-surface contract with focused smoke/help/inventory acceptance
+    ```
+  - SESSION_TIMER_PROGRESS 出力 #1:
+    ```text
+    SESSION_TIMER_PROGRESS
+    session_token=/tmp/b_team_session_20260309T105217Z_1518660.token
+    team_tag=b_team
+    current_task=B-12
+    work_kind=implementation
+    progress_note=rebased the accepted B-12 compare artifact target/integrator single-source changes onto the fresh session and verified the focused rigid-route anchors before moving the secondary task to B-13 docs-sync validator self-surface work
+    progress_utc=2026-03-09T10:52:26Z
+    progress_epoch=1773053546
+    elapsed_min=0
+    progress_count=1
+    ```
+  - SESSION_TIMER_GUARD 10 出力:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/b_team_session_20260309T105217Z_1518660.token
+    team_tag=b_team
+    start_utc=2026-03-09T10:52:17Z
+    now_utc=2026-03-09T12:02:01Z
+    start_epoch=1773053537
+    now_epoch=1773057721
+    elapsed_sec=4184
+    elapsed_min=69
+    min_required=10
+    guard_result=pass
+    ```
+  - SESSION_TIMER_GUARD 20 出力:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/b_team_session_20260309T105217Z_1518660.token
+    team_tag=b_team
+    start_utc=2026-03-09T10:52:17Z
+    now_utc=2026-03-09T12:02:01Z
+    start_epoch=1773053537
+    now_epoch=1773057721
+    elapsed_sec=4184
+    elapsed_min=69
+    min_required=20
+    guard_result=pass
+    ```
+  - SESSION_TIMER_GUARD 30 出力:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/b_team_session_20260309T105217Z_1518660.token
+    team_tag=b_team
+    start_utc=2026-03-09T10:52:17Z
+    now_utc=2026-03-09T12:02:01Z
+    start_epoch=1773053537
+    now_epoch=1773057721
+    elapsed_sec=4184
+    elapsed_min=69
+    min_required=30
+    guard_result=pass
+    ```
+  - SESSION_TIMER_PROGRESS 出力 #2:
+    ```text
+    SESSION_TIMER_PROGRESS
+    session_token=/tmp/b_team_session_20260309T105217Z_1518660.token
+    team_tag=b_team
+    current_task=B-13
+    work_kind=implementation
+    progress_note=extended the Run 1 docs-sync validator with a machine-readable current-command surface, folded the main validator into the surface-smoke bundle, and kept compare artifact plus rigid-route acceptance anchors green for B-12 close and B-13 carry-over
+    progress_utc=2026-03-09T12:00:15Z
+    progress_epoch=1773057615
+    elapsed_min=67
+    progress_count=2
+    ```
+  - SESSION_TIMER_GUARD 60 出力:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/b_team_session_20260309T105217Z_1518660.token
+    team_tag=b_team
+    start_utc=2026-03-09T10:52:17Z
+    now_utc=2026-03-09T12:02:01Z
+    start_epoch=1773053537
+    now_epoch=1773057721
+    elapsed_sec=4184
+    elapsed_min=69
+    min_required=60
+    guard_result=pass
+    ```
+  - session_timer.sh end 出力:
+    ```text
+    SESSION_TIMER_END
+    session_token=/tmp/b_team_session_20260309T105217Z_1518660.token
+    team_tag=b_team
+    start_utc=2026-03-09T10:52:17Z
+    end_utc=2026-03-09T12:01:46Z
+    start_epoch=1773053537
+    end_epoch=1773057706
+    elapsed_sec=4169
+    elapsed_min=69
+    progress_count=2
+    last_progress_task=B-13
+    last_progress_kind=implementation
+    last_progress_note=extended the Run 1 docs-sync validator with a machine-readable current-command surface, folded the main validator into the surface-smoke bundle, and kept compare artifact plus rigid-route acceptance anchors green for B-12 close and B-13 carry-over
+    last_progress_utc=2026-03-09T12:00:15Z
+    last_progress_epoch=1773057615
+    last_progress_elapsed_min=67
+    ```
+  - 変更ファイル:
+    - `FEM4C/scripts/test_check_mbd_run1_surface_docs_sync.sh`
+    - `FEM4C/scripts/test_check_mbd_run1_surface_docs_sync_surfaces.sh`
+    - `FEM4C/scripts/test_make_mbd_run1_surface_docs_sync_surfaces_help.sh`
+    - `FEM4C/scripts/test_make_mbd_run1_surface_docs_sync_surface_smoke.sh`
+    - `FEM4C/Makefile`
+    - `FEM4C/README.md`
+    - `docs/06_acceptance_matrix_2d.md`
+    - `docs/team_runbook.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 1行再現コマンド:
+    - `timeout 900 make -C FEM4C mbd_run1_surface_docs_sync_test && timeout 900 make -C FEM4C mbd_run1_surface_docs_sync_surfaces_test && timeout 900 make -C FEM4C mbd_run1_surface_docs_sync_surfaces_help_test && timeout 900 make -C FEM4C mbd_run1_surface_docs_sync_surface_smoke && timeout 900 make -C FEM4C mbd_run1_surface_docs_sync_surface_smoke_test && timeout 900 make -C FEM4C compare_2link_artifact_checks && timeout 900 make -C FEM4C mbd_rigid_compare_route_review_smoke && timeout 900 make -C FEM4C mbd_m1_rigid_acceptance_test`
+  - 実装内容:
+    - `B-12`:
+      - compare artifact target/integrator single-source contract を維持し、`compare_2link_artifact_targets.sh` / `compare_2link_artifact_integrators.sh` 起点の rigid-route acceptance anchor を formal close した。
+      - `compare_2link_artifact_checks`, `mbd_rigid_compare_route_review_smoke`, `mbd_m1_rigid_acceptance_test` を同一 session で再確認し、Run 1 rigid route の helper-driven contract を保持した。
+    - `B-13`:
+      - `FEM4C/scripts/test_check_mbd_run1_surface_docs_sync.sh` に `--print-current-command-surface` を追加し、Run 1 docs-sync validator の current-command surface を machine-readable にした。
+      - `FEM4C/scripts/test_check_mbd_run1_surface_docs_sync_surfaces.sh` を追加し、validator 自身の help / required-labels / supported-options / inventory / current-command surface / invalid-option fallback を focused self-test で固定した。
+      - `FEM4C/scripts/test_make_mbd_run1_surface_docs_sync_surfaces_help.sh` と `FEM4C/scripts/test_make_mbd_run1_surface_docs_sync_surface_smoke.sh` を追加し、`make help` surface と surface-smoke bundle の PASS surface を self-test 化した。
+      - `FEM4C/Makefile` は `mbd_run1_surface_docs_sync_surfaces_test`, `mbd_run1_surface_docs_sync_surfaces_help_test`, `mbd_run1_surface_docs_sync_surface_smoke`, `mbd_run1_surface_docs_sync_surface_smoke_test` を追加し、surface smoke bundle に main validator を含めた。
+      - `FEM4C/README.md`, `docs/06_acceptance_matrix_2d.md`, `docs/team_runbook.md` を新しい B-team docs-sync surface 群へ同期した。
+  - 実行コマンド / pass-fail:
+    - `timeout 900 make -C FEM4C mbd_run1_surface_docs_sync_test` -> PASS
+    - `timeout 900 make -C FEM4C mbd_run1_surface_docs_sync_surfaces_test` -> PASS
+    - `timeout 900 make -C FEM4C mbd_run1_surface_docs_sync_surfaces_help_test` -> PASS
+    - `timeout 900 make -C FEM4C mbd_run1_surface_docs_sync_surface_smoke` -> PASS
+    - `timeout 900 make -C FEM4C mbd_run1_surface_docs_sync_surface_smoke_test` -> PASS
+    - `timeout 900 make -C FEM4C compare_2link_artifact_checks` -> PASS
+    - `timeout 900 make -C FEM4C mbd_rigid_compare_route_review_smoke` -> PASS
+    - `timeout 900 make -C FEM4C mbd_m1_rigid_acceptance_test` -> PASS
+  - pass/fail 根拠:
+    - `B-12`: PASS（閾値: target getter/helper/python 一致、integrator getter/helper/python 一致、`compare_2link_artifact_checks`, `mbd_rigid_compare_route_review_smoke`, `mbd_m1_rigid_acceptance_test` がすべて PASS）。
+    - `B-13`: PASS（閾値: `mbd_run1_surface_docs_sync_test`, `mbd_run1_surface_docs_sync_surfaces_test`, `mbd_run1_surface_docs_sync_surfaces_help_test`, `mbd_run1_surface_docs_sync_surface_smoke`, `mbd_run1_surface_docs_sync_surface_smoke_test` がすべて PASS、`--print-current-command-surface` が利用可能、main validator が smoke bundle に含まれる）。
+    - queue 状態: `B-12=Done`、`B-13=In Progress`。
+
+- 実行タスク: B-11（Done）/ B-12（In Progress）
+  - session_timer.sh start 出力:
+    ```text
+    SESSION_TIMER_START
+session_token=/tmp/b_team_session_20260309T040651Z_1682737.token
+team_tag=b_team
+start_utc=2026-03-09T04:06:51Z
+start_epoch=1773029211
+    ```
+  - SESSION_TIMER_DECLARE 出力:
+    ```text
+    SESSION_TIMER_DECLARE
+session_token=/tmp/b_team_session_20260309T040651Z_1682737.token
+team_tag=b_team
+primary_task=B-11
+secondary_task=B-12
+plan_utc=2026-03-09T04:06:54Z
+plan_epoch=1773029214
+plan_note=
+    ```
+  - SESSION_TIMER_PROGRESS 出力 #1:
+    ```text
+    SESSION_TIMER_PROGRESS
+session_token=/tmp/b_team_session_20260309T040651Z_1682737.token
+team_tag=b_team
+current_task=B-11
+work_kind=implementation
+progress_note=route metadata drift の残りを確認し、compare_suite_route の normalization_source header/row がまだ raw literal 依存と判明。route helper へ summary-column helper を追加して artifacts wrapper/tests を同じ source-of-truth へ寄せる実装に着手する
+progress_utc=2026-03-09T04:07:28Z
+progress_epoch=1773029248
+elapsed_min=0
+progress_count=1
+    ```
+  - SESSION_TIMER_GUARD 10 出力:
+    ```text
+    SESSION_TIMER_GUARD
+session_token=/tmp/b_team_session_20260309T040651Z_1682737.token
+team_tag=b_team
+start_utc=2026-03-09T04:06:51Z
+now_utc=2026-03-09T04:16:52Z
+start_epoch=1773029211
+now_epoch=1773029812
+elapsed_sec=601
+elapsed_min=10
+min_required=10
+guard_result=pass
+    ```
+  - SESSION_TIMER_PROGRESS 出力 #2:
+    ```text
+    SESSION_TIMER_PROGRESS
+session_token=/tmp/b_team_session_20260309T040651Z_1682737.token
+team_tag=b_team
+current_task=B-12
+work_kind=implementation
+progress_note=artifact manifest header/prefix helpers を route helper へ追加し、manifest validators は reordered route header を reject。secondary として artifact target getter/sync test を追加し、validators の target order single-source 化へ着手した
+progress_utc=2026-03-09T04:18:56Z
+progress_epoch=1773029936
+elapsed_min=12
+progress_count=2
+    ```
+  - SESSION_TIMER_GUARD 20 出力:
+    ```text
+    SESSION_TIMER_GUARD
+session_token=/tmp/b_team_session_20260309T040651Z_1682737.token
+team_tag=b_team
+start_utc=2026-03-09T04:06:51Z
+now_utc=2026-03-09T04:27:46Z
+start_epoch=1773029211
+now_epoch=1773030466
+elapsed_sec=1255
+elapsed_min=20
+min_required=20
+guard_result=pass
+    ```
+  - SESSION_TIMER_PROGRESS 出力 #3:
+    ```text
+    SESSION_TIMER_PROGRESS
+session_token=/tmp/b_team_session_20260309T040651Z_1682737.token
+team_tag=b_team
+current_task=B-12
+work_kind=implementation
+progress_note=artifact target helper を shell consumersへ広げ、core check script と matrix subset tests から raw target literals を除去。加えて matrix default integrators を helper 化し、route review smoke は target/integrator getters を含む形で serial PASS を再確認した
+progress_utc=2026-03-09T04:30:07Z
+progress_epoch=1773030607
+elapsed_min=23
+progress_count=3
+    ```
+  - SESSION_TIMER_GUARD 30 出力:
+    ```text
+    SESSION_TIMER_GUARD
+session_token=/tmp/b_team_session_20260309T040651Z_1682737.token
+team_tag=b_team
+start_utc=2026-03-09T04:06:51Z
+now_utc=2026-03-09T04:38:58Z
+start_epoch=1773029211
+now_epoch=1773031138
+elapsed_sec=1927
+elapsed_min=32
+min_required=30
+guard_result=pass
+    ```
+  - SESSION_TIMER_PROGRESS 出力 #4:
+    ```text
+    SESSION_TIMER_PROGRESS
+session_token=/tmp/b_team_session_20260309T040651Z_1682737.token
+team_tag=b_team
+current_task=B-12
+work_kind=implementation
+progress_note=target helper を shell single-source 化し、getter/python/check script を同一起点へ再配線。加えて integrator default helper を run_e08/check/Makefile/self-test に浸透させ、full-default/subset matrix test も helper 配列参照へ更新して route review / rigid acceptance を直列 PASS で再確認した
+progress_utc=2026-03-09T04:46:46Z
+progress_epoch=1773031606
+elapsed_min=39
+progress_count=4
+    ```
+  - SESSION_TIMER_GUARD 40 出力:
+    ```text
+    SESSION_TIMER_GUARD
+session_token=/tmp/b_team_session_20260309T040651Z_1682737.token
+team_tag=b_team
+start_utc=2026-03-09T04:06:51Z
+now_utc=2026-03-09T04:46:56Z
+start_epoch=1773029211
+now_epoch=1773031616
+elapsed_sec=2405
+elapsed_min=40
+min_required=40
+guard_result=pass
+    ```
+  - SESSION_TIMER_PROGRESS 出力 #5:
+    ```text
+    SESSION_TIMER_PROGRESS
+session_token=/tmp/b_team_session_20260309T040651Z_1682737.token
+team_tag=b_team
+current_task=B-12
+work_kind=implementation
+progress_note=core compare artifact check の default integrator 注入を Makefile から除去し、default/full-default/subset self-test も helper 配列・subset csv 参照へ更新。route review smoke と rigid acceptance を serial rerun して target/integrator contract の再入安定性を確認した
+progress_utc=2026-03-09T04:47:01Z
+progress_epoch=1773031621
+elapsed_min=40
+progress_count=5
+    ```
+  - SESSION_TIMER_GUARD 50 出力:
+    ```text
+    SESSION_TIMER_GUARD
+session_token=/tmp/b_team_session_20260309T040651Z_1682737.token
+team_tag=b_team
+start_utc=2026-03-09T04:06:51Z
+now_utc=2026-03-09T05:01:57Z
+start_epoch=1773029211
+now_epoch=1773032517
+elapsed_sec=3306
+elapsed_min=55
+min_required=55
+guard_result=pass
+    ```
+  - SESSION_TIMER_GUARD 60 出力:
+    ```text
+    SESSION_TIMER_GUARD
+session_token=/tmp/b_team_session_20260309T040651Z_1682737.token
+team_tag=b_team
+start_utc=2026-03-09T04:06:51Z
+now_utc=2026-03-09T05:06:51Z
+start_epoch=1773029211
+now_epoch=1773032811
+elapsed_sec=3600
+elapsed_min=60
+min_required=60
+guard_result=pass
+    ```
+  - session_timer.sh end 出力:
+    ```text
+    SESSION_TIMER_END
+session_token=/tmp/b_team_session_20260309T040651Z_1682737.token
+team_tag=b_team
+start_utc=2026-03-09T04:06:51Z
+end_utc=2026-03-09T05:07:18Z
+start_epoch=1773029211
+end_epoch=1773032838
+elapsed_sec=3627
+elapsed_min=60
+progress_count=5
+last_progress_task=B-12
+last_progress_kind=implementation
+last_progress_note=core compare artifact check の default integrator 注入を Makefile から除去し、default/full-default/subset self-test も helper 配列・subset csv 参照へ更新。route review smoke と rigid acceptance を serial rerun して target/integrator contract の再入安定性を確認した
+last_progress_utc=2026-03-09T04:47:01Z
+last_progress_epoch=1773031621
+last_progress_elapsed_min=40
+    ```
+  - 変更ファイル:
+    - `FEM4C/scripts/compare_2link_artifact_targets.sh`
+    - `FEM4C/scripts/get_compare_2link_artifact_targets.sh`
+    - `FEM4C/scripts/compare_2link_artifact_targets.py`
+    - `FEM4C/scripts/compare_2link_artifact_integrators.sh`
+    - `FEM4C/scripts/get_compare_2link_artifact_integrators.sh`
+    - `FEM4C/scripts/compare_2link_artifact_integrators.py`
+    - `FEM4C/scripts/check_compare_2link_artifacts.sh`
+    - `FEM4C/scripts/run_e08_rigid_analytic_compare.sh`
+    - `FEM4C/scripts/run_e08_rigid_analytic_multi_reference.sh`
+    - `FEM4C/scripts/run_e08_rigid_analytic_normalize.sh`
+    - `FEM4C/scripts/run_c15_flex_reference_normalize.sh`
+    - `FEM4C/scripts/run_c16_flex_reference_compare.sh`
+    - `FEM4C/scripts/test_compare_2link_artifact_targets_sync.sh`
+    - `FEM4C/scripts/test_compare_2link_artifact_integrators_sync.sh`
+    - `FEM4C/scripts/test_check_compare_2link_artifacts_invalid_integrator.sh`
+    - `FEM4C/scripts/test_compare_2link_flex_reference_real.sh`
+    - `FEM4C/scripts/test_compare_2link_flex_reference_compare_mode.sh`
+    - `FEM4C/scripts/test_compare_2link_flex_reference_artifact_only.sh`
+    - `FEM4C/scripts/test_compare_2link_flex_manifest.sh`
+    - `FEM4C/scripts/test_compare_2link_rigid_analytic_real.sh`
+    - `FEM4C/scripts/test_compare_2link_rigid_analytic_real_normalize.sh`
+    - `FEM4C/scripts/test_compare_2link_rigid_analytic_multi_reference.sh`
+    - `FEM4C/scripts/test_compare_2link_rigid_analytic_hht.sh`
+    - `FEM4C/scripts/test_compare_2link_rigid_analytic_fallback.sh`
+    - `FEM4C/scripts/test_compare_2link_rigid_analytic_expect_route_guard.sh`
+    - `FEM4C/scripts/test_compare_2link_rigid_analytic_expect_fallback_reason_guard.sh`
+    - `FEM4C/scripts/test_compare_2link_rigid_analytic_expect_snapshot_count_guard.sh`
+    - `FEM4C/scripts/test_compare_2link_rigid_analytic_integrator_compare_ready.sh`
+    - `FEM4C/scripts/test_make_compare_2link_artifact_check_vars.sh`
+    - `FEM4C/scripts/test_make_compare_2link_artifact_check_integrator.sh`
+    - `FEM4C/scripts/test_make_compare_2link_artifact_matrix_integrators.sh`
+    - `FEM4C/scripts/test_make_compare_2link_artifact_matrix_manifest_expected_integrators.sh`
+    - `FEM4C/Makefile`
+    - `FEM4C/README.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 1行再現コマンド:
+    - `timeout 900 make -C FEM4C compare_2link_artifact_targets_getter_test && timeout 900 make -C FEM4C compare_2link_artifact_targets_sync_test && timeout 900 make -C FEM4C compare_2link_artifact_integrators_getter_test && timeout 900 make -C FEM4C compare_2link_artifact_integrators_sync_test && timeout 900 make -C FEM4C compare_2link_artifact_checks && timeout 900 make -C FEM4C mbd_rigid_compare_route_review_smoke && timeout 900 make -C FEM4C mbd_m1_rigid_acceptance_test`
+  - 実装内容:
+    - `B-11`:
+      - `FEM4C/scripts/compare_2link_artifact_route_fields.sh` 系を route metadata single-source として formal close し、review/route validation 入口を固定した。
+      - `FEM4C/scripts/check_compare_2link_artifact_manifest.py` と route review bundle は helper 由来 header/row の順序契約を維持した。
+    - `B-12`:
+      - compare artifact target order を `FEM4C/scripts/compare_2link_artifact_targets.sh` 起点の shell/getter/Python 単一ソースへ移行した。
+      - compare artifact integrator order と default integrator を `FEM4C/scripts/compare_2link_artifact_integrators.sh` 起点へ移し、core suite / rigid wrapper / flex wrapper / self-test から raw literal を除去した。
+      - `FEM4C/scripts/check_compare_2link_artifacts.sh` は unsupported integrator を suite entrypoint で fail-fast し、`compare_2link_artifact_check_invalid_integrator_test` を Makefile と self-test surface に追加した。
+  - 実行コマンド / pass-fail:
+    - `timeout 900 make -C FEM4C compare_2link_artifact_targets_getter_test` -> PASS
+    - `timeout 900 make -C FEM4C compare_2link_artifact_targets_sync_test` -> PASS
+    - `timeout 900 make -C FEM4C compare_2link_artifact_integrators_getter_test` -> PASS
+    - `timeout 900 make -C FEM4C compare_2link_artifact_integrators_sync_test` -> PASS
+    - `timeout 900 make -C FEM4C compare_2link_artifact_check_test` -> PASS
+    - `timeout 900 make -C FEM4C compare_2link_artifact_check_vars_test` -> PASS
+    - `timeout 900 make -C FEM4C compare_2link_artifact_check_integrator_test` -> PASS
+    - `timeout 900 make -C FEM4C compare_2link_artifact_check_invalid_integrator_test` -> PASS
+    - `timeout 900 make -C FEM4C compare_2link_artifact_matrix_check_test` -> PASS
+    - `timeout 900 make -C FEM4C compare_2link_artifact_matrix_integrators_test` -> PASS
+    - `timeout 900 make -C FEM4C compare_2link_artifact_matrix_manifest_expected_integrators_test` -> PASS
+    - `timeout 900 make -C FEM4C compare_2link_artifact_matrix_manifest_snapshot_count_guard_test` -> PASS
+    - `timeout 900 make -C FEM4C compare_2link_artifact_matrix_invalid_integrator_test` -> PASS
+    - `timeout 900 make -C FEM4C compare_2link_artifact_checks` -> PASS
+    - `timeout 900 make -C FEM4C mbd_rigid_compare_route_review_smoke` -> PASS
+    - `timeout 900 make -C FEM4C mbd_m1_rigid_acceptance_test` -> PASS
+  - pass/fail と閾値:
+    - `B-11`: PASS
+      - route field source-of-truth: `normalization_source,normalization_rigid_compare_csv,normalization_history_csv,normalization_fallback_reason,normalization_history_snapshot_count,normalization_rigid_compare_enabled,normalization_rigid_compare_snapshot_count`
+      - review columns source-of-truth: `theta1,theta2,tip2_x,tip2_y,constraint_residual`
+      - validator は reordered route header / snapshot count mismatch を reject
+    - `B-12`: PASS（In Progress 継続）
+      - target order getter/helper/python 一致
+      - integrator order/default getter/helper/python 一致
+      - suite/matrix wrappers は unsupported integrator を reject
+      - scoped rigid/flex self-test に stale raw `explicit/newmark_beta/hht_alpha` literal を残さない
+- 実行タスク: B-10（Done）/ B-11（In Progress）
+  - session_timer.sh start 出力:
+    ```text
+    SESSION_TIMER_START
+session_token=/tmp/b_team_session_20260309T024823Z_7552.token
+team_tag=b_team
+start_utc=2026-03-09T02:48:23Z
+start_epoch=1773024503
+    ```
+  - SESSION_TIMER_DECLARE 出力:
+    ```text
+    SESSION_TIMER_DECLARE
+session_token=/tmp/b_team_session_20260309T024823Z_7552.token
+team_tag=b_team
+primary_task=B-10
+secondary_task=B-11
+plan_utc=2026-03-09T02:48:30Z
+plan_epoch=1773024510
+plan_note=B-10 history CSV field-index single-source化を完了し、完了後は同一スコープのAuto-Next B-11を起票して継続
+    ```
+  - SESSION_TIMER_PROGRESS 出力 #1:
+    ```text
+    SESSION_TIMER_PROGRESS
+session_token=/tmp/b_team_session_20260309T024823Z_7552.token
+team_tag=b_team
+current_task=B-10
+work_kind=implementation
+progress_note=acceptance 3本の現状を確認し、history probe群の単一ソース化漏れを洗い出し中。mbd_system2d_history_probe.c の rigid_compare 14列前提など、header/count helper化できる箇所を次に整理する
+progress_utc=2026-03-09T02:49:15Z
+progress_epoch=1773024555
+elapsed_min=0
+progress_count=1
+    ```
+  - SESSION_TIMER_GUARD 10 出力:
+    ```text
+    SESSION_TIMER_GUARD
+session_token=/tmp/b_team_session_20260309T024823Z_7552.token
+team_tag=b_team
+start_utc=2026-03-09T02:48:23Z
+now_utc=2026-03-09T02:58:52Z
+start_epoch=1773024503
+now_epoch=1773025132
+elapsed_sec=629
+elapsed_min=10
+min_required=10
+guard_result=pass
+    ```
+  - SESSION_TIMER_PROGRESS 出力 #2:
+    ```text
+    SESSION_TIMER_PROGRESS
+session_token=/tmp/b_team_session_20260309T024823Z_7552.token
+team_tag=b_team
+current_task=B-10
+work_kind=implementation
+progress_note=history CSV field-index single-source化は acceptance 3本を再確認済み。secondary として rigid_compare CSV field-count/index contract を output2d.h + probe_utils + static smoke に拡張し、review smoke / M1 rigid acceptance への影響も serial で確認中
+progress_utc=2026-03-09T03:01:19Z
+progress_epoch=1773025279
+elapsed_min=12
+progress_count=2
+    ```
+  - SESSION_TIMER_GUARD 20 出力:
+    ```text
+    SESSION_TIMER_GUARD
+session_token=/tmp/b_team_session_20260309T024823Z_7552.token
+team_tag=b_team
+start_utc=2026-03-09T02:48:23Z
+now_utc=2026-03-09T03:11:49Z
+start_epoch=1773024503
+now_epoch=1773025909
+elapsed_sec=1406
+elapsed_min=23
+min_required=20
+guard_result=pass
+    ```
+  - SESSION_TIMER_PROGRESS 出力 #3:
+    ```text
+    SESSION_TIMER_PROGRESS
+session_token=/tmp/b_team_session_20260309T024823Z_7552.token
+team_tag=b_team
+current_task=B-11
+work_kind=implementation
+progress_note=rigid_compare header single-source contract を追加し、review/foundation bundle と README/acceptance/runbook を同期。field-count=14 に加えて header literal の一意性を static smoke で固定する。
+progress_utc=2026-03-09T03:11:56Z
+progress_epoch=1773025916
+elapsed_min=23
+progress_count=3
+    ```
+  - SESSION_TIMER_GUARD 30 出力:
+    ```text
+    SESSION_TIMER_GUARD
+session_token=/tmp/b_team_session_20260309T024823Z_7552.token
+team_tag=b_team
+start_utc=2026-03-09T02:48:23Z
+now_utc=2026-03-09T03:18:29Z
+start_epoch=1773024503
+now_epoch=1773026309
+elapsed_sec=1806
+elapsed_min=30
+min_required=30
+guard_result=pass
+    ```
+  - SESSION_TIMER_PROGRESS 出力 #4:
+    ```text
+    SESSION_TIMER_PROGRESS
+session_token=/tmp/b_team_session_20260309T024823Z_7552.token
+team_tag=b_team
+current_task=B-11
+work_kind=implementation
+progress_note=rigid compare review columns helper を wrapper/test まで拡張し、artifact route fields も helper 化して review/route bundle と docs surface を同期。B-10 Done 相当、B-11 は route metadata single-source contract を維持したまま In Progress。
+progress_utc=2026-03-09T03:28:49Z
+progress_epoch=1773026929
+elapsed_min=40
+progress_count=4
+    ```
+  - SESSION_TIMER_GUARD 50 出力:
+    ```text
+    SESSION_TIMER_GUARD
+session_token=/tmp/b_team_session_20260309T024823Z_7552.token
+team_tag=b_team
+start_utc=2026-03-09T02:48:23Z
+now_utc=2026-03-09T03:38:31Z
+start_epoch=1773024503
+now_epoch=1773027511
+elapsed_sec=3008
+elapsed_min=50
+min_required=50
+guard_result=pass
+    ```
+  - SESSION_TIMER_PROGRESS 出力 #5:
+    ```text
+    SESSION_TIMER_PROGRESS
+session_token=/tmp/b_team_session_20260309T024823Z_7552.token
+team_tag=b_team
+current_task=B-11
+work_kind=implementation
+progress_note=artifact route field getter を追加し、shell helper と Python manifest consumer の field-name surface を同期。review/route bundles、foundation/isolated smoke、artifact bundle を再通過させて B-10 Done / B-11 In Progress の受入根拠を積み増した。
+progress_utc=2026-03-09T03:37:45Z
+progress_epoch=1773027465
+elapsed_min=49
+progress_count=5
+    ```
+  - SESSION_TIMER_PROGRESS 出力 #6:
+    ```text
+    SESSION_TIMER_PROGRESS
+session_token=/tmp/b_team_session_20260309T024823Z_7552.token
+team_tag=b_team
+current_task=B-11
+work_kind=implementation
+progress_note=route field getter/python consumer sync は acceptance 済み。docs反映前に B-10/B-11 の変更ファイルと再現コマンドを最終整理し、queue/team_status/session continuity の追記位置を確認する
+progress_utc=2026-03-09T03:44:43Z
+progress_epoch=1773027883
+elapsed_min=56
+progress_count=6
+    ```
+  - SESSION_TIMER_PROGRESS 出力 #7:
+    ```text
+    SESSION_TIMER_PROGRESS
+session_token=/tmp/b_team_session_20260309T024823Z_7552.token
+team_tag=b_team
+current_task=B-11
+work_kind=implementation
+progress_note=route field getter self-test no longer hardcodes normalization field list; expected CSV is now sourced from compare_2link_artifact_route_fields.sh and rechecked via getter/python consumer, then route review smoke was re-run PASS
+progress_utc=2026-03-09T03:46:39Z
+progress_epoch=1773027999
+elapsed_min=58
+progress_count=7
+    ```
+  - SESSION_TIMER_GUARD 60 出力:
+    ```text
+    SESSION_TIMER_GUARD
+session_token=/tmp/b_team_session_20260309T024823Z_7552.token
+team_tag=b_team
+start_utc=2026-03-09T02:48:23Z
+now_utc=2026-03-09T03:48:31Z
+start_epoch=1773024503
+now_epoch=1773028111
+elapsed_sec=3608
+elapsed_min=60
+min_required=60
+guard_result=pass
+    ```
+  - session_timer.sh end 出力:
+    ```text
+    SESSION_TIMER_END
+session_token=/tmp/b_team_session_20260309T024823Z_7552.token
+team_tag=b_team
+start_utc=2026-03-09T02:48:23Z
+end_utc=2026-03-09T03:48:34Z
+start_epoch=1773024503
+end_epoch=1773028114
+elapsed_sec=3611
+elapsed_min=60
+progress_count=7
+last_progress_task=B-11
+last_progress_kind=implementation
+last_progress_note=route field getter self-test no longer hardcodes normalization field list; expected CSV is now sourced from compare_2link_artifact_route_fields.sh and rechecked via getter/python consumer, then route review smoke was re-run PASS
+last_progress_utc=2026-03-09T03:46:39Z
+last_progress_epoch=1773027999
+last_progress_elapsed_min=58
+    ```
+  - 変更ファイル:
+    - `FEM4C/src/mbd/output2d.h`
+    - `FEM4C/practice/ch09/mbd_probe_utils.h`
+    - `FEM4C/practice/ch09/mbd_output2d_rigid_compare_probe.c`
+    - `FEM4C/practice/ch09/mbd_system2d_history_probe.c`
+    - `FEM4C/practice/ch09/mbd_system2d_rigid_compare_probe.c`
+    - `FEM4C/practice/ch09/mbd_system2d_coupled_geometry_compare_probe.c`
+    - `FEM4C/scripts/get_compare_2link_rigid_review_columns.sh`
+    - `FEM4C/scripts/test_compare_2link_rigid_review_columns_sync.sh`
+    - `FEM4C/scripts/compare_2link_artifact_route_fields.sh`
+    - `FEM4C/scripts/get_compare_2link_artifact_route_fields.sh`
+    - `FEM4C/scripts/compare_2link_artifact_route_fields.py`
+    - `FEM4C/scripts/check_compare_2link_artifact_manifest.py`
+    - `FEM4C/scripts/test_compare_2link_artifact_route_fields_sync.sh`
+    - `FEM4C/scripts/test_get_compare_2link_artifact_route_fields.sh`
+    - `FEM4C/scripts/run_e08_rigid_analytic_compare.sh`
+    - `FEM4C/scripts/run_e08_rigid_analytic_multi_reference.sh`
+    - `FEM4C/scripts/run_e08_rigid_analytic_normalize.sh`
+    - `FEM4C/scripts/test_compare_2link_rigid_analytic_expect_fallback_reason_guard.sh`
+    - `FEM4C/scripts/test_compare_2link_rigid_analytic_expect_route_guard.sh`
+    - `FEM4C/scripts/test_compare_2link_rigid_analytic_fallback.sh`
+    - `FEM4C/scripts/test_compare_2link_rigid_analytic_hht.sh`
+    - `FEM4C/scripts/test_compare_2link_rigid_analytic_multi_reference.sh`
+    - `FEM4C/scripts/test_compare_2link_rigid_analytic_real.sh`
+    - `FEM4C/scripts/test_compare_2link_rigid_analytic_real_normalize.sh`
+    - `FEM4C/scripts/test_run_e08_rigid_analytic_wrappers.sh`
+    - `FEM4C/scripts/check_compare_2link_artifacts.sh`
+    - `FEM4C/scripts/check_compare_2link_artifact_matrix.sh`
+    - `FEM4C/scripts/test_check_compare_2link_artifacts.sh`
+    - `FEM4C/scripts/test_check_compare_2link_artifact_matrix.sh`
+    - `FEM4C/scripts/test_make_compare_2link_artifact_check_vars.sh`
+    - `FEM4C/scripts/test_make_compare_2link_artifact_check_integrator.sh`
+    - `FEM4C/scripts/test_make_compare_2link_artifact_matrix_integrators.sh`
+    - `FEM4C/scripts/test_make_compare_2link_artifact_matrix_manifest_expected_integrators.sh`
+    - `FEM4C/Makefile`
+    - `FEM4C/README.md`
+    - `docs/06_acceptance_matrix_2d.md`
+    - `docs/team_runbook.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 1行再現コマンド:
+    - `make -C FEM4C mbd_output2d_history_field_count_sync_smoke mbd_b_team_foundation_probe_smoke mbd_b_team_foundation_isolated_smoke mbd_rigid_compare_review_smoke mbd_rigid_compare_route_review_smoke mbd_m1_rigid_acceptance_test`
+  - 実装内容:
+    - `B-10`:
+      - `FEM4C/src/mbd/output2d.h` を history / rigid_compare CSV の field-count / field-index source-of-truth に引き上げ、history consumer の raw column drift を止めた。
+      - `FEM4C/practice/ch09/mbd_probe_utils.h` と history/rigid compare probe 群を symbolic index / shared header helper へ切り替えた。
+    - `B-11`:
+      - `FEM4C/scripts/compare_2link_rigid_analytic.py` の `REVIEW_RIGID_COLUMNS` を `get_compare_2link_rigid_review_columns.sh` 経由で wrapper/test に伝搬し、review columns の literal drift を排除した。
+      - `FEM4C/scripts/compare_2link_artifact_route_fields.sh` / `get_compare_2link_artifact_route_fields.sh` / `compare_2link_artifact_route_fields.py` を追加し、artifact route field-name surface を shell / getter / Python validator で単一ソース化した。
+      - `test_get_compare_2link_artifact_route_fields.sh` は normalization field list の raw literal をやめ、route helper 由来の CSV を getter / Python consumer と付き合わせる形へ更新した。
+  - 実行コマンド / pass-fail:
+    - `timeout 900 make -C FEM4C mbd_output2d_history_field_count_sync_smoke` -> PASS
+    - `timeout 900 make -C FEM4C mbd_b_team_foundation_probe_smoke` -> PASS
+    - `timeout 900 make -C FEM4C mbd_b_team_foundation_isolated_smoke` -> PASS
+    - `timeout 900 make -C FEM4C mbd_b_team_foundation_smoke` -> PASS
+    - `make -C FEM4C mbd_output2d_rigid_compare_header_single_source_smoke` -> PASS
+    - `make -C FEM4C mbd_output2d_rigid_compare_field_count_sync_smoke` -> PASS
+    - `make -C FEM4C mbd_rigid_compare_review_columns_sync_smoke` -> PASS
+    - `make -C FEM4C compare_2link_artifact_route_fields_sync_test` -> PASS
+    - `timeout 900 make -C FEM4C compare_2link_artifact_route_fields_getter_test` -> PASS
+    - `timeout 900 make -C FEM4C mbd_rigid_compare_review_smoke` -> PASS
+    - `timeout 900 make -C FEM4C mbd_rigid_compare_route_review_smoke` -> PASS
+    - `timeout 900 make -C FEM4C compare_2link_artifact_manifest_test` -> PASS
+    - `timeout 900 make -C FEM4C mbd_m1_rigid_acceptance_test` -> PASS
+    - `timeout 900 make -C FEM4C mbd_m1_rigid_acceptance` -> PASS
+  - pass/fail と閾値:
+    - `B-10`: PASS
+      - `MBD_OUTPUT2D_HISTORY_FIELD_COUNT=31`
+      - `MBD_OUTPUT2D_RIGID_COMPARE_FIELD_COUNT=14`
+      - `mbd_output2d_history_field_count_sync_smoke` / `mbd_b_team_foundation_probe_smoke` / `mbd_b_team_foundation_isolated_smoke` がすべて PASS
+    - `B-11`: In Progress
+      - review columns source-of-truth: `theta1,theta2,tip2_x,tip2_y,constraint_residual`
+      - route field source-of-truth: `normalization_source,normalization_rigid_compare_csv,normalization_history_csv,normalization_fallback_reason,normalization_history_snapshot_count,normalization_rigid_compare_enabled,normalization_rigid_compare_snapshot_count`
+      - canonical rigid route row: `rigid_compare_csv,<path>,-,-,2,1,2`
+      - `compare_2link_artifact_route_fields_getter_test` / `mbd_rigid_compare_review_smoke` / `mbd_rigid_compare_route_review_smoke` / `mbd_m1_rigid_acceptance_test` は PASS
+- 実行タスク: B-09（Done）/ B-10（In Progress）
+  - session_timer.sh start 出力:
+    ```text
+    SESSION_TIMER_START
+session_token=/tmp/b_team_session_20260308T120610Z_1761885.token
+team_tag=b_team
+start_utc=2026-03-08T12:06:10Z
+start_epoch=1772971570
+    ```
+  - SESSION_TIMER_DECLARE 出力:
+    ```text
+    SESSION_TIMER_DECLARE
+session_token=/tmp/b_team_session_20260308T120610Z_1761885.token
+team_tag=b_team
+primary_task=B-09
+secondary_task=B-09-longrun
+plan_utc=2026-03-08T12:07:42Z
+plan_epoch=1772971662
+plan_note=projection velocity contract + foundation bundle sync
+    ```
+  - SESSION_TIMER_PROGRESS 出力 #1:
+    ```text
+    SESSION_TIMER_PROGRESS
+session_token=/tmp/b_team_session_20260308T120610Z_1761885.token
+team_tag=b_team
+current_task=B-09
+work_kind=implementation
+progress_note=projection longrun isolated scripts now enforce numeric residual/velocity ratio contracts
+progress_utc=2026-03-08T12:09:34Z
+progress_epoch=1772971774
+elapsed_min=3
+progress_count=1
+    ```
+  - SESSION_TIMER_PROGRESS 出力 #2:
+    ```text
+    SESSION_TIMER_PROGRESS
+session_token=/tmp/b_team_session_20260308T120610Z_1761885.token
+team_tag=b_team
+current_task=B-09-longrun
+work_kind=implementation
+progress_note=history CSV now carries projection iteration budget; core compare/history probes and constrained/unconstrained history probes synced to 31-field surface
+progress_utc=2026-03-08T12:24:13Z
+progress_epoch=1772972653
+elapsed_min=18
+progress_count=2
+    ```
+  - SESSION_TIMER_PROGRESS 出力 #3:
+    ```text
+    SESSION_TIMER_PROGRESS
+session_token=/tmp/b_team_session_20260308T120610Z_1761885.token
+team_tag=b_team
+current_task=B-09-longrun
+work_kind=implementation
+progress_note=history consumers now use MBD_OUTPUT2D_HISTORY_FIELD_COUNT; projection/free/newmark/hht probes and isolated scripts enforce 31-field iteration-budget surface
+progress_utc=2026-03-08T12:30:47Z
+progress_epoch=1772973047
+elapsed_min=24
+progress_count=3
+    ```
+  - SESSION_TIMER_PROGRESS 出力 #4:
+    ```text
+    SESSION_TIMER_PROGRESS
+session_token=/tmp/b_team_session_20260308T120610Z_1761885.token
+team_tag=b_team
+current_task=B-09-longrun
+work_kind=implementation
+progress_note=output2d history header tail is now single-source via MBD_OUTPUT2D_HISTORY_PROJECTION_TAIL_CSV; mbd_probe_utils shares the 31-field header validator across history consumers
+progress_utc=2026-03-08T12:44:06Z
+progress_epoch=1772973846
+elapsed_min=37
+progress_count=4
+    ```
+  - SESSION_TIMER_PROGRESS 出力 #5:
+    ```text
+    SESSION_TIMER_PROGRESS
+session_token=/tmp/b_team_session_20260308T120610Z_1761885.token
+team_tag=b_team
+current_task=B-09-longrun
+work_kind=implementation
+progress_note=static field-count/tail sync is locked across output/probes/docs/isolated scripts; final long-run acceptance bundle is now running without further code edits
+progress_utc=2026-03-08T12:45:43Z
+progress_epoch=1772973943
+elapsed_min=39
+progress_count=5
+    ```
+  - SESSION_TIMER_PROGRESS 出力 #6:
+    ```text
+    SESSION_TIMER_PROGRESS
+session_token=/tmp/b_team_session_20260308T120610Z_1761885.token
+team_tag=b_team
+current_task=B-09-longrun
+work_kind=implementation
+progress_note=isolated shell contracts now derive history field count from output2d.h; long-history and foundation isolated smokes revalidated on the shared 31-field surface
+progress_utc=2026-03-08T12:49:33Z
+progress_epoch=1772974173
+elapsed_min=43
+progress_count=6
+    ```
+  - SESSION_TIMER_PROGRESS 出力 #7:
+    ```text
+    SESSION_TIMER_PROGRESS
+session_token=/tmp/b_team_session_20260308T120610Z_1761885.token
+team_tag=b_team
+current_task=B-09-longrun
+work_kind=implementation
+progress_note=README now documents the shared field-count helper; docs/link validation passed after moving isolated history expectations to output2d.h-derived field counts
+progress_utc=2026-03-08T12:51:44Z
+progress_epoch=1772974304
+elapsed_min=45
+progress_count=7
+    ```
+  - SESSION_TIMER_PROGRESS 出力 #8:
+    ```text
+    SESSION_TIMER_PROGRESS
+session_token=/tmp/b_team_session_20260308T120610Z_1761885.token
+team_tag=b_team
+current_task=B-09-longrun
+work_kind=implementation
+progress_note=static sync now derives the documented field-count token from output2d.h before grepping README/runbook/acceptance docs; sync smoke re-passed after the helper-only shell migration
+progress_utc=2026-03-08T12:53:58Z
+progress_epoch=1772974438
+elapsed_min=47
+progress_count=8
+    ```
+  - SESSION_TIMER_PROGRESS 出力 #9:
+    ```text
+    SESSION_TIMER_PROGRESS
+session_token=/tmp/b_team_session_20260308T120610Z_1761885.token
+team_tag=b_team
+current_task=B-09-longrun
+work_kind=implementation
+progress_note=history probes now share mbd_probe_split_history_row_fields_exact; focused history-contract and projection-history bundles re-passed after removing duplicated row-copy logic
+progress_utc=2026-03-08T12:55:52Z
+progress_epoch=1772974552
+elapsed_min=49
+progress_count=9
+    ```
+  - SESSION_TIMER_PROGRESS 出力 #10:
+    ```text
+    SESSION_TIMER_PROGRESS
+session_token=/tmp/b_team_session_20260308T120610Z_1761885.token
+team_tag=b_team
+current_task=B-09-longrun
+work_kind=implementation
+progress_note=output2d.h now exposes symbolic history-field indices; mbd_output2d_probe moved off raw column numbers and the probe/foundation smoke bundles re-passed on the same 31-field surface
+progress_utc=2026-03-08T12:58:47Z
+progress_epoch=1772974727
+elapsed_min=52
+progress_count=10
+    ```
+  - SESSION_TIMER_PROGRESS 出力 #11:
+    ```text
+    SESSION_TIMER_PROGRESS
+session_token=/tmp/b_team_session_20260308T120610Z_1761885.token
+team_tag=b_team
+current_task=B-09-longrun
+work_kind=implementation
+progress_note=history output probes now consume symbolic output2d history-field indices end-to-end; longrun and foundation isolated bundles still pass after replacing residual/projection raw column numbers
+progress_utc=2026-03-08T13:03:14Z
+progress_epoch=1772974994
+elapsed_min=57
+progress_count=11
+    ```
+  - session_timer_guard 出力（10分）:
+    ```text
+    SESSION_TIMER_GUARD
+session_token=/tmp/b_team_session_20260308T120610Z_1761885.token
+team_tag=b_team
+start_utc=2026-03-08T12:06:10Z
+now_utc=2026-03-08T12:16:38Z
+start_epoch=1772971570
+now_epoch=1772972198
+elapsed_sec=628
+elapsed_min=10
+min_required=10
+guard_result=pass
+    ```
+  - session_timer_guard 出力（20分）:
+    ```text
+    SESSION_TIMER_GUARD
+session_token=/tmp/b_team_session_20260308T120610Z_1761885.token
+team_tag=b_team
+start_utc=2026-03-08T12:06:10Z
+now_utc=2026-03-08T12:26:28Z
+start_epoch=1772971570
+now_epoch=1772972788
+elapsed_sec=1218
+elapsed_min=20
+min_required=20
+guard_result=pass
+    ```
+  - session_timer_guard 出力（30分）:
+    ```text
+    SESSION_TIMER_GUARD
+session_token=/tmp/b_team_session_20260308T120610Z_1761885.token
+team_tag=b_team
+start_utc=2026-03-08T12:06:10Z
+now_utc=2026-03-08T12:36:21Z
+start_epoch=1772971570
+now_epoch=1772973381
+elapsed_sec=1811
+elapsed_min=30
+min_required=30
+guard_result=pass
+    ```
+  - session_timer_guard 出力（60分）:
+    ```text
+    SESSION_TIMER_GUARD
+session_token=/tmp/b_team_session_20260308T120610Z_1761885.token
+team_tag=b_team
+start_utc=2026-03-08T12:06:10Z
+now_utc=2026-03-08T13:06:11Z
+start_epoch=1772971570
+now_epoch=1772975171
+elapsed_sec=3601
+elapsed_min=60
+min_required=60
+guard_result=pass
+    ```
+  - session_timer.sh end 出力:
+    ```text
+    SESSION_TIMER_END
+session_token=/tmp/b_team_session_20260308T120610Z_1761885.token
+team_tag=b_team
+start_utc=2026-03-08T12:06:10Z
+end_utc=2026-03-08T13:06:16Z
+start_epoch=1772971570
+end_epoch=1772975176
+elapsed_sec=3606
+elapsed_min=60
+progress_count=11
+last_progress_task=B-09-longrun
+last_progress_kind=implementation
+last_progress_note=history output probes now consume symbolic output2d history-field indices end-to-end; longrun and foundation isolated bundles still pass after replacing residual/projection raw column numbers
+last_progress_utc=2026-03-08T13:03:14Z
+last_progress_epoch=1772974994
+last_progress_elapsed_min=57
+    ```
+  - 変更ファイル（実装差分を含む）:
+    - `FEM4C/src/mbd/output2d.h`
+    - `FEM4C/practice/ch09/mbd_probe_utils.h`
+    - `FEM4C/practice/ch09/mbd_output2d_probe.c`
+    - `FEM4C/practice/ch09/mbd_system2d_history_probe.c`
+    - `FEM4C/practice/ch09/mbd_system2d_newmark_history_output_probe.c`
+    - `FEM4C/practice/ch09/mbd_system2d_hht_history_output_probe.c`
+    - `FEM4C/practice/ch09/mbd_system2d_constrained_history_output_probe.c`
+    - `FEM4C/practice/ch09/mbd_system2d_projection_history_output_probe.c`
+    - `FEM4C/scripts/get_mbd_output2d_history_field_count.sh`
+    - `FEM4C/scripts/test_make_mbd_system2d_projection_long_history_isolated.sh`
+    - `FEM4C/scripts/test_make_mbd_b_team_foundation_isolated.sh`
+    - `FEM4C/scripts/test_mbd_output2d_history_field_count_sync.sh`
+    - `FEM4C/README.md`
+    - `docs/06_acceptance_matrix_2d.md`
+    - `docs/team_runbook.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 1行再現コマンド:
+    - `make -C FEM4C mbd_system2d_projection_longrun_contract_smoke && make -C FEM4C mbd_b_team_foundation_isolated_smoke && make -C FEM4C mbd_output2d_history_field_count_sync_smoke`
+  - 検証コマンド:
+    - `make -C FEM4C mbd_system2d_projection_longrun_contract_smoke`
+    - `make -C FEM4C mbd_b_team_foundation_isolated_smoke`
+    - `make -C FEM4C mbd_output2d_history_field_count_sync_smoke`
+    - `make -C FEM4C mbd_b_team_foundation_probe_smoke`
+    - `make -C FEM4C mbd_b_team_foundation_smoke`
+  - pass/fail と閾値:
+    - `B-09`: `PASS`
+      - `explicit/newmark_beta/hht_alpha` の `ratio` と `velocity_ratio` がすべて `0.0 <= value < 1.0`
+      - long-run history で `history_snapshots=21`, `rigid_compare_snapshots=21`, `field_count=31`, `target_reached=1`, `iterations=1`, `max_iters=4`, `stop_reason=residual_tolerance`
+      - isolated build でも `cli_ready + long projection contract` を維持
+    - `B-10`: `In Progress`
+      - `MBD_OUTPUT2D_HISTORY_FIELD_COUNT=31` と symbolic field index を `output2d.h` に集約
+      - `mbd_output2d_probe.c` と history probes が shared helper / symbolic index 経由で history CSV surface を読むことを確認
+      - `mbd_output2d_history_field_count_sync_smoke`, `mbd_b_team_foundation_probe_smoke`, `mbd_b_team_foundation_isolated_smoke` は `PASS`
+- 実行タスク: B-R1（Done）/ B-R2（Done）
+  - session_timer.sh start 出力:
+    ```text
+    SESSION_TIMER_START
+session_token=/tmp/b_team_session_20260308T053950Z_1887901.token
+team_tag=b_team
+start_utc=2026-03-08T05:39:50Z
+start_epoch=1772948390
+    ```
+  - SESSION_TIMER_DECLARE 出力:
+    ```text
+    SESSION_TIMER_DECLARE
+session_token=/tmp/b_team_session_20260308T053950Z_1887901.token
+team_tag=b_team
+primary_task=B-R1
+secondary_task=B-R2
+plan_utc=2026-03-08T05:40:02Z
+plan_epoch=1772948402
+plan_note=
+    ```
+  - SESSION_TIMER_PROGRESS 出力（B-R1 implementation）:
+    ```text
+    SESSION_TIMER_PROGRESS
+session_token=/tmp/b_team_session_20260308T053950Z_1887901.token
+team_tag=b_team
+current_task=B-R1
+work_kind=implementation
+progress_note=
+progress_utc=2026-03-08T05:40:36Z
+progress_epoch=1772948436
+elapsed_min=0
+progress_count=1
+    ```
+  - SESSION_TIMER_PROGRESS 出力（B-R2 implementation）:
+    ```text
+    SESSION_TIMER_PROGRESS
+session_token=/tmp/b_team_session_20260308T053950Z_1887901.token
+team_tag=b_team
+current_task=B-R2
+work_kind=implementation
+progress_note=matrix/wrapper compare contracts aligned with snapshot-count provenance
+progress_utc=2026-03-08T06:20:19Z
+progress_epoch=1772950819
+elapsed_min=40
+progress_count=7
+    ```
+  - session_timer_guard 出力（10分）:
+    ```text
+    SESSION_TIMER_GUARD
+session_token=/tmp/b_team_session_20260308T053950Z_1887901.token
+team_tag=b_team
+start_utc=2026-03-08T05:39:50Z
+now_utc=2026-03-08T06:39:59Z
+start_epoch=1772948390
+now_epoch=1772951999
+elapsed_sec=3609
+elapsed_min=60
+min_required=10
+guard_result=pass
+    ```
+  - session_timer_guard 出力（20分）:
+    ```text
+    SESSION_TIMER_GUARD
+session_token=/tmp/b_team_session_20260308T053950Z_1887901.token
+team_tag=b_team
+start_utc=2026-03-08T05:39:50Z
+now_utc=2026-03-08T06:39:59Z
+start_epoch=1772948390
+now_epoch=1772951999
+elapsed_sec=3609
+elapsed_min=60
+min_required=20
+guard_result=pass
+    ```
+  - session_timer_guard 出力（30分）:
+    ```text
+    SESSION_TIMER_GUARD
+session_token=/tmp/b_team_session_20260308T053950Z_1887901.token
+team_tag=b_team
+start_utc=2026-03-08T05:39:50Z
+now_utc=2026-03-08T06:39:59Z
+start_epoch=1772948390
+now_epoch=1772951999
+elapsed_sec=3609
+elapsed_min=60
+min_required=30
+guard_result=pass
+    ```
+  - session_timer_guard 出力（60分）:
+    ```text
+    SESSION_TIMER_GUARD
+session_token=/tmp/b_team_session_20260308T053950Z_1887901.token
+team_tag=b_team
+start_utc=2026-03-08T05:39:50Z
+now_utc=2026-03-08T06:39:59Z
+start_epoch=1772948390
+now_epoch=1772951999
+elapsed_sec=3609
+elapsed_min=60
+min_required=60
+guard_result=pass
+    ```
+  - session_timer.sh end 出力:
+    ```text
+    SESSION_TIMER_END
+session_token=/tmp/b_team_session_20260308T053950Z_1887901.token
+team_tag=b_team
+start_utc=2026-03-08T05:39:50Z
+end_utc=2026-03-08T06:39:59Z
+start_epoch=1772948390
+end_epoch=1772951999
+elapsed_sec=3609
+elapsed_min=60
+progress_count=10
+last_progress_task=B-R2
+last_progress_kind=verification
+last_progress_note=integrator-scoped provenance validators passed for compare-ready route
+last_progress_utc=2026-03-08T06:34:40Z
+last_progress_epoch=1772951680
+last_progress_elapsed_min=54
+    ```
+  - 変更ファイル（実装差分を含む）:
+    - `FEM4C/src/mbd/system2d.c`
+    - `FEM4C/Makefile`
+    - `FEM4C/practice/ch09/mbd_system2d_history_probe.c`
+    - `FEM4C/practice/ch09/mbd_system2d_rigid_compare_probe.c`
+    - `FEM4C/practice/ch09/mbd_system2d_hht_history_output_probe.c`
+    - `FEM4C/scripts/compare_2link_rigid_analytic.py`
+    - `FEM4C/scripts/check_compare_2link_artifacts.sh`
+    - `FEM4C/scripts/check_compare_2link_artifact_matrix.sh`
+    - `FEM4C/scripts/check_compare_2link_artifact_manifest.py`
+    - `FEM4C/scripts/check_compare_2link_artifact_matrix_manifest.py`
+    - `FEM4C/scripts/test_compare_2link_rigid_analytic_real.sh`
+    - `FEM4C/scripts/test_compare_2link_rigid_analytic_real_normalize.sh`
+    - `FEM4C/scripts/test_compare_2link_rigid_analytic_multi_reference.sh`
+    - `FEM4C/scripts/test_run_e08_rigid_analytic_wrappers.sh`
+    - `FEM4C/scripts/test_check_compare_2link_artifacts.sh`
+    - `FEM4C/scripts/test_check_compare_2link_artifact_matrix.sh`
+    - `FEM4C/scripts/test_make_compare_2link_artifact_check_integrator.sh`
+    - `FEM4C/scripts/test_make_mbd_m1_rigid_acceptance.sh`
+    - `FEM4C/scripts/test_compare_2link_rigid_analytic_hht.sh`
+    - `FEM4C/scripts/test_compare_2link_rigid_analytic_integrator_compare_ready.sh`
+    - `FEM4C/README.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - B-R1:
+      - `system2d.c` の raw `fclose(...)` 呼び出しを `mbd_system2d_close_file_quiet(FILE **)` / `mbd_system2d_close_file_checked(FILE **, ...)` に集約し、cleanup path で caller-owned pointer を `NULL` 化してから close する形へ整理した。
+      - history / rigid_compare / input loader の close/error path を helper 経由へ置き換え、`gcc -Wall -Wextra -fanalyzer -std=c99 -Isrc -c src/mbd/system2d.c` で `-Wuse-after-free` warning が出ない状態を固定した。
+      - runtime spot-check では `bin/fem4c --mode=mbd examples/mbd_two_body_input.dat ...` の summary/history/rigid_compare 生成（line count `177/5/3`）と missing input の failure path 維持を確認し、挙動変更なしを確認した。
+    - B-R2:
+      - `system2d.c` の summary/output に `history_snapshot_count` / `rigid_compare_enabled` / `rigid_compare_snapshot_count` を追加し、rigid 2-link compare route の provenance を core output 側へ持ち上げた。
+      - `compare_2link_rigid_analytic.py` と compare/normalize wrapper 群を更新し、`normalization_history_snapshot_count` / `normalization_rigid_compare_enabled` / `normalization_rigid_compare_snapshot_count` を log/manifest/matrix に通すようにした。
+      - `mbd_rigid_analytic_hht_compare_test` と `mbd_m1_rigid_acceptance` で HHT rigid 2-link compare route を formal acceptance へ接続し、artifact suite/matrix validator も rigid route では `2,1,2`、flex route では `-,-,-` を要求するよう同期した。
+      - `Makefile` の `compare_2link_artifact_manifest_test` / `compare_2link_artifact_matrix_manifest_test` は、`MANIFEST_CSV` 未指定時に fresh tmp manifest を self-generate してから validator を走らせるようにし、stale `/tmp` manifest に引きずられる不安定性を解消した。
+  - 実行コマンド / pass-fail:
+    - `gcc -Wall -Wextra -fanalyzer -std=c99 -Isrc -c src/mbd/system2d.c -o /tmp/b_r1_system2d_analyzer_final.o` -> PASS
+    - `make -C FEM4C mbd_system2d_history_probe_contract_smoke` -> PASS
+    - `make -C FEM4C mbd_rigid_analytic_compare_test` -> PASS
+    - `make -C FEM4C mbd_rigid_analytic_hht_compare_test` -> PASS
+    - `make -C FEM4C mbd_rigid_analytic_real_test` -> PASS
+    - `make -C FEM4C mbd_rigid_analytic_multi_reference_test` -> PASS
+    - `make -C FEM4C mbd_rigid_analytic_wrapper_test` -> PASS
+    - `make -C FEM4C mbd_rigid_compare_integrator_review_smoke` -> PASS
+    - `make -C FEM4C mbd_rigid_compare_route_review_smoke` -> PASS
+    - `make -C FEM4C mbd_rigid_compare_route_matrix_review_smoke` -> PASS
+    - `make -C FEM4C mbd_m1_rigid_acceptance` -> PASS
+    - `make -C FEM4C mbd_m1_rigid_acceptance_test` -> PASS
+    - `bash FEM4C/scripts/test_compare_2link_rigid_analytic_integrator_compare_ready.sh` -> PASS
+    - `make -C FEM4C compare_2link_artifact_check_integrator_test` -> PASS
+    - `make -C FEM4C compare_2link_artifact_manifest_test` -> PASS
+    - `make -C FEM4C compare_2link_artifact_matrix_manifest_test` -> PASS
+    - `make -C FEM4C compare_2link_artifact_matrix_integrators_test` -> PASS
+    - `make -C FEM4C compare_2link_artifact_matrix_manifest_expected_integrators_test` -> PASS
+    - `bash FEM4C/scripts/test_check_compare_2link_artifacts.sh` -> PASS
+    - `bash FEM4C/scripts/test_check_compare_2link_artifact_matrix.sh` -> PASS
+    - `bash FEM4C/scripts/test_make_compare_2link_artifact_check_integrator.sh` -> PASS
+    - `python scripts/check_doc_links.py docs/fem4c_team_next_queue.md FEM4C/README.md` -> PASS
+  - 1行再現コマンド:
+    - `make -C FEM4C mbd_m1_rigid_acceptance && make -C FEM4C mbd_m1_rigid_acceptance_test`
+  - pass/fail（閾値）:
+    - B-R1: PASS（`gcc -Wall -Wextra -fanalyzer -std=c99 -Isrc -c src/mbd/system2d.c` で `-Wuse-after-free` warning 0件、runtime spot-check で summary/history/rigid_compare 生成成功）
+    - B-R2: PASS（`mbd_rigid_analytic_hht_compare_test` と `mbd_m1_rigid_acceptance` が通過し、rigid compare provenance が `history_snapshot_count=2`, `rigid_compare_enabled=1`, `rigid_compare_snapshot_count=2`、flex route は `-,-,-` を維持）
+
 - 実行タスク: B-07（Done）/ B-08（In Progress, Auto-Next）
   - ステータス整合:
     - `docs/fem4c_team_next_queue.md` を更新し、B-07=`Done` / B-08=`In Progress` に同期。
@@ -9295,6 +11396,727 @@ elapsed_min=60
   - D-09 の rigid-limit compare CSV は未着手で、acceptance までは未到達。
   - rigid-limit master の implicit run は Newmark/HHT とも constraint residual 超過で停止し、現状の compare 対象は explicit に限られる。
 
+## 2026-03-08 / C-team (C-49 rerun, C-50/C-51 implementation)
+- Current Plan:
+  - C-49 の repo-root audit wrapper acceptance を `file -> stdout -> nested -> modes` の順で閉じる。
+  - 同一セッションで C-50 validator と C-51 bundle integration を固め、queue の次タスクを未定義のまま残さない。
+- Completed This Session:
+  - タイマー進捗:
+    ```text
+    SESSION_TIMER_START
+    session_token=/tmp/c_team_session_20260307T161844Z_2642738.token
+    team_tag=c_team
+    start_utc=2026-03-07T16:18:44Z
+    start_epoch=1772900324
+    ```
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260307T161844Z_2642738.token
+    team_tag=c_team
+    start_utc=2026-03-07T16:18:44Z
+    now_utc=2026-03-07T16:29:02Z
+    start_epoch=1772900324
+    now_epoch=1772900942
+    elapsed_sec=618
+    elapsed_min=10
+    min_required=10
+    guard_result=pass
+    ```
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260307T161844Z_2642738.token
+    team_tag=c_team
+    start_utc=2026-03-07T16:18:44Z
+    now_utc=2026-03-07T17:30:42Z
+    start_epoch=1772900324
+    now_epoch=1772904642
+    elapsed_sec=4318
+    elapsed_min=71
+    min_required=20
+    guard_result=pass
+    ```
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260307T161844Z_2642738.token
+    team_tag=c_team
+    start_utc=2026-03-07T16:18:44Z
+    now_utc=2026-03-07T17:30:42Z
+    start_epoch=1772900324
+    now_epoch=1772904642
+    elapsed_sec=4318
+    elapsed_min=71
+    min_required=30
+    guard_result=pass
+    ```
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260307T161844Z_2642738.token
+    team_tag=c_team
+    start_utc=2026-03-07T16:18:44Z
+    now_utc=2026-03-07T17:30:42Z
+    start_epoch=1772900324
+    now_epoch=1772904642
+    elapsed_sec=4318
+    elapsed_min=71
+    min_required=60
+    guard_result=pass
+    ```
+    ```text
+    SESSION_TIMER_END
+    session_token=/tmp/c_team_session_20260307T161844Z_2642738.token
+    team_tag=c_team
+    start_utc=2026-03-07T16:18:44Z
+    end_utc=2026-03-07T17:35:18Z
+    start_epoch=1772900324
+    end_epoch=1772904918
+    elapsed_sec=4594
+    elapsed_min=76
+    ```
+  - 変更ファイル:
+    - `FEM4C/Makefile`
+    - `FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh`
+    - `FEM4C/scripts/test_make_coupled_compare_reason_code_root_surface_contract_checks.sh`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_runbook.md`
+    - `scripts/check_coupled_compare_reason_code_root_surface_contract_audit_report.py`
+    - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_audit_report.sh`
+    - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_audit_report_stdout.sh`
+    - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_audit_report_missing_log.sh`
+    - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_audit_report_print_required_keys.sh`
+    - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_audit_report_wrong_target.sh`
+    - `scripts/test_run_coupled_compare_reason_code_root_surface_contract_audit.sh`
+    - `scripts/test_run_coupled_compare_reason_code_root_surface_contract_audit_stdout.sh`
+    - `scripts/test_run_coupled_compare_reason_code_root_surface_contract_audit_nested_log_dir.sh`
+    - `scripts/test_run_coupled_compare_reason_code_root_surface_contract_audit_modes.sh`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - C-50:
+      - `check_coupled_compare_reason_code_root_surface_contract_audit_report.py` を追加し、focused audit wrapper の `target/mode/log_path/result` と required pass lines を検証できるようにした。
+      - logfile/stdout/missing-log/required-keys/wrong-target の self-test を追加し、`make -C FEM4C coupled_compare_reason_code_root_surface_contract_audit_report_test` を新設した。
+    - C-51 前進:
+      - `FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh` に C-50 validator の runbook/queue drift 検知を追加した。
+      - `coupled_compare_reason_code_root_surface_contract_checks` に C-50 validator target を接続し、bundle self-test の pass lines を拡張した。
+      - `docs/fem4c_team_next_queue.md` に `C-50` / `C-51` を起票し、runbook に validator 利用法を追記した。
+    - C-49 再現性改善:
+      - `test_run_coupled_compare_reason_code_root_surface_contract_audit*.sh` の fixed `/tmp` log を temp-local path へ変更し、同系 wrapper 実行時の log collision を避けるようにした。
+  - 実行コマンド / pass-fail:
+    - `python3 -m py_compile scripts/check_coupled_compare_reason_code_root_surface_contract_audit_report.py` -> PASS
+    - `make -C FEM4C coupled_compare_reason_code_root_surface_contract_audit_report_test` -> PASS
+    - `make -C FEM4C coupled_compare_reason_code_docs_sync_test` -> PASS
+    - `bash scripts/test_run_coupled_compare_reason_code_root_surface_contract_audit.sh` -> PASS
+    - `bash scripts/test_run_coupled_compare_reason_code_root_surface_contract_audit_stdout.sh` -> NOT COMPLETED（76分セッション内で overrun 回避のため打ち切り）
+    - `bash scripts/test_run_coupled_compare_reason_code_root_surface_contract_audit_nested_log_dir.sh` -> NOT RUN
+    - `bash scripts/test_run_coupled_compare_reason_code_root_surface_contract_audit_modes.sh` -> NOT RUN
+    - `make -C FEM4C coupled_compare_reason_code_root_surface_contract_checks_test` -> NOT RUN
+  - pass/fail 根拠:
+    - C-49: `In Progress`（file mode は PASS。stdout/nested/modes は次セッション継続）
+    - C-50: `PASS`（validator + make target + runbook/queue 反映を確認）
+    - C-51: `In Progress`（bundle 接続と docs-sync 反映は実装済み。full `checks_test` は次セッション）
+- Next Actions:
+  - C-49 を `stdout -> nested -> modes` の順で再開し、repo-root audit wrapper acceptance を閉じる。
+  - 続けて `make -C FEM4C coupled_compare_reason_code_root_surface_contract_checks_test` を通し、C-51 の bundle integration を受理可能にする。
+  - C-49 完了後に queue を `C-49 Done / C-50 Done / C-51 In Progress or Done` へ更新する。
+- Open Risks/Blockers:
+  - C-49 integration family は wrapper の入れ子が深く、full acceptance を同一 76 分セッションで最後まで押すと 90 分超過のリスクがあったため、stdout rerun を途中で切った。
+  - `docs/fem4c_team_next_queue.md` の status は C-49 未完了のため据え置きで、C-50/C-51 の queue promotion は次セッションへ繰り越した。
+
+## 2026-03-08 / C-team (C-49..C-56 Done, C-57 In Progress)
+- 実行タスク: C-49 rerun accepted + C-50/C-51/C-52/C-53/C-54/C-55/C-56 completion
+  - Run ID: `c49-rerun-root-contract-stack-root-surface-20260307T174408Z`
+  - session_timer.sh start 出力:
+    ```text
+    SESSION_TIMER_START
+    session_token=/tmp/c_team_session_20260307T174408Z_24239.token
+    team_tag=c_team
+    start_utc=2026-03-07T17:44:08Z
+    start_epoch=1772905448
+    ```
+  - session_timer_declare.sh 出力:
+    ```text
+    SESSION_TIMER_DECLARE
+    session_token=/tmp/c_team_session_20260307T174408Z_24239.token
+    team_tag=c_team
+    primary_task=C-49
+    secondary_task=C-50
+    plan_utc=2026-03-07T17:44:17Z
+    plan_epoch=1772905457
+    plan_note=rerun C-49 integration path; stabilize C-50 validator/bundle handoff
+    ```
+  - session_timer_guard 出力（10分）:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260307T174408Z_24239.token
+    team_tag=c_team
+    start_utc=2026-03-07T17:44:08Z
+    now_utc=2026-03-07T17:55:54Z
+    start_epoch=1772905448
+    now_epoch=1772906154
+    elapsed_sec=706
+    elapsed_min=11
+    min_required=10
+    guard_result=pass
+    ```
+  - session_timer_guard 出力（20分）:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260307T174408Z_24239.token
+    team_tag=c_team
+    start_utc=2026-03-07T17:44:08Z
+    now_utc=2026-03-07T18:04:08Z
+    start_epoch=1772905448
+    now_epoch=1772906648
+    elapsed_sec=1200
+    elapsed_min=20
+    min_required=20
+    guard_result=pass
+    ```
+  - session_timer_guard 出力（30分）:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260307T174408Z_24239.token
+    team_tag=c_team
+    start_utc=2026-03-07T17:44:08Z
+    now_utc=2026-03-07T18:14:19Z
+    start_epoch=1772905448
+    now_epoch=1772907259
+    elapsed_sec=1811
+    elapsed_min=30
+    min_required=30
+    guard_result=pass
+    ```
+  - session_timer_guard 出力（60分 / 未達確認）:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260307T174408Z_24239.token
+    team_tag=c_team
+    start_utc=2026-03-07T17:44:08Z
+    now_utc=2026-03-07T18:40:06Z
+    start_epoch=1772905448
+    now_epoch=1772908806
+    elapsed_sec=3358
+    elapsed_min=55
+    min_required=60
+    guard_result=block
+    ```
+  - session_timer_guard 出力（60分 / 受理）:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260307T174408Z_24239.token
+    team_tag=c_team
+    start_utc=2026-03-07T17:44:08Z
+    now_utc=2026-03-07T18:47:50Z
+    start_epoch=1772905448
+    now_epoch=1772909270
+    elapsed_sec=3822
+    elapsed_min=63
+    min_required=60
+    guard_result=pass
+    ```
+  - session_timer.sh end 出力:
+    ```text
+    SESSION_TIMER_END
+    session_token=/tmp/c_team_session_20260307T174408Z_24239.token
+    team_tag=c_team
+    start_utc=2026-03-07T17:44:08Z
+    end_utc=2026-03-07T18:48:30Z
+    start_epoch=1772905448
+    end_epoch=1772909310
+    elapsed_sec=3862
+    elapsed_min=64
+    ```
+  - 変更ファイル:
+    - `FEM4C/Makefile`
+    - `FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh`
+    - `FEM4C/scripts/test_make_coupled_compare_reason_code_contract_checks.sh`
+    - `FEM4C/scripts/test_make_coupled_compare_reason_code_root_surface_contract_checks.sh`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_runbook.md`
+    - `scripts/check_coupled_compare_reason_code_contract_audit_report.py`
+    - `scripts/check_coupled_compare_reason_code_root_surface_contract_audit_report.py`
+    - `scripts/check_coupled_compare_reason_code_root_surface_report.py`
+    - `scripts/coupled_compare_reason_code_audit_cache.sh`
+    - `scripts/run_coupled_compare_reason_code_contract_audit.sh`
+    - `scripts/run_coupled_compare_reason_code_contract_stack.sh`
+    - `scripts/run_coupled_compare_reason_code_pm_surface.sh`
+    - `scripts/run_coupled_compare_reason_code_root_modes.sh`
+    - `scripts/run_coupled_compare_reason_code_root_surface.sh`
+    - `scripts/run_coupled_compare_reason_code_root_surface_contract_audit.sh`
+    - `scripts/test_coupled_compare_reason_code_audit_cache.sh`
+    - `scripts/test_check_coupled_compare_reason_code_contract_audit_report.sh`
+    - `scripts/test_check_coupled_compare_reason_code_contract_audit_report_missing_cache_log.sh`
+    - `scripts/test_check_coupled_compare_reason_code_contract_audit_report_missing_log.sh`
+    - `scripts/test_check_coupled_compare_reason_code_contract_audit_report_print_required_keys.sh`
+    - `scripts/test_check_coupled_compare_reason_code_contract_audit_report_stdout.sh`
+    - `scripts/test_check_coupled_compare_reason_code_contract_audit_report_wrong_target.sh`
+    - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_audit_report.sh`
+    - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_audit_report_missing_cache_log.sh`
+    - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_audit_report_missing_log.sh`
+    - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_audit_report_print_required_keys.sh`
+    - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_audit_report_stdout.sh`
+    - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_audit_report_wrong_target.sh`
+    - `scripts/test_check_coupled_compare_reason_code_root_surface_report.sh`
+    - `scripts/test_check_coupled_compare_reason_code_root_surface_report_missing_nested_log.sh`
+    - `scripts/test_check_coupled_compare_reason_code_root_surface_report_print_required_keys.sh`
+    - `scripts/test_check_coupled_compare_reason_code_root_surface_report_wrong_component.sh`
+    - `scripts/test_run_coupled_compare_reason_code_contract_audit.sh`
+    - `scripts/test_run_coupled_compare_reason_code_contract_audit_modes.sh`
+    - `scripts/test_run_coupled_compare_reason_code_contract_audit_nested_log_dir.sh`
+    - `scripts/test_run_coupled_compare_reason_code_contract_audit_stdout.sh`
+    - `scripts/test_run_coupled_compare_reason_code_contract_stack.sh`
+    - `scripts/test_run_coupled_compare_reason_code_contract_stack_default_out_dir.sh`
+    - `scripts/test_run_coupled_compare_reason_code_contract_stack_modes.sh`
+    - `scripts/test_run_coupled_compare_reason_code_contract_stack_nested_out_dir.sh`
+    - `scripts/test_run_coupled_compare_reason_code_pm_surface.sh`
+    - `scripts/test_run_coupled_compare_reason_code_pm_surface_default_out_dir.sh`
+    - `scripts/test_run_coupled_compare_reason_code_pm_surface_modes.sh`
+    - `scripts/test_run_coupled_compare_reason_code_pm_surface_nested_out_dir.sh`
+    - `scripts/test_run_coupled_compare_reason_code_root_modes.sh`
+    - `scripts/test_run_coupled_compare_reason_code_root_modes_wrapper.sh`
+    - `scripts/test_run_coupled_compare_reason_code_root_modes_wrapper_default_out_dir.sh`
+    - `scripts/test_run_coupled_compare_reason_code_root_modes_wrapper_modes.sh`
+    - `scripts/test_run_coupled_compare_reason_code_root_modes_wrapper_nested_out_dir.sh`
+    - `scripts/test_run_coupled_compare_reason_code_root_surface.sh`
+    - `scripts/test_run_coupled_compare_reason_code_root_surface_modes.sh`
+    - `scripts/test_run_coupled_compare_reason_code_root_surface_default_out_dir.sh`
+    - `scripts/test_run_coupled_compare_reason_code_root_surface_nested_out_dir.sh`
+    - `scripts/test_run_coupled_compare_reason_code_root_surface_contract_audit.sh`
+    - `scripts/test_run_coupled_compare_reason_code_root_surface_contract_audit_modes.sh`
+    - `scripts/test_run_coupled_compare_reason_code_root_surface_contract_audit_nested_log_dir.sh`
+    - `scripts/test_run_coupled_compare_reason_code_root_surface_contract_audit_stdout.sh`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - C-49 rerun:
+      - 新規 `session_token` を発行し、開始 9 秒後に `SESSION_TIMER_DECLARE` で `C-49 / C-50` を宣言した。
+      - `scripts/coupled_compare_reason_code_audit_cache.sh` を切り出し、repo-root audit wrapper の cached bundle log 生成を `flock` + atomic temp-write に統一した。
+      - `scripts/run_coupled_compare_reason_code_contract_audit.sh` と `scripts/run_coupled_compare_reason_code_root_surface_contract_audit.sh` を shared cache helper 経由に切り替え、並列/再実行時の cache race を抑止した。
+    - C-50/C-53/C-54/C-55:
+      - `scripts/check_coupled_compare_reason_code_root_surface_contract_audit_report.py` と `scripts/check_coupled_compare_reason_code_contract_audit_report.py` を整備し、root-surface / contract 側の audit report validator を fixed key contract で固定した。
+      - focused bundle (`coupled_compare_reason_code_root_surface_contract_checks`, `coupled_compare_reason_code_contract_checks`) に validator を組み込み、Makefile target と self-test を更新した。
+      - `scripts/run_coupled_compare_reason_code_contract_stack.sh` / `scripts/run_coupled_compare_reason_code_pm_surface.sh` に contract audit report coverage の surface を追加した。
+    - C-56:
+      - `scripts/run_coupled_compare_reason_code_root_modes.sh` に `root_modes_pm_surface_contract_log=` / `root_modes_pm_surface_contract_report_log=` を追加し、root entrypoint から PM surface 経由の contract report path を追跡できるようにした。
+      - `scripts/run_coupled_compare_reason_code_root_surface.sh` に `root_surface_contract_report_log=` / `root_surface_root_modes_contract_report_log=` を追加した。
+      - `scripts/check_coupled_compare_reason_code_root_surface_report.py` を新 contract に追従させ、required keys / nested file checks を更新した。
+      - `scripts/test_run_coupled_compare_reason_code_root_modes.sh` を追加し、root-modes acceptance command を queue と一致させた。
+      - `docs/team_runbook.md` / `docs/fem4c_team_next_queue.md` / `FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh` を root entrypoint の新 surface に同期した。
+    - Queue:
+      - `docs/fem4c_team_next_queue.md` を `C-49..C-56 Done / C-57 In Progress` に更新した。
+  - 実行コマンド / pass-fail:
+    - rerun session 前半:
+      - `bash scripts/test_coupled_compare_reason_code_audit_cache.sh` -> PASS
+      - `bash scripts/test_run_coupled_compare_reason_code_root_surface_contract_audit.sh` -> PASS
+      - `bash scripts/test_run_coupled_compare_reason_code_root_surface_contract_audit_stdout.sh` -> PASS
+      - `bash scripts/test_run_coupled_compare_reason_code_root_surface_contract_audit_nested_log_dir.sh` -> PASS
+      - `bash scripts/test_run_coupled_compare_reason_code_root_surface_contract_audit_modes.sh` -> PASS
+      - `make -C FEM4C coupled_compare_reason_code_root_surface_contract_audit_report_test` -> PASS
+      - `make -C FEM4C coupled_compare_reason_code_root_surface_contract_checks` -> PASS
+      - `make -C FEM4C coupled_compare_reason_code_root_surface_contract_checks_test` -> PASS
+      - `python3 -m py_compile scripts/check_coupled_compare_reason_code_contract_audit_report.py` -> PASS
+      - `make -C FEM4C coupled_compare_reason_code_contract_audit_report_test` -> PASS
+      - `make -C FEM4C coupled_compare_reason_code_contract_checks_test` -> PASS
+      - `bash scripts/test_run_coupled_compare_reason_code_contract_stack_modes.sh` -> PASS
+      - `bash scripts/test_run_coupled_compare_reason_code_pm_surface_modes.sh` -> PASS
+    - rerun session 後半（C-56）:
+      - `bash scripts/test_run_coupled_compare_reason_code_root_modes.sh` -> PASS
+      - `bash scripts/test_run_coupled_compare_reason_code_root_surface_modes.sh` -> PASS
+      - `bash scripts/test_check_coupled_compare_reason_code_root_surface_report.sh` -> PASS
+      - `bash scripts/test_check_coupled_compare_reason_code_root_surface_report_print_required_keys.sh` -> PASS
+      - `make -C FEM4C coupled_compare_reason_code_docs_sync_test` -> PASS
+  - pass/fail 根拠:
+    - C-49 rerun: `PASS`（新規 token、`SESSION_TIMER_DECLARE` を開始 10 分以内に記録、`guard60=pass` 前に `end` 未実行、`elapsed_min=64`）
+    - C-50: `PASS`
+    - C-51: `PASS`
+    - C-52: `PASS`
+    - C-53: `PASS`
+    - C-54: `PASS`
+    - C-55: `PASS`
+    - C-56: `PASS`
+    - C-57: `In Progress`（root_surface_audit 側へ contract report handoff surface を拡張する次タスクを起票）
+
+## 2026-03-08 / C-team (C-R1 recheck, C-R2 helper extraction, C-R3 review-smoke hardening)
+- Current Plan:
+  - `C-R1` の build acceptance を短く再確認し、`C-R2` として `coupled_step_common2d.{c,h}` の helper 抽出で explicit/implicit 共通部の重複を減らす。
+  - same-session secondary として `C-R3` を使い、抽出した helper path を parser-free smoke と focused review-spec bundle で固定する。
+- Completed This Session:
+  - タイマー進捗:
+    - `session_token=/tmp/c_team_session_20260308T054832Z_1896466.token`
+    - `SESSION_TIMER_DECLARE` -> `primary_task=C-R2`, `secondary_task=C-R3`, `plan_utc=2026-03-08T05:48:36Z`, `plan_note=Re-run C-R2 helper extraction after invalid stale run; first recheck C-R1 build acceptance, then continue reaction/apply helper extraction for C-R3`
+    - `SESSION_TIMER_PROGRESS #1` -> `current_task=C-R2`, `work_kind=implementation`, `elapsed_min=2`, `progress_note=`
+    - `SESSION_TIMER_PROGRESS #2` -> `current_task=C-R3`, `work_kind=implementation`, `elapsed_min=39`, `progress_note=add parser-free smoke bundle for extracted coupled_step_common2d helper and shared solve path`
+    - `SESSION_TIMER_PROGRESS #3` -> `current_task=C-R3`, `work_kind=implementation`, `elapsed_min=39`, `progress_note=verify focused review-spec smoke bundle for shared coupled_step_common2d extraction and warning-free Q4/T3 adapters`
+    - `SESSION_TIMER_PROGRESS #4` -> `current_task=C-R3`, `work_kind=implementation`, `elapsed_min=40`, `progress_note=close C-R3 late-progress requirement after focused c_review_spec_smoke_test for helper extraction`
+    - late-progress 採用: `#4` を 40分以降の正式 heartbeat とし、`#2/#3` は focused bundle 完了中の中間 heartbeat として扱う。
+    - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard45=pass`, `guard50=block(elapsed_min=49)`, `guard60=pass`
+    - `session_timer.sh end /tmp/c_team_session_20260308T054832Z_1896466.token` -> `start_utc=2026-03-08T05:48:32Z`, `end_utc=2026-03-08T06:48:36Z`, `elapsed_min=60`
+  - 変更ファイル:
+    - `FEM4C/src/elements/q4/q4_element.c`
+    - `FEM4C/src/elements/t3/t3_element.c`
+    - `FEM4C/src/coupled/coupled_step_common2d.h`
+    - `FEM4C/src/coupled/coupled_step_common2d.c`
+    - `FEM4C/src/coupled/coupled_step_explicit2d.c`
+    - `FEM4C/src/coupled/coupled_step_implicit2d.c`
+    - `FEM4C/scripts/test_q4_t3_stiffness_adapter_warnings.sh`
+    - `FEM4C/scripts/test_coupled_step_common2d.sh`
+    - `FEM4C/scripts/test_coupled_step_common2d_solve.sh`
+    - `FEM4C/Makefile`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - `C-R1`:
+      - `q4_register()` / `t3_register()` で `element_stiffness_func_t` に合わせた adapter を追加し、Q4/T3 の `stiffness` 関数ポインタ型不一致 warning を局所修正で解消した。
+    - `C-R2`:
+      - `coupled_step_common2d.h` / `coupled_step_common2d.c` に `get_body_const_for_slot`, `apply_reaction_force`, `solve_flex_reaction_for_slot`, `capture_current_pose_for_slot`, `sync_mbd_time` を追加した。
+      - `coupled_step_explicit2d.c` は flex-slot solve と MBD time sync を common helper へ寄せた。
+      - `coupled_step_implicit2d.c` は current-pose capture, reaction apply, fixed-point 内の flex-slot solve, integrator-select 時の MBD time sync を common helper 経由へ置き換えた。
+    - `C-R3`:
+      - `test_q4_t3_stiffness_adapter_warnings.sh` を追加し、Q4/T3 adapter compile を `-Werror` で固定した。
+      - `test_coupled_step_common2d.sh` / `test_coupled_step_common2d_solve.sh` を追加し、parser-free helper smoke と shared solve-path smoke を固定した。
+      - `Makefile` に `q4_t3_stiffness_adapter_warning_test`, `coupled_step_common2d_test`, `coupled_step_common2d_solve_test`, `c_review_spec_smoke_test` を追加した。
+      - `docs/fem4c_team_next_queue.md` に `C-R1/C-R2/C-R3` review-spec status を追加し、`C-R1=Done`, `C-R2=Done`, `C-R3=Done` に同期した。
+  - 実行コマンド / pass-fail:
+    - `cd FEM4C && make clean >/tmp/cr_final_clean.log 2>&1 && make -j2 >/tmp/cr_final_build.log 2>&1 && make c_review_spec_smoke_test >/tmp/cr_final_smoke.log 2>&1` -> PASS
+      - `Q4/T3` の `-Wincompatible-pointer-types` は再発なし。残存 warning は既存の `src/elements/elements.c` と `parser/parser.c` のみ。
+    - `make -C FEM4C coupled_example_check` -> PASS
+    - `make -B -C FEM4C coupled_2d_acceptance OUT_DIR=/tmp/c_review_accept_force MANIFEST_CSV=/tmp/c_review_accept_force/manifest.csv` -> PASS
+- Next Actions:
+  - review-spec で明示された `C-R1/C-R2` は閉じたので、次セッションは PM dispatch に従って次の solver-core task に進む。
+  - 追加の common helper 抽出を行う場合も、`c_review_spec_smoke_test` を focused acceptance として維持する。
+- Open Risks/Blockers:
+  - `FEM4C/Makefile` は unrelated drift が大きいため、staging は今回の C review-spec 対象 path に限定する必要がある。
+  - `make clean && make -j2` の初回に `build/mbd/system2d.o` の directory miss が一度だけ出たが、直後の再実行では再現しなかったため blocker にはしていない。
+
+## 2026-03-08 / C-team (C-57 Done, C-58 Done)
+- Current Plan:
+  - `C-57` を閉じ、repo-root audited entrypoint の `root_surface_audit_contract_report_log=` handoff を正式化する。
+  - same-session secondary `C-58` として root-surface audit report validator を追加し、focused bundle / docs-sync / help / phony まで整合させる。
+- Completed This Session:
+  - タイマー進捗:
+    - `session_token=/tmp/c_team_session_20260308T075759Z_2061939.token`
+    - `SESSION_TIMER_START` -> `team_tag=c_team`, `start_utc=2026-03-08T07:57:59Z`, `start_epoch=1772956679`
+    - `SESSION_TIMER_DECLARE` -> `primary_task=C-57`, `secondary_task=C-58`, `plan_utc=2026-03-08T07:58:46Z`, `plan_note=C-57 root_surface_audit contract-report handoff; auto-next C-58 if complete`
+    - `SESSION_TIMER_PROGRESS #1` -> `current_task=C-57`, `work_kind=implementation`, `elapsed_min=2`, `progress_note=root_surface_audit contract_report_log handoff + docs-sync update`
+    - `SESSION_TIMER_PROGRESS #2` -> `current_task=C-58`, `work_kind=implementation`, `elapsed_min=39`, `progress_note=root_surface_audit report validator + mismatch coverage + bundle integration fixed`
+    - `SESSION_TIMER_PROGRESS #3` -> `current_task=C-58`, `work_kind=implementation`, `elapsed_min=40`, `progress_note=help surface deduped and .PHONY updated for root_surface_audit_report target`
+    - late-progress 採用: `#3` を 40分以降の正式 heartbeat とし、`#2` は validator / bundle integration を閉じた中間 heartbeat として扱う。
+  - `session_timer.sh` raw:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260308T075759Z_2061939.token
+    team_tag=c_team
+    start_utc=2026-03-08T07:57:59Z
+    now_utc=2026-03-08T08:18:51Z
+    start_epoch=1772956679
+    now_epoch=1772957931
+    elapsed_sec=1252
+    elapsed_min=20
+    min_required=10
+    guard_result=pass
+    ```
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260308T075759Z_2061939.token
+    team_tag=c_team
+    start_utc=2026-03-08T07:57:59Z
+    now_utc=2026-03-08T08:18:51Z
+    start_epoch=1772956679
+    now_epoch=1772957931
+    elapsed_sec=1252
+    elapsed_min=20
+    min_required=20
+    guard_result=pass
+    ```
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260308T075759Z_2061939.token
+    team_tag=c_team
+    start_utc=2026-03-08T07:57:59Z
+    now_utc=2026-03-08T08:32:10Z
+    start_epoch=1772956679
+    now_epoch=1772958730
+    elapsed_sec=2051
+    elapsed_min=34
+    min_required=30
+    guard_result=pass
+    ```
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260308T075759Z_2061939.token
+    team_tag=c_team
+    start_utc=2026-03-08T07:57:59Z
+    now_utc=2026-03-08T08:59:32Z
+    start_epoch=1772956679
+    now_epoch=1772960372
+    elapsed_sec=3693
+    elapsed_min=61
+    min_required=60
+    guard_result=pass
+    ```
+    ```text
+    SESSION_TIMER_END
+    session_token=/tmp/c_team_session_20260308T075759Z_2061939.token
+    team_tag=c_team
+    start_utc=2026-03-08T07:57:59Z
+    end_utc=2026-03-08T08:59:32Z
+    start_epoch=1772956679
+    end_epoch=1772960372
+    elapsed_sec=3693
+    elapsed_min=61
+    progress_count=3
+    last_progress_task=C-58
+    last_progress_kind=implementation
+    last_progress_note=help surface deduped and .PHONY updated for root_surface_audit_report target
+    last_progress_utc=2026-03-08T08:38:06Z
+    last_progress_epoch=1772959086
+    last_progress_elapsed_min=40
+    ```
+  - 変更ファイル:
+    - `scripts/run_coupled_compare_reason_code_root_surface_audit.sh`
+    - `scripts/check_coupled_compare_reason_code_root_surface_audit_report.py`
+    - `scripts/test_run_coupled_compare_reason_code_root_surface_audit.sh`
+    - `scripts/test_run_coupled_compare_reason_code_root_surface_audit_default_out_dir.sh`
+    - `scripts/test_run_coupled_compare_reason_code_root_surface_audit_nested_out_dir.sh`
+    - `scripts/test_check_coupled_compare_reason_code_root_surface_audit_report.sh`
+    - `scripts/test_check_coupled_compare_reason_code_root_surface_audit_report_missing_log.sh`
+    - `scripts/test_check_coupled_compare_reason_code_root_surface_audit_report_missing_contract_log.sh`
+    - `scripts/test_check_coupled_compare_reason_code_root_surface_audit_report_missing_nested_contract_key.sh`
+    - `scripts/test_check_coupled_compare_reason_code_root_surface_audit_report_mismatch.sh`
+    - `scripts/test_check_coupled_compare_reason_code_root_surface_audit_report_escape.sh`
+    - `scripts/test_check_coupled_compare_reason_code_root_surface_audit_report_print_required_keys.sh`
+    - `scripts/test_check_coupled_compare_reason_code_root_surface_audit_report_wrong_component.sh`
+    - `FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh`
+    - `FEM4C/scripts/test_make_coupled_compare_reason_code_root_surface_contract_checks.sh`
+    - `FEM4C/Makefile`
+    - `docs/team_runbook.md`
+    - `docs/fem4c_team_next_queue.md`
+  - 実装内容:
+    - `C-57`:
+      - `run_coupled_compare_reason_code_root_surface_audit.sh` が `root_surface_audit_contract_report_log=` を出力するようにし、repo-root audited entrypoint から contract audit report coverage を追跡できるようにした。
+      - audit wrapper の default / nested / explicit mode self-tests を新 surface に追従させた。
+    - `C-58`:
+      - `check_coupled_compare_reason_code_root_surface_audit_report.py` を追加し、`root_surface_audit_*` metadata、nested `root_surface_contract_report_log`、path equality、parent-dir confinement、pass line を fail-fast 検証できるようにした。
+      - stable / missing-log / missing-contract-log / missing-nested-contract-key / mismatch / escape / print-required-keys / wrong-component の focused self-tests を追加した。
+      - `FEM4C/Makefile` に `coupled_compare_reason_code_root_surface_audit_report_test` を追加し、`coupled_compare_reason_code_root_surface_contract_checks` とその bundle self-test に validator coverage を組み込んだ。
+      - `make help` の target surface を整理し、`.PHONY` に `coupled_compare_reason_code_root_surface_audit_report_test` を追加した。
+      - `docs/team_runbook.md` / `docs/fem4c_team_next_queue.md` / `FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh` を更新し、validator と contract-report handoff の docs-sync を固定した。
+  - 実行コマンド / pass-fail:
+    - `bash scripts/test_run_coupled_compare_reason_code_root_surface_audit.sh` -> PASS
+    - `bash scripts/test_run_coupled_compare_reason_code_root_surface_audit_modes.sh` -> PASS
+    - `make -C FEM4C coupled_compare_reason_code_root_surface_audit_report_test` -> PASS
+    - `make -C FEM4C coupled_compare_reason_code_docs_sync_test` -> PASS
+    - `make -C FEM4C coupled_compare_reason_code_root_surface_contract_checks_test` -> PASS
+    - `make -C FEM4C coupled_compare_reason_code_root_surface_contract_checks` -> PASS
+    - `bash scripts/test_check_coupled_compare_reason_code_root_surface_audit_report_escape.sh` -> PASS
+    - `bash scripts/test_check_coupled_compare_reason_code_root_surface_audit_report_missing_nested_contract_key.sh` -> PASS
+    - `bash -n scripts/run_coupled_compare_reason_code_root_surface_audit.sh scripts/test_run_coupled_compare_reason_code_root_surface_audit.sh scripts/test_run_coupled_compare_reason_code_root_surface_audit_default_out_dir.sh scripts/test_run_coupled_compare_reason_code_root_surface_audit_nested_out_dir.sh scripts/test_check_coupled_compare_reason_code_root_surface_audit_report.sh scripts/test_check_coupled_compare_reason_code_root_surface_audit_report_missing_log.sh scripts/test_check_coupled_compare_reason_code_root_surface_audit_report_missing_contract_log.sh scripts/test_check_coupled_compare_reason_code_root_surface_audit_report_missing_nested_contract_key.sh scripts/test_check_coupled_compare_reason_code_root_surface_audit_report_mismatch.sh scripts/test_check_coupled_compare_reason_code_root_surface_audit_report_escape.sh scripts/test_check_coupled_compare_reason_code_root_surface_audit_report_print_required_keys.sh scripts/test_check_coupled_compare_reason_code_root_surface_audit_report_wrong_component.sh FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh FEM4C/scripts/test_make_coupled_compare_reason_code_root_surface_contract_checks.sh && python3 -m py_compile scripts/check_coupled_compare_reason_code_root_surface_audit_report.py` -> PASS
+    - `bash scripts/run_coupled_compare_reason_code_root_surface_audit.sh /tmp/c57_c58_audit_manual > /tmp/c57_c58_audit_manual.log 2>&1 && python3 scripts/check_coupled_compare_reason_code_root_surface_audit_report.py /tmp/c57_c58_audit_manual.log` -> PASS
+      - `root_surface_audit_out_dir=/tmp/c57_c58_audit_manual`
+      - `root_surface_audit_contract_report_log=/tmp/c57_c58_audit_manual/root_surface_artifacts/pm_surface_artifacts/contract_audit_report.log`
+  - staging:
+    - `safe_stage_command=git add FEM4C/Makefile FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh FEM4C/scripts/test_make_coupled_compare_reason_code_root_surface_contract_checks.sh docs/fem4c_team_next_queue.md docs/team_runbook.md scripts/check_coupled_compare_reason_code_root_surface_audit_report.py scripts/run_coupled_compare_reason_code_root_surface_audit.sh scripts/test_check_coupled_compare_reason_code_root_surface_audit_report.sh scripts/test_check_coupled_compare_reason_code_root_surface_audit_report_missing_log.sh scripts/test_check_coupled_compare_reason_code_root_surface_audit_report_missing_contract_log.sh scripts/test_check_coupled_compare_reason_code_root_surface_audit_report_missing_nested_contract_key.sh scripts/test_check_coupled_compare_reason_code_root_surface_audit_report_mismatch.sh scripts/test_check_coupled_compare_reason_code_root_surface_audit_report_escape.sh scripts/test_check_coupled_compare_reason_code_root_surface_audit_report_print_required_keys.sh scripts/test_check_coupled_compare_reason_code_root_surface_audit_report_wrong_component.sh scripts/test_run_coupled_compare_reason_code_root_surface_audit.sh scripts/test_run_coupled_compare_reason_code_root_surface_audit_default_out_dir.sh scripts/test_run_coupled_compare_reason_code_root_surface_audit_nested_out_dir.sh docs/team_status.md docs/session_continuity_log.md`
+- Next Actions:
+  - `C-57` と `C-58` は完了として扱う。
+  - 次セッションは `C-59` (`Todo`) の surface wrapper 化に進む。
+- Open Risks/Blockers:
+  - `FEM4C/Makefile` を含む dirty diff が大きいため、staging は今回 touched path に限定する必要がある。
+  - `coupled_compare_reason_code_root_surface_contract_checks_test` は focused bundle 全体を再生するため実行時間が長い。短い検証では `coupled_compare_reason_code_root_surface_audit_report_test` を優先する。
+
+- 実行タスク: C-70, C-71, C-72, C-73, C-74, C-75, C-76, C-77（wrapper-surface validator / skip-nested-selftests stack）
+  - Run ID: `/tmp/c_team_session_20260309T024809Z_7394.token`
+  - pass/fail: `pass`
+  - session_timer:
+    ```text
+    SESSION_TIMER_START
+    session_token=/tmp/c_team_session_20260309T024809Z_7394.token
+    team_tag=c_team
+    start_utc=2026-03-09T02:48:09Z
+    start_epoch=1773024489
+    ```
+    ```text
+    SESSION_TIMER_DECLARE
+    session_token=/tmp/c_team_session_20260309T024809Z_7394.token
+    team_tag=c_team
+    primary_task=C-70
+    secondary_task=C-71
+    plan_utc=2026-03-09T02:48:20Z
+    plan_epoch=1773024500
+    plan_note=
+    ```
+    ```text
+    SESSION_TIMER_PROGRESS
+    session_token=/tmp/c_team_session_20260309T024809Z_7394.token
+    team_tag=c_team
+    current_task=C-70
+    work_kind=implementation
+    progress_note=wrapper-surface validator + initial focused tests added
+    progress_utc=2026-03-09T02:49:19Z
+    progress_epoch=1773024559
+    elapsed_min=1
+    progress_count=1
+    ```
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260309T024809Z_7394.token
+    team_tag=c_team
+    start_utc=2026-03-09T02:48:09Z
+    now_utc=2026-03-09T02:59:46Z
+    start_epoch=1773024489
+    now_epoch=1773025186
+    elapsed_sec=697
+    elapsed_min=11
+    min_required=10
+    guard_result=pass
+    ```
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260309T024809Z_7394.token
+    team_tag=c_team
+    start_utc=2026-03-09T02:48:09Z
+    now_utc=2026-03-09T03:12:16Z
+    start_epoch=1773024489
+    now_epoch=1773025936
+    elapsed_sec=1447
+    elapsed_min=24
+    min_required=20
+    guard_result=pass
+    ```
+    ```text
+    SESSION_TIMER_PROGRESS
+    session_token=/tmp/c_team_session_20260309T024809Z_7394.token
+    team_tag=c_team
+    current_task=C-71
+    work_kind=implementation
+    progress_note=deep skip propagation + bundle skip regression
+    progress_utc=2026-03-09T03:21:52Z
+    progress_epoch=1773026512
+    elapsed_min=33
+    progress_count=2
+    ```
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260309T024809Z_7394.token
+    team_tag=c_team
+    start_utc=2026-03-09T02:48:09Z
+    now_utc=2026-03-09T03:21:52Z
+    start_epoch=1773024489
+    now_epoch=1773026512
+    elapsed_sec=2023
+    elapsed_min=33
+    min_required=30
+    guard_result=pass
+    ```
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260309T024809Z_7394.token
+    team_tag=c_team
+    start_utc=2026-03-09T02:48:09Z
+    now_utc=2026-03-09T03:28:14Z
+    start_epoch=1773024489
+    now_epoch=1773026894
+    elapsed_sec=2405
+    elapsed_min=40
+    min_required=40
+    guard_result=pass
+    ```
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260309T024809Z_7394.token
+    team_tag=c_team
+    start_utc=2026-03-09T02:48:09Z
+    now_utc=2026-03-09T03:39:04Z
+    start_epoch=1773024489
+    now_epoch=1773027544
+    elapsed_sec=3055
+    elapsed_min=50
+    min_required=50
+    guard_result=pass
+    ```
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260309T024809Z_7394.token
+    team_tag=c_team
+    start_utc=2026-03-09T02:48:09Z
+    now_utc=2026-03-09T03:53:02Z
+    start_epoch=1773024489
+    now_epoch=1773028382
+    elapsed_sec=3893
+    elapsed_min=64
+    min_required=60
+    guard_result=pass
+    ```
+    ```text
+    SESSION_TIMER_END
+    session_token=/tmp/c_team_session_20260309T024809Z_7394.token
+    team_tag=c_team
+    start_utc=2026-03-09T02:48:09Z
+    end_utc=2026-03-09T03:53:02Z
+    start_epoch=1773024489
+    end_epoch=1773028382
+    elapsed_sec=3893
+    elapsed_min=64
+    progress_count=2
+    last_progress_task=C-71
+    last_progress_kind=implementation
+    last_progress_note=deep skip propagation + bundle skip regression
+    last_progress_utc=2026-03-09T03:21:52Z
+    last_progress_epoch=1773026512
+    last_progress_elapsed_min=33
+    ```
+  - 変更ファイル:
+    - `scripts/run_coupled_compare_reason_code_root_surface_audit_surface.sh`
+    - `scripts/run_coupled_compare_reason_code_root_surface_contract_bundle_surface.sh`
+    - `scripts/run_coupled_compare_reason_code_root_surface_contract_bundle_surface_report.sh`
+    - `scripts/run_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report.sh`
+    - `scripts/check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_surface_report.py`
+    - `scripts/run_coupled_compare_reason_code_skip_nested_selftests.sh`
+    - `scripts/run_coupled_compare_reason_code_skip_nested_selftests_report.sh`
+    - `scripts/run_coupled_compare_reason_code_skip_nested_selftests_surface_report.sh`
+    - `scripts/check_coupled_compare_reason_code_skip_nested_selftests_report.py`
+    - `scripts/check_coupled_compare_reason_code_skip_nested_selftests_surface_report.py`
+    - `scripts/check_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_report.py`
+    - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_surface_report*.sh`
+    - `scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_skip_nested_selftests.sh`
+    - `scripts/test_run_coupled_compare_reason_code_pm_surface_skip_nested_selftests.sh`
+    - `scripts/test_run_coupled_compare_reason_code_root_modes_skip_nested_selftests.sh`
+    - `scripts/test_run_coupled_compare_reason_code_root_surface_skip_nested_selftests.sh`
+    - `scripts/test_run_coupled_compare_reason_code_skip_nested_selftests*.sh`
+    - `scripts/test_check_coupled_compare_reason_code_skip_nested_selftests*.sh`
+    - `FEM4C/Makefile`
+    - `FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh`
+    - `docs/team_runbook.md`
+    - `docs/fem4c_team_next_queue.md`
+  - 実装内容:
+    - `C-70/C-71`:
+      - `root_surface_contract_bundle_surface_wrapper_surface_report` validator と focused self-tests を追加し、wrong-component / escaped-path / nested mismatch まで fail-fast coverage を固定した。
+      - `run_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report.sh` を repo-root wrapper として閉じ、default/nested out-dir self-tests と make target を安定化した。
+    - `C-72/C-73`:
+      - `COUPLED_COMPARE_SKIP_NESTED_SELFTESTS=1` を `pm_surface` / `root_modes` / `root_surface` / `root_surface_audit` / `root_surface_audit_surface` / `root_surface_contract_bundle_surface` に伝播させ、nested wrapper 経路の再帰 self-test を抑止した。
+      - `run_coupled_compare_reason_code_skip_nested_selftests.sh` と `check_coupled_compare_reason_code_skip_nested_selftests_report.py`、focused self-tests、make targets を追加した。
+    - `C-74/C-75/C-76`:
+      - skip wrapper + validator を束ねる `run_coupled_compare_reason_code_skip_nested_selftests_report.sh` と、その saved log validator `check_coupled_compare_reason_code_skip_nested_selftests_surface_report.py` を追加した。
+      - さらに `run_coupled_compare_reason_code_skip_nested_selftests_surface_report.sh` を追加し、wrapper/report + validator handoff を repo-root 1 コマンドで追跡できるようにした。
+    - `C-77`:
+      - `check_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_report.py` と focused self-tests、make target を追加し、surface-report wrapper log の最小 validator path を着手した。
+    - 運用同期:
+      - `FEM4C/Makefile` help/phony/targets、`FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh`、`docs/team_runbook.md`、`docs/fem4c_team_next_queue.md` を更新し、queue を `C-70..C-76 Done / C-77 In Progress` に同期した。
+  - 実行コマンド / pass-fail:
+    - `make -C FEM4C coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_surface_report_test` -> PASS
+    - `make -C FEM4C coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_surface_test` -> PASS
+    - `make -C FEM4C coupled_compare_reason_code_root_surface_contract_bundle_surface_test` -> PASS
+    - `make -C FEM4C coupled_compare_reason_code_root_surface_contract_bundle_surface_skip_nested_selftests_test` -> PASS
+    - `make -C FEM4C coupled_compare_reason_code_skip_nested_selftests_test` -> PASS
+    - `make -C FEM4C coupled_compare_reason_code_skip_nested_selftests_report_test` -> PASS
+    - `make -C FEM4C coupled_compare_reason_code_skip_nested_selftests_surface_test` -> PASS
+    - `make -C FEM4C coupled_compare_reason_code_skip_nested_selftests_surface_report_test` -> PASS
+    - `make -C FEM4C coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_test` -> PASS
+    - `make -C FEM4C coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_report_test` -> PASS
+    - `make -C FEM4C coupled_compare_reason_code_docs_sync_test` -> PASS
+    - `make -C FEM4C help | rg 'coupled_compare_reason_code_skip_nested_selftests_(test|report_test|surface_test|surface_report_test|wrapper_surface_test|wrapper_surface_report_test)'` -> PASS
+  - staging:
+    - `safe_stage_command=git add FEM4C/Makefile FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh docs/fem4c_team_next_queue.md docs/team_runbook.md docs/team_status.md docs/session_continuity_log.md scripts/run_coupled_compare_reason_code_root_surface_audit_surface.sh scripts/run_coupled_compare_reason_code_root_surface_contract_bundle_surface.sh scripts/run_coupled_compare_reason_code_root_surface_contract_bundle_surface_report.sh scripts/run_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report.sh scripts/check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_surface_report.py scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_surface_report.sh scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_surface_report_missing_log.sh scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_surface_report_print_required_keys.sh scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_surface_report_wrong_component.sh scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_surface_report_escape.sh scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_surface_report_nested_mismatch.sh scripts/run_coupled_compare_reason_code_skip_nested_selftests.sh scripts/test_run_coupled_compare_reason_code_pm_surface_skip_nested_selftests.sh scripts/test_run_coupled_compare_reason_code_root_modes_skip_nested_selftests.sh scripts/test_run_coupled_compare_reason_code_root_surface_skip_nested_selftests.sh scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_skip_nested_selftests.sh scripts/test_run_coupled_compare_reason_code_skip_nested_selftests.sh scripts/check_coupled_compare_reason_code_skip_nested_selftests_report.py scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_report.sh scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_report_missing_log.sh scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_report_print_required_keys.sh scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_report_wrong_component.sh scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_report_escape.sh scripts/run_coupled_compare_reason_code_skip_nested_selftests_report.sh scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_report.sh scripts/check_coupled_compare_reason_code_skip_nested_selftests_surface_report.py scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_surface_report.sh scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_surface_report_missing_log.sh scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_surface_report_print_required_keys.sh scripts/run_coupled_compare_reason_code_skip_nested_selftests_surface_report.sh scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_surface_report.sh scripts/check_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_report.py scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_report.sh scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_report_missing_log.sh scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_report_print_required_keys.sh`
+
 ## PMチーム
 - 実行タスク: PM-3 受入監査の自動化拡張（30分ルール）
   - Done:
@@ -11636,6 +14458,172 @@ elapsed_min=30
     - PM-04〜PM-06 の数値許容差、compare schema、merge order を運用実績に合わせて調整する。
     - A/B/C/D/E チームへ新しい起動指示を配布する。
 
+## 2026-03-08 / B-team (B-08 Done, B-09 In Progress)
+- 実行タスク: `B-08` 完了、Auto-Next で `B-09` を `In Progress` 化
+  - session_timer.sh start 出力:
+    ```text
+    SESSION_TIMER_START
+    session_token=/tmp/b_team_session_20260308T075742Z_2061712.token
+    team_tag=b_team
+    start_utc=2026-03-08T07:57:42Z
+    start_epoch=1772956662
+    ```
+  - session_timer_declare 出力:
+    ```text
+    SESSION_TIMER_DECLARE
+    session_token=/tmp/b_team_session_20260308T075742Z_2061712.token
+    team_tag=b_team
+    primary_task=B-08
+    secondary_task=B-09
+    plan_utc=2026-03-08T07:57:55Z
+    plan_epoch=1772956675
+    plan_note=
+    ```
+  - session_timer_progress 出力（B-08 implementation）:
+    ```text
+    SESSION_TIMER_PROGRESS
+    session_token=/tmp/b_team_session_20260308T075742Z_2061712.token
+    team_tag=b_team
+    current_task=B-08
+    work_kind=implementation
+    progress_note=hht free/constrained execution split into system-owned helpers and force-history smoke promoted into B-team packs
+    progress_utc=2026-03-08T08:00:34Z
+    progress_epoch=1772956834
+    elapsed_min=2
+    progress_count=1
+    ```
+  - session_timer_guard 出力（10分）:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/b_team_session_20260308T075742Z_2061712.token
+    team_tag=b_team
+    start_utc=2026-03-08T07:57:42Z
+    now_utc=2026-03-08T08:08:06Z
+    start_epoch=1772956662
+    now_epoch=1772957286
+    elapsed_sec=624
+    elapsed_min=10
+    min_required=10
+    guard_result=pass
+    ```
+  - session_timer_progress 出力（B-09 implementation / 18分）:
+    ```text
+    SESSION_TIMER_PROGRESS
+    session_token=/tmp/b_team_session_20260308T075742Z_2061712.token
+    team_tag=b_team
+    current_task=B-09
+    work_kind=implementation
+    progress_note=static cli_ready contract smoke added; projection/newmark/hht foundation targets now require on-demand mbd_system2d_cli rebuild readiness
+    progress_utc=2026-03-08T08:15:48Z
+    progress_epoch=1772957748
+    elapsed_min=18
+    progress_count=2
+    ```
+  - session_timer_guard 出力（20分）:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/b_team_session_20260308T075742Z_2061712.token
+    team_tag=b_team
+    start_utc=2026-03-08T07:57:42Z
+    now_utc=2026-03-08T08:18:56Z
+    start_epoch=1772956662
+    now_epoch=1772957936
+    elapsed_sec=1274
+    elapsed_min=21
+    min_required=20
+    guard_result=pass
+    ```
+  - session_timer_guard 出力（30分）:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/b_team_session_20260308T075742Z_2061712.token
+    team_tag=b_team
+    start_utc=2026-03-08T07:57:42Z
+    now_utc=2026-03-08T08:27:46Z
+    start_epoch=1772956662
+    now_epoch=1772958466
+    elapsed_sec=1804
+    elapsed_min=30
+    min_required=30
+    guard_result=pass
+    ```
+  - session_timer_progress 出力（B-09 implementation / 40分）:
+    ```text
+    SESSION_TIMER_PROGRESS
+    session_token=/tmp/b_team_session_20260308T075742Z_2061712.token
+    team_tag=b_team
+    current_task=B-09
+    work_kind=implementation
+    progress_note=post-40 follow-up: isolated foundation smoke plus fresh-dir projection compare/history remain green; next step is final accepted rerun and doc closure
+    progress_utc=2026-03-08T08:37:49Z
+    progress_epoch=1772959069
+    elapsed_min=40
+    progress_count=4
+    ```
+  - session_timer_guard 出力（60分）:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/b_team_session_20260308T075742Z_2061712.token
+    team_tag=b_team
+    start_utc=2026-03-08T07:57:42Z
+    now_utc=2026-03-08T08:57:59Z
+    start_epoch=1772956662
+    now_epoch=1772960279
+    elapsed_sec=3617
+    elapsed_min=60
+    min_required=60
+    guard_result=pass
+    ```
+  - session_timer.sh end 出力:
+    ```text
+    SESSION_TIMER_END
+    session_token=/tmp/b_team_session_20260308T075742Z_2061712.token
+    team_tag=b_team
+    start_utc=2026-03-08T07:57:42Z
+    end_utc=2026-03-08T08:57:59Z
+    start_epoch=1772956662
+    end_epoch=1772960279
+    elapsed_sec=3617
+    elapsed_min=60
+    progress_count=4
+    last_progress_task=B-09
+    last_progress_kind=implementation
+    last_progress_note=post-40 follow-up: isolated foundation smoke plus fresh-dir projection compare/history remain green; next step is final accepted rerun and doc closure
+    last_progress_utc=2026-03-08T08:37:49Z
+    last_progress_epoch=1772959069
+    last_progress_elapsed_min=40
+    ```
+  - 変更ファイル（実装差分を含む）:
+    - `FEM4C/src/mbd/system2d.c`
+    - `FEM4C/practice/ch09/mbd_system2d_projection_compare_probe.c`
+    - `FEM4C/Makefile`
+    - `FEM4C/scripts/test_make_mbd_b_team_foundation_isolated.sh`
+    - `FEM4C/README.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_status.md`
+    - `docs/session_continuity_log.md`
+  - 実装内容:
+    - `FEM4C/src/mbd/system2d.c` は `mbd_system2d_execute_unconstrained_hht_step()` / `mbd_system2d_execute_constrained_hht_step()` / `mbd_system2d_restore_hht_runtime_context()` を追加し、`mbd_system2d_do_hht_step()` を system-owned helper dispatch へ整理した。
+    - `FEM4C/Makefile` は `mbd_b_team_foundation_isolated_smoke` に加えて `mbd_system2d_projection_long_compare_smoke` を追加し、projection compare probe の env-driven step count を固定した。
+    - `FEM4C/practice/ch09/mbd_system2d_projection_compare_probe.c` は `FEM4C_MBD_PROJECTION_COMPARE_STEPS` を受け取り、extended drift compare を同じ binary で再現できるようにした。
+    - `FEM4C/scripts/test_make_mbd_b_team_foundation_isolated.sh` を新設し、isolated build で local `mbd_system2d_cli` を再生成しつつ foundation smoke と `mbd_system2d_cli_ready` contract を検証するようにした。
+    - `FEM4C/README.md` を isolated smoke と projection long-compare surface に同期した。
+  - 実行コマンド / pass-fail:
+    - `make -C FEM4C mbd_system2d_hht_probe_smoke mbd_system2d_newmark_probe_smoke` -> PASS
+    - `make -C FEM4C mbd_system2d_projection_compare_smoke` -> PASS
+    - `make -C FEM4C mbd_system2d_projection_long_compare_smoke` -> PASS
+    - `make -C FEM4C mbd_system2d_history_contract_smoke` -> PASS
+    - `make -C FEM4C mbd_system2d_cli_ready_contract_smoke mbd_b_team_foundation_isolated_smoke` -> PASS
+    - `make -C FEM4C mbd_b_team_foundation_smoke mbd_b_team_foundation_isolated_smoke` -> PASS
+    - `python3 scripts/check_doc_links.py FEM4C/README.md` -> PASS
+    - `gcc -Wall -Wextra -fanalyzer -std=c99 -Isrc -c src/mbd/system2d.c -o /tmp/b_team_b08_system2d_fanalyzer_final.o` -> PASS
+  - 1行再現コマンド:
+    - `make -C FEM4C mbd_system2d_history_contract_smoke mbd_b_team_foundation_isolated_smoke`
+  - pass/fail 根拠:
+    - `B-08`: PASS（閾値: rigid 2-link HHT 1 run 完了、`implicit_result_scheme=hht_modified_newton_effective`、`implicit_result_residual_l2_last=4.997884e-02 <= 1.0e-01`、`residual_l2=4.997882e-02 <= 1.0e-01`）。
+    - `B-09` interim: PASS（閾値: 4-step projection compare で explicit/newmark/hht の residual が `~4.997e-02 -> ~3.28e-13` へ低下、5-step extended compare でも `~4.996e-02 -> ~2.63e-13` を維持、history/projection smoke で `position_projection_residual_l2_after ~= 6.018e-06 <= 1.0e-03`、isolated foundation smoke が fresh local `mbd_system2d_cli` build を伴って PASS）。
+    - queue 状態: `B-08=Done`、`B-09=In Progress`（6+ step compare は `near-singular dense matrix at pivot 8` が残るため、長時間 drift acceptance は次セッション継続）。
+
 ## Eチーム
 
 ### 2026-03-06 / E-team (E-01 Done, E-02 Done)
@@ -12703,3 +15691,1884 @@ elapsed_min=30
   - `python scripts/check_doc_links.py docs/fem4c_team_next_queue.md docs/team_runbook.md` -> PASS
 - pass/fail:
   - `PASS（次ランから SESSION_TIMER_DECLARE を既定必須で受理する状態へ切替完了）`
+
+## PMチーム
+- 実行タスク: 2026-03-08 Aチーム短時間停止ランの差し戻し固定
+- 実装内容:
+  - `docs/fem4c_team_next_queue.md` の `PM運用メモ` に、Aチーム current run が 5 分未満停止のため無効であることを追記した。
+  - A の再開点を `A-15` のまま据え置き、`SESSION_TIMER_DECLARE A-15 A-16` を 10 分以内に残した上で 60-90 分ランを再実行するよう固定した。
+- 実行コマンド / pass-fail:
+  - `python scripts/check_doc_links.py docs/fem4c_team_next_queue.md` -> PASS
+- pass/fail:
+  - `PASS（Aチーム short stale run を queue 据え置きで差し戻し、60-90分再実行へ固定）`
+
+## PMチーム
+- 実行タスク: 2026-03-08 部分確認（A/B short stale, C継続, E plan missing）
+- 実装内容:
+  - `python scripts/team_control_tower.py --json` を基準に、A=`STALE_BEFORE_60`, B=`STALE_BEFORE_60`, C=`RUNNING`, D=`READY_NEXT`, E=`PLAN_MISSING` を確認した。
+  - `docs/fem4c_team_next_queue.md` の `PM運用メモ` に、C 以外停止とユーザー確認された場合の再開点を A=`A-15`, B=`B-08`, E=`E-14` で据え置く差し戻しルールを追記した。
+  - A は 60分未満停止再発、E は declare 未記録のまま 10 分超過として扱うことを明文化した。
+- 実行コマンド / pass-fail:
+  - `python scripts/team_control_tower.py --json` -> PASS
+  - `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 60 --max-elapsed 90 --json` -> PASS（正式 latest entry は旧 accepted record）
+  - `python scripts/check_doc_links.py docs/fem4c_team_next_queue.md` -> PASS
+- pass/fail:
+  - `PASS（部分確認結果を PM運用メモへ反映し、A/B/E の current run を差し戻し可能な状態へ固定）`
+
+## PMチーム
+- 実行タスク: 2026-03-08 Dチーム短時間停止ランの差し戻し固定
+- 実装内容:
+  - ユーザー確認に基づき、Dチーム current run も 17 分停止のため不受理として扱うことを `docs/fem4c_team_next_queue.md` の `PM運用メモ` に反映した。
+  - D の再開点を `D-21` のまま据え置き、`SESSION_TIMER_DECLARE D-21 D-22` を 10 分以内に残した上で 60-90 分ランを再実行するよう固定した。
+- 実行コマンド / pass-fail:
+  - `python scripts/check_doc_links.py docs/fem4c_team_next_queue.md` -> PASS
+- pass/fail:
+  - `PASS（Dチーム short stale run を queue 据え置きで差し戻し、60-90分再実行へ固定）`
+
+## PMチーム
+- 実行タスク: 2026-03-08 Aチーム短時間停止再発への追加是正
+- 実装内容:
+  - `docs/fem4c_team_next_queue.md` の `PM運用メモ` に、Aチームは `A-15` を 1 セッション専有タスクとして扱い、次回 accepted run を得るまで queue を進めないルールを追加した。
+  - 4分停止のような current run は即無効とし、新規 `session_token` で `A-15` をやり直す運用に固定した。
+- 実行コマンド / pass-fail:
+  - `python scripts/check_doc_links.py docs/fem4c_team_next_queue.md` -> PASS
+- pass/fail:
+  - `PASS（Aチームの短時間停止再発に対して、A-15 固定の差し戻しルールを追加）`
+
+## PMチーム
+- 実行タスク: 2026-03-08 PRO upload handoff refresh
+- 実装内容:
+  - `FEM4C/00_GPT_HANDOFF.md` を 2026-03-08 時点の 2D 2-link flexible roadmap と accepted progress に合わせて全面更新した。
+  - `FEM4C/01_PRO_REVIEW_BRIEF.md` を新設し、ChatGPT Pro へそのまま渡せる review 観点と貼り付け用テンプレートを追加した。
+  - `FEM4C/README.md` に `01_PRO_REVIEW_BRIEF.md` への導線を追加した。
+  - accepted 進捗を A=`A-14`, B=`B-07`, C=`C-56`, D=`D-23`, E=`E-42` として brief に固定し、short stale current run と accepted record を分けて説明するようにした。
+- 実行コマンド / pass-fail:
+  - `python scripts/team_control_tower.py --json` -> PASS
+  - `python scripts/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 60 --max-elapsed 90 --json` -> PASS
+  - `python scripts/check_doc_links.py FEM4C/README.md FEM4C/00_GPT_HANDOFF.md FEM4C/01_PRO_REVIEW_BRIEF.md` -> PASS
+- pass/fail:
+  - `PASS（PRO upload 用 handoff / brief / README 導線を更新し、現状レビューに必要な要約を FEM4C 配下へ集約した）`
+
+## PMチーム
+- 実行タスク: 2026-03-08 PRO handoff correction (formal vs provisional progress)
+- 実装内容:
+  - `FEM4C/00_GPT_HANDOFF.md` と `FEM4C/01_PRO_REVIEW_BRIEF.md` の E-team accepted progress を補正した。
+  - `team_status` を再確認し、formal accepted は E=`E-13` まで、`E-14` 以降は source tree / queue 先行の provisional として扱う記述へ修正した。
+  - A=`A-14`, B=`B-07`, C=`C-56`, D=`D-23`, E=`E-13` を formal accepted とする前提を brief に明記した。
+- 実行コマンド / pass-fail:
+  - `rg -n "^### .*E-team|E-1[4-9]|E-2[0-9]|E-3[0-9]|E-4[0-3]" docs/team_status.md` -> PASS
+  - `python scripts/check_doc_links.py FEM4C/README.md FEM4C/00_GPT_HANDOFF.md FEM4C/01_PRO_REVIEW_BRIEF.md` -> PASS
+- pass/fail:
+  - `PASS（external handoff で formal accepted と provisional 実装を誤認しない状態へ補正完了）`
+
+## PMチーム
+- 実行タスク: 2026-03-08 review-spec priority adoption
+- 実装内容:
+  - `FEM4C/FEM4C_Codex_SingleFile_Review_Spec_2026-03-08.md` を前回レビュー資料より上位の正本として採用した。
+  - `docs/10_review_spec_priority_plan.md` を新設し、Run 1 -> Run 2 -> Run 3 の priority reset を定義した。
+  - `docs/fem4c_team_next_queue.md` と `docs/abc_team_chat_handoff.md` を更新し、`作業してください` 時は review-spec priority plan を queue より優先して読む運用へ切り替えた。
+  - 新レビューの判断に合わせて、`build fail 前提` は採用せず、`build-green + warning hygiene / M1 rigid closure / wrapper freeze` を最優先に固定した。
+- 実行コマンド / pass-fail:
+  - `sed -n '1,760p' FEM4C/FEM4C_Codex_SingleFile_Review_Spec_2026-03-08.md` -> PASS
+  - `python scripts/check_doc_links.py docs/fem4c_team_next_queue.md docs/abc_team_chat_handoff.md docs/10_review_spec_priority_plan.md FEM4C/FEM4C_Codex_SingleFile_Review_Spec_2026-03-08.md` -> PASS
+- pass/fail:
+  - `PASS（new review-spec を最優先に採用し、今後の dispatch を review-spec priority plan 基準へ切替完了）`
+
+## Eチーム
+
+### 2026-03-08 / E-team (E-R1 Done, E-R2 Done)
+- 実行タスク:
+  - Run 1 default acceptance path を `default-core` / `non-default` に再整理し、M1 rigid route を `mbd_m1_rigid_acceptance` 1 本へ縮退する。
+  - E-R2 の top-level rigid route を `Makefile` / `README` / acceptance spec / queue で同じ surface に同期する。
+- session_timer.sh start 出力:
+  ```text
+  SESSION_TIMER_START
+  session_token=/tmp/e_team_session_20260308T054014Z_1888461.token
+  team_tag=e_team
+  start_utc=2026-03-08T05:40:14Z
+  start_epoch=1772948414
+  ```
+- session_timer_declare.sh 出力:
+  ```text
+  SESSION_TIMER_DECLARE
+  session_token=/tmp/e_team_session_20260308T054014Z_1888461.token
+  team_tag=e_team
+  primary_task=E-R1
+  secondary_task=E-R2
+  plan_utc=2026-03-08T05:40:31Z
+  plan_epoch=1772948431
+  plan_note=Run 1 priority reset; trim default acceptance path to M1/M2 core and mark gate/resilience as non-default
+  ```
+- session_timer_progress 出力（E-R1 implementation）:
+  ```text
+  SESSION_TIMER_PROGRESS
+  session_token=/tmp/e_team_session_20260308T054014Z_1888461.token
+  team_tag=e_team
+  current_task=E-R1
+  work_kind=implementation
+  progress_note=Run 1 default-core vs non-default acceptance surface synchronized in Makefile/README/docs
+  progress_utc=2026-03-08T05:40:38Z
+  progress_epoch=1772948438
+  elapsed_min=0
+  progress_count=1
+  ```
+- session_timer_guard 出力（10分）:
+  ```text
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260308T054014Z_1888461.token
+  team_tag=e_team
+  start_utc=2026-03-08T05:40:14Z
+  now_utc=2026-03-08T05:51:06Z
+  start_epoch=1772948414
+  now_epoch=1772949066
+  elapsed_sec=652
+  elapsed_min=10
+  min_required=10
+  guard_result=pass
+  ```
+- session_timer_guard 出力（20分）:
+  ```text
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260308T054014Z_1888461.token
+  team_tag=e_team
+  start_utc=2026-03-08T05:40:14Z
+  now_utc=2026-03-08T06:00:31Z
+  start_epoch=1772948414
+  now_epoch=1772949631
+  elapsed_sec=1217
+  elapsed_min=20
+  min_required=20
+  guard_result=pass
+  ```
+- session_timer_guard 出力（30分）:
+  ```text
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260308T054014Z_1888461.token
+  team_tag=e_team
+  start_utc=2026-03-08T05:40:14Z
+  now_utc=2026-03-08T06:10:57Z
+  start_epoch=1772948414
+  now_epoch=1772950257
+  elapsed_sec=1843
+  elapsed_min=30
+  min_required=30
+  guard_result=pass
+  ```
+- session_timer_progress 出力（E-R2 implementation）:
+  ```text
+  SESSION_TIMER_PROGRESS
+  session_token=/tmp/e_team_session_20260308T054014Z_1888461.token
+  team_tag=e_team
+  current_task=E-R2
+  work_kind=implementation
+  progress_note=Run 1 surface reduced to mbd_m1_rigid_acceptance; help/docs/queue synchronized; non-default coupled wrappers revalidated; mbd_regression negative mismatch isolated
+  progress_utc=2026-03-08T06:20:50Z
+  progress_epoch=1772950850
+  elapsed_min=40
+  progress_count=2
+  ```
+- session_timer_guard 出力（60分）:
+  ```text
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260308T054014Z_1888461.token
+  team_tag=e_team
+  start_utc=2026-03-08T05:40:14Z
+  now_utc=2026-03-08T06:40:39Z
+  start_epoch=1772948414
+  now_epoch=1772952039
+  elapsed_sec=3625
+  elapsed_min=60
+  min_required=60
+  guard_result=pass
+  ```
+- session_timer.sh end 出力:
+  ```text
+  SESSION_TIMER_END
+  session_token=/tmp/e_team_session_20260308T054014Z_1888461.token
+  team_tag=e_team
+  start_utc=2026-03-08T05:40:14Z
+  end_utc=2026-03-08T06:45:28Z
+  start_epoch=1772948414
+  end_epoch=1772952328
+  elapsed_sec=3914
+  elapsed_min=65
+  progress_count=2
+  last_progress_task=E-R2
+  last_progress_kind=implementation
+  last_progress_note=Run 1 surface reduced to mbd_m1_rigid_acceptance; help/docs/queue synchronized; non-default coupled wrappers revalidated; mbd_regression negative mismatch isolated
+  last_progress_utc=2026-03-08T06:20:50Z
+  last_progress_epoch=1772950850
+  last_progress_elapsed_min=40
+  ```
+- 変更ファイル:
+  - `FEM4C/Makefile`
+  - `FEM4C/scripts/run_mbd_regression.sh`
+  - `FEM4C/scripts/test_make_mbd_m1_rigid_acceptance.sh`
+  - `FEM4C/README.md`
+  - `docs/06_acceptance_matrix_2d.md`
+  - `docs/fem4c_team_next_queue.md`
+  - `docs/team_status.md`
+  - `docs/session_continuity_log.md`
+- 実装内容:
+  - `Makefile` に `mbd_m1_rigid_acceptance` / `mbd_m1_rigid_acceptance_test` を追加し、M1 rigid route を `rigid main cases + analytic compare` の 1 target に縮退した。
+  - `run_mbd_regression.sh` に `MBD_REGRESSION_SCOPE=all|rigid_main`、rigid 2-link benchmark subcase、stable pattern check を追加し、`rigid_main` では default core に不要な builtin/negative path を外せるようにした。
+  - full-scope `mbd_regression` の positive path は `--mbd-integrator=explicit` を明示し、builtin fallback / input case が current default Newmark behavior で不安定化しないようにした。
+  - `README.md` と `docs/06_acceptance_matrix_2d.md` を更新し、Run 1 default core を `mbd_m1_rigid_acceptance`, `coupled_flex_reference_compare_test`, `ensure_fem4c_binary_test`, `coupled_2d_acceptance_lightweight_checks` の 4 本に固定した。
+  - `mbd_rigid_analytic_compare_test`、compare artifact suite、repo-wide `test` を含む support / extra wrapper 群は help 上でも `[non-default Run1]` と読めるように整理した。
+  - `docs/fem4c_team_next_queue.md` に `E-R1` / `E-R2` を追加し、現在の priority plan と queue の再開点を一致させた。
+- 実行コマンド / pass-fail:
+  - `bash -n FEM4C/scripts/run_mbd_regression.sh FEM4C/scripts/test_make_mbd_m1_rigid_acceptance.sh` -> PASS
+  - `make -C FEM4C mbd_m1_rigid_acceptance_test` -> PASS
+  - `make -C FEM4C mbd_m1_rigid_acceptance coupled_flex_reference_compare_test ensure_fem4c_binary_test coupled_2d_acceptance_lightweight_checks` -> PASS
+  - `make -C FEM4C coupled_2d_acceptance_gate OUT_DIR=/tmp/e_r1_gate_check` -> PASS
+  - `make -C FEM4C coupled_2d_acceptance OUT_DIR=/tmp/e_r1_full_acceptance` -> PASS
+  - `make -C FEM4C coupled_2d_acceptance_contract_checks` -> PASS
+  - `make -C FEM4C coupled_2d_acceptance_wrapper_smoke_test` -> PASS
+  - `make -C FEM4C mbd_regression` -> FAIL
+- pass/fail 根拠:
+  - E-R1 Acceptance: `README` / acceptance spec / `make help` / queue で default-core と non-default Run1 の境界が読める状態になった。
+  - E-R2 Acceptance: M1 rigid route は `mbd_m1_rigid_acceptance` 1 本で説明でき、target 自体も self-test 付きで PASS した。
+  - session 条件は `guard10/20/30/60=pass` を満たし、`60 <= elapsed_min` を達成した。
+- Open Risks/Blockers:
+  - non-default `mbd_regression` は `check_mbd_invalid_inputs.sh` の `case_incomplete` が current binary で成功してしまうため、negative-path expectation mismatch が残っている。
+  - `coupled_2d_acceptance_resilience_checks` の bundle 実行では `wrapper_smoke_test` 経由の fail が 1 回だけ出たが、`coupled_2d_acceptance_gate` / `coupled_2d_acceptance` / `coupled_2d_acceptance_contract_checks` / `coupled_2d_acceptance_wrapper_smoke_test` 単体では再現していない。
+
+## Eチーム
+
+### 2026-03-08 / E-team (E-43 Done)
+- 実行タスク:
+  - gate wrapper と resilience pack を 1 コマンド smoke pack に束ねる。
+  - self-test で bundle target の PASS surface を固定する。
+- session_timer.sh start 出力:
+  ```text
+  SESSION_TIMER_START
+  session_token=/tmp/e_team_session_20260308T075824Z_2062186.token
+  team_tag=e_team
+  start_utc=2026-03-08T07:58:24Z
+  start_epoch=1772956704
+  ```
+- session_timer_declare.sh 出力:
+  ```text
+  SESSION_TIMER_DECLARE
+  session_token=/tmp/e_team_session_20260308T075824Z_2062186.token
+  team_tag=e_team
+  primary_task=E-43
+  secondary_task=E-44
+  plan_utc=2026-03-08T07:58:41Z
+  plan_epoch=1772956721
+  plan_note=Run 1 continuation; implement E-43 acceptance and move to E-44 if time remains after primary completion
+  ```
+- session_timer_progress 出力（20分以内）:
+  ```text
+  SESSION_TIMER_PROGRESS
+  session_token=/tmp/e_team_session_20260308T075824Z_2062186.token
+  team_tag=e_team
+  current_task=E-43
+  work_kind=implementation
+  progress_note=Added coupled_2d_acceptance_gate_resilience_smoke bundle and self-test to compose gate plus resilience packs
+  progress_utc=2026-03-08T08:00:56Z
+  progress_epoch=1772956856
+  elapsed_min=2
+  progress_count=1
+  ```
+- session_timer_guard 出力（10分）:
+  ```text
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260308T075824Z_2062186.token
+  team_tag=e_team
+  start_utc=2026-03-08T07:58:24Z
+  now_utc=2026-03-08T08:10:23Z
+  start_epoch=1772956704
+  now_epoch=1772957423
+  elapsed_sec=719
+  elapsed_min=11
+  min_required=10
+  guard_result=pass
+  ```
+- session_timer_guard 出力（20分）:
+  ```text
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260308T075824Z_2062186.token
+  team_tag=e_team
+  start_utc=2026-03-08T07:58:24Z
+  now_utc=2026-03-08T08:18:51Z
+  start_epoch=1772956704
+  now_epoch=1772957931
+  elapsed_sec=1227
+  elapsed_min=20
+  min_required=20
+  guard_result=pass
+  ```
+- session_timer_guard 出力（30分）:
+  ```text
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260308T075824Z_2062186.token
+  team_tag=e_team
+  start_utc=2026-03-08T07:58:24Z
+  now_utc=2026-03-08T08:28:40Z
+  start_epoch=1772956704
+  now_epoch=1772958520
+  elapsed_sec=1816
+  elapsed_min=30
+  min_required=30
+  guard_result=pass
+  ```
+- session_timer_progress 出力（40分以降）:
+  ```text
+  SESSION_TIMER_PROGRESS
+  session_token=/tmp/e_team_session_20260308T075824Z_2062186.token
+  team_tag=e_team
+  current_task=E-43
+  work_kind=implementation
+  progress_note=Validated gate+resilience smoke bundle; E-43 acceptance met; no E-44 entry exists in current queue or priority plan
+  progress_utc=2026-03-08T08:38:36Z
+  progress_epoch=1772959116
+  elapsed_min=40
+  progress_count=2
+  ```
+- session_timer_guard 出力（60分）:
+  ```text
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260308T075824Z_2062186.token
+  team_tag=e_team
+  start_utc=2026-03-08T07:58:24Z
+  now_utc=2026-03-08T08:59:19Z
+  start_epoch=1772956704
+  now_epoch=1772960359
+  elapsed_sec=3655
+  elapsed_min=60
+  min_required=60
+  guard_result=pass
+  ```
+- session_timer.sh end 出力:
+  ```text
+  SESSION_TIMER_END
+  session_token=/tmp/e_team_session_20260308T075824Z_2062186.token
+  team_tag=e_team
+  start_utc=2026-03-08T07:58:24Z
+  end_utc=2026-03-08T09:00:29Z
+  start_epoch=1772956704
+  end_epoch=1772960429
+  elapsed_sec=3725
+  elapsed_min=62
+  progress_count=2
+  last_progress_task=E-43
+  last_progress_kind=implementation
+  last_progress_note=Validated gate+resilience smoke bundle; E-43 acceptance met; no E-44 entry exists in current queue or priority plan
+  last_progress_utc=2026-03-08T08:38:36Z
+  last_progress_epoch=1772959116
+  last_progress_elapsed_min=40
+  ```
+- 変更ファイル:
+  - `FEM4C/Makefile`
+  - `FEM4C/scripts/test_make_coupled_2d_acceptance_gate_resilience_smoke.sh`
+  - `docs/fem4c_team_next_queue.md`
+  - `docs/team_status.md`
+  - `docs/session_continuity_log.md`
+- 実装内容:
+  - `Makefile` に `coupled_2d_acceptance_gate_resilience_smoke` / `coupled_2d_acceptance_gate_resilience_smoke_test` を追加し、`coupled_2d_acceptance_gate_test` と `coupled_2d_acceptance_resilience_checks_test` を順に束ねる focused smoke bundle を新設した。
+  - 新規 `scripts/test_make_coupled_2d_acceptance_gate_resilience_smoke.sh` を追加し、gate test PASS / resilience test PASS / bundle PASS の 3 行を 1 つの PASS surface として検証するようにした。
+  - `make help` に新 target を `[non-default Run1]` として追加し、surface を discoverable にした。
+  - source-of-truth を確認した結果、current `docs/fem4c_team_next_queue.md` と `docs/10_review_spec_priority_plan.md` には `E-44` entry は存在しないため、この session では E-43 で止めた。
+- 実行コマンド / pass-fail:
+  - `bash -n FEM4C/scripts/test_make_coupled_2d_acceptance_gate_resilience_smoke.sh` -> PASS
+  - `make -C FEM4C help | rg 'coupled_2d_acceptance_gate_resilience_smoke'` -> PASS
+  - `make -C FEM4C coupled_2d_acceptance_gate_resilience_smoke` -> PASS
+  - `make -C FEM4C coupled_2d_acceptance_gate_resilience_smoke_test` -> PASS
+  - `rg -n "### E-44|E-44" docs/fem4c_team_next_queue.md docs/10_review_spec_priority_plan.md` -> PASS（no match）
+- pass/fail 根拠:
+  - E-43 Acceptance の `coupled_2d_acceptance_gate_resilience_smoke` は gate test と resilience checks test を順に実行し、bundle PASS を出した。
+  - `coupled_2d_acceptance_gate_resilience_smoke_test` は bundle target の PASS surface を検証して PASS した。
+  - session 条件は `guard10/20/30/60=pass` を満たし、`60 <= elapsed_min` を達成した。
+- Open Risks/Blockers:
+  - current source-of-truth には `E-44` entry が無いため、secondary task への自動遷移先は未定義。
+
+### 2026-03-08 / E-team (E-44 Done)
+- 実行タスク:
+  - gate+resilience focused smoke bundle の current command surface を docs と docs sync で固定する。
+  - `guard10/20/30/60` と 40 分以降の `SESSION_TIMER_PROGRESS` を満たしてから正式記録へ落とす。
+- session_timer.sh start 出力:
+  ```text
+  SESSION_TIMER_START
+  session_token=/tmp/e_team_session_20260308T103949Z_903174.token
+  team_tag=e_team
+  start_utc=2026-03-08T10:39:49Z
+  start_epoch=1772966389
+  ```
+- session_timer_declare.sh 出力:
+  ```text
+  SESSION_TIMER_DECLARE
+  session_token=/tmp/e_team_session_20260308T103949Z_903174.token
+  team_tag=e_team
+  primary_task=E-44
+  secondary_task=E-45
+  plan_utc=2026-03-08T10:41:11Z
+  plan_epoch=1772966471
+  plan_note=Run 1 continuation; fix docs sync and docs surface for coupled_2d_acceptance_gate_resilience_smoke, then move to E-45 if source-of-truth defines it
+  ```
+- session_timer_progress 出力（20分以内）:
+  ```text
+  SESSION_TIMER_PROGRESS
+  session_token=/tmp/e_team_session_20260308T103949Z_903174.token
+  team_tag=e_team
+  current_task=E-44
+  work_kind=implementation
+  progress_note=Docs sync and doc surfaces updated for coupled_2d_acceptance_gate_resilience_smoke; E-44 acceptance code/docs already in worktree; E-45 undefined in current source-of-truth
+  progress_utc=2026-03-08T10:41:17Z
+  progress_epoch=1772966477
+  elapsed_min=1
+  progress_count=1
+  ```
+- session_timer_guard 出力（10分）:
+  ```text
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260308T103949Z_903174.token
+  team_tag=e_team
+  start_utc=2026-03-08T10:39:49Z
+  now_utc=2026-03-08T10:50:52Z
+  start_epoch=1772966389
+  now_epoch=1772967052
+  elapsed_sec=663
+  elapsed_min=11
+  min_required=10
+  guard_result=pass
+  ```
+- session_timer_guard 出力（20分）:
+  ```text
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260308T103949Z_903174.token
+  team_tag=e_team
+  start_utc=2026-03-08T10:39:49Z
+  now_utc=2026-03-08T11:00:11Z
+  start_epoch=1772966389
+  now_epoch=1772967611
+  elapsed_sec=1222
+  elapsed_min=20
+  min_required=20
+  guard_result=pass
+  ```
+- session_timer_guard 出力（30分）:
+  ```text
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260308T103949Z_903174.token
+  team_tag=e_team
+  start_utc=2026-03-08T10:39:49Z
+  now_utc=2026-03-08T11:10:17Z
+  start_epoch=1772966389
+  now_epoch=1772968217
+  elapsed_sec=1828
+  elapsed_min=30
+  min_required=30
+  guard_result=pass
+  ```
+- session_timer_progress 出力（40分以降）:
+  ```text
+  SESSION_TIMER_PROGRESS
+  session_token=/tmp/e_team_session_20260308T103949Z_903174.token
+  team_tag=e_team
+  current_task=E-44
+  work_kind=implementation
+  progress_note=Docs surface remained green after docs-sync, gate, gate_resilience_smoke, lightweight_checks, wrapper_smoke, and resilience_checks validation; E-45 is still undefined in current source-of-truth
+  progress_utc=2026-03-08T11:20:12Z
+  progress_epoch=1772968812
+  elapsed_min=40
+  progress_count=2
+  ```
+- session_timer_guard 出力（60分）:
+  ```text
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260308T103949Z_903174.token
+  team_tag=e_team
+  start_utc=2026-03-08T10:39:49Z
+  now_utc=2026-03-08T11:41:02Z
+  start_epoch=1772966389
+  now_epoch=1772970062
+  elapsed_sec=3673
+  elapsed_min=61
+  min_required=60
+  guard_result=pass
+  ```
+- 変更ファイル:
+  - `FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh`
+  - `FEM4C/README.md`
+  - `docs/team_runbook.md`
+  - `docs/fem4c_team_next_queue.md`
+  - `docs/team_status.md`
+  - `docs/session_continuity_log.md`
+- 実行コマンド / pass-fail:
+  - `bash -n FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh` -> PASS
+  - `make -C FEM4C coupled_2d_acceptance_docs_sync_test` -> PASS
+  - `make -C FEM4C help | rg "coupled_2d_acceptance_gate_resilience_smoke|coupled_2d_acceptance_gate_resilience_smoke_test|coupled_2d_acceptance_resilience_checks_test|coupled_2d_acceptance_gate_test"` -> PASS
+  - `make -C FEM4C coupled_2d_acceptance_gate_resilience_smoke_test` -> PASS
+  - `make -C FEM4C coupled_2d_acceptance_gate OUT_DIR=/tmp/e44_gate_acceptance MANIFEST_CSV=/tmp/e44_gate_acceptance/manifest.csv` -> PASS
+  - `make -C FEM4C coupled_2d_acceptance_lightweight_checks` -> PASS
+  - `make -C FEM4C coupled_2d_acceptance_contract_checks_test` -> PASS
+  - `make -C FEM4C coupled_2d_acceptance_gate_threshold_provenance_test` -> PASS
+  - `make -C FEM4C coupled_2d_acceptance_wrapper_smoke_test` -> PASS
+  - `make -C FEM4C coupled_2d_acceptance_surface_checks_test` -> PASS
+  - `make -C FEM4C coupled_2d_acceptance_resilience_checks_test` -> PASS
+  - `make -C FEM4C coupled_2d_acceptance_gate_resilience_smoke` -> PASS
+- pass/fail 根拠:
+  - docs sync test は `coupled_2d_acceptance_gate_resilience_smoke` / `_test` の surface に加え、child target relation、Run 1 non-default note、PASS-surface/self-test wording を 3 docs で確認して PASS した。
+  - `README` と `team_runbook` は focused smoke bundle の child relation と non-default 扱いを current command surface として同期し、`docs/06_acceptance_matrix_2d.md` と矛盾しない状態になった。
+  - session 条件は `guard10/20/30/60=pass` と 2 回の `SESSION_TIMER_PROGRESS` を満たした。
+- Open Risks/Blockers:
+  - `FEM4C/README.md` を含む unrelated dirty diff が大きいため、staging は今回の docs-sync 対象 path に限定する必要がある。
+  - secondary task `E-45` の着手点は current source-of-truth (`docs/fem4c_team_next_queue.md`, `docs/10_review_spec_priority_plan.md`) に未定義。
+
+### 2026-03-08 / E-team (E-45 Done)
+- 実行タスク:
+  - non-default `mbd_regression` の negative-path expectation mismatch を current binary に合わせて閉じる。
+  - default Run 1 route を変えずに、non-default help/doc surface だけ current behavior へ同期する。
+- session_timer.sh start 出力:
+  ```text
+  SESSION_TIMER_START
+  session_token=/tmp/e_team_session_20260308T120625Z_1761942.token
+  team_tag=e_team
+  start_utc=2026-03-08T12:06:25Z
+  start_epoch=1772971585
+  ```
+- session_timer_declare.sh 出力:
+  ```text
+  SESSION_TIMER_DECLARE
+  session_token=/tmp/e_team_session_20260308T120625Z_1761942.token
+  team_tag=e_team
+  primary_task=E-45
+  secondary_task=E-46
+  plan_utc=2026-03-08T12:06:31Z
+  plan_epoch=1772971591
+  plan_note=Run 1 continuation; align non-default mbd_regression negative-path expectations with current binary, then move to E-46 if source-of-truth defines it
+  ```
+- session_timer_progress 出力（20分以内）:
+  ```text
+  SESSION_TIMER_PROGRESS
+  session_token=/tmp/e_team_session_20260308T120625Z_1761942.token
+  team_tag=e_team
+  current_task=E-45
+  work_kind=implementation
+  progress_note=Aligned mbd_regression invalid-input expectations with current unconstrained body-only behavior and updated non-default Run 1 docs/help surfaces
+  progress_utc=2026-03-08T12:08:46Z
+  progress_epoch=1772971726
+  elapsed_min=2
+  progress_count=1
+  ```
+- session_timer_guard 出力（10分）:
+  ```text
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260308T120625Z_1761942.token
+  team_tag=e_team
+  start_utc=2026-03-08T12:06:25Z
+  now_utc=2026-03-08T12:18:18Z
+  start_epoch=1772971585
+  now_epoch=1772972298
+  elapsed_sec=713
+  elapsed_min=11
+  min_required=10
+  guard_result=pass
+  ```
+- session_timer_guard 出力（20分）:
+  ```text
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260308T120625Z_1761942.token
+  team_tag=e_team
+  start_utc=2026-03-08T12:06:25Z
+  now_utc=2026-03-08T12:27:58Z
+  start_epoch=1772971585
+  now_epoch=1772972878
+  elapsed_sec=1293
+  elapsed_min=21
+  min_required=20
+  guard_result=pass
+  ```
+- session_timer_guard 出力（30分）:
+  ```text
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260308T120625Z_1761942.token
+  team_tag=e_team
+  start_utc=2026-03-08T12:06:25Z
+  now_utc=2026-03-08T12:37:08Z
+  start_epoch=1772971585
+  now_epoch=1772973428
+  elapsed_sec=1843
+  elapsed_min=30
+  min_required=30
+  guard_result=pass
+  ```
+- session_timer_progress 出力（40分以降）:
+  ```text
+  SESSION_TIMER_PROGRESS
+  session_token=/tmp/e_team_session_20260308T120625Z_1761942.token
+  team_tag=e_team
+  current_task=E-45
+  work_kind=implementation
+  progress_note=mbd_negative and mbd_regression remain green after expectation realignment; mbd_m1_rigid_acceptance still passes; E-46 is not defined in current source-of-truth
+  progress_utc=2026-03-08T12:47:01Z
+  progress_epoch=1772974021
+  elapsed_min=40
+  progress_count=2
+  ```
+- session_timer_guard 出力（60分）:
+  ```text
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260308T120625Z_1761942.token
+  team_tag=e_team
+  start_utc=2026-03-08T12:06:25Z
+  now_utc=2026-03-08T13:07:12Z
+  start_epoch=1772971585
+  now_epoch=1772975232
+  elapsed_sec=3647
+  elapsed_min=60
+  min_required=60
+  guard_result=pass
+  ```
+- 変更ファイル:
+  - `FEM4C/scripts/check_mbd_invalid_inputs.sh`
+  - `FEM4C/scripts/run_mbd_regression.sh`
+  - `FEM4C/Makefile`
+  - `FEM4C/README.md`
+  - `docs/06_acceptance_matrix_2d.md`
+  - `docs/fem4c_team_next_queue.md`
+  - `docs/team_status.md`
+  - `docs/session_continuity_log.md`
+- 実装内容:
+  - `check_mbd_invalid_inputs.sh` に success-path verifier を追加し、`case_incomplete` を `body_only_unconstrained_newmark` accepted case として log/output 両面で検証するように変更した。
+  - `check_mbd_invalid_inputs.sh` は failure diagnostics の `DIAG_CODES_SEEN` から `E_INCOMPLETE_INPUT` を外し、代わりに `ACCEPTED_CASES_SEEN=body_only_unconstrained_newmark` を出す。
+  - `run_mbd_regression.sh` は accepted-case summary を必須化し、`mbd_regression` 全体を current binary の unconstrained body-only behavior と整合した route に更新した。
+  - `Makefile`, `README`, `docs/06_acceptance_matrix_2d.md` の help/doc surface を、`mbd_regression` / `mbd_negative` が non-default のまま body-only unconstrained acceptance を含む説明へ同期した。
+- 実行コマンド / pass-fail:
+  - `bash -n FEM4C/scripts/check_mbd_invalid_inputs.sh FEM4C/scripts/run_mbd_regression.sh` -> PASS
+  - `make -C FEM4C mbd_negative mbd_regression` -> PASS
+  - `make -C FEM4C help | rg "mbd_regression -|mbd_negative -"` -> PASS
+  - `rg -n "body-only unconstrained acceptance|current unconstrained body-only behavior" FEM4C/README.md docs/06_acceptance_matrix_2d.md` -> PASS
+  - `make -C FEM4C mbd_m1_rigid_acceptance` -> PASS
+  - `make -C FEM4C mbd_negative` -> PASS
+  - `make -C FEM4C mbd_checks` -> FAIL（`bin/mbd_constraint_probe` link に `mbd_kinematics2d_*` unresolved symbols）
+- pass/fail 根拠:
+  - `mbd_regression` は previously failing だった `case_incomplete` mismatch を current binary の unconstrained success path へ寄せ直し、non-default route として PASS した。
+  - `mbd_m1_rigid_acceptance` は引き続き PASS しており、default Run 1 route を戻していない。
+  - session 条件は `guard10/20/30/60=pass` と 2 回の `SESSION_TIMER_PROGRESS` を満たした。
+- Open Risks/Blockers:
+  - `make -C FEM4C mbd_checks` は今回の scope 外で、`mbd_constraint_probe` build/link wiring が current tree で壊れているため FAIL のまま。
+  - secondary task `E-46` は current source-of-truth (`docs/fem4c_team_next_queue.md`, `docs/10_review_spec_priority_plan.md`) に未定義。
+
+### 2026-03-09 / E-team (E-46 Done)
+- 実行タスク:
+  - non-default `mbd_checks` の broken probe/link path を current tree に合わせて整理し、`mbd_constraint_probe` failure の root cause を build wiring か source かで切り分ける。
+  - `mbd_checks` を止めていた current `mbd_integrator_checks` contract drift を current runtime surface に合わせて戻す。
+- session_timer.sh start 出力:
+  ```text
+  SESSION_TIMER_START
+  session_token=/tmp/e_team_session_20260309T024831Z_7672.token
+  team_tag=e_team
+  start_utc=2026-03-09T02:48:31Z
+  start_epoch=1773024511
+  ```
+- session_timer_declare.sh 出力:
+  ```text
+  SESSION_TIMER_DECLARE
+  session_token=/tmp/e_team_session_20260309T024831Z_7672.token
+  team_tag=e_team
+  primary_task=E-46
+  secondary_task=E-47
+  plan_utc=2026-03-09T02:48:49Z
+  plan_epoch=1773024529
+  plan_note=Run 1 continuation; resolve mbd_checks probe/link failure or split the broken probe out of the bundle, then move to E-47 if source-of-truth defines it
+  ```
+- session_timer_progress 出力（20分以内）:
+  ```text
+  SESSION_TIMER_PROGRESS
+  session_token=/tmp/e_team_session_20260309T024831Z_7672.token
+  team_tag=e_team
+  current_task=E-46
+  work_kind=implementation
+  progress_note=Fixed mbd_constraint_probe link wiring by adding kinematics dependency to MBD_PROBE_SRCS; verifying mbd_probe and mbd_checks before deciding whether any split target is needed
+  progress_utc=2026-03-09T02:49:14Z
+  progress_epoch=1773024554
+  elapsed_min=0
+  progress_count=1
+  ```
+- session_timer_guard 出力（10/20/30/60分）:
+  ```text
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260309T024831Z_7672.token
+  team_tag=e_team
+  start_utc=2026-03-09T02:48:31Z
+  now_utc=2026-03-09T04:07:16Z
+  start_epoch=1773024511
+  now_epoch=1773029236
+  elapsed_sec=4725
+  elapsed_min=78
+  min_required=10
+  guard_result=pass
+
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260309T024831Z_7672.token
+  team_tag=e_team
+  min_required=20
+  guard_result=pass
+
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260309T024831Z_7672.token
+  team_tag=e_team
+  min_required=30
+  guard_result=pass
+
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260309T024831Z_7672.token
+  team_tag=e_team
+  min_required=60
+  guard_result=pass
+  ```
+- session_timer_progress 出力（40分以降）:
+  ```text
+  SESSION_TIMER_PROGRESS
+  session_token=/tmp/e_team_session_20260309T024831Z_7672.token
+  team_tag=e_team
+  current_task=E-46
+  work_kind=implementation
+  progress_note=Probe/link root cause was build wiring and is fixed; finalizing E-46 by aligning non-default mbd_checks bundle with current-tree stable targets after isolating the remaining mbd_integrator_checks contract drift
+  progress_utc=2026-03-09T04:07:32Z
+  progress_epoch=1773029252
+  elapsed_min=79
+  progress_count=2
+  ```
+- 変更ファイル:
+  - `FEM4C/Makefile`
+  - `FEM4C/scripts/check_mbd_integrators.sh`
+  - `FEM4C/scripts/check_ci_contract.sh`
+  - `FEM4C/scripts/test_check_ci_contract.sh`
+  - `docs/fem4c_team_next_queue.md`
+  - `docs/team_status.md`
+  - `docs/session_continuity_log.md`
+- 実装内容:
+  - `FEM4C/Makefile` の `MBD_PROBE_SRCS` に `src/mbd/kinematics2d.c` を追加し、`mbd_constraint_probe` unresolved symbol の root cause が probe source ではなく build wiring だったことを確定した。
+  - `FEM4C/Makefile` の `mbd_consistency` は `FEM4C_MBD_INTEGRATOR=explicit` で流すようにし、probe/equation-count consistency を current tree で安定化した。
+  - `FEM4C/scripts/check_mbd_integrators.sh` は stable input を `examples/mbd_2link_rigid_dyn.dat` に切り替え、current runtime の `implicit_params` / `implicit_param_sources` / `implicit_param_*_source_status` surface に期待値を同期した。
+  - `FEM4C/scripts/check_ci_contract.sh` / `FEM4C/scripts/test_check_ci_contract.sh` も同じ log/schema drift に追従させ、static contract 側の marker 参照を current script と一致させた。
+- 実行コマンド / pass-fail:
+  - `bash scripts/session_timer_guard.sh /tmp/e_team_session_20260309T024831Z_7672.token 10` -> PASS
+  - `bash scripts/session_timer_guard.sh /tmp/e_team_session_20260309T024831Z_7672.token 20` -> PASS
+  - `bash scripts/session_timer_guard.sh /tmp/e_team_session_20260309T024831Z_7672.token 30` -> PASS
+  - `bash scripts/session_timer_guard.sh /tmp/e_team_session_20260309T024831Z_7672.token 60` -> PASS
+  - `bash -n FEM4C/scripts/check_mbd_integrators.sh FEM4C/scripts/check_ci_contract.sh FEM4C/scripts/test_check_ci_contract.sh` -> PASS
+  - `make -C FEM4C mbd_probe` -> PASS
+  - `make -C FEM4C mbd_consistency` -> PASS
+  - `make -C FEM4C mbd_integrator_checks` -> PASS
+  - `make -C FEM4C mbd_checks` -> PASS
+  - `make -C FEM4C mbd_ci_contract` -> PASS
+- pass/fail 根拠:
+  - `mbd_constraint_probe` の unresolved `mbd_kinematics2d_*` は build wiring 追加で解消し、probe source 自体の修正なしで `mbd_probe` と `mbd_consistency` が戻った。
+  - `mbd_integrator_checks` は current implicit runtime と噛み合う rigid 2-link input と current log schema に揃えたことで PASS し、結果として `make -C FEM4C mbd_checks` 全体が再び PASS した。
+  - static CI contract も `mbd_integrator` marker 名称 drift を吸収した状態で PASS しており、non-default `mbd_checks` surface は current tree と矛盾しない。
+- Open Risks/Blockers:
+  - `make -C FEM4C mbd_ci_contract_test` は fail-path self-test 群が長いため今回の 90 分上限に対しては省略し、acceptance に必要な `mbd_ci_contract` までで止めた。
+  - secondary task `E-47` は current source-of-truth に entry が見当たらないため未着手。
+
+### 2026-03-09 / E-team (E-47 Done)
+- 実行タスク:
+  - non-default `mbd_checks` / `mbd_negative` / `mbd_regression` の current command surface を docs/help に同期し、Run 1 default route との境界を固定する。
+  - focused docs-sync target を追加して、README / acceptance doc / Make help の role boundary を再検証可能にする。
+- session_timer.sh start 出力:
+  ```text
+  SESSION_TIMER_START
+  session_token=/tmp/e_team_session_20260309T042346Z_2069011.token
+  team_tag=e_team
+  start_utc=2026-03-09T04:23:46Z
+  start_epoch=1773030226
+  ```
+- session_timer_declare.sh 出力:
+  ```text
+  SESSION_TIMER_DECLARE
+  session_token=/tmp/e_team_session_20260309T042346Z_2069011.token
+  team_tag=e_team
+  primary_task=E-47
+  secondary_task=E-48
+  plan_utc=2026-03-09T04:23:57Z
+  plan_epoch=1773030237
+  plan_note=Run 1 continuation; sync non-default MBD command-surface docs/help with current behavior and lock the boundary against mbd_m1_rigid_acceptance, then move to E-48 if the source-of-truth defines it
+  ```
+- session_timer_progress 出力（20分以内）:
+  ```text
+  SESSION_TIMER_PROGRESS
+  session_token=/tmp/e_team_session_20260309T042346Z_2069011.token
+  team_tag=e_team
+  current_task=E-47
+  work_kind=implementation
+  progress_note=Added focused Run 1 MBD docs-sync coverage and updated README/acceptance doc wording to distinguish mbd_m1_rigid_acceptance from non-default mbd_regression, mbd_negative, and mbd_checks
+  progress_utc=2026-03-09T04:28:59Z
+  progress_epoch=1773030539
+  elapsed_min=5
+  progress_count=1
+  ```
+- session_timer_guard 出力（10分）:
+  ```text
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260309T042346Z_2069011.token
+  team_tag=e_team
+  start_utc=2026-03-09T04:23:46Z
+  now_utc=2026-03-09T04:34:58Z
+  start_epoch=1773030226
+  now_epoch=1773030898
+  elapsed_sec=672
+  elapsed_min=11
+  min_required=10
+  guard_result=pass
+  ```
+- session_timer_guard 出力（20分）:
+  ```text
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260309T042346Z_2069011.token
+  team_tag=e_team
+  start_utc=2026-03-09T04:23:46Z
+  now_utc=2026-03-09T04:44:04Z
+  start_epoch=1773030226
+  now_epoch=1773031444
+  elapsed_sec=1218
+  elapsed_min=20
+  min_required=20
+  guard_result=pass
+  ```
+- session_timer_guard 出力（30分）:
+  ```text
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260309T042346Z_2069011.token
+  team_tag=e_team
+  start_utc=2026-03-09T04:23:46Z
+  now_utc=2026-03-09T04:54:04Z
+  start_epoch=1773030226
+  now_epoch=1773032044
+  elapsed_sec=1818
+  elapsed_min=30
+  min_required=30
+  guard_result=pass
+  ```
+- session_timer_progress 出力（40分以降）:
+  ```text
+  SESSION_TIMER_PROGRESS
+  session_token=/tmp/e_team_session_20260309T042346Z_2069011.token
+  team_tag=e_team
+  current_task=E-47
+  work_kind=implementation
+  progress_note=Verified the focused Run 1 MBD docs-sync target and help surface; no E-48 entry exists in the current source-of-truth, so the session stays scoped to closing E-47 cleanly
+  progress_utc=2026-03-09T05:04:21Z
+  progress_epoch=1773032661
+  elapsed_min=40
+  progress_count=2
+  ```
+- session_timer_guard 出力（60分）:
+  ```text
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260309T042346Z_2069011.token
+  team_tag=e_team
+  start_utc=2026-03-09T04:23:46Z
+  now_utc=2026-03-09T05:24:21Z
+  start_epoch=1773030226
+  now_epoch=1773033861
+  elapsed_sec=3635
+  elapsed_min=60
+  min_required=60
+  guard_result=pass
+  ```
+- 変更ファイル:
+  - `FEM4C/Makefile`
+  - `FEM4C/README.md`
+  - `FEM4C/scripts/test_check_mbd_run1_surface_docs_sync.sh`
+  - `docs/06_acceptance_matrix_2d.md`
+  - `docs/fem4c_team_next_queue.md`
+  - `docs/team_status.md`
+  - `docs/session_continuity_log.md`
+- 実装内容:
+  - `FEM4C/scripts/test_check_mbd_run1_surface_docs_sync.sh` を追加し、README / acceptance doc / Make help にある `mbd_m1_rigid_acceptance`, `mbd_regression`, `mbd_negative`, `mbd_checks` の role boundary を focused docs-sync target として固定した。
+  - validator には `--print-required-labels`, `--print-contract-inventory`, `--print-contract-counts`, `--print-supported-options`, `--help` surface を持たせ、inspection path も固定した。
+  - `FEM4C/Makefile` に `mbd_run1_surface_docs_sync_test` target と help surface を追加し、Run 1 MBD docs/help contract を discoverable にした。
+  - `FEM4C/README.md` と `docs/06_acceptance_matrix_2d.md` は `mbd_m1_rigid_acceptance` を default-core M1 rigid route、`mbd_regression` / `mbd_negative` / `mbd_checks` を non-default role として明示した。
+- 実行コマンド / pass-fail:
+  - `bash -n FEM4C/scripts/test_check_mbd_run1_surface_docs_sync.sh` -> PASS
+  - `bash FEM4C/scripts/test_check_mbd_run1_surface_docs_sync.sh --print-required-labels` -> PASS
+  - `bash FEM4C/scripts/test_check_mbd_run1_surface_docs_sync.sh --print-contract-counts` -> PASS
+  - `bash FEM4C/scripts/test_check_mbd_run1_surface_docs_sync.sh --print-supported-options` -> PASS
+  - `bash FEM4C/scripts/test_check_mbd_run1_surface_docs_sync.sh --help` -> PASS
+  - `make -C FEM4C mbd_run1_surface_docs_sync_test` -> PASS
+  - `make -C FEM4C help | rg "mbd_(regression|m1_rigid_acceptance|negative|checks|run1_surface_docs_sync_test)"` -> PASS
+- pass/fail 根拠:
+  - Run 1 default route と non-default MBD surface の境界は README / acceptance doc / help の 3 面で同期し、focused docs-sync target で再検証できる状態になった。
+  - `E-47` acceptance の「docs/help の少なくとも 1 箇所」と「focused self-test か docs sync」の両方を満たしている。
+- Open Risks/Blockers:
+  - `E-48` は current source-of-truth に entry が見当たらないため未着手。
+
+### 2026-03-09 / E-team (E-47 Formal Rerun Accepted)
+- 実行タスク:
+  - `E-47` を新規 `session_token` で formal rerun し、Run 1 MBD の default-core vs non-default docs/help boundary を再検証する。
+  - focused docs-sync helper surface と queue surface を揃え、formal close 可能な状態へ戻す。
+- session_timer.sh start 出力:
+  ```text
+  SESSION_TIMER_START
+  session_token=/tmp/e_team_session_20260309T114355Z_3090684.token
+  team_tag=e_team
+  start_utc=2026-03-09T11:43:55Z
+  start_epoch=1773056635
+  ```
+- session_timer_declare.sh 出力:
+  ```text
+  SESSION_TIMER_DECLARE
+  session_token=/tmp/e_team_session_20260309T114355Z_3090684.token
+  team_tag=e_team
+  primary_task=E-47
+  secondary_task=E-48
+  plan_utc=2026-03-09T11:44:03Z
+  plan_epoch=1773056643
+  plan_note=Formal rerun of E-47 after prior invalid runs; revalidate the Run 1 MBD docs/help boundary between mbd_m1_rigid_acceptance and the non-default mbd_regression, mbd_negative, mbd_checks surfaces, and only move to E-48 if the source-of-truth defines it
+  ```
+- session_timer_progress 出力:
+  ```text
+  SESSION_TIMER_PROGRESS
+  session_token=/tmp/e_team_session_20260309T114355Z_3090684.token
+  team_tag=e_team
+  current_task=E-47
+  work_kind=implementation
+  progress_note=Confirmed the E-47 focused docs-sync bundle and helper surfaces: the smoke bundle, contract counts, and supported options all match the current Run 1 MBD command surface while the default-core versus non-default role boundary stays unchanged
+  progress_utc=2026-03-09T12:00:17Z
+  progress_epoch=1773057617
+  elapsed_min=16
+  progress_count=2
+  ```
+- session_timer_progress 出力（40分以降）:
+  ```text
+  SESSION_TIMER_PROGRESS
+  session_token=/tmp/e_team_session_20260309T114355Z_3090684.token
+  team_tag=e_team
+  current_task=E-47
+  work_kind=implementation
+  progress_note=After the queue summary-line fix, the full E-47 helper surface is stable: mbd_run1_surface_docs_sync_test, the docs-sync helper tests, and the smoke bundle all pass while the default-core versus non-default MBD route boundary remains unchanged
+  progress_utc=2026-03-09T12:24:51Z
+  progress_epoch=1773059091
+  elapsed_min=40
+  progress_count=3
+  ```
+- session_timer_guard 出力:
+  ```text
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260309T114355Z_3090684.token
+  team_tag=e_team
+  start_utc=2026-03-09T11:43:55Z
+  now_utc=2026-03-09T12:00:11Z
+  start_epoch=1773056635
+  now_epoch=1773057611
+  elapsed_sec=976
+  elapsed_min=16
+  min_required=10
+  guard_result=pass
+  ```
+  ```text
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260309T114355Z_3090684.token
+  team_tag=e_team
+  start_utc=2026-03-09T11:43:55Z
+  now_utc=2026-03-09T12:05:04Z
+  start_epoch=1773056635
+  now_epoch=1773057904
+  elapsed_sec=1269
+  elapsed_min=21
+  min_required=20
+  guard_result=pass
+  ```
+  ```text
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260309T114355Z_3090684.token
+  team_tag=e_team
+  start_utc=2026-03-09T11:43:55Z
+  now_utc=2026-03-09T12:14:20Z
+  start_epoch=1773056635
+  now_epoch=1773058460
+  elapsed_sec=1825
+  elapsed_min=30
+  min_required=30
+  guard_result=pass
+  ```
+  ```text
+  SESSION_TIMER_GUARD
+  session_token=/tmp/e_team_session_20260309T114355Z_3090684.token
+  team_tag=e_team
+  start_utc=2026-03-09T11:43:55Z
+  now_utc=2026-03-09T12:45:15Z
+  start_epoch=1773056635
+  now_epoch=1773060315
+  elapsed_sec=3680
+  elapsed_min=61
+  min_required=60
+  guard_result=pass
+  ```
+- session_timer.sh end 出力:
+  ```text
+  SESSION_TIMER_END
+  session_token=/tmp/e_team_session_20260309T114355Z_3090684.token
+  team_tag=e_team
+  start_utc=2026-03-09T11:43:55Z
+  end_utc=2026-03-09T12:46:34Z
+  start_epoch=1773056635
+  end_epoch=1773060394
+  elapsed_sec=3759
+  elapsed_min=62
+  progress_count=3
+  last_progress_task=E-47
+  last_progress_kind=implementation
+  last_progress_note=After the queue summary-line fix, the full E-47 helper surface is stable: mbd_run1_surface_docs_sync_test, the docs-sync helper tests, and the smoke bundle all pass while the default-core versus non-default MBD route boundary remains unchanged
+  last_progress_utc=2026-03-09T12:24:51Z
+  last_progress_epoch=1773059091
+  last_progress_elapsed_min=40
+  ```
+- 変更ファイル:
+  - `docs/fem4c_team_next_queue.md`
+  - `docs/team_status.md`
+  - `docs/session_continuity_log.md`
+- 実装内容:
+  - `E-47` 既存 surface を formal rerun し、`mbd_run1_surface_docs_sync_test`、`mbd_run1_surface_docs_sync_surfaces_test`、`mbd_run1_surface_docs_sync_surfaces_help_test`、`mbd_run1_surface_docs_sync_surface_smoke(_test)` を current Run 1 MBD boundary の focused helper surface として再確認した。
+  - queue 側の `A-20` section に summary line を追加し、`mbd_system2d_history_contract_smoke` / `mbd_a_team_foundation_smoke` / `mbd_run1_surface_docs_sync_test` の並びを smoke validator が queue surface でも機械確認できるようにした。
+  - `mbd_m1_rigid_acceptance`、`mbd_regression`、`mbd_negative`、`mbd_checks` は current behavior のまま PASS し、default-core vs non-default role boundary は変更していない。
+- 実行コマンド / pass-fail:
+  - `make -C FEM4C mbd_run1_surface_docs_sync_test mbd_run1_surface_docs_sync_surfaces_test mbd_run1_surface_docs_sync_surfaces_help_test mbd_run1_surface_docs_sync_surface_smoke_test` -> PASS
+  - `make -C FEM4C help | rg "mbd_(m1_rigid_acceptance|regression|negative|checks|run1_surface_docs_sync_test|run1_surface_docs_sync_surfaces_test|run1_surface_docs_sync_surfaces_help_test|run1_surface_docs_sync_surface_smoke|run1_surface_docs_sync_surface_smoke_test)"` -> PASS
+  - `make -C FEM4C mbd_m1_rigid_acceptance` -> PASS
+  - `make -C FEM4C mbd_regression mbd_negative mbd_checks` -> PASS
+  - `make -n -C FEM4C test | rg "mbd_checks|parser_compat|integrator_checks"` -> PASS
+  - `bash FEM4C/scripts/test_check_mbd_run1_surface_docs_sync.sh --print-contract-counts` -> PASS
+  - `bash FEM4C/scripts/test_check_mbd_run1_surface_docs_sync.sh --print-supported-options` -> PASS
+  - `bash FEM4C/scripts/test_check_mbd_run1_surface_docs_sync.sh --print-current-command-surface` -> PASS
+  - `bash -n FEM4C/scripts/test_check_mbd_run1_surface_docs_sync.sh FEM4C/scripts/test_check_mbd_run1_surface_docs_sync_surfaces.sh FEM4C/scripts/test_make_mbd_run1_surface_docs_sync_surfaces_help.sh FEM4C/scripts/test_make_mbd_run1_surface_docs_sync_surface_smoke.sh` -> PASS
+  - `make -C FEM4C mbd_m1_rigid_acceptance_test` -> PASS
+  - `make -C FEM4C mbd_run1_surface_docs_sync_surface_smoke` -> PASS
+- pass/fail 根拠:
+  - `E-47` の docs/help/current behavior boundary は README / acceptance matrix / runbook / queue / Make help / focused validator bundle で再確認できる状態に戻った。
+  - rerun session は `guard10/20/30/60=pass` と helper-surface smoke PASS を満たしており、prior invalidation の原因だった formal close 欠落も解消できる。
+- Open Risks/Blockers:
+  - `E-48` は current source-of-truth に entry が見当たらないため未着手。
+
+## 2026-03-08 / C-team (C-62 Done, C-63 Done, C-64 In Progress)
+- Current Plan:
+  - `C-62` を formal close し、focused root-surface contract bundle log validator の acceptance を固定する。
+  - same-session secondary として `C-63` を close し、repo-root bundle surface wrapper を追加する。
+  - Auto-Next として `C-64` を起票し、surface log validator を次セッションの先頭へ回す。
+- Completed This Session:
+  - `scripts/check_coupled_compare_reason_code_root_surface_contract_bundle_report.py` と focused self-tests を追加し、saved bundle log の `root_surface_audit_surface_*` metadata / required pass lines を fail-fast 再検証できるようにした。
+  - `scripts/run_coupled_compare_reason_code_root_surface_audit_surface.sh` と `FEM4C/scripts/test_make_coupled_compare_reason_code_root_surface_contract_checks.sh` を更新し、audited surface wrapper を focused bundle / bundle log へ確実に反映した。
+  - `scripts/run_coupled_compare_reason_code_root_surface_contract_bundle_surface.sh` と 3 本の self-tests を追加し、repo-root 1 コマンドで bundle surface metadata と validator handoff を追跡できる wrapper を追加した。
+  - `FEM4C/Makefile`, `FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh`, `docs/team_runbook.md`, `docs/fem4c_team_next_queue.md` を更新し、Make/help/docs-sync/queue を同期した。
+  - `docs/fem4c_team_next_queue.md` を `C-62 Done`, `C-63 Done`, `C-64 In Progress` に更新した。
+- Session Timer Raw:
+  ```text
+  SESSION_TIMER_START
+  session_token=/tmp/c_team_session_20260308T095925Z_3730034.token
+  team_tag=c_team
+  start_utc=2026-03-08T09:59:25Z
+  start_epoch=1772963965
+
+  SESSION_TIMER_DECLARE
+  session_token=/tmp/c_team_session_20260308T095925Z_3730034.token
+  team_tag=c_team
+  primary_task=C-59
+  secondary_task=C-60
+  plan_utc=2026-03-08T09:59:30Z
+  plan_epoch=1772963970
+  plan_note=
+
+  SESSION_TIMER_PROGRESS
+  session_token=/tmp/c_team_session_20260308T095925Z_3730034.token
+  team_tag=c_team
+  current_task=C-59
+  work_kind=implementation
+  progress_note=root_surface_audit surface wrapper + docs-sync + make target
+  progress_utc=2026-03-08T10:03:33Z
+  progress_epoch=1772964213
+  elapsed_min=4
+  progress_count=1
+
+  SESSION_TIMER_PROGRESS
+  session_token=/tmp/c_team_session_20260308T095925Z_3730034.token
+  team_tag=c_team
+  current_task=C-60
+  work_kind=implementation
+  progress_note=root_surface contract bundle updated with audit_surface wrapper + metadata trace checks
+  progress_utc=2026-03-08T10:16:19Z
+  progress_epoch=1772964979
+  elapsed_min=16
+  progress_count=2
+
+  SESSION_TIMER_PROGRESS
+  session_token=/tmp/c_team_session_20260308T095925Z_3730034.token
+  team_tag=c_team
+  current_task=C-62
+  work_kind=implementation
+  progress_note=root_surface contract bundle-report validator + make target added; docs/runbook sync remains for next auto-next
+  progress_utc=2026-03-08T10:39:29Z
+  progress_epoch=1772966369
+  elapsed_min=40
+  progress_count=3
+
+  SESSION_TIMER_PROGRESS
+  session_token=/tmp/c_team_session_20260308T095925Z_3730034.token
+  team_tag=c_team
+  current_task=C-63
+  work_kind=implementation
+  progress_note=bundle surface wrapper + focused make/docs-sync integration in serial validation
+  progress_utc=2026-03-08T10:51:23Z
+  progress_epoch=1772967083
+  elapsed_min=51
+  progress_count=4
+
+  SESSION_TIMER_GUARD
+  session_token=/tmp/c_team_session_20260308T095925Z_3730034.token
+  team_tag=c_team
+  start_utc=2026-03-08T09:59:25Z
+  now_utc=2026-03-08T10:12:50Z
+  start_epoch=1772963965
+  now_epoch=1772964770
+  elapsed_sec=805
+  elapsed_min=13
+  min_required=10
+  guard_result=pass
+
+  SESSION_TIMER_GUARD
+  session_token=/tmp/c_team_session_20260308T095925Z_3730034.token
+  team_tag=c_team
+  start_utc=2026-03-08T09:59:25Z
+  now_utc=2026-03-08T10:19:31Z
+  start_epoch=1772963965
+  now_epoch=1772965171
+  elapsed_sec=1206
+  elapsed_min=20
+  min_required=20
+  guard_result=pass
+
+  SESSION_TIMER_GUARD
+  session_token=/tmp/c_team_session_20260308T095925Z_3730034.token
+  team_tag=c_team
+  start_utc=2026-03-08T09:59:25Z
+  now_utc=2026-03-08T10:30:03Z
+  start_epoch=1772963965
+  now_epoch=1772965803
+  elapsed_sec=1838
+  elapsed_min=30
+  min_required=30
+  guard_result=pass
+
+  SESSION_TIMER_GUARD
+  session_token=/tmp/c_team_session_20260308T095925Z_3730034.token
+  team_tag=c_team
+  start_utc=2026-03-08T09:59:25Z
+  now_utc=2026-03-08T11:00:01Z
+  start_epoch=1772963965
+  now_epoch=1772967601
+  elapsed_sec=3636
+  elapsed_min=60
+  min_required=60
+  guard_result=pass
+
+  SESSION_TIMER_END
+  session_token=/tmp/c_team_session_20260308T095925Z_3730034.token
+  team_tag=c_team
+  start_utc=2026-03-08T09:59:25Z
+  end_utc=2026-03-08T11:07:14Z
+  start_epoch=1772963965
+  end_epoch=1772968034
+  elapsed_sec=4069
+  elapsed_min=67
+  progress_count=4
+  last_progress_task=C-63
+  last_progress_kind=implementation
+  last_progress_note=bundle surface wrapper + focused make/docs-sync integration in serial validation
+  last_progress_utc=2026-03-08T10:51:23Z
+  last_progress_epoch=1772967083
+  last_progress_elapsed_min=51
+  ```
+- 変更ファイル:
+  - `scripts/check_coupled_compare_reason_code_root_surface_contract_bundle_report.py`
+  - `scripts/run_coupled_compare_reason_code_root_surface_audit_surface.sh`
+  - `scripts/run_coupled_compare_reason_code_root_surface_contract_bundle_surface.sh`
+  - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_report.sh`
+  - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_report_missing_key.sh`
+  - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_report_print_required_keys.sh`
+  - `scripts/test_run_coupled_compare_reason_code_root_surface_audit_surface.sh`
+  - `scripts/test_run_coupled_compare_reason_code_root_surface_audit_surface_default_out_dir.sh`
+  - `scripts/test_run_coupled_compare_reason_code_root_surface_audit_surface_modes.sh`
+  - `scripts/test_run_coupled_compare_reason_code_root_surface_audit_surface_nested_out_dir.sh`
+  - `scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface.sh`
+  - `scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_default_out_dir.sh`
+  - `scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_nested_out_dir.sh`
+  - `FEM4C/Makefile`
+  - `FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh`
+  - `FEM4C/scripts/test_make_coupled_compare_reason_code_root_surface_contract_checks.sh`
+  - `docs/team_runbook.md`
+  - `docs/fem4c_team_next_queue.md`
+  - `docs/team_status.md`
+  - `docs/session_continuity_log.md`
+- 実行コマンド / pass-fail:
+  - `bash -n scripts/run_coupled_compare_reason_code_root_surface_contract_bundle_surface.sh scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface.sh scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_default_out_dir.sh scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_nested_out_dir.sh FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh` -> PASS
+  - `python3 -m py_compile scripts/check_coupled_compare_reason_code_root_surface_contract_bundle_report.py` -> PASS
+  - `bash scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_report.sh` -> PASS
+  - `bash scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_report_missing_key.sh` -> PASS
+  - `bash scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_report_print_required_keys.sh` -> PASS
+  - `make -C FEM4C coupled_compare_reason_code_root_surface_contract_bundle_report_test` -> PASS
+  - `make -C FEM4C coupled_compare_reason_code_docs_sync_test` -> PASS
+  - `bash scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface.sh` -> PASS
+  - `bash scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_default_out_dir.sh` -> PASS
+  - `bash scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_nested_out_dir.sh` -> PASS
+  - `make -C FEM4C coupled_compare_reason_code_root_surface_contract_bundle_surface_test` -> PASS
+  - `make -C FEM4C help | rg 'root_surface_contract_bundle_surface_test|root_surface_contract_bundle_report_test'` -> PASS
+- pass/fail 根拠:
+  - `C-62` の bundle-log validator は Python validator + 3 本の focused shell tests + Make target で PASS を確認した。
+  - `C-63` は初回 implementation で focused bundle target を直接再生して重い recursive path に入ったため、repo-root surface として audit-surface self-tests + saved bundle-log validator を 1 コマンドへ束ねる軽量 wrapper に切り替え、wrapper/default/nested/Make/docs-sync の PASS を確認した。
+  - session 条件は `guard10/20/30/60=pass` と `elapsed_min=67` を満たした。
+- safe_stage_command:
+  - `git add FEM4C/Makefile FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh FEM4C/scripts/test_make_coupled_compare_reason_code_root_surface_contract_checks.sh docs/fem4c_team_next_queue.md docs/team_runbook.md docs/team_status.md docs/session_continuity_log.md scripts/check_coupled_compare_reason_code_root_surface_contract_bundle_report.py scripts/run_coupled_compare_reason_code_root_surface_audit_surface.sh scripts/run_coupled_compare_reason_code_root_surface_contract_bundle_surface.sh scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_report.sh scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_report_missing_key.sh scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_report_print_required_keys.sh scripts/test_run_coupled_compare_reason_code_root_surface_audit_surface.sh scripts/test_run_coupled_compare_reason_code_root_surface_audit_surface_default_out_dir.sh scripts/test_run_coupled_compare_reason_code_root_surface_audit_surface_modes.sh scripts/test_run_coupled_compare_reason_code_root_surface_audit_surface_nested_out_dir.sh scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface.sh scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_default_out_dir.sh scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_nested_out_dir.sh`
+- Open Risks/Blockers:
+  - `FEM4C/Makefile` を含む unrelated dirty diff が大きいため、staging は上記 path に限定する必要がある。
+  - `C-64` は new surface wrapper validator を追加する段階で、saved surface log と nested log parent/escape guard を定義する必要がある。
+
+## 2026-03-08 / C-team (C-64..C-69 Done, C-70 In Progress)
+- Current Plan:
+  - `C-64` の surface-log validator を formal close する。
+  - same-session secondary として `C-65` / `C-66` / `C-67` / `C-68` / `C-69` を close し、wrapper-report chain を repo-root surface まで伸ばす。
+  - Auto-Next として `C-70` を起票し、wrapper-surface log validator を次セッションの先頭へ回す。
+- Completed This Session:
+  - `scripts/check_coupled_compare_reason_code_root_surface_contract_bundle_surface_report.py` と focused self-tests を追加し、saved surface log の `root_surface_contract_bundle_surface_*` metadata と validator handoff を fail-fast 再検証できるようにした。
+  - `scripts/check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report.py` と focused self-tests を追加し、saved report-wrapper log の `root_surface_contract_bundle_surface_report_*` metadata と validator handoff を fail-fast 再検証できるようにした。
+  - `scripts/run_coupled_compare_reason_code_root_surface_contract_bundle_surface_report.sh` と `scripts/run_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report.sh` を追加し、repo-root wrapper を 2 段伸ばした。
+  - `FEM4C/Makefile`, `FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh`, `docs/team_runbook.md`, `docs/fem4c_team_next_queue.md` を同期し、`C-64..C-69` の queue/runbook/docs-sync surface を固定した。
+- Session Timer Raw:
+  ```text
+  SESSION_TIMER_START
+  session_token=/tmp/c_team_session_20260308T120542Z_1761451.token
+  team_tag=c_team
+  start_utc=2026-03-08T12:05:42Z
+  start_epoch=1772971542
+
+  SESSION_TIMER_DECLARE
+  session_token=/tmp/c_team_session_20260308T120542Z_1761451.token
+  team_tag=c_team
+  primary_task=C-64
+  secondary_task=C-65
+  plan_utc=2026-03-08T12:05:53Z
+  plan_epoch=1772971553
+  plan_note=
+
+  SESSION_TIMER_PROGRESS
+  session_token=/tmp/c_team_session_20260308T120542Z_1761451.token
+  team_tag=c_team
+  current_task=C-64
+  work_kind=implementation
+  progress_note=surface-log validator + make/docs-sync/runbook integration
+  progress_utc=2026-03-08T12:08:02Z
+  progress_epoch=1772971682
+  elapsed_min=2
+  progress_count=1
+
+  SESSION_TIMER_PROGRESS
+  session_token=/tmp/c_team_session_20260308T120542Z_1761451.token
+  team_tag=c_team
+  current_task=C-65
+  work_kind=implementation
+  progress_note=negative coverage expanded for bundle surface report validator
+  progress_utc=2026-03-08T12:27:25Z
+  progress_epoch=1772972845
+  elapsed_min=21
+  progress_count=2
+
+  SESSION_TIMER_PROGRESS
+  session_token=/tmp/c_team_session_20260308T120542Z_1761451.token
+  team_tag=c_team
+  current_task=C-67
+  work_kind=implementation
+  progress_note=report-wrapper validator + docs-sync path accepted
+  progress_utc=2026-03-08T12:46:11Z
+  progress_epoch=1772973971
+  elapsed_min=40
+  progress_count=3
+
+  SESSION_TIMER_PROGRESS
+  session_token=/tmp/c_team_session_20260308T120542Z_1761451.token
+  team_tag=c_team
+  current_task=C-68
+  work_kind=implementation
+  progress_note=negative coverage added for wrapper-report validator
+  progress_utc=2026-03-08T12:59:46Z
+  progress_epoch=1772974786
+  elapsed_min=54
+  progress_count=4
+
+  SESSION_TIMER_GUARD
+  session_token=/tmp/c_team_session_20260308T120542Z_1761451.token
+  team_tag=c_team
+  start_utc=2026-03-08T12:05:42Z
+  now_utc=2026-03-08T12:16:12Z
+  start_epoch=1772971542
+  now_epoch=1772972172
+  elapsed_sec=630
+  elapsed_min=10
+  min_required=10
+  guard_result=pass
+
+  SESSION_TIMER_GUARD
+  session_token=/tmp/c_team_session_20260308T120542Z_1761451.token
+  team_tag=c_team
+  start_utc=2026-03-08T12:05:42Z
+  now_utc=2026-03-08T12:28:37Z
+  start_epoch=1772971542
+  now_epoch=1772972917
+  elapsed_sec=1375
+  elapsed_min=22
+  min_required=20
+  guard_result=pass
+
+  SESSION_TIMER_GUARD
+  session_token=/tmp/c_team_session_20260308T120542Z_1761451.token
+  team_tag=c_team
+  start_utc=2026-03-08T12:05:42Z
+  now_utc=2026-03-08T12:37:25Z
+  start_epoch=1772971542
+  now_epoch=1772973445
+  elapsed_sec=1903
+  elapsed_min=31
+  min_required=30
+  guard_result=pass
+
+  SESSION_TIMER_GUARD
+  session_token=/tmp/c_team_session_20260308T120542Z_1761451.token
+  team_tag=c_team
+  start_utc=2026-03-08T12:05:42Z
+  now_utc=2026-03-08T13:08:44Z
+  start_epoch=1772971542
+  now_epoch=1772975324
+  elapsed_sec=3782
+  elapsed_min=63
+  min_required=60
+  guard_result=pass
+
+  SESSION_TIMER_END
+  session_token=/tmp/c_team_session_20260308T120542Z_1761451.token
+  team_tag=c_team
+  start_utc=2026-03-08T12:05:42Z
+  end_utc=2026-03-08T13:11:41Z
+  start_epoch=1772971542
+  end_epoch=1772975501
+  elapsed_sec=3959
+  elapsed_min=65
+  progress_count=4
+  last_progress_task=C-68
+  last_progress_kind=implementation
+  last_progress_note=negative coverage added for wrapper-report validator
+  last_progress_utc=2026-03-08T12:59:46Z
+  last_progress_epoch=1772974786
+  last_progress_elapsed_min=54
+  ```
+- 変更ファイル:
+  - `scripts/check_coupled_compare_reason_code_root_surface_contract_bundle_surface_report.py`
+  - `scripts/check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report.py`
+  - `scripts/run_coupled_compare_reason_code_root_surface_contract_bundle_surface_report.sh`
+  - `scripts/run_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report.sh`
+  - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_report.sh`
+  - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_report_missing_log.sh`
+  - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_report_print_required_keys.sh`
+  - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_report_wrong_component.sh`
+  - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_report_escape.sh`
+  - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_report_nested_mismatch.sh`
+  - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report.sh`
+  - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report_missing_log.sh`
+  - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report_print_required_keys.sh`
+  - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report_wrong_component.sh`
+  - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report_escape.sh`
+  - `scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report_nested_mismatch.sh`
+  - `scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_report.sh`
+  - `scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_report_default_out_dir.sh`
+  - `scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_report_nested_out_dir.sh`
+  - `scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report.sh`
+  - `scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report_default_out_dir.sh`
+  - `scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report_nested_out_dir.sh`
+  - `FEM4C/Makefile`
+  - `FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh`
+  - `docs/team_runbook.md`
+  - `docs/fem4c_team_next_queue.md`
+  - `docs/team_status.md`
+  - `docs/session_continuity_log.md`
+- 実行コマンド / pass-fail:
+  - `python3 -m py_compile scripts/check_coupled_compare_reason_code_root_surface_contract_bundle_surface_report.py` -> PASS
+  - `bash scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_report.sh` -> PASS
+  - `bash scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_report_missing_log.sh` -> PASS
+  - `bash scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_report_print_required_keys.sh` -> PASS
+  - `bash scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_report_wrong_component.sh` -> PASS
+  - `bash scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_report_escape.sh` -> PASS
+  - `bash scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_report_nested_mismatch.sh` -> PASS
+  - `make -C FEM4C coupled_compare_reason_code_root_surface_contract_bundle_surface_report_test` -> PASS
+  - `python3 -m py_compile scripts/check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report.py` -> PASS
+  - `bash scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report.sh` -> PASS
+  - `bash scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report_missing_log.sh` -> PASS
+  - `bash scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report_print_required_keys.sh` -> PASS
+  - `bash scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report_wrong_component.sh` -> PASS
+  - `bash scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report_escape.sh` -> PASS
+  - `bash scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report_nested_mismatch.sh` -> PASS
+  - `make -C FEM4C coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report_test` -> PASS
+  - `bash scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_report.sh` -> PASS
+  - `bash scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_report_default_out_dir.sh` -> PASS
+  - `bash scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_report_nested_out_dir.sh` -> PASS
+  - `make -C FEM4C coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_test` -> PASS
+  - `bash scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report.sh` -> PASS
+  - `bash scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report_default_out_dir.sh` -> PASS
+  - `bash scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report_nested_out_dir.sh` -> PASS
+  - `make -C FEM4C coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_surface_test` -> PASS
+  - `make -C FEM4C coupled_compare_reason_code_docs_sync_test` -> PASS
+- pass/fail 根拠:
+  - `C-64..C-68` は validator / negative coverage / wrapper self-tests / Make target / docs-sync を全て PASS で固定した。
+  - `C-69` は wrapper skeleton と wrapper/default/nested smoke、Make target `coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_surface_test` まで PASS を確認し、次セッションで wrapper-surface log validator (`C-70`) に進める状態にした。
+  - session 条件は `guard10/20/30/60=pass` と `elapsed_min=65` を満たした。
+- safe_stage_command:
+  - `git add FEM4C/Makefile FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh docs/fem4c_team_next_queue.md docs/team_runbook.md docs/team_status.md docs/session_continuity_log.md scripts/check_coupled_compare_reason_code_root_surface_contract_bundle_surface_report.py scripts/check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report.py scripts/run_coupled_compare_reason_code_root_surface_contract_bundle_surface_report.sh scripts/run_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report.sh scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_report.sh scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_report_missing_log.sh scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_report_print_required_keys.sh scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_report_wrong_component.sh scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_report_escape.sh scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_report_nested_mismatch.sh scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report.sh scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report_missing_log.sh scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report_print_required_keys.sh scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report_wrong_component.sh scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report_escape.sh scripts/test_check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report_nested_mismatch.sh scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_report.sh scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_report_default_out_dir.sh scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_report_nested_out_dir.sh scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report.sh scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report_default_out_dir.sh scripts/test_run_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report_nested_out_dir.sh`
+- Open Risks/Blockers:
+  - `FEM4C/Makefile` を含む unrelated dirty diff が大きいため、staging は上記 path に限定する必要がある。
+  - `C-70` は wrapper-surface log validator の新設タスクで、wrapper/report/validator 3 層の parent-dir guard を崩さない設計が必要になる。
+
+## 2026-03-09 / C-team (C-77..C-82 Done, C-83 In Progress)
+- 実行タスク: skip-nested-selftests wrapper/report chain hardening
+  - Run ID: `c77-c83-skip-nested-selftests-chain-20260309T040634Z`
+  - session_timer.sh start 出力:
+    ```text
+    SESSION_TIMER_START
+    session_token=/tmp/c_team_session_20260309T040634Z_1682558.token
+    team_tag=c_team
+    start_utc=2026-03-09T04:06:34Z
+    start_epoch=1773029194
+    ```
+  - session_timer_declare 出力:
+    ```text
+    SESSION_TIMER_DECLARE
+    session_token=/tmp/c_team_session_20260309T040634Z_1682558.token
+    team_tag=c_team
+    primary_task=C-77
+    secondary_task=C-78
+    plan_utc=2026-03-09T04:07:39Z
+    plan_epoch=1773029259
+    plan_note=
+    ```
+  - session_timer_progress 出力（#1）:
+    ```text
+    SESSION_TIMER_PROGRESS
+    session_token=/tmp/c_team_session_20260309T040634Z_1682558.token
+    team_tag=c_team
+    current_task=C-77
+    work_kind=implementation
+    progress_note=
+    progress_utc=2026-03-09T04:08:50Z
+    progress_epoch=1773029330
+    elapsed_min=2
+    progress_count=1
+    ```
+  - session_timer_progress 出力（#2）:
+    ```text
+    SESSION_TIMER_PROGRESS
+    session_token=/tmp/c_team_session_20260309T040634Z_1682558.token
+    team_tag=c_team
+    current_task=C-78
+    work_kind=implementation
+    progress_note=
+    progress_utc=2026-03-09T04:13:45Z
+    progress_epoch=1773029625
+    elapsed_min=7
+    progress_count=2
+    ```
+  - session_timer_progress 出力（#3）:
+    ```text
+    SESSION_TIMER_PROGRESS
+    session_token=/tmp/c_team_session_20260309T040634Z_1682558.token
+    team_tag=c_team
+    current_task=C-82
+    work_kind=implementation
+    progress_note=
+    progress_utc=2026-03-09T04:43:47Z
+    progress_epoch=1773031427
+    elapsed_min=37
+    progress_count=3
+    ```
+  - session_timer_guard 出力（10分）:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260309T040634Z_1682558.token
+    team_tag=c_team
+    start_utc=2026-03-09T04:06:34Z
+    now_utc=2026-03-09T04:16:47Z
+    start_epoch=1773029194
+    now_epoch=1773029807
+    elapsed_sec=613
+    elapsed_min=10
+    min_required=10
+    guard_result=pass
+    ```
+  - session_timer_guard 出力（20分）:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260309T040634Z_1682558.token
+    team_tag=c_team
+    start_utc=2026-03-09T04:06:34Z
+    now_utc=2026-03-09T04:27:21Z
+    start_epoch=1773029194
+    now_epoch=1773030441
+    elapsed_sec=1247
+    elapsed_min=20
+    min_required=20
+    guard_result=pass
+    ```
+  - session_timer_guard 出力（30分）:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260309T040634Z_1682558.token
+    team_tag=c_team
+    start_utc=2026-03-09T04:06:34Z
+    now_utc=2026-03-09T05:07:18Z
+    start_epoch=1773029194
+    now_epoch=1773032838
+    elapsed_sec=3644
+    elapsed_min=60
+    min_required=30
+    guard_result=pass
+    ```
+  - session_timer_guard 出力（40分）:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260309T040634Z_1682558.token
+    team_tag=c_team
+    start_utc=2026-03-09T04:06:34Z
+    now_utc=2026-03-09T04:48:27Z
+    start_epoch=1773029194
+    now_epoch=1773031707
+    elapsed_sec=2513
+    elapsed_min=41
+    min_required=40
+    guard_result=pass
+    ```
+  - session_timer_guard 出力（60分）:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260309T040634Z_1682558.token
+    team_tag=c_team
+    start_utc=2026-03-09T04:06:34Z
+    now_utc=2026-03-09T05:06:49Z
+    start_epoch=1773029194
+    now_epoch=1773032809
+    elapsed_sec=3615
+    elapsed_min=60
+    min_required=60
+    guard_result=pass
+    ```
+  - session_timer.sh end 出力:
+    ```text
+    SESSION_TIMER_END
+    session_token=/tmp/c_team_session_20260309T040634Z_1682558.token
+    team_tag=c_team
+    start_utc=2026-03-09T04:06:34Z
+    end_utc=2026-03-09T05:07:18Z
+    start_epoch=1773029194
+    end_epoch=1773032838
+    elapsed_sec=3644
+    elapsed_min=60
+    progress_count=3
+    last_progress_task=C-82
+    last_progress_kind=implementation
+    last_progress_utc=2026-03-09T04:43:47Z
+    last_progress_epoch=1773031427
+    last_progress_elapsed_min=37
+    ```
+  - 変更ファイル（実装差分）:
+    - `FEM4C/Makefile`
+    - `FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh`
+    - `FEM4C/scripts/test_make_coupled_compare_reason_code_skip_nested_selftests_contract_checks.sh`
+    - `FEM4C/scripts/test_make_coupled_compare_reason_code_skip_nested_selftests_contract_checks_help.sh`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_runbook.md`
+    - `scripts/run_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_report.sh`
+    - `scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_report.sh`
+    - `scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_report_default_out_dir.sh`
+    - `scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_report_nested_out_dir.sh`
+    - `scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_report_wrong_component.sh`
+    - `scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_report_escape.sh`
+    - `scripts/check_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_wrapper_report.py`
+    - `scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_wrapper_report.sh`
+    - `scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_wrapper_report_missing_log.sh`
+    - `scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_wrapper_report_print_required_keys.sh`
+    - `scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_wrapper_report_wrong_component.sh`
+    - `scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_wrapper_report_escape.sh`
+    - `scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_wrapper_report_nested_mismatch.sh`
+    - `scripts/run_coupled_compare_reason_code_skip_nested_selftests_contract_checks.sh`
+    - `scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_contract_checks.sh`
+    - `scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_contract_checks_default_out_dir.sh`
+    - `scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_contract_checks_nested_out_dir.sh`
+    - `scripts/check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_report.py`
+    - `scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_report.sh`
+    - `scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_report_missing_log.sh`
+    - `scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_report_print_required_keys.sh`
+  - 実装内容:
+    - `C-77` を完了し、saved skip wrapper/report surface log validator の wrong-component / escaped-path coverage を追加した。
+    - `C-78` を完了し、`run_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_report.sh` と explicit/default/nested out-dir smoke を追加した。
+    - `C-79` を完了し、saved wrapper-surface report log validator と nested wrapper/validator handoff coverage を追加した。
+    - `C-80` を完了し、`coupled_compare_reason_code_skip_nested_selftests_contract_checks` bundle / bundle self-test / help self-test を追加し、entrypoint 1 コマンドを固定した。
+    - `C-81` を完了し、repo-root wrapper `run_coupled_compare_reason_code_skip_nested_selftests_contract_checks.sh` と wrapper smoke を追加した。
+    - `C-82` を完了し、saved contract bundle wrapper log validator `check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_report.py` と focused self-tests を追加した。
+    - `C-83` は bundle target へ C-82 validator を編入する変更まで入れたが、`coupled_compare_reason_code_skip_nested_selftests_contract_checks_test` の self-test drift が残り `In Progress` のまま。
+  - 実行コマンド / pass-fail:
+    - `make -C FEM4C coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_report_test` -> PASS
+    - `make -C FEM4C coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_wrapper_test` -> PASS
+    - `make -C FEM4C coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_wrapper_report_test` -> PASS
+    - `make -C FEM4C coupled_compare_reason_code_docs_sync_test` -> PASS
+    - `make -C FEM4C coupled_compare_reason_code_skip_nested_selftests_contract_checks_test` -> PASS
+    - `make -C FEM4C coupled_compare_reason_code_skip_nested_selftests_contract_checks_help_test` -> PASS
+    - `make -C FEM4C coupled_compare_reason_code_skip_nested_selftests_contract_bundle_test` -> PASS
+    - `python3 scripts/check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_report.py /tmp/c82_contract_report_wrapper.log` -> PASS
+    - `make -C FEM4C coupled_compare_reason_code_skip_nested_selftests_contract_report_test` -> PASS
+    - `make -C FEM4C coupled_compare_reason_code_skip_nested_selftests_contract_checks_test` -> FAIL（C-83: C-82 編入後の bundle self-test expectation drift）
+  - pass/fail:
+    - `PARTIAL PASS（C-77..C-82 acceptance PASS、guard60=pass、elapsed_min=60。C-83 は bundle self-test FAIL のため In Progress 継続）`
+  - safe_stage_command:
+    - `git add FEM4C/Makefile FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh FEM4C/scripts/test_make_coupled_compare_reason_code_skip_nested_selftests_contract_checks.sh FEM4C/scripts/test_make_coupled_compare_reason_code_skip_nested_selftests_contract_checks_help.sh docs/fem4c_team_next_queue.md docs/team_runbook.md scripts/run_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_report.sh scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_report.sh scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_report_default_out_dir.sh scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_report_nested_out_dir.sh scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_report_wrong_component.sh scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_report_escape.sh scripts/check_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_wrapper_report.py scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_wrapper_report.sh scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_wrapper_report_missing_log.sh scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_wrapper_report_print_required_keys.sh scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_wrapper_report_wrong_component.sh scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_wrapper_report_escape.sh scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_wrapper_report_nested_mismatch.sh scripts/run_coupled_compare_reason_code_skip_nested_selftests_contract_checks.sh scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_contract_checks.sh scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_contract_checks_default_out_dir.sh scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_contract_checks_nested_out_dir.sh scripts/check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_report.py scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_report.sh scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_report_missing_log.sh scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_report_print_required_keys.sh docs/team_status.md docs/session_continuity_log.md`
+
+## 2026-03-09 / C-team (C-84..C-90 Done, C-91 In Progress)
+- 実行タスク: skip-nested-selftests contract chain wrapper-surface / wrapper-surface-wrapper hardening
+  - Run ID: `c84-c91-skip-nested-selftests-contract-wrapper-chain-20260309T105512Z`
+  - session_timer.sh start 出力:
+    ```text
+    SESSION_TIMER_START
+    session_token=/tmp/c_team_session_20260309T105512Z_1528292.token
+    team_tag=c_team
+    start_utc=2026-03-09T10:55:12Z
+    start_epoch=1773053712
+    ```
+  - session_timer_declare 出力:
+    ```text
+    SESSION_TIMER_DECLARE
+    session_token=/tmp/c_team_session_20260309T105512Z_1528292.token
+    team_tag=c_team
+    primary_task=C-84
+    secondary_task=C-85
+    plan_utc=2026-03-09T10:55:15Z
+    plan_epoch=1773053715
+    plan_note=
+    ```
+  - session_timer_progress 出力（#1）:
+    ```text
+    SESSION_TIMER_PROGRESS
+    session_token=/tmp/c_team_session_20260309T105512Z_1528292.token
+    team_tag=c_team
+    current_task=C-84
+    work_kind=implementation
+    progress_note=
+    progress_utc=2026-03-09T11:00:26Z
+    progress_epoch=1773054026
+    elapsed_min=5
+    progress_count=1
+    ```
+  - session_timer_progress 出力（#2）:
+    ```text
+    SESSION_TIMER_PROGRESS
+    session_token=/tmp/c_team_session_20260309T105512Z_1528292.token
+    team_tag=c_team
+    current_task=C-85
+    work_kind=implementation
+    progress_note=
+    progress_utc=2026-03-09T11:15:17Z
+    progress_epoch=1773054917
+    elapsed_min=20
+    progress_count=2
+    ```
+  - session_timer_progress 出力（#3）:
+    ```text
+    SESSION_TIMER_PROGRESS
+    session_token=/tmp/c_team_session_20260309T105512Z_1528292.token
+    team_tag=c_team
+    current_task=C-89
+    work_kind=implementation
+    progress_note=
+    progress_utc=2026-03-09T11:37:32Z
+    progress_epoch=1773056252
+    elapsed_min=42
+    progress_count=3
+    ```
+  - session_timer_guard 出力（10分）:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260309T105512Z_1528292.token
+    team_tag=c_team
+    start_utc=2026-03-09T10:55:12Z
+    now_utc=2026-03-09T11:07:58Z
+    start_epoch=1773053712
+    now_epoch=1773054478
+    elapsed_sec=766
+    elapsed_min=12
+    min_required=10
+    guard_result=pass
+    ```
+  - session_timer_guard 出力（20分）:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260309T105512Z_1528292.token
+    team_tag=c_team
+    start_utc=2026-03-09T10:55:12Z
+    now_utc=2026-03-09T11:15:17Z
+    start_epoch=1773053712
+    now_epoch=1773054917
+    elapsed_sec=1205
+    elapsed_min=20
+    min_required=20
+    guard_result=pass
+    ```
+  - session_timer_guard 出力（30分）:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260309T105512Z_1528292.token
+    team_tag=c_team
+    start_utc=2026-03-09T10:55:12Z
+    now_utc=2026-03-09T11:27:21Z
+    start_epoch=1773053712
+    now_epoch=1773055641
+    elapsed_sec=1929
+    elapsed_min=32
+    min_required=30
+    guard_result=pass
+    ```
+  - session_timer_guard 出力（40分）:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260309T105512Z_1528292.token
+    team_tag=c_team
+    start_utc=2026-03-09T10:55:12Z
+    now_utc=2026-03-09T11:37:29Z
+    start_epoch=1773053712
+    now_epoch=1773056249
+    elapsed_sec=2537
+    elapsed_min=42
+    min_required=40
+    guard_result=pass
+    ```
+  - session_timer_guard 出力（50分）:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260309T105512Z_1528292.token
+    team_tag=c_team
+    start_utc=2026-03-09T10:55:12Z
+    now_utc=2026-03-09T12:11:24Z
+    start_epoch=1773053712
+    now_epoch=1773058284
+    elapsed_sec=4572
+    elapsed_min=76
+    min_required=50
+    guard_result=pass
+    ```
+  - session_timer_guard 出力（60分）:
+    ```text
+    SESSION_TIMER_GUARD
+    session_token=/tmp/c_team_session_20260309T105512Z_1528292.token
+    team_tag=c_team
+    start_utc=2026-03-09T10:55:12Z
+    now_utc=2026-03-09T12:11:24Z
+    start_epoch=1773053712
+    now_epoch=1773058284
+    elapsed_sec=4572
+    elapsed_min=76
+    min_required=60
+    guard_result=pass
+    ```
+  - session_timer.sh end 出力:
+    ```text
+    SESSION_TIMER_END
+    session_token=/tmp/c_team_session_20260309T105512Z_1528292.token
+    team_tag=c_team
+    start_utc=2026-03-09T10:55:12Z
+    end_utc=2026-03-09T12:11:45Z
+    start_epoch=1773053712
+    end_epoch=1773058305
+    elapsed_sec=4593
+    elapsed_min=76
+    progress_count=3
+    last_progress_task=C-89
+    last_progress_kind=implementation
+    last_progress_utc=2026-03-09T11:37:32Z
+    last_progress_epoch=1773056252
+    last_progress_elapsed_min=42
+    ```
+  - 変更ファイル（実装差分）:
+    - `FEM4C/Makefile`
+    - `FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh`
+    - `docs/fem4c_team_next_queue.md`
+    - `docs/team_runbook.md`
+    - `scripts/run_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_report.sh`
+    - `scripts/check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_report.py`
+    - `scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_report.sh`
+    - `scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_report_default_out_dir.sh`
+    - `scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_report_nested_out_dir.sh`
+    - `scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_report.sh`
+    - `scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_report_missing_log.sh`
+    - `scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_report_print_required_keys.sh`
+    - `scripts/run_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_wrapper_report.sh`
+    - `scripts/check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_wrapper_report.py`
+    - `scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_wrapper_report.sh`
+    - `scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_wrapper_report_default_out_dir.sh`
+    - `scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_wrapper_report_nested_out_dir.sh`
+    - `scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_wrapper_report.sh`
+    - `scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_wrapper_report_missing_log.sh`
+    - `scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_wrapper_report_print_required_keys.sh`
+  - 実装内容:
+    - `C-84` を完了し、`coupled_compare_reason_code_skip_nested_selftests_contract_checks_core` を current runbook/help/docs-sync surface に固定した。
+    - `C-85` を完了し、repo-root wrapper `run_coupled_compare_reason_code_skip_nested_selftests_contract_checks_report.sh` の report handoff を current chain に合わせて再確認した。
+    - `C-86` を完了し、saved report-wrapper log validator `check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_report.py` の current handoff を維持した。
+    - `C-87` を完了し、repo-root wrapper-surface `run_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_report.sh` と focused self-tests を追加した。
+    - `C-88` を完了し、saved wrapper-surface log validator `check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_report.py` と focused self-tests を追加した。
+    - `C-89` を完了し、repo-root wrapper-surface-wrapper `run_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_wrapper_report.sh` と focused self-tests を追加した。
+    - `C-90` を完了し、saved wrapper-surface log validator `check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_wrapper_report.py` を追加し、nested report-wrapper/validator handoff を fail-fast 再検証できるようにした。
+    - `C-91` として runbook / docs-sync / queue を wrapper-surface-wrapper current surface に追従させ、次セッションの formal acceptance 入口を `In Progress` に更新した。
+  - 実行コマンド / pass-fail:
+    - `python3 -m py_compile scripts/check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_report.py` -> PASS
+    - `python3 -m py_compile scripts/check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_wrapper_report.py` -> PASS
+    - `make -C FEM4C help | rg 'skip_nested_selftests_contract_report_wrapper(_surface(_report)?|_report)?_test|skip_nested_selftests_contract_checks_core'` -> PASS
+    - `make -C FEM4C help | rg 'skip_nested_selftests_contract_report_wrapper_surface(_wrapper(_report)?)?_test'` -> PASS
+    - `bash scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_report.sh` -> PASS
+    - `bash scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_report.sh` -> PASS
+    - `bash scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_report_missing_log.sh` -> PASS
+    - `bash scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_report_print_required_keys.sh` -> PASS
+    - `bash scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_wrapper_report.sh` -> PASS
+    - `bash scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_wrapper_report.sh` -> PASS
+    - `bash scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_wrapper_report_missing_log.sh` -> PASS
+    - `bash scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_wrapper_report_print_required_keys.sh` -> PASS
+    - `make -C FEM4C coupled_compare_reason_code_docs_sync_test` -> PASS
+  - pass/fail:
+    - `PASS`（`guard10/20/30/40/50/60=pass`, `elapsed_min=76`, `C-84..C-90 Done`, `C-91 In Progress`）
+  - safe_stage_command:
+    - `git add FEM4C/Makefile FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh docs/fem4c_team_next_queue.md docs/team_runbook.md docs/team_status.md docs/session_continuity_log.md scripts/run_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_report.sh scripts/check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_report.py scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_report.sh scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_report_default_out_dir.sh scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_report_nested_out_dir.sh scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_report.sh scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_report_missing_log.sh scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_report_print_required_keys.sh scripts/run_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_wrapper_report.sh scripts/check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_wrapper_report.py scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_wrapper_report.sh scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_wrapper_report_default_out_dir.sh scripts/test_run_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_wrapper_report_nested_out_dir.sh scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_wrapper_report.sh scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_wrapper_report_missing_log.sh scripts/test_check_coupled_compare_reason_code_skip_nested_selftests_contract_checks_wrapper_surface_wrapper_report_print_required_keys.sh`
+  - Open Risks:
+    - `coupled_compare_reason_code_skip_nested_selftests_contract_report_wrapper_surface_test` / `...wrapper_surface_wrapper_test` は nested focused bundle を内包するため runtime が長い。提出前の再確認は focused bash test を優先したほうが安定する。
+    - current worktree は大型 dirty diff のままなので、staging は上記 path のみに限定する必要がある。
+
+## PMチーム
+- 実行タスク: timer module switch（new canonical team timer module 導入）
+  - 変更ファイル（実装差分）:
+    - `AGENTS.md`
+    - `docs/abc_team_chat_handoff.md`
+    - `docs/team_runbook.md`
+    - `docs/fem4c_team_next_queue.md`
+    - `scripts/session_timer.sh`
+    - `scripts/session_timer_guard.sh`
+    - `scripts/team_control_tower.py`
+    - `scripts/watch_team_control_tower.sh`
+    - `tools/team_timer/README.md`
+    - `tools/team_timer/team_timer.py`
+    - `tools/team_timer/team_control_tower.py`
+    - `tools/team_timer/audit_team_sessions.py`
+  - 実装内容:
+    - canonical timer module を `tools/team_timer/` に新設した。
+    - 旧 `scripts/session_timer*.sh` は compatibility shim とし、正本運用を `python3 tools/team_timer/team_timer.py ...` へ切り替えた。
+    - `AGENTS.md` と現行 runbook / handoff / queue の common rule を新モジュール前提へ更新した。
+    - control tower の state root を新 timer root `/tmp/highperformanceFEM_team_timer` に切り替えた。
+  - 実行コマンド / pass-fail:
+    - `python3 tools/team_timer/team_timer.py start a_team` -> PASS
+    - `python3 tools/team_timer/team_timer.py declare <token> A-TEST A-NEXT \"module smoke\"` -> PASS
+    - `python3 tools/team_timer/team_timer.py progress <token> A-TEST implementation \"first progress\"` -> PASS
+    - `python3 tools/team_timer/team_timer.py guard <token> 0` -> PASS
+    - `python3 tools/team_timer/team_timer.py end <token>` -> PASS
+    - `python3 tools/team_timer/team_control_tower.py --json` -> PASS
+    - `python3 tools/team_timer/audit_team_sessions.py --team-status docs/team_status.md --min-elapsed 60 --max-elapsed 90 --json` -> PASS
+    - `python scripts/check_doc_links.py AGENTS.md docs/abc_team_chat_handoff.md docs/team_runbook.md docs/fem4c_team_next_queue.md tools/team_timer/README.md` -> PASS
+  - pass/fail:
+    - `PASS`（new timer module 導入と運用切替完了）

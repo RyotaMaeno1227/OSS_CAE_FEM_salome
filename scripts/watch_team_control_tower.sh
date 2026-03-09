@@ -13,7 +13,7 @@ mkdir -p "$(dirname "${output_path}")"
 
 while true; do
   tmp_path="$(mktemp /tmp/team_control_tower_XXXXXX.md)"
-  python scripts/team_control_tower.py --write "${tmp_path}" > /dev/null
+  python3 tools/team_timer/team_control_tower.py --write "${tmp_path}" > /dev/null
   mv "${tmp_path}" "${output_path}"
   sleep "${interval_sec}"
 done

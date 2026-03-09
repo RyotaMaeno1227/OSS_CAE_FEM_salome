@@ -13,6 +13,630 @@
 
 ---
 
+## 2026-03-10 / D-team (D-50 audit schema surface, D-51 audit schema self-test)
+- Current Plan:
+  - `D-50` で combined docs-sync roster audit output の schema/field contract を機械可読に出し、同一セッションで `D-51` の companion self-test 拡張まで進める。
+- Completed This Session:
+  - `session_token=/tmp/d_team_session_20260309T203614Z_7676.token`
+  - `SESSION_TIMER_DECLARE primary=D-50 secondary=D-51 plan_utc=2026-03-09T19:36:28Z`
+  - `SESSION_TIMER_PROGRESS #1 current_task=D-50 elapsed_min=15`
+  - `SESSION_TIMER_PROGRESS #2 current_task=D-51 elapsed_min=61`
+  - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+  - `session_timer.sh end /tmp/d_team_session_20260309T203614Z_7676.token` -> `start_utc=2026-03-09T19:36:14Z`, `end_utc=2026-03-09T20:38:03Z`, `elapsed_min=61`
+  - `test_check_coupled_2d_acceptance_docs_sync.sh` は `--print-docs-sync-surface-target-audit-schema` を持ち、count key と table column 群を machine-readable に出せるようになった。
+  - `test_check_coupled_2d_acceptance_docs_sync_surfaces.sh` は新 schema option の help/options/output を self-test するように広がった。
+  - `test_make_coupled_2d_acceptance_docs_sync_surfaces_help.sh` は audit schema と audit output の count key / header drift も検知するようになった。
+  - `bash -n FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync_surfaces.sh FEM4C/scripts/test_make_coupled_2d_acceptance_docs_sync_surfaces_help.sh` -> `PASS`
+  - `cd FEM4C && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --print-docs-sync-surface-target-audit-schema && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --print-docs-sync-surface-target-audit` -> `PASS`
+  - `make -C FEM4C coupled_2d_acceptance_docs_sync_surfaces_test coupled_2d_acceptance_docs_sync_surfaces_help_test coupled_2d_acceptance_surface_checks_test coupled_2d_acceptance_docs_sync_test` -> `PASS`
+  - queue は `D-50=Done`, `D-51=Done`, 再開点 `D-52` に更新済み。
+- Next Actions:
+  - `D-52` として docs-sync roster audit の schema と data を 1 回で取得できる inventory surface を追加する。
+- Open Risks/Blockers:
+  - repo-wide `make -C FEM4C test` の既知 `mbd_constraint_probe` linker failure は未解消。
+
+## 2026-03-09 / B-team (B-12 done, B-13 in progress)
+- Current Plan:
+  - `B-12` を formal close し、compare artifact target/integrator single-source contract を維持したまま、同一セッションで `B-13` の docs/help/current-command surface 固定へ進める。
+  - `B-13` では Run 1 docs-sync validator 自身の help/inventory/current-command surface を self-test target と smoke bundle で固定する。
+- Completed This Session:
+  - `session_token=/tmp/b_team_session_20260309T105217Z_1518660.token`
+  - `SESSION_TIMER_DECLARE primary=B-12 secondary=B-13 plan_utc=2026-03-09T10:52:23Z`
+  - `SESSION_TIMER_PROGRESS #1 current_task=B-12 elapsed_min=0`
+  - `SESSION_TIMER_PROGRESS #2 current_task=B-13 elapsed_min=67`
+  - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+  - `session_timer.sh end /tmp/b_team_session_20260309T105217Z_1518660.token` -> `start_utc=2026-03-09T10:52:17Z`, `end_utc=2026-03-09T12:01:46Z`, `elapsed_min=69`
+  - `FEM4C/scripts/test_check_mbd_run1_surface_docs_sync.sh` に `--print-current-command-surface` を追加し、Run 1 docs-sync validator の machine-readable current-command surface を固定した。
+  - `FEM4C/scripts/test_check_mbd_run1_surface_docs_sync_surfaces.sh` と `FEM4C/scripts/test_make_mbd_run1_surface_docs_sync_surfaces_help.sh` を追加し、validator 自身の help / required-label / supported-option / inventory / current-command surface を focused self-test 化した。
+  - `FEM4C/scripts/test_make_mbd_run1_surface_docs_sync_surface_smoke.sh` と `FEM4C/Makefile` を更新し、`mbd_run1_surface_docs_sync_test` を含む surface smoke bundle を 1 target で再確認できるようにした。
+  - `FEM4C/README.md`, `docs/06_acceptance_matrix_2d.md`, `docs/team_runbook.md` を新しい B-team docs-sync surface 群に同期した。
+  - `timeout 900 make -C FEM4C mbd_run1_surface_docs_sync_test` -> `PASS`
+  - `timeout 900 make -C FEM4C mbd_run1_surface_docs_sync_surfaces_test` -> `PASS`
+  - `timeout 900 make -C FEM4C mbd_run1_surface_docs_sync_surfaces_help_test` -> `PASS`
+  - `timeout 900 make -C FEM4C mbd_run1_surface_docs_sync_surface_smoke` -> `PASS`
+  - `timeout 900 make -C FEM4C mbd_run1_surface_docs_sync_surface_smoke_test` -> `PASS`
+  - `timeout 900 make -C FEM4C compare_2link_artifact_checks` -> `PASS`
+  - `timeout 900 make -C FEM4C mbd_rigid_compare_route_review_smoke` -> `PASS`
+  - `timeout 900 make -C FEM4C mbd_m1_rigid_acceptance_test` -> `PASS`
+- Next Actions:
+  - `B-13` を継続し、Run 1 docs-sync validator の surface roster / counts / machine-readable inventory の追加固定が必要なら同じ current-command surface 群を anchor に進める。
+  - 次セッションでも acceptance anchor は `mbd_run1_surface_docs_sync_test`, `mbd_run1_surface_docs_sync_surfaces_test`, `mbd_run1_surface_docs_sync_surfaces_help_test`, `mbd_run1_surface_docs_sync_surface_smoke`, `mbd_run1_surface_docs_sync_surface_smoke_test`, `compare_2link_artifact_checks`, `mbd_rigid_compare_route_review_smoke`, `mbd_m1_rigid_acceptance_test` を維持する。
+- Open Risks/Blockers:
+  - `FEM4C/Makefile`, `FEM4C/README.md`, `docs/06_acceptance_matrix_2d.md`, `docs/team_runbook.md` は shared worktree 上で他チーム差分が混在しているため、次回も B-team 対象 surface だけを局所維持する必要がある。
+  - Run 1 focused acceptance anchor は green だが、repo-wide broad regression は今回の scope 外。
+
+## 2026-03-09 / D-team (D-48 combined docs sync audit surface, D-49 help contract audit single-source)
+- Current Plan:
+  - `D-48` で docs-sync surface roster の label/count を 1 回で監査できる combined audit surface を追加し、同一セッションで `D-49` の help-contract single-source 化まで進める。
+- Completed This Session:
+  - `session_token=/tmp/d_team_session_20260309T120002Z_3722651.token`
+  - `SESSION_TIMER_DECLARE primary=D-48 secondary=D-49 plan_utc=2026-03-09T11:00:29Z`
+  - `SESSION_TIMER_PROGRESS #1 current_task=D-48 elapsed_min=15`
+  - `SESSION_TIMER_PROGRESS #2 current_task=D-49 elapsed_min=61`
+  - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+  - `session_timer.sh end /tmp/d_team_session_20260309T120002Z_3722651.token` -> `start_utc=2026-03-09T11:00:02Z`, `end_utc=2026-03-09T12:02:09Z`, `elapsed_min=62`
+  - `test_check_coupled_2d_acceptance_docs_sync.sh` は `--print-docs-sync-surface-target-audit` を持ち、roster count と indexed target table を 1 回で返せるようになった。
+  - `test_check_coupled_2d_acceptance_docs_sync_surfaces.sh` は新 audit option の help/options/combined output を検証するように広がった。
+  - `test_make_coupled_2d_acceptance_docs_sync_surfaces_help.sh` は combined audit output を source-of-truth にして `make help` surface を検証するようになった。
+  - `bash -n FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync_surfaces.sh FEM4C/scripts/test_make_coupled_2d_acceptance_docs_sync_surfaces_help.sh` -> `PASS`
+  - `cd FEM4C && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --print-docs-sync-surface-target-audit` -> `PASS`
+  - `make -C FEM4C coupled_2d_acceptance_docs_sync_surfaces_test coupled_2d_acceptance_docs_sync_surfaces_help_test coupled_2d_acceptance_surface_checks_test coupled_2d_acceptance_docs_sync_test` -> `PASS`
+  - queue は `D-48=Done`, `D-49=Done`, 再開点 `D-50` に更新済み。
+- Next Actions:
+  - `D-50` として combined docs-sync roster audit output の schema/field contract を機械可読に出せるようにする。
+- Open Risks/Blockers:
+  - repo-wide `make -C FEM4C test` の既知 `mbd_constraint_probe` linker failure は未解消。
+
+## 2026-03-09 / D-team (D-46 docs sync roster inventory+count, D-47 surface self-test coverage)
+- Current Plan:
+  - `D-46` で docs-sync surface roster printer に header/count surface を追加し、同一セッションで `D-47` の self-test coverage 拡張まで進める。
+- Completed This Session:
+  - `session_token=/tmp/d_team_session_20260309T111821Z_2254716.token`
+  - `SESSION_TIMER_DECLARE primary=D-46 secondary=D-47 plan_utc=2026-03-09T10:18:31Z`
+  - `SESSION_TIMER_PROGRESS #1 current_task=D-46 elapsed_min=15`
+  - `SESSION_TIMER_PROGRESS #2 current_task=D-47 elapsed_min=61`
+  - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+  - `session_timer.sh end /tmp/d_team_session_20260309T111821Z_2254716.token` -> `start_utc=2026-03-09T10:18:21Z`, `end_utc=2026-03-09T11:19:57Z`, `elapsed_min=61`
+  - `test_check_coupled_2d_acceptance_docs_sync.sh` は `--print-docs-sync-surface-target-inventory` / `--print-docs-sync-surface-target-count` を持ち、roster inventory/count を機械可読に出せるようになった。
+  - `test_check_coupled_2d_acceptance_docs_sync_surfaces.sh` は新しい help/options/inventory/count output を self-test するように広がった。
+  - `bash -n FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync_surfaces.sh` -> `PASS`
+  - `cd FEM4C && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --print-docs-sync-surface-target-inventory && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --print-docs-sync-surface-target-count` -> `PASS`
+  - `make -C FEM4C coupled_2d_acceptance_docs_sync_surfaces_test coupled_2d_acceptance_docs_sync_surfaces_help_test` -> `PASS`
+  - `make -C FEM4C coupled_2d_acceptance_surface_checks_test coupled_2d_acceptance_docs_sync_test` -> `PASS`
+  - queue は `D-46=Done`, `D-47=Done`, 再開点 `D-48` に更新済み。
+- Next Actions:
+  - `D-48` として roster labels/count を 1 回で監査できる combined surface を追加する。
+- Open Risks/Blockers:
+  - repo-wide `make -C FEM4C test` の既知 `mbd_constraint_probe` linker failure は未解消。
+
+## 2026-03-09 / D-team (D-44 docs sync surface roster printer, D-45 help contract single-source)
+- Current Plan:
+  - `D-44` で docs-sync surface target 群の roster printer を追加し、同一セッションで `D-45` の help contract single-source 化まで進める。
+- Completed This Session:
+  - `session_token=/tmp/d_team_session_20260309T104951Z_1507871.token`
+  - `SESSION_TIMER_DECLARE primary=D-44 secondary=D-45 plan_utc=2026-03-09T09:50:22Z`
+  - `SESSION_TIMER_PROGRESS #1 current_task=D-44 elapsed_min=15`
+  - `SESSION_TIMER_PROGRESS #2 current_task=D-45 elapsed_min=61`
+  - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+  - `session_timer.sh end /tmp/d_team_session_20260309T104951Z_1507871.token` -> `start_utc=2026-03-09T09:49:51Z`, `end_utc=2026-03-09T10:52:10Z`, `elapsed_min=62`
+  - `test_check_coupled_2d_acceptance_docs_sync.sh` は `--print-docs-sync-surface-targets` を持ち、docs-sync surface target 群を `target:<name>` で機械可読に出せるようになった。
+  - `test_check_coupled_2d_acceptance_docs_sync_surfaces.sh` は help/supported-options/invalid-option fallback へ新 option が出ることと、roster output 自体を確認するようにした。
+  - `test_make_coupled_2d_acceptance_docs_sync_surfaces_help.sh` は validator roster printer を source-of-truth にして `make help` surface を検証するようになった。
+  - `bash -n FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync_surfaces.sh FEM4C/scripts/test_make_coupled_2d_acceptance_docs_sync_surfaces_help.sh` -> `PASS`
+  - `cd FEM4C && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --print-docs-sync-surface-targets` -> `PASS`
+  - `make -C FEM4C coupled_2d_acceptance_docs_sync_surfaces_test coupled_2d_acceptance_docs_sync_surfaces_help_test coupled_2d_acceptance_docs_sync_surface_smoke_test` -> `PASS`
+  - `make -C FEM4C coupled_2d_acceptance_surface_checks_test coupled_2d_acceptance_docs_sync_test` -> `PASS`
+  - queue は `D-44=Done`, `D-45=Done`, 再開点 `D-46` に更新済み。
+- Next Actions:
+  - `D-46` として docs-sync surface roster printer に header/count surface を追加する。
+- Open Risks/Blockers:
+  - repo-wide `make -C FEM4C test` の既知 `mbd_constraint_probe` linker failure は未解消。
+  - roster printer は入ったが header/count surface はまだ無い。
+
+## 2026-03-09 / D-team (D-42 docs sync help surface, D-43 docs sync surface smoke bundle)
+- Current Plan:
+  - `D-42` で docs sync surface self-test target を `make help` surface と focused smoke で固定し、同一セッションで `D-43` の surface-smoke wiring まで進める。
+- Completed This Session:
+  - `session_token=/tmp/d_team_session_20260309T053134Z_530932.token`
+  - `SESSION_TIMER_DECLARE primary=D-42 secondary=D-43 plan_utc=2026-03-09T04:31:46Z`
+  - `SESSION_TIMER_PROGRESS #1 current_task=D-42 elapsed_min=15`
+  - `SESSION_TIMER_PROGRESS #2 current_task=D-43 elapsed_min=69`
+  - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+  - `session_timer.sh end /tmp/d_team_session_20260309T053134Z_530932.token` -> `start_utc=2026-03-09T04:31:34Z`, `end_utc=2026-03-09T05:40:55Z`, `elapsed_min=69`
+  - `test_make_coupled_2d_acceptance_docs_sync_surfaces_help.sh` を追加し、`make help` 上の docs-sync surface target 群を focused self-test として固定した。
+  - `test_make_coupled_2d_acceptance_docs_sync_surface_smoke.sh` と Makefile target を追加し、help contract + validator surfaces をまとめた docs-sync surface smoke bundle を作った。
+  - `coupled_2d_acceptance_surface_checks` は `coupled_2d_acceptance_docs_sync_surface_smoke_test` を通すようになり、validator contract も help-test / smoke-bundle children を検証するようになった。
+  - `bash -n FEM4C/scripts/test_make_coupled_2d_acceptance_docs_sync_surfaces_help.sh FEM4C/scripts/test_make_coupled_2d_acceptance_docs_sync_surface_smoke.sh FEM4C/scripts/test_make_coupled_2d_acceptance_surface_checks.sh FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh` -> `PASS`
+  - `make -C FEM4C coupled_2d_acceptance_docs_sync_surfaces_help_test coupled_2d_acceptance_docs_sync_surface_smoke_test coupled_2d_acceptance_surface_checks_test coupled_2d_acceptance_docs_sync_test` -> `PASS`
+  - `make -C FEM4C help | rg 'coupled_2d_acceptance_docs_sync_surfaces_help_test|coupled_2d_acceptance_docs_sync_surface_smoke|coupled_2d_acceptance_docs_sync_surface_smoke_test|coupled_2d_acceptance_surface_checks'` -> `PASS`
+  - queue は `D-42=Done`, `D-43=Done`, 再開点 `D-44` に更新済み。
+- Next Actions:
+  - `D-44` として docs-sync surface target 群の roster を機械可読に取得できる helper surface を追加する。
+- Open Risks/Blockers:
+  - repo-wide `make -C FEM4C test` の既知 `mbd_constraint_probe` linker failure は未解消。
+  - docs-sync surface target 群の roster は machine-readable ではまだ取れない。
+
+## 2026-03-09 / A-team (A-18 done, A-R1 carry-over synced)
+- Current Plan:
+  - `A-18` を formal close し、A-team history/foundation current-command surface を Run 1 docs sync にも接続した状態で次の PM dispatch を待つ。
+- Completed This Session:
+  - `session_token=/tmp/a_team_session_20260309T042343Z_2066660.token`
+  - `SESSION_TIMER_DECLARE primary=A-18 secondary=A-R1 plan_utc=2026-03-09T04:23:52Z`
+  - `SESSION_TIMER_PROGRESS` を 2 件記録し、A-18 の Run 1 docs sync 拡張と A-R1 carry-over の docs sync 強化を同一セッションで完了した。
+  - `FEM4C/Makefile` は A-team history/foundation entrypoint の help 文言と surface smoke を source-of-truth 変数で共有し、help contract は `make -s help` 出力を直接検査するようになった。
+  - `FEM4C/README.md` と `docs/06_acceptance_matrix_2d.md` は `mbd_system2d_history_contract_smoke` を history-only current command surface、`mbd_a_team_foundation_smoke` を full foundation current command surface として明記した。
+  - `FEM4C/scripts/test_check_mbd_run1_surface_docs_sync.sh` は A-team history/foundation current-command surface を required labels / regex / help surface として監査するようになった。
+  - `make -C FEM4C help | rg "^  mbd_system2d_history_contract_smoke - Run A-team history-only generalized-force contract bundle$|^  mbd_a_team_foundation_smoke - Run A-team full rigid MBD foundation bundle$"` -> `PASS`
+  - `make -C FEM4C mbd_a_team_history_contract_smoke` -> `PASS`
+  - `make -C FEM4C mbd_a_team_foundation_smoke` -> `PASS`
+  - `make -C FEM4C mbd_run1_surface_docs_sync_test` -> `PASS`
+  - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+  - `session_timer.sh end /tmp/a_team_session_20260309T042343Z_2066660.token` -> `start_utc=2026-03-09T04:23:43Z`, `end_utc=2026-03-09T05:32:39Z`, `elapsed_min=68`
+- Next Actions:
+  - PM の次ディスパッチがあるまで A-team は current accepted 状態を維持する。
+  - A-team surface を再度触る場合は、`mbd_a_team_history_contract_smoke`, `mbd_a_team_foundation_smoke`, `mbd_run1_surface_docs_sync_test` の 3 本を acceptance anchor として同時維持する。
+- Open Risks/Blockers:
+  - 機能 blocker はない。
+  - queue 上で A-team の次 Auto-Next はまだ未定義で、次回は PM dispatch で再開点を明示するのが安全。
+  - `FEM4C/Makefile` / `FEM4C/README.md` / `docs/06_acceptance_matrix_2d.md` は他チームも触るため、次回も A-team の局所差分だけを維持する必要がある。
+
+## 2026-03-09 / D-team (D-40 docs sync surface self-test, D-41 surface bundle wiring)
+- Current Plan:
+  - `D-40` で docs sync validator の help/inventory surfaces を focused self-test で固定し、同一セッションで `D-41` の surface bundle wiring まで進める。
+- Completed This Session:
+  - `session_token=/tmp/d_team_session_20260309T042334Z_2059745.token`
+  - `SESSION_TIMER_DECLARE primary=D-40 secondary=D-41 plan_utc=2026-03-09T03:23:42Z`
+  - `SESSION_TIMER_PROGRESS #1 current_task=D-40 elapsed_min=15`
+  - `SESSION_TIMER_PROGRESS #2 current_task=D-41 elapsed_min=66`
+  - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+  - `session_timer.sh end /tmp/d_team_session_20260309T042334Z_2059745.token` -> `start_utc=2026-03-09T03:23:34Z`, `end_utc=2026-03-09T04:29:55Z`, `elapsed_min=66`
+  - `test_check_coupled_2d_acceptance_docs_sync_surfaces.sh` を追加し、docs sync validator の help / supported-options / inventory / counts / invalid-option fallback を focused self-test で固定した。
+  - `coupled_2d_acceptance_surface_checks` は `coupled_2d_acceptance_docs_sync_surfaces_test` を含むようになり、docs surface も追従した。
+  - `bash -n FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync_surfaces.sh` -> `PASS`
+  - `make -C FEM4C coupled_2d_acceptance_docs_sync_surfaces_test` -> `PASS`
+  - `make -C FEM4C coupled_2d_acceptance_surface_checks_test` -> `PASS`
+  - `make -C FEM4C help | rg 'coupled_2d_acceptance_docs_sync_surfaces_test|coupled_2d_acceptance_surface_checks'` -> `PASS`
+  - queue は `D-40=Done`, `D-41=Done`, 再開点 `D-42` に更新済み。
+- Next Actions:
+  - `D-42` として help surface と focused smoke から docs sync surface self-test target を固定する。
+- Open Risks/Blockers:
+  - repo-wide `make -C FEM4C test` の既知 `mbd_constraint_probe` linker failure は未解消。
+  - docs sync surface self-test target の help surface 専用 smoke はまだ無い。
+
+## 2026-03-09 / D-team (D-38 validator usage surface, D-39 supported option inventory)
+- Current Plan:
+  - `D-38` で validator の usage/help surface を追加し、同一セッションで `D-39` の supported-option inventory まで進める。
+- Completed This Session:
+  - `session_token=/tmp/d_team_session_20260309T040623Z_1682513.token`
+  - `SESSION_TIMER_DECLARE primary=D-38 secondary=D-39 plan_utc=2026-03-09T03:07:54Z`
+  - `SESSION_TIMER_PROGRESS #1 current_task=D-38 elapsed_min=15`
+  - `SESSION_TIMER_PROGRESS #2 current_task=D-39 elapsed_min=61`
+  - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+  - `session_timer.sh end /tmp/d_team_session_20260309T040623Z_1682513.token` -> `start_utc=2026-03-09T03:06:24Z`, `end_utc=2026-03-09T04:07:54Z`, `elapsed_min=61`
+  - `test_check_coupled_2d_acceptance_docs_sync.sh` は `--help` / `--print-supported-options` を持ち、unsupported option 時にも usage を返すようになった。
+  - `cd FEM4C && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --help` -> `PASS`
+  - `cd FEM4C && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --print-supported-options` -> `PASS`
+  - `cd FEM4C && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --bad-flag` -> expected exit `2`
+  - `make -C FEM4C coupled_2d_acceptance_docs_sync_test coupled_2d_acceptance_surface_checks_test` -> `PASS`
+  - queue は `D-38=Done`, `D-39=Done`, 再開点 `D-40` に更新済み。
+- Next Actions:
+  - `D-40` として validator の help/inventory surfaces を focused self-test で固定する。
+- Open Risks/Blockers:
+  - repo-wide `make -C FEM4C test` の既知 `mbd_constraint_probe` linker failure は未解消。
+  - help/inventory surfaces は専用 self-test をまだ持たない。
+
+## 2026-03-09 / A-team (A-15 Done, A-16 Done)
+- Current Plan:
+  - `A-15` / `A-16` の accepted run を formal close し、A-team history/foundation bundle の single-source 化を維持した状態で次の PM dispatch を待つ。
+- Completed This Session:
+  - `session_token=/tmp/a_team_session_20260309T024836Z_7702.token`
+  - `SESSION_TIMER_DECLARE primary=A-15 secondary=A-16 plan_utc=2026-03-09T02:48:40Z`
+  - `SESSION_TIMER_PROGRESS` を 2 件記録し、A-15 の history CLI target single-source 化と A-16 の foundation/probe helper 依存整理を同一セッションで完了した。
+  - `MBD_SYSTEM2D_HISTORY_CLI_TARGETS` / `MBD_SYSTEM2D_HISTORY_CLI_CONTRACT_BUNDLE` を追加し、layout audit と aggregate bundle が同じ CLI target 群を参照するようにした。
+  - `mbd_probe_utils.h` に `output2d.h` を追加して include-order 依存を解消し、header single-source smoke は direct helper 呼び出しと `mbd_probe_utils.h` 経由の両方を許容するようにした。
+  - `make -C FEM4C mbd_system2d_history_contract_smoke` -> `PASS`
+  - `make -C FEM4C help | rg 'mbd_a_team_history_contract_smoke|mbd_a_team_foundation_smoke|mbd_a_team_foundation_surface_smoke'` -> `PASS`
+  - `make -C FEM4C mbd_a_team_foundation_smoke` -> `PASS`
+  - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+  - `session_timer.sh end /tmp/a_team_session_20260309T024836Z_7702.token` -> `start_utc=2026-03-09T02:48:36Z`, `end_utc=2026-03-09T04:07:31Z`, `elapsed_min=78`
+- Next Actions:
+  - PM の次ディスパッチがあるまで A-team は current accepted 状態を維持する。
+  - history/foundation bundle を再度触る場合は、`mbd_system2d_history_contract_smoke` と `mbd_a_team_foundation_smoke` を acceptance anchor として同時維持する。
+- Open Risks/Blockers:
+  - 機能 blocker はない。
+  - `FEM4C/bin` / `FEM4C/build` / `FEM4C/parser` は外部 `make clean` 等で消える可能性があり、その場合は再生成してから foundation smoke を rerun する必要がある。
+  - `FEM4C/Makefile` と docs は repo-wide に既存差分が広く、次回も A-team の局所差分だけを厳密に維持する必要がある。
+
+## 2026-03-09 / B-team (B-11 done, B-12 in progress)
+- Current Plan:
+  - `B-11` を formal close し、同一セッションで `B-12` の compare artifact target/integrator single-source 化を継続する。
+- Completed This Session:
+  - `session_token=/tmp/b_team_session_20260309T040651Z_1682737.token`
+  - `SESSION_TIMER_DECLARE primary=B-11 secondary=B-12 plan_utc=2026-03-09T04:06:54Z`
+  - `SESSION_TIMER_PROGRESS` を 5 件記録し、`B-11` の route metadata single-source 化を formal close しつつ、`B-12` の target/integrator helper を core wrapper / Makefile / rigid+flex self-test へ浸透させた。
+  - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard40=pass`, `guard50=pass`, `guard60=pass`
+  - `session_timer.sh end /tmp/b_team_session_20260309T040651Z_1682737.token` -> `start_utc=2026-03-09T04:06:51Z`, `end_utc=2026-03-09T05:07:18Z`, `elapsed_min=60`
+  - `FEM4C/scripts/compare_2link_artifact_targets.{sh,py}` と `FEM4C/scripts/get_compare_2link_artifact_targets.sh` を追加し、target order を shell helper / getter / Python consumer の単一ソースに揃えた。
+  - `FEM4C/scripts/compare_2link_artifact_integrators.{sh,py}` と `FEM4C/scripts/get_compare_2link_artifact_integrators.sh` を追加し、default integrator を含む integrator order を単一ソース化した。
+  - `FEM4C/scripts/check_compare_2link_artifacts.sh` は helper 起点で target/integrator を解決し、unsupported integrator を suite entrypoint で fail-fast するよう更新した。
+  - `FEM4C/scripts/run_e08_rigid_analytic_compare.sh`, `FEM4C/scripts/run_e08_rigid_analytic_multi_reference.sh`, `FEM4C/scripts/run_e08_rigid_analytic_normalize.sh`, `FEM4C/scripts/run_c15_flex_reference_normalize.sh`, `FEM4C/scripts/run_c16_flex_reference_compare.sh` を helper 起点の default integrator 契約へ同期した。
+  - `timeout 900 make -C FEM4C compare_2link_artifact_targets_getter_test` -> `PASS`
+  - `timeout 900 make -C FEM4C compare_2link_artifact_targets_sync_test` -> `PASS`
+  - `timeout 900 make -C FEM4C compare_2link_artifact_integrators_getter_test` -> `PASS`
+  - `timeout 900 make -C FEM4C compare_2link_artifact_integrators_sync_test` -> `PASS`
+  - `timeout 900 make -C FEM4C compare_2link_artifact_checks` -> `PASS`
+  - `timeout 900 make -C FEM4C mbd_rigid_compare_route_review_smoke` -> `PASS`
+  - `timeout 900 make -C FEM4C mbd_m1_rigid_acceptance_test` -> `PASS`
+- Next Actions:
+  - `B-12` を継続し、target/integrator helper 契約を残りの compare artifact consumer と docs surface へさらに浸透させる。
+  - PM の次指示がなければ queue 先頭の `B-12` を正として続行する。
+- Open Risks/Blockers:
+  - shared worktree で並列 `make` を投げると false failure を誘発するため、B-team acceptance は引き続き直列実行が必要。
+  - repo-wide dirty worktree が大きく、`FEM4C/Makefile` と compare scripts 群は他タスク差分混入リスクが継続している。
+
+## 2026-03-09 / B-team (B-10 done, B-11 in progress)
+- Current Plan:
+  - `B-10` を formal close し、同一セッションで `B-11` の rigid compare review / artifact route metadata single-source 化を継続する。
+- Completed This Session:
+  - `session_token=/tmp/b_team_session_20260309T024823Z_7552.token`
+  - `SESSION_TIMER_DECLARE primary=B-10 secondary=B-11 plan_utc=2026-03-09T02:48:30Z`
+  - `SESSION_TIMER_PROGRESS` を 7 件記録し、`B-10` の history field-count/index single-source 化と `B-11` の rigid compare review / route metadata helper 化を同一セッションで前進させた。
+  - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard50=pass`, `guard60=pass`
+  - `session_timer.sh end /tmp/b_team_session_20260309T024823Z_7552.token` -> `start_utc=2026-03-09T02:48:23Z`, `end_utc=2026-03-09T03:48:34Z`, `elapsed_min=60`
+  - `FEM4C/src/mbd/output2d.h` を history / rigid_compare CSV field-count / field-index の単一ソースにし、history probe 群と rigid compare probe 群を shared helper ベースへ寄せた。
+  - `FEM4C/scripts/get_compare_2link_rigid_review_columns.sh` と `FEM4C/scripts/compare_2link_artifact_route_fields.{sh,py}` を軸に、review columns / artifact route field-name surface を shell / getter / Python consumer で同期した。
+  - `FEM4C/scripts/test_get_compare_2link_artifact_route_fields.sh` は route helper 起点で expected CSV を作る形へ更新し、normalization field list の raw literal を除去した。
+  - `timeout 900 make -C FEM4C mbd_output2d_history_field_count_sync_smoke` -> `PASS`
+  - `timeout 900 make -C FEM4C mbd_b_team_foundation_probe_smoke` -> `PASS`
+  - `timeout 900 make -C FEM4C mbd_b_team_foundation_isolated_smoke` -> `PASS`
+  - `timeout 900 make -C FEM4C mbd_rigid_compare_review_smoke` -> `PASS`
+  - `timeout 900 make -C FEM4C mbd_rigid_compare_route_review_smoke` -> `PASS`
+  - `timeout 900 make -C FEM4C compare_2link_artifact_route_fields_getter_test` -> `PASS`
+  - `timeout 900 make -C FEM4C compare_2link_artifact_manifest_test` -> `PASS`
+  - `timeout 900 make -C FEM4C mbd_m1_rigid_acceptance_test` -> `PASS`
+- Next Actions:
+  - `B-11` を継続し、artifact route metadata helper を残りの compare/manifest consumer へさらに浸透させて raw field-name drift を減らす。
+  - PM の次指示がなければ queue 先頭の `B-11` を正として続行する。
+- Open Risks/Blockers:
+  - repo-wide dirty worktree が大きく、B-team 管轄外の差分混入リスクは継続している。
+  - `FEM4C/Makefile` と compare scripts 群は変更面が広いため、B-team 追記時は local scope のみを厳密に維持する必要がある。
+
+## 2026-03-09 / D-team (D-36 docs sync contract inventory, D-37 inventory counts)
+- Current Plan:
+  - `D-36` で docs sync validator の contract inventory 出力を追加し、同一セッションで `D-37` の counts/header まで進める。
+- Completed This Session:
+  - `session_token=/tmp/d_team_session_20260309T024814Z_7432.token`
+  - `SESSION_TIMER_DECLARE primary=D-36 secondary=D-37 plan_utc=2026-03-09T01:50:36Z`
+  - `SESSION_TIMER_PROGRESS #1 current_task=D-36 elapsed_min=15`
+  - `SESSION_TIMER_PROGRESS #2 current_task=D-37 elapsed_min=61`
+  - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+  - `session_timer.sh end /tmp/d_team_session_20260309T024814Z_7432.token` -> `start_utc=2026-03-09T01:49:06Z`, `end_utc=2026-03-09T02:50:39Z`, `elapsed_min=61`
+  - `test_check_coupled_2d_acceptance_docs_sync.sh` は `--print-required-labels`, `--print-contract-inventory`, `--print-contract-counts` を持ち、validator contract inventory を機械可読に出せるようになった。
+  - `cd FEM4C && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --print-required-labels` -> `PASS`
+  - `cd FEM4C && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --print-contract-inventory` -> `PASS`
+  - `cd FEM4C && bash scripts/test_check_coupled_2d_acceptance_docs_sync.sh --print-contract-counts` -> `PASS`
+  - `make -C FEM4C coupled_2d_acceptance_docs_sync_test coupled_2d_acceptance_surface_checks_test` -> `PASS`
+  - queue は `D-36=Done`, `D-37=Done`, 再開点 `D-38` に更新済み。
+- Next Actions:
+  - `D-38` として inventory flags の usage/help surface を追加する。
+- Open Risks/Blockers:
+  - repo-wide `make -C FEM4C test` の既知 `mbd_constraint_probe` linker failure は未解消。
+  - inventory flags は discoverable な usage/help surface をまだ持たない。
+
+## 2026-03-08 / B-team (B-09 done, B-10 in progress)
+- Current Plan:
+  - `B-09` を acceptance close し、同一セッションで `B-10` の history CSV field-index single-source 化へ前進する。
+- Completed This Session:
+  - `session_token=/tmp/b_team_session_20260308T120610Z_1761885.token`
+  - `SESSION_TIMER_DECLARE primary=B-09 secondary=B-09-longrun plan_utc=2026-03-08T12:07:42Z`
+  - `SESSION_TIMER_PROGRESS` を 11 件記録し、long-run projection/history contract と history field-count/index single-source 化を継続した。
+  - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+  - `session_timer.sh end /tmp/b_team_session_20260308T120610Z_1761885.token` -> `start_utc=2026-03-08T12:06:10Z`, `end_utc=2026-03-08T13:06:16Z`, `elapsed_min=60`
+  - `output2d.h` に history CSV field-count / field-index source-of-truth を追加し、history probes と isolated shell contract が raw literal ではなく shared helper / symbolic index 経由で surface を読むよう整理した。
+  - `make -C FEM4C mbd_system2d_projection_longrun_contract_smoke` -> `PASS`
+  - `make -C FEM4C mbd_b_team_foundation_isolated_smoke` -> `PASS`
+  - `make -C FEM4C mbd_output2d_history_field_count_sync_smoke` -> `PASS`
+  - `make -C FEM4C mbd_b_team_foundation_probe_smoke` -> `PASS`
+  - `make -C FEM4C mbd_b_team_foundation_smoke` -> `PASS`
+- Next Actions:
+  - `B-10` として、history CSV projection/implicit field index 契約を残りの consumers へ広げ、raw column drift をさらに削る。
+- Open Risks/Blockers:
+  - repo-wide dirty worktree なので、B-team 更新時は local scope のみを維持する必要がある。
+  - long-run projection acceptance は通過済みだが、history CSV consumer の symbolic index 置換はまだ途中で、未更新 consumer に raw column 番号が残る可能性がある。
+
+## 2026-03-08 / D-team (D-34 gate+resilience top-level role, D-35 semantic docs sync labels)
+- Current Plan:
+  - `D-34` で gate+resilience smoke の top-level role を validator の名前付き契約へ上げ、同一セッションで `D-35` の診断 label 化まで進める。
+- Completed This Session:
+  - `session_token=/tmp/d_team_session_20260308T120544Z_1761475.token`
+  - `SESSION_TIMER_DECLARE primary=D-34 secondary=D-35 plan_utc=2026-03-08T11:07:33Z`
+  - `SESSION_TIMER_PROGRESS #1 current_task=D-34 elapsed_min=15`
+  - `SESSION_TIMER_PROGRESS #2 current_task=D-35 elapsed_min=61`
+  - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+  - `session_timer.sh end /tmp/d_team_session_20260308T120544Z_1761475.token` -> `start_utc=2026-03-08T11:06:03Z`, `end_utc=2026-03-08T12:07:34Z`, `elapsed_min=61`
+  - `test_check_coupled_2d_acceptance_docs_sync.sh` は required token / bundle regex を semantic labels 付きの table として管理し、missing item 名を stderr へ出せるようになった。
+  - `bash -n FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh` -> `PASS`
+  - `make -C FEM4C coupled_2d_acceptance_docs_sync_test` -> `PASS`
+  - `make -C FEM4C coupled_2d_acceptance_surface_checks_test` -> `PASS`
+  - queue は `D-34=Done`, `D-35=Done`, 再開点 `D-36` に更新済み。
+- Next Actions:
+  - `D-36` として docs sync validator の contract inventory を機械可読に出せるようにする。
+- Open Risks/Blockers:
+  - repo-wide `make -C FEM4C test` の既知 `mbd_constraint_probe` linker failure は未解消。
+  - queue の PM運用メモには他チーム由来の重複行番号が残るため、D-team 更新時は局所差分維持が必要。
+
+## 2026-03-08 / D-team (D-32 gate+resilience bundle contract, D-33 docs sync diagnostics)
+- Current Plan:
+  - `D-32` で `coupled_2d_acceptance_gate_resilience_smoke` の bundle composition を docs sync へ固定し、同一セッションで `D-33` の診断強化まで進める。
+- Completed This Session:
+  - `session_token=/tmp/d_team_session_20260308T100739Z_3991936.token`
+  - `SESSION_TIMER_DECLARE primary=D-32 secondary=D-33 plan_utc=2026-03-08T09:10:16Z`
+  - `SESSION_TIMER_PROGRESS #1 current_task=D-32 elapsed_min=15`
+  - `SESSION_TIMER_PROGRESS #2 current_task=D-33 elapsed_min=61`
+  - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+  - `session_timer.sh end /tmp/d_team_session_20260308T100739Z_3991936.token` -> `start_utc=2026-03-08T09:08:46Z`, `end_utc=2026-03-08T10:10:14Z`, `elapsed_min=61`
+  - `test_check_coupled_2d_acceptance_docs_sync.sh` は gate+resilience, surface, lightweight, resilience bundles を multiline regex で束ね関係まで検証し、missing pattern / regex 名を stderr へ出す診断も持つようになった。
+  - `bash -n FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh` -> `PASS`
+  - `make -C FEM4C coupled_2d_acceptance_docs_sync_test` -> `PASS`
+  - `make -C FEM4C coupled_2d_acceptance_surface_checks_test` -> `PASS`
+  - queue は `D-32=Done`, `D-33=Done`, 再開点 `D-34` に更新済み。
+- Next Actions:
+  - `D-34` として gate+resilience smoke bundle の top-level docs surface 接続を固定する。
+- Open Risks/Blockers:
+  - repo-wide `make -C FEM4C test` の既知 `mbd_constraint_probe` linker failure は未解消。
+  - queue の PM運用メモには他チーム由来の重複行が残るため、D-team 更新時は局所差分維持が必要。
+
+## 2026-03-08 / D-team (D-30 wrapper/resilience composition docs sync, D-31 docs sync table refactor)
+- Current Plan:
+  - `D-30` で wrapper smoke / resilience pack の child-target composition を docs sync へ固定し、同一セッションで `D-31` の docs sync script 集約まで進める。
+- Completed This Session:
+  - `session_token=/tmp/d_team_session_20260308T095823Z_3691791.token`
+  - `SESSION_TIMER_DECLARE primary=D-30 secondary=D-31 plan_utc=2026-03-08T09:01:48Z`
+  - `SESSION_TIMER_PROGRESS #1 current_task=D-30 elapsed_min=15`
+  - `SESSION_TIMER_PROGRESS #2 current_task=D-31 elapsed_min=61`
+  - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+  - `session_timer.sh end /tmp/d_team_session_20260308T095823Z_3691791.token` -> `start_utc=2026-03-08T09:00:18Z`, `end_utc=2026-03-08T10:01:46Z`, `elapsed_min=61`
+  - `test_check_coupled_2d_acceptance_docs_sync.sh` は `wrapper_smoke_test` / `resilience_checks_test` を docs 側の必須 surface に追加し、required patterns を単一テーブルへ集約した。
+  - `docs/06_acceptance_matrix_2d.md`, `docs/team_runbook.md`, `FEM4C/README.md` は `coupled_2d_acceptance_resilience_checks` の child-target composition を current command surface へ追記した。
+  - `bash -n FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh` -> `PASS`
+  - `make -C FEM4C coupled_2d_acceptance_docs_sync_test` -> `PASS`
+  - `make -C FEM4C coupled_2d_acceptance_surface_checks_test` -> `PASS`
+  - queue は `D-30=Done`, `D-31=Done`, 再開点 `D-32` に更新済み。
+- Next Actions:
+  - `D-32` として `coupled_2d_acceptance_gate_resilience_smoke` bundle の child-target composition を docs と docs sync で固定する。
+- Open Risks/Blockers:
+  - repo-wide `make -C FEM4C test` の既知 `mbd_constraint_probe` linker failure は未解消。
+  - docs sync は gate+resilience smoke bundle の composition まではまだ要求していない。
+
+## 2026-03-08 / B-team (B-08 done, B-09 in progress)
+- Current Plan:
+  - `B-08` を accepted record に閉じ、`B-09` は projection drift hardening と isolated CLI-ready foundation smoke を維持したまま継続する。
+- Completed This Session:
+  - `session_token=/tmp/b_team_session_20260308T075742Z_2061712.token`
+  - `SESSION_TIMER_DECLARE primary=B-08 secondary=B-09 plan_utc=2026-03-08T07:57:55Z`
+  - `SESSION_TIMER_PROGRESS #1 current_task=B-08 elapsed_min=2`
+  - `SESSION_TIMER_PROGRESS #2 current_task=B-09 elapsed_min=18`
+  - `SESSION_TIMER_PROGRESS #3 current_task=B-09 elapsed_min=39`
+  - `SESSION_TIMER_PROGRESS #4 current_task=B-09 elapsed_min=40`
+  - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+  - `session_timer.sh end /tmp/b_team_session_20260308T075742Z_2061712.token` -> `start_utc=2026-03-08T07:57:42Z`, `end_utc=2026-03-08T08:57:59Z`, `elapsed_min=60`
+  - `system2d.c` の HHT free/constrained path を system-owned helper dispatch に整理した。
+  - `mbd_b_team_foundation_isolated_smoke` / `test_make_mbd_b_team_foundation_isolated.sh` を追加し、fresh local dirs で foundation smoke + cli_ready contract を固定した。
+  - `mbd_system2d_projection_compare_probe.c` に `FEM4C_MBD_PROJECTION_COMPARE_STEPS` を追加し、`mbd_system2d_projection_long_compare_smoke` を 5-step extended compare として固定した。
+  - `make -C FEM4C mbd_system2d_history_contract_smoke mbd_b_team_foundation_isolated_smoke` と `make -C FEM4C mbd_system2d_projection_long_compare_smoke` が PASS した。
+- Next Actions:
+  - `B-09` を継続し、current 4-step/5-step compare/history contract から 6+ step での `near-singular dense matrix at pivot 8` を解消して長時間積分 acceptance へ進める。
+- Open Risks/Blockers:
+  - projection compare は 5 step まで PASS だが、6 step 以上で dense KKT が `pivot 8` 近傍で特異化する。
+  - shared `bin/` / `build/` / `parser/` は他チームの `make clean` と競合しうるため、`mbd_b_team_foundation_isolated_smoke` を acceptance anchor として維持する。
+
+## 2026-03-08 / D-team (D-28 surface bundle composition docs sync, D-29 lightweight/wrapper link docs sync)
+- Current Plan:
+  - `D-28` で `coupled_2d_acceptance_surface_checks` の child-target composition を docs sync へ固定し、同一セッションで `D-29` の lightweight/wrapper 接続まで進める。
+- Completed This Session:
+  - `session_token=/tmp/d_team_session_20260308T082001Z_2594858.token`
+  - `SESSION_TIMER_DECLARE primary=D-28 secondary=D-29 plan_utc=2026-03-08T07:22:26Z`
+  - `SESSION_TIMER_PROGRESS #1 current_task=D-28 elapsed_min=15`
+  - `SESSION_TIMER_PROGRESS #2 current_task=D-29 elapsed_min=61`
+  - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+  - `session_timer.sh end /tmp/d_team_session_20260308T082001Z_2594858.token` -> `start_utc=2026-03-08T07:20:56Z`, `end_utc=2026-03-08T08:22:21Z`, `elapsed_min=61`
+  - `test_check_coupled_2d_acceptance_docs_sync.sh` は `coupled_2d_acceptance_gate_test`, `coupled_2d_acceptance_surface_checks_test`, `coupled_2d_acceptance_lightweight_checks_test` を docs 側の必須 surface に追加した。
+  - `docs/06_acceptance_matrix_2d.md`, `docs/team_runbook.md`, `FEM4C/README.md` は `surface_checks` と `lightweight_checks` の child-target composition を current command surface へ追記した。
+  - `bash -n FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh` -> `PASS`
+  - `make -C FEM4C coupled_2d_acceptance_docs_sync_test` -> `PASS`
+  - `make -C FEM4C coupled_2d_acceptance_surface_checks_test` -> `PASS`
+  - queue は `D-28=Done`, `D-29=Done`, 再開点 `D-30` に更新済み。
+- Next Actions:
+  - `D-30` として `coupled_2d_acceptance_wrapper_smoke_test` / `coupled_2d_acceptance_resilience_checks_test` の composition まで docs と docs sync で固定する。
+- Open Risks/Blockers:
+  - repo-wide `make -C FEM4C test` の既知 `mbd_constraint_probe` linker failure は未解消。
+  - docs sync は wrapper/resilience 側の child-target composition まではまだ要求していない。
+
+## 2026-03-08 / D-team (D-26 gate provenance docs sync, D-27 provenance self-test docs surface)
+- Current Plan:
+  - `D-26` で gate provenance fields の docs sync contract を閉じ、同一セッションで `D-27` の provenance self-test target docs surface まで進める。
+- Completed This Session:
+  - `session_token=/tmp/d_team_session_20260308T075814Z_2062134.token`
+  - `SESSION_TIMER_DECLARE primary=D-26 secondary=D-27 plan_utc=2026-03-08T07:02:14Z`
+  - `SESSION_TIMER_PROGRESS #1 current_task=D-26 elapsed_min=15`
+  - `SESSION_TIMER_PROGRESS #2 current_task=D-27 elapsed_min=61`
+  - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+  - `session_timer.sh end /tmp/d_team_session_20260308T075814Z_2062134.token` -> `start_utc=2026-03-08T07:00:44Z`, `end_utc=2026-03-08T08:02:25Z`, `elapsed_min=61`
+  - `test_check_coupled_2d_acceptance_docs_sync.sh` は `rigid_limit_threshold_source_command` / `rigid_limit_threshold_update_points` と `coupled_2d_acceptance_gate_threshold_provenance_test` を docs 側の必須 surface として検証するようになった。
+  - `docs/06_acceptance_matrix_2d.md`, `docs/team_runbook.md`, `FEM4C/README.md` は gate provenance self-test target の役割を current command surface に追記した。
+  - `bash -n FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh` -> `PASS`
+  - `make -C FEM4C coupled_2d_acceptance_docs_sync_test` -> `PASS`
+  - `make -C FEM4C coupled_2d_acceptance_surface_checks_test` -> `PASS`
+  - queue は `D-26=Done`, `D-27=Done`, 再開点 `D-28` に更新済み。
+- Next Actions:
+  - `D-28` として `coupled_2d_acceptance_surface_checks` bundle が `docs_sync + gate_test + gate_threshold_provenance_test` を束ねることを docs と docs sync で固定する。
+- Open Risks/Blockers:
+  - repo-wide `make -C FEM4C test` の既知 `mbd_constraint_probe` linker failure は未解消。
+  - docs sync は target 名と provenance fields までは固定したが、surface bundle の child-target composition まではまだ要求していない。
+
+## 2026-03-08 / A-team (A-R2 carry-over accepted, A-R3 done)
+- Current Plan:
+  - review-spec Run 2 の A-side route contract を閉じ、受入 anchor を `make -C FEM4C mbd_implicit_label_review_smoke`, `make -C FEM4C compare_2link_artifact_checks`, `make -C FEM4C mbd_rigid_compare_route_review_smoke` の 3 本へ固定する。
+- Completed This Session:
+  - `session_token=/tmp/a_team_session_20260308T055936Z_1919486.token`
+  - `SESSION_TIMER_DECLARE primary=A-R2 secondary=A-R3 plan_utc=2026-03-08T05:59:43Z`
+  - `SESSION_TIMER_PROGRESS` を 5 回記録し、A-R2 carry-over 再確認後に A-R3 の direct-route contract tightening を継続した。
+  - `compare_2link_rigid_analytic.py` に `none` fallback sentinel と snapshot-count / `rigid_compare_enabled` fail-fast expectation を追加し、direct rigid route を helper/wrapper の両方で固定した。
+  - `compare_2link_artifact_route_fields.sh` を新設し、artifact suite / matrix wrapper / stdout-contract test の route field list を single-source 化した。
+  - `check_compare_2link_artifact_manifest.py` / `check_compare_2link_artifact_matrix_manifest.py` は rigid direct-route validator と dash-only route validator を helper 化し、artifact/matrix manifest contract を共有化した。
+  - `make -C FEM4C mbd_implicit_label_review_smoke` -> `PASS`
+  - `make -C FEM4C compare_2link_artifact_checks` -> `PASS`
+  - `make -C FEM4C mbd_rigid_compare_route_review_smoke` -> `PASS`
+  - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+  - `session_timer.sh end /tmp/a_team_session_20260308T055936Z_1919486.token` -> `start_utc=2026-03-08T05:59:36Z`, `end_utc=2026-03-08T06:59:45Z`, `elapsed_min=60`
+- Next Actions:
+  - review-spec mode を継続する場合は、次の A-side priority は PM が明示 dispatch する。
+  - rigid route regression を再度触る場合は、`mbd_implicit_label_review_smoke` / `compare_2link_artifact_checks` / `mbd_rigid_compare_route_review_smoke` を A-side acceptance anchor として維持する。
+- Open Risks/Blockers:
+  - 機能 blocker はない。
+  - `FEM4C/Makefile` は repo-wide に広い既存差分を含むため、次回も A-side path だけを限定して stage する必要がある。
+
+## 2026-03-08 / B-team (B-R1 fclose warning hygiene, B-R2 rigid HHT formal closure)
+- Current Plan:
+  - `B-R1` の `system2d.c` `fclose` warning hygiene を局所修正で閉じ、同一セッションで `B-R2` の rigid 2-link HHT compare provenance を formal acceptance route まで接続する。
+- Completed This Session:
+  - `system2d.c` の raw `fclose(...)` を helper に集約し、`gcc -Wall -Wextra -fanalyzer -std=c99 -Isrc -c src/mbd/system2d.c` で `-Wuse-after-free` warning が消えることを確認した。
+  - `system2d.c` summary/output に `history_snapshot_count` / `rigid_compare_enabled` / `rigid_compare_snapshot_count` を追加し、rigid compare provenance を core output に残すようにした。
+  - `compare_2link_rigid_analytic.py`、artifact suite/matrix validator、rigid analytic wrapper tests を更新し、rigid route では provenance `2,1,2`、flex route では `-,-,-` を必須に同期した。
+  - `Makefile` の compare artifact manifest validator targets は、`MANIFEST_CSV` 未指定時に fresh tmp manifest を self-generate するようにして、stale `/tmp` manifest 依存を除去した。
+  - `mbd_rigid_analytic_hht_compare_test` と `mbd_m1_rigid_acceptance` を PASS まで通し、HHT rigid 2-link route を formal acceptance child へ接続した。
+- Next Actions:
+  - review-spec 上の B-team Run 1/Run 2 は閉じたため、次回 dispatch は PM 指示に従って backlog か次の priority slice を再開する。
+  - rigid acceptance を触る場合は、summary provenance `history_snapshot_count` / `rigid_compare_snapshot_count` を compare wrapper/manifest と常に同時更新する。
+- Open Risks/Blockers:
+  - repo 全体には B-team 管轄外の大規模差分が残っているため、`make clean && make -j2` の repo-wide warning 再確認はこのセッションでは実施していない。
+  - `README.md` と queue/docs には他チーム由来の広い差分があるため、次回も provenance 追記箇所だけを局所編集する必要がある。
+
+## 2026-03-08 / D-team (D-24 gate threshold provenance, D-25 gate provenance self-test)
+- Current Plan:
+  - `D-24` で `coupled_2d_acceptance_gate` の top-level summary row に threshold provenance を載せ、同一セッションで `D-25` の synthetic self-test まで進める。
+- Completed This Session:
+  - `session_token=/tmp/d_team_session_20260308T060318Z_1924276.token`
+  - `SESSION_TIMER_DECLARE primary=D-24 secondary=D-25 plan_utc=2026-03-08T05:11:43Z`
+  - `SESSION_TIMER_PROGRESS #1 current_task=D-24 elapsed_min=8`
+  - `SESSION_TIMER_PROGRESS #2 current_task=D-25 elapsed_min=61`
+  - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+  - `session_timer.sh end /tmp/d_team_session_20260308T060318Z_1924276.token` -> `start_utc=2026-03-08T05:11:18Z`, `end_utc=2026-03-08T06:13:01Z`, `elapsed_min=61`
+  - `run_2d_coupled_acceptance_gate.sh` は `rigid_limit_threshold_source_command` / `rigid_limit_threshold_update_points` を gate log と `coupled_acceptance_gate,...` row に出すようになった。
+  - `MAKE_CMD` override を入れ、`test_run_2d_coupled_acceptance_gate_threshold_provenance.sh` で synthetic self-test を追加した。
+  - `coupled_2d_acceptance_surface_checks` は provenance self-test も束ねるようになった。
+  - `docs/06_acceptance_matrix_2d.md`, `docs/team_runbook.md`, `FEM4C/README.md` に gate provenance row surface を追記した。
+  - `make -C FEM4C coupled_2d_acceptance_gate_test coupled_2d_acceptance_gate_threshold_provenance_test coupled_2d_acceptance_surface_checks_test` -> `PASS`
+  - queue は `D-24=Done`, `D-25=Done`, 再開点 `D-26` に更新済み。
+- Next Actions:
+  - `D-26` として docs sync test に gate provenance fields の明示確認を追加する。
+- Open Risks/Blockers:
+  - repo-wide `make -C FEM4C test` の既知 `mbd_constraint_probe` linker failure は未解消。
+  - docs surface 自体は更新済みだが、docs sync test はまだ provenance fields を強制していない。
+
+## 2026-03-08 / D-team (D-R2 reaction mapping artifact, D-R3 artifact-only export)
+- Current Plan:
+  - `D-R2` で 1-link meaningful case の reaction mapping artifact を閉じ、同一セッションで `D-R3` の compare-side auxiliary CSV export へ進む。
+- Completed This Session:
+  - `session_token=/tmp/d_team_session_20260308T053957Z_1888207.token`
+  - `SESSION_TIMER_DECLARE primary=D-R2 secondary=D-R3 plan_utc=2026-03-08T04:51:44Z`
+  - `SESSION_TIMER_PROGRESS #1 current_task=D-R2 elapsed_min=13`
+  - `SESSION_TIMER_PROGRESS #2 current_task=D-R3 elapsed_min=64`
+  - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+  - `session_timer.sh end /tmp/d_team_session_20260308T053957Z_1888207.token` -> `start_utc=2026-03-08T04:49:57Z`, `end_utc=2026-03-08T05:54:07Z`, `elapsed_min=64`
+  - `flex_snapshot2d` / `coupled_run2d` / `coupled_step_*` が root/tip reaction と mapped body-force vectors を snapshot artifact へ持ち上げるようになった。
+  - `compare_rigid_limit_2link.py` は snapshot の `root_reaction_local`, `tip_reaction_local`, `root_body_force`, `tip_body_force`, `total_body_force` rows を parse するようになった。
+  - `compare_2link_flex_reference.py` に `--artifact-only` を追加し、1-link summary から `interface_centers_csv` / `reaction_map_csv` を直接 export できるようにした。
+  - `scripts/test_compare_2link_flex_reference_artifact_only.sh` と `Makefile` target `coupled_flex_reference_artifact_only_test` を追加した。
+  - `python3 -m py_compile FEM4C/scripts/compare_rigid_limit_2link.py FEM4C/scripts/compare_2link_flex_reference.py` -> `PASS`
+  - `make -C FEM4C clean && make -C FEM4C bin/fem4c` -> `PASS`
+  - `./bin/fem4c --mode=coupled --coupled-integrator=explicit examples/coupled_1link_flex_master.dat /tmp/d_r2_1link_explicit.dat` -> `PASS`
+  - `make -C FEM4C coupled_flex_reference_real_test coupled_flex_reference_compare_test coupled_flex_reference_artifact_only_test` -> `PASS`
+  - queue は `D-R2=Done`, `D-R3=Done`、再開点 `D-24` に更新済み。
+- Next Actions:
+  - review-spec slice は閉じたため、次回再開は `D-24` backlog。
+  - 必要なら `reaction_map_csv` を higher-level wrapper / manifest に surfacing する。
+- Open Risks/Blockers:
+  - repo-wide `make -C FEM4C test` の既知 `mbd_constraint_probe` linker failure は未解消。
+  - `reaction_map_csv` は focused compare CLI/test では使えるが、top-level wrapper manifest にはまだ出ていない。
+
+## 2026-03-08 / D-team (D-R1 1-link meaningful case skeleton)
+- Current Plan:
+  - review-spec 優先で `D-R1` を実装し、1-link flexible meaningful case の最小骨格を作る。
+- Completed This Session:
+  - `session_token=/tmp/d_team_session_20260308T051359Z_1876846.token`
+  - `SESSION_TIMER_DECLARE primary=D-R1 secondary=D-R2 plan_utc=2026-03-08T04:16:11Z`
+  - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+  - `session_timer.sh end /tmp/d_team_session_20260308T051359Z_1876846.token` -> `start_utc=2026-03-08T04:15:59Z`, `end_utc=2026-03-08T05:20:52Z`, `elapsed_min=64`
+  - `examples/flex_link1_q4_meaningful.dat` と `examples/coupled_1link_flex_master.dat` を追加し、single-body/single-flex-body の nonzero-load case を定義した。
+  - `flex_snapshot2d.c` が `observation_point_*` と `load_resultant_*` metadata を snapshot へ出すようになった。
+  - `make -C FEM4C bin/fem4c` -> `PASS`
+  - `./bin/fem4c --mode=coupled --coupled-integrator=explicit examples/coupled_1link_flex_master.dat /tmp/d_r1_1link_explicit.dat` -> `PASS`
+  - evidence check:
+    - `reaction_root_tip_nonzero=0.000000e+00,2.500000e+04,6.250000e+03,-7.275958e-12,2.500000e+04,-6.250000e+03`
+    - `load_resultant_local=0.000000e+00,-5.000000e+04,-2.500000e+04`
+    - `observation_point_disp_world=0.000000e+00,-2.579365e-07`
+  - `docs/fem4c_team_next_queue.md` は review-spec 優先の `D-R1=Done`, `D-R2=Todo` へ更新済み。
+- Next Actions:
+  - 再開点は `D-R2`。root/tip reaction と generalized-force mapping を artifact 側へ持ち上げる。
+- Open Risks/Blockers:
+  - reaction はまだ coupled step log surface での確認に留まり、snapshot artifact へは未格納。
+  - compare CSV / normalization 側の 1-link surface は次 run (`D-R2`) で整える。
+
+## 2026-03-08 / D-team (D-21 Rerun Accepted + D-23 Coupled Compare Threshold Provenance)
+- Current Plan:
+  - D-21 rerun を新規 `session_token` で受理しつつ、同一セッションで `coupled_compare_checks` aggregate summary/manifest へ threshold provenance を surfacing する。
+- Completed This Session:
+  - D-21 rerun evidence:
+    - `session_token=/tmp/d_team_session_20260307T181518Z_1286257.token`
+    - `SESSION_TIMER_DECLARE primary=D-21 secondary=D-22 plan_utc=2026-03-07T17:14:22Z`
+    - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+    - `session_timer.sh end /tmp/d_team_session_20260307T181518Z_1286257.token` -> `start_utc=2026-03-07T17:14:18Z`, `end_utc=2026-03-07T18:27:59Z`, `elapsed_min=73`
+  - D-23:
+    - `run_coupled_compare_checks.sh` が aggregate stdout/manifest に `rigid_limit_threshold_source_command` / `rigid_limit_threshold_update_points` を出すようになった。
+    - `check_coupled_compare_checks_manifest.py` が provenance-enabled pass row と `-` sentinel row を区別して検証するようになった。
+    - fake `MAKE_CMD` ベースの `test_run_coupled_compare_checks_threshold_provenance.sh` を追加し、wrapper の provenance extraction を isolated に固定した。
+    - `test_run_coupled_compare_checks_failfast.sh` と `Makefile` `coupled_compare_checks_manifest_test` も新列/quoted target list に追従させた。
+    - `make -C FEM4C coupled_compare_checks_test coupled_compare_checks_threshold_provenance_test coupled_compare_checks_out_dir_test coupled_compare_checks_subset_test coupled_compare_checks_failfast_test coupled_compare_checks_manifest_reason_codes_test coupled_compare_checks_manifest_override_test` -> `PASS`
+    - `make -C FEM4C coupled_compare_checks_artifact_manifest_test` -> `PASS`
+    - `make -C FEM4C coupled_compare_checks OUT_DIR=/tmp/d23_full_real MANIFEST_CSV=/tmp/d23_full_real/coupled_compare_checks_manifest.csv` -> `PASS`
+    - `make -C FEM4C coupled_compare_checks_manifest_test MANIFEST_CSV=/tmp/d23_full_real/coupled_compare_checks_manifest.csv EXPECTED_TARGETS='coupled_example_check,coupled_rigid_limit_manifest_test,coupled_flex_manifest_test,compare_2link_artifact_check,compare_2link_artifact_checks'` -> `PASS`
+    - `docs/fem4c_team_next_queue.md` は `D-23=Done`, `D-24=Todo` へ更新済み。
+- Next Actions:
+  - 再開点は `D-24`。`coupled_2d_acceptance_gate` まで threshold provenance を surfacing する。
+  - PM が gate log だけで threshold source を辿れるようにする。
+- Open Risks/Blockers:
+  - repo-wide `make -C FEM4C test` の既知 `mbd_constraint_probe` linker failure は未解消のまま。
+  - real child target を含む wrapper smoke は `make` の並列実行と干渉し得るため、validation は直列実行を前提にした。
+
+## 2026-03-08 / D-team (D-21..D-22 Threshold Provenance Surfacing)
+- Current Plan:
+  - D-21 で threshold provenance を example / acceptance wrapper summary へ露出し、D-22 で acceptance manifest / validator / focused smoke を machine-checkable にする。
+- Completed This Session:
+  - D-21:
+    - `check_coupled_2link_examples.sh` が `rigid_limit_threshold_source_command` / `rigid_limit_threshold_update_points` を log 冒頭へ出すようにした。
+    - `run_2d_coupled_acceptance.sh` も global summary 行と各 `coupled_acceptance_stage` row に同 provenance を追加した。
+  - D-22:
+    - acceptance manifest に provenance 2 列を追加し、`check_2d_coupled_acceptance_manifest.py` が current threshold contract と照合するようにした。
+    - `test_run_2d_coupled_acceptance.sh` と stage/integrator subset tests を focused build+rigid smoke へ寄せ、`test_check_2d_coupled_acceptance_manifest_threshold_contract.sh` を追加して compare_matrix 分岐は synthetic manifest で固定した。
+    - `Makefile` に `coupled_2d_acceptance_threshold_contract_test` を追加した。
+    - `docs/fem4c_team_next_queue.md` は `D-21=Done`, `D-22=Done`, `D-23=Todo` へ更新済み。
+  - Session Evidence:
+    - `session_token=/tmp/d_team_session_20260307T173029Z_3898104.token`
+    - `SESSION_TIMER_DECLARE primary=D-21 secondary=D-22 plan_utc=2026-03-07T16:44:49Z`
+    - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+    - `session_timer.sh end /tmp/d_team_session_20260307T173029Z_3898104.token` -> `start_utc=2026-03-07T16:44:39Z`, `end_utc=2026-03-07T17:46:25Z`, `elapsed_min=61`
+    - `make -C FEM4C coupled_2d_acceptance_test coupled_2d_acceptance_stages_test coupled_2d_acceptance_stage_integrators_test coupled_2d_acceptance_integrators_test coupled_2d_acceptance_threshold_contract_test` -> `PASS`
+    - `make -C FEM4C coupled_2d_acceptance OUT_DIR=/tmp/d21_acceptance_build_rigid MANIFEST_CSV=/tmp/d21_acceptance_build_rigid/coupled_2d_acceptance_manifest.csv STAGES="build rigid_matrix" INTEGRATORS="explicit"` -> `PASS`
+    - `make -C FEM4C coupled_example_check` -> `PASS`
+    - `make -C FEM4C clean` を 1 回実行し、stale ASan object による `__asan_*` unresolved link failure を解消した。
+- Next Actions:
+  - queue 再開点は `D-23`。`coupled_compare_checks` aggregate summary/manifest に threshold provenance を持ち上げる。
+  - PM が higher-level suite から child log を開かずに threshold source を追えるようにする。
+- Open Risks/Blockers:
+  - `coupled_2d_acceptance` の full default path はこのセッションでは再受理しておらず、focused build/rigid smoke と synthetic compare_matrix manifest contract で代替した。
+  - stale object 混入時の `make bin/fem4c` link failure は residual risk として残る。
+
 ## 2026-03-08 / D-team (D-19..D-20 Rigid-Limit Threshold Contract/Docs Sync)
 - Current Plan:
   - D-19 で rigid-limit compare threshold table を helper と docs の shared contract に揃え、D-20 で machine-readable printer / Make target / self-test まで固める。
@@ -71,6 +695,37 @@
 - Open Risks/Blockers:
   - `make -C FEM4C test` 全体の既存 `mbd_constraint_probe` link failure は未解決。
   - interface center はまだ compare schema 本体ではなく auxiliary CSV なので、consumer 側は manifest 経由で追う前提が残る。
+
+## 2026-03-07 / A-team (A-13 Done, A-14 Done, A-15 In Progress)
+- Current Plan:
+  - A-15 として generalized force history regression を probe-first aggregate target へ整理し、free/constrained history contract の主回帰入口を `mbd_system2d_history_contract_smoke` へ寄せつつ、残る history marker 用 grep recipe を縮退させる。
+- Completed This Session:
+  - A-13:
+    - `mbd_system2d_console_history_probe.c` を追加し、`mbd_system2d_run()` の stdout を direct capture して `explicit/newmark/hht` の history marker を固定した。
+    - same probe を `newmark_constrained/hht_constrained` まで拡張し、2-body current/previous marker を body0/body1 両方で固定した。
+    - `Makefile` の console history smoke を direct probe 呼び出しへ切り替えた。
+  - A-14:
+    - `mbd_system2d_constrained_history_output_probe.c` を追加し、`examples/mbd_two_body_input.dat` の constrained summary rows を Newmark/HHT で direct probe 化した。
+    - `mbd_system2d_newmark_constrained_history_output_smoke` / `mbd_system2d_hht_constrained_history_output_smoke` を追加し、2-body history rows と implicit iteration source を固定した。
+    - `mbd_a_team_foundation_smoke` に constrained console/history probes を組み込み、A-team pack 単体で free/constrained history contract を回せるようにした。
+  - A-15 groundwork:
+    - `mbd_system2d_history_contract_smoke` を追加し、explicit/free, Newmark free/constrained, HHT free/constrained の console/summary contract を 1 コマンドに束ねた。
+  - Session Evidence:
+    - `session_token=/tmp/a_team_session_20260307T161231Z_2274407.token`
+    - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`
+    - `session_timer.sh end /tmp/a_team_session_20260307T161231Z_2274407.token` -> `start_utc=2026-03-07T16:12:31Z`, `end_utc=2026-03-07T17:30:28Z`, `elapsed_min=77`
+    - `make -C FEM4C mbd_system2d_explicit_console_history_smoke mbd_system2d_newmark_console_history_smoke mbd_system2d_hht_console_history_smoke` -> `PASS`
+    - `make -C FEM4C mbd_system2d_newmark_constrained_console_history_smoke mbd_system2d_hht_constrained_console_history_smoke` -> `PASS`
+    - `make -C FEM4C mbd_system2d_newmark_constrained_history_output_smoke mbd_system2d_hht_constrained_history_output_smoke` -> `PASS`
+    - `make -C FEM4C mbd_system2d_explicit_probe_smoke mbd_system2d_explicit_smoke mbd_system2d_newmark_smoke mbd_system2d_newmark_constrained_smoke mbd_system2d_hht_smoke mbd_system2d_hht_constrained_smoke mbd_a_team_foundation_smoke` -> `PASS`
+    - `make -C FEM4C mbd_a_team_foundation_smoke` -> `PASS`
+    - `make -C FEM4C mbd_system2d_history_contract_smoke` -> `PASS`
+- Next Actions:
+  - queue 再開点は `A-15`。`mbd_system2d_history_contract_smoke` を primary にしつつ、残る history-marker grep recipe を probe-first entry へ整理する。
+  - 必要なら free summary 側も aggregate target へ寄せ、`mbd_a_team_foundation_smoke` と `history_contract_smoke` の重複を減らす。
+- Open Risks/Blockers:
+  - blocker はない。
+  - 現在の history regression は direct probe と legacy grep smoke が併存しているため、次ランで責務整理が必要。
 
 ## 2026-03-07 / A-team (A-12 Done, A-13 In Progress)
 - Current Plan:
@@ -4707,6 +5362,23 @@
   - 既存の最新 team_status エントリは `SESSION_TIMER_DECLARE` を持たないため、次サイクルまでは新旧ルールが混在する。
   - 受入ゲートを plan declare 必須で回すと、pre-rollout の最新エントリは FAIL になるため、移行中は判定理由の読み替えが必要。
 
+## 2026-03-08 / C-team (C-49..C-56 Done, C-57 In Progress)
+- Current Plan:
+  - C-57 として `run_coupled_compare_reason_code_root_surface_audit.sh` に contract report handoff surface を追加し、audited entrypoint から contract validator coverage を 1 本のログで追跡できるようにする。
+  - runbook / queue / docs-sync を audited entrypoint contract に追従させる。
+- Completed This Session:
+  - `session_token=/tmp/c_team_session_20260307T174408Z_24239.token` を新規発行し、開始 9 秒後に `SESSION_TIMER_DECLARE` で `C-49 / C-50` を記録した。
+  - `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=block(elapsed_min=55)` を経て継続し、`guard60=pass`, `end elapsed_min=64` で正式終了した。
+  - `scripts/coupled_compare_reason_code_audit_cache.sh` を追加し、contract/root-surface audit wrapper の cached bundle log 生成を lock-safe に統一した。
+  - contract/root-surface audit report validator、focused bundle integration、contract stack / PM surface / root_modes / root_surface の coverage handoff を実装し、`C-49..C-56` を Done に進めた。
+  - `docs/fem4c_team_next_queue.md` を `C-49..C-56 Done / C-57 In Progress` に更新し、`docs/team_status.md` に今回ランの raw timer / declare / commands / pass-fail を追記した。
+- Next Actions:
+  - `run_coupled_compare_reason_code_root_surface_audit.sh` に `root_surface_audit_contract_report_log=` を追加する。
+  - `test_run_coupled_compare_reason_code_root_surface_audit*.sh` と docs-sync を新 surface に合わせて更新し、C-57 を閉じる。
+- Open Risks/Blockers:
+  - worktree が広く dirty なので、staging は coupled_compare reason-code 契約周辺の path に限定する必要がある。
+  - `FEM4C/Makefile` の巨大 `.PHONY` 行には unrelated drift が混在しているため、次セッションも C-team 対象 token 以外へは触れない。
+
 ## 2026-03-08 / PM-team (PLAN_DECLARE gate default-on)
 - Current Plan:
   - 全チーム停止中の切れ目で、plan declare の live 監視だけでなく受入ゲート既定も ON にする。
@@ -4719,3 +5391,537 @@
 - Open Risks/Blockers:
   - 既存の pre-rollout latest entry は plan declare 無しのため、一時的に受入ゲート fail が増える。
   - この fail は移行期の想定動作であり、次ランで順次置き換える必要がある。
+
+## 2026-03-08 / PM-team (A-team short stale rerun enforced)
+- Current Plan:
+  - 5分未満で停止した A チーム current run を無効化し、`A-15` を 60-90分ランで再実行させる。
+- Completed This Session:
+  - `docs/fem4c_team_next_queue.md` の `PM運用メモ` に、A current run を short stale として無効化するルールを追加した。
+  - `A-15` を据え置き、10 分以内の `SESSION_TIMER_DECLARE A-15 A-16` と `guard60=pass` 必須を明記した。
+- Next Actions:
+  - A チームには同一タスク `A-15` を新規 `session_token` で再実行させる。
+  - 次回 `確認してください` では、A の最新エントリに `SESSION_TIMER_DECLARE` と `elapsed_min>=60` があるかを最優先で確認する。
+- Open Risks/Blockers:
+  - verbal 完了報告だけだと queue が誤って進む可能性があるため、引き続き `docs/team_status.md` の正式転記を正本とする。
+
+## 2026-03-08 / PM-team (Partial check: A/B stale, C running, E plan-missing)
+- Current Plan:
+  - C 以外停止という前提で部分確認を行い、A/B/E の current run を差し戻し可能な形へ固定する。
+- Completed This Session:
+  - `team_control_tower` で A=`STALE_BEFORE_60`, B=`STALE_BEFORE_60`, C=`RUNNING`, D=`READY_NEXT`, E=`PLAN_MISSING` を確認した。
+  - `docs/fem4c_team_next_queue.md` の `PM運用メモ` に、A=`A-15`, B=`B-08`, E=`E-14` を current run 破棄の上で再実行する条件を追記した。
+- Next Actions:
+  - A には `A-15` の再実行と `SESSION_TIMER_DECLARE A-15 A-16` を要求する。
+  - B には `B-08` の再実行を要求する。
+  - E には `E-14` を再開させ、10 分以内の `SESSION_TIMER_DECLARE E-14 E-15` を要求する。
+- Open Risks/Blockers:
+  - `audit_team_sessions.py` の正式 latest entry は旧 accepted record を拾うため、current run の差し戻し判断は live state とユーザー確認を併用する必要がある。
+
+## 2026-03-08 / PM-team (D-team short stale rerun enforced)
+- Current Plan:
+  - ユーザー観測で 17 分停止だった D チーム current run も不受理にし、`D-21` を 60-90分ランで再実行させる。
+- Completed This Session:
+  - `docs/fem4c_team_next_queue.md` の `PM運用メモ` を更新し、D current run も short stale 扱いで無効化するルールを追加した。
+  - `D-21` を据え置き、10 分以内の `SESSION_TIMER_DECLARE D-21 D-22` と `guard60=pass` 必須を明記した。
+- Next Actions:
+  - D チームには同一タスク `D-21` を新規 `session_token` で再実行させる。
+  - 次回 `確認してください` では、D の最新エントリに `SESSION_TIMER_DECLARE` と `elapsed_min>=60` があるかを優先確認する。
+- Open Risks/Blockers:
+  - live 監視では旧 accepted entry を `READY_NEXT` と見せることがあるため、current run の差し戻し判断は引き続きユーザー観測を優先する。
+
+## 2026-03-08 / PM-team (A-team repeated short-run escalation)
+- Current Plan:
+  - A チームの短時間停止再発に対し、一般ルールではなく A 専用の差し戻し条件を追加する。
+- Completed This Session:
+  - `docs/fem4c_team_next_queue.md` の `PM運用メモ` に、A チームは `A-15` を 1 セッション専有タスクとして扱い、次回 accepted run を得るまで queue を進めないルールを追加した。
+  - 4分停止の current run は即無効とし、`A-15` を新規 `session_token` でやり直す方針を固定した。
+- Next Actions:
+  - A チームには `A-15` を新規 `session_token` で再実行させ、`SESSION_TIMER_DECLARE A-15 A-16` と `guard60=pass` を必須にする。
+  - 次回 `確認してください` では、A の latest accepted run が出るまで queue を進めない。
+- Open Risks/Blockers:
+  - A チームが 60 分継続できない場合、追加の個別チャット是正が今後も必要になる可能性がある。
+
+## 2026-03-08 / C-team (C-49 rerun, C-50/C-51 implementation)
+- Current Plan:
+  - C-49 の repo-root audit wrapper acceptance を `stdout -> nested -> modes` の順で閉じる。
+  - `coupled_compare_reason_code_root_surface_contract_checks_test` まで通して、focused bundle に C-50 validator を正式採用する。
+- Completed This Session:
+  - `check_coupled_compare_reason_code_root_surface_contract_audit_report.py` と 5 本の self-test を追加し、`make -C FEM4C coupled_compare_reason_code_root_surface_contract_audit_report_test` を PASS まで固定した。
+  - `FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh` に C-50/C-51 の drift 検知を追加し、`make -C FEM4C coupled_compare_reason_code_docs_sync_test` を PASS まで更新した。
+  - `test_run_coupled_compare_reason_code_root_surface_contract_audit*.sh` を temp-local log 化し、C-49 file mode を PASS まで戻した。
+  - 76分で `SESSION_TIMER_END` を回収し、90分超過を避けて session を閉じた。
+- Next Actions:
+  - C-49 の `stdout` / `nested` / `modes` を新しい tmp-safe script で再開する。
+  - 続けて `make -C FEM4C coupled_compare_reason_code_root_surface_contract_checks_test` を通し、C-51 を受理可能にする。
+  - C-49 完了後に queue を `C-49 Done / C-50 Done / C-51 In Progress or Done` へ更新する。
+- Open Risks/Blockers:
+  - C-49 integration family は wrapper の入れ子が深く、1 セッションで full acceptance まで押し切ると 90 分超過リスクが高い。
+  - queue status は C-49 未完了のため据え置きで、C-50/C-51 の実装完了をまだ queue 上の `Done` へ反映していない。
+
+## 2026-03-08 / PM-team (PRO upload handoff refresh)
+- Current Plan:
+  - ChatGPT Pro へ `FEM4C/` を upload する前提で、FEM4C 配下だけで現状を説明できる handoff を最新化する。
+  - accepted progress と short stale current run を分けて説明し、外部レビューで誤解が出ないようにする。
+- Completed This Session:
+  - `FEM4C/00_GPT_HANDOFF.md` を全面更新し、現在の 2D 2-link flexible roadmap、accepted progress、主要問題点、見るべきファイルを整理した。
+  - `FEM4C/01_PRO_REVIEW_BRIEF.md` を新設し、Pro に依頼する観点と貼り付け用 review template を追加した。
+  - `FEM4C/README.md` に review brief への導線を追加した。
+- Next Actions:
+  - 必要なら `FEM4C/` を zip して `00_GPT_HANDOFF.md` と `01_PRO_REVIEW_BRIEF.md` を先に読ませる。
+  - Pro の返答では、`src/mbd/` / `src/coupled/` の責務分割、M1 rigid completion、wrapper 群の適量性を重点確認する。
+- Open Risks/Blockers:
+  - root 側の PM docs / monitoring rules は `FEM4C/` 単体 upload では見えないため、運用起因の短時間停止問題まで外部レビューが把握できるとは限らない。
+  - accepted progress と live current run がズレるため、最新の short stale current run は引き続き PM 側で読む必要がある。
+
+## 2026-03-08 / PM-team (PRO handoff correction: formal vs provisional progress)
+- Current Plan:
+  - PRO 向け handoff で accepted 進捗を過大表示しないよう、formal log と queue/source tree の差を確認する。
+- Completed This Session:
+  - `team_status` を再確認し、E-team の formal accepted は `E-13` までであることを確認した。
+  - `FEM4C/00_GPT_HANDOFF.md` と `FEM4C/01_PRO_REVIEW_BRIEF.md` を修正し、E-14 以降は provisional 実装として扱う記述へ補正した。
+  - handoff では A=`A-14`, B=`B-07`, C=`C-56`, D=`D-23`, E=`E-13` を formal accepted と明記した。
+- Next Actions:
+  - PRO へは formal accepted と provisional を分けてレビュー依頼する。
+  - E-team の後半 wrapper 群は、必要なら formal acceptance を別途回収する。
+- Open Risks/Blockers:
+  - queue/source tree が formal accepted を先行しているチームは、今後も PM 側で evidence の有無を切り分ける必要がある。
+
+## 2026-03-08 / PM-team (review-spec priority adoption)
+- Current Plan:
+  - `FEM4C/FEM4C_Codex_SingleFile_Review_Spec_2026-03-08.md` を前回レビュー資料より優先し、M1 rigid closure 中心の計画へ切り替える。
+- Completed This Session:
+  - new review-spec を読み、`build-green だが warning hygiene 未閉塞 / coupled 実行経路あり / current master case は smoke 寄り / stub 遷移負債と wrapper 過多が主問題` という判断を採用した。
+  - `docs/10_review_spec_priority_plan.md` を追加し、Run 1 (warning hygiene + priority reset) / Run 2 (M1 rigid closure) / Run 3 (M2 meaningful pass + debt cleanup) を定義した。
+  - `docs/fem4c_team_next_queue.md` と `docs/abc_team_chat_handoff.md` を更新し、review-spec 採用期間中は priority plan が older open task より上位になるよう切り替えた。
+- Next Actions:
+  - 次回以降のチーム dispatch は `A-R1`, `B-R1`, `C-R1`, `D-R1`, `E-R1`, `PM-R1` を最優先にする。
+  - M1 closure まで wrapper 増設を凍結し、warning hygiene / rigid acceptance / meaningful 1-link flex に集中する。
+- Open Risks/Blockers:
+  - 既存 queue の open task 表記と review-spec priority plan が一時的に二重化しているため、dispatch 側は priority plan 優先を徹底する必要がある。
+
+## 2026-03-08 / E-team (E-R1 Done, E-R2 Done)
+- Current Plan:
+  - Run 1 default acceptance path を `default-core` / `non-default` に切り分け、M1 rigid route を 1 target に縮退する。
+  - `guard10/20/30/60` と 40 分以降の `SESSION_TIMER_PROGRESS` を満たしてから正式記録へ落とす。
+- Completed This Session:
+  - `session_token=/tmp/e_team_session_20260308T054014Z_1888461.token` で `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`, `end elapsed_min=65` を記録した。
+  - `FEM4C/Makefile` に `mbd_m1_rigid_acceptance` / `mbd_m1_rigid_acceptance_test` を追加し、M1 rigid route を `rigid main cases + analytic compare` の 1 target に縮退した。
+  - `FEM4C/scripts/run_mbd_regression.sh` に `MBD_REGRESSION_SCOPE=all|rigid_main` と rigid benchmark subcase を追加し、default core 用の `rigid_main` path を分離した。
+  - full-scope positive path は builtin fallback / input case を `--mbd-integrator=explicit` へ固定し、current default Newmark behavior での不安定化を避けた。
+  - `FEM4C/README.md`, `docs/06_acceptance_matrix_2d.md`, `docs/fem4c_team_next_queue.md` を更新し、Run 1 default core を 4 targets に固定しつつ、E-R1/E-R2 の queue surface を同期した。
+  - `make help` 上でも `mbd_m1_rigid_acceptance`, `coupled_flex_reference_compare_test`, `ensure_fem4c_binary_test`, `coupled_2d_acceptance_lightweight_checks` だけが `[default-core Run1]` に見えるよう、support / compare / wrapper targets を `[non-default Run1]` に寄せた。
+  - 検証:
+    - `bash -n FEM4C/scripts/run_mbd_regression.sh FEM4C/scripts/test_make_mbd_m1_rigid_acceptance.sh` -> PASS
+    - `make -C FEM4C mbd_m1_rigid_acceptance_test` -> PASS
+    - `make -C FEM4C mbd_m1_rigid_acceptance coupled_flex_reference_compare_test ensure_fem4c_binary_test coupled_2d_acceptance_lightweight_checks` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_gate OUT_DIR=/tmp/e_r1_gate_check` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance OUT_DIR=/tmp/e_r1_full_acceptance` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_contract_checks` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_wrapper_smoke_test` -> PASS
+    - `make -C FEM4C mbd_regression` -> FAIL (`check_mbd_invalid_inputs.sh` の `case_incomplete` expectation mismatch)
+- Next Actions:
+  - E-R1 / E-R2 自体は完了として扱う。
+  - non-default `mbd_regression` negative-path mismatch は、必要なら次の E dispatch か PM判断で別タスク化して切り出す。
+- Open Risks/Blockers:
+  - `check_mbd_invalid_inputs.sh` の `case_incomplete` は current binary では成功してしまい、`mbd_regression` 全体を non-default route でも green に戻せていない。
+  - `coupled_2d_acceptance_resilience_checks` は bundle 実行で 1 回だけ fail したが、child targets 単体では再現していないため、transient の有無を次回も監視する。
+
+## 2026-03-08 / E-team (E-43 Done)
+- Current Plan:
+  - gate wrapper と resilience pack を 1 コマンド smoke pack に束ねる。
+  - `guard10/20/30/60` と 40 分以降の `SESSION_TIMER_PROGRESS` を満たしてから正式記録へ落とす。
+- Completed This Session:
+  - `session_token=/tmp/e_team_session_20260308T075824Z_2062186.token` で `guard10=pass`, `guard20=pass`, `guard30=pass`, `guard60=pass`, `end elapsed_min=62` を記録した。
+  - `FEM4C/Makefile` に `coupled_2d_acceptance_gate_resilience_smoke` / `coupled_2d_acceptance_gate_resilience_smoke_test` を追加し、`coupled_2d_acceptance_gate_test` と `coupled_2d_acceptance_resilience_checks_test` を順に束ねる focused smoke bundle を新設した。
+  - `FEM4C/scripts/test_make_coupled_2d_acceptance_gate_resilience_smoke.sh` を追加し、gate PASS / resilience PASS / bundle PASS の 3 行を 1 つの PASS surface として検証する self-test を固定した。
+  - `make help` に新 target を `[non-default Run1]` として追加し、surface discoverability を同期した。
+  - `docs/fem4c_team_next_queue.md` を `E-43 Done` に更新した。
+  - 検証:
+    - `bash -n FEM4C/scripts/test_make_coupled_2d_acceptance_gate_resilience_smoke.sh` -> PASS
+    - `make -C FEM4C help | rg 'coupled_2d_acceptance_gate_resilience_smoke'` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_gate_resilience_smoke` -> PASS
+    - `make -C FEM4C coupled_2d_acceptance_gate_resilience_smoke_test` -> PASS
+    - `rg -n "### E-44|E-44" docs/fem4c_team_next_queue.md docs/10_review_spec_priority_plan.md` -> PASS（no match）
+- Next Actions:
+  - E-43 自体は完了として扱う。
+  - `E-44` は current source-of-truth に entry が無いため、次の E dispatch は queue / priority plan の更新待ち。
+- Open Risks/Blockers:
+  - secondary task `E-44` の着手点が current source-of-truth に存在しない。
+
+## 2026-03-08 / E-team (E-44 Done)
+- Current Plan:
+  - gate+resilience focused smoke bundle の current command surface を docs と docs sync で固定する。
+  - `guard10/20/30/60` と 40 分以降の `SESSION_TIMER_PROGRESS` を満たしてから正式記録へ落とす。
+- Completed This Session:
+  - timer / progress:
+    ```text
+    SESSION_TIMER_DECLARE
+    session_token=/tmp/e_team_session_20260308T103949Z_903174.token
+    team_tag=e_team
+    primary_task=E-44
+    secondary_task=E-45
+    plan_utc=2026-03-08T10:41:11Z
+
+    SESSION_TIMER_PROGRESS
+    session_token=/tmp/e_team_session_20260308T103949Z_903174.token
+    current_task=E-44
+    work_kind=implementation
+    progress_utc=2026-03-08T10:41:17Z
+    elapsed_min=1
+
+    SESSION_TIMER_GUARD
+    session_token=/tmp/e_team_session_20260308T103949Z_903174.token
+    min_required=10
+    guard_result=pass
+    now_utc=2026-03-08T10:50:52Z
+    elapsed_min=11
+
+    SESSION_TIMER_GUARD
+    session_token=/tmp/e_team_session_20260308T103949Z_903174.token
+    min_required=20
+    guard_result=pass
+    now_utc=2026-03-08T11:00:11Z
+    elapsed_min=20
+
+    SESSION_TIMER_GUARD
+    session_token=/tmp/e_team_session_20260308T103949Z_903174.token
+    min_required=30
+    guard_result=pass
+    now_utc=2026-03-08T11:10:17Z
+    elapsed_min=30
+
+    SESSION_TIMER_PROGRESS
+    session_token=/tmp/e_team_session_20260308T103949Z_903174.token
+    current_task=E-44
+    work_kind=implementation
+    progress_utc=2026-03-08T11:20:12Z
+    elapsed_min=40
+
+    SESSION_TIMER_GUARD
+    session_token=/tmp/e_team_session_20260308T103949Z_903174.token
+    min_required=60
+    guard_result=pass
+    now_utc=2026-03-08T11:41:02Z
+    elapsed_min=61
+    ```
+  - `FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh` に bundle child-target relation / Run 1 non-default / PASS-surface self-test wording を追加し、`docs/team_runbook.md` と `FEM4C/README.md` を同じ contract に同期した。
+  - `docs/fem4c_team_next_queue.md` を `E-44 Done` に更新した。
+- 実行コマンド / pass-fail:
+  - `bash -n FEM4C/scripts/test_check_coupled_2d_acceptance_docs_sync.sh` -> PASS
+  - `make -C FEM4C coupled_2d_acceptance_docs_sync_test` -> PASS
+  - `make -C FEM4C help | rg "coupled_2d_acceptance_gate_resilience_smoke|coupled_2d_acceptance_gate_resilience_smoke_test|coupled_2d_acceptance_resilience_checks_test|coupled_2d_acceptance_gate_test"` -> PASS
+  - `make -C FEM4C coupled_2d_acceptance_gate_resilience_smoke_test` -> PASS
+  - `make -C FEM4C coupled_2d_acceptance_gate OUT_DIR=/tmp/e44_gate_acceptance MANIFEST_CSV=/tmp/e44_gate_acceptance/manifest.csv` -> PASS
+  - `make -C FEM4C coupled_2d_acceptance_lightweight_checks` -> PASS
+  - `make -C FEM4C coupled_2d_acceptance_contract_checks_test` -> PASS
+  - `make -C FEM4C coupled_2d_acceptance_gate_threshold_provenance_test` -> PASS
+  - `make -C FEM4C coupled_2d_acceptance_wrapper_smoke_test` -> PASS
+  - `make -C FEM4C coupled_2d_acceptance_surface_checks_test` -> PASS
+  - `make -C FEM4C coupled_2d_acceptance_resilience_checks_test` -> PASS
+  - `make -C FEM4C coupled_2d_acceptance_gate_resilience_smoke` -> PASS
+- Next Actions:
+  - E-44 自体は完了として扱う。
+  - `E-45` は current source-of-truth に entry が無いため、次の E dispatch を待つ。
+- Open Risks/Blockers:
+  - `FEM4C/README.md` を含む unrelated dirty diff が大きいため、staging は今回の docs-sync 対象 path に限定する必要がある。
+  - secondary task `E-45` の着手点は current source-of-truth に未定義。
+
+## 2026-03-08 / E-team (E-45 Done)
+- Current Plan:
+  - non-default `mbd_regression` の negative-path expectation mismatch を current binary に合わせて閉じる。
+  - default Run 1 route を変えずに、non-default help/doc surface だけ current behavior へ同期する。
+- Completed This Session:
+  - timer / progress:
+    ```text
+    SESSION_TIMER_DECLARE
+    session_token=/tmp/e_team_session_20260308T120625Z_1761942.token
+    team_tag=e_team
+    primary_task=E-45
+    secondary_task=E-46
+    plan_utc=2026-03-08T12:06:31Z
+
+    SESSION_TIMER_PROGRESS
+    session_token=/tmp/e_team_session_20260308T120625Z_1761942.token
+    current_task=E-45
+    work_kind=implementation
+    progress_utc=2026-03-08T12:08:46Z
+    elapsed_min=2
+
+    SESSION_TIMER_GUARD
+    session_token=/tmp/e_team_session_20260308T120625Z_1761942.token
+    min_required=10
+    guard_result=pass
+    now_utc=2026-03-08T12:18:18Z
+    elapsed_min=11
+
+    SESSION_TIMER_GUARD
+    session_token=/tmp/e_team_session_20260308T120625Z_1761942.token
+    min_required=20
+    guard_result=pass
+    now_utc=2026-03-08T12:27:58Z
+    elapsed_min=21
+
+    SESSION_TIMER_GUARD
+    session_token=/tmp/e_team_session_20260308T120625Z_1761942.token
+    min_required=30
+    guard_result=pass
+    now_utc=2026-03-08T12:37:08Z
+    elapsed_min=30
+
+    SESSION_TIMER_PROGRESS
+    session_token=/tmp/e_team_session_20260308T120625Z_1761942.token
+    current_task=E-45
+    work_kind=implementation
+    progress_utc=2026-03-08T12:47:01Z
+    elapsed_min=40
+
+    SESSION_TIMER_GUARD
+    session_token=/tmp/e_team_session_20260308T120625Z_1761942.token
+    min_required=60
+    guard_result=pass
+    now_utc=2026-03-08T13:07:12Z
+    elapsed_min=60
+    ```
+  - `FEM4C/scripts/check_mbd_invalid_inputs.sh` に success-path verifier を追加し、`case_incomplete` を `body_only_unconstrained_newmark` accepted case として扱うようにした。
+  - `FEM4C/scripts/run_mbd_regression.sh` は `ACCEPTED_CASES_SEEN=body_only_unconstrained_newmark` を必須化し、`mbd_regression` 全体を current binary の unconstrained body-only behavior と整合させた。
+  - `FEM4C/Makefile`, `FEM4C/README.md`, `docs/06_acceptance_matrix_2d.md` を current help/doc surface に同期し、`mbd_regression` / `mbd_negative` が non-default のまま body-only unconstrained acceptance を含むことを明記した。
+  - `docs/fem4c_team_next_queue.md` を `E-45 Done` に更新した。
+- 実行コマンド / pass-fail:
+  - `bash -n FEM4C/scripts/check_mbd_invalid_inputs.sh FEM4C/scripts/run_mbd_regression.sh` -> PASS
+  - `make -C FEM4C mbd_negative mbd_regression` -> PASS
+  - `make -C FEM4C help | rg "mbd_regression -|mbd_negative -"` -> PASS
+  - `rg -n "body-only unconstrained acceptance|current unconstrained body-only behavior" FEM4C/README.md docs/06_acceptance_matrix_2d.md` -> PASS
+  - `make -C FEM4C mbd_m1_rigid_acceptance` -> PASS
+  - `make -C FEM4C mbd_negative` -> PASS
+  - `make -C FEM4C mbd_checks` -> FAIL（`bin/mbd_constraint_probe` link に `mbd_kinematics2d_*` unresolved symbols）
+- Next Actions:
+  - E-45 自体は完了として扱う。
+  - `E-46` は current source-of-truth に entry が無いため、次の E dispatch を待つ。
+- Open Risks/Blockers:
+  - `make -C FEM4C mbd_checks` は今回の scope 外で、`mbd_constraint_probe` build/link wiring が current tree で壊れているため FAIL のまま。
+  - secondary task `E-46` の着手点は current source-of-truth に未定義。
+
+## 2026-03-09 / E-team (E-46 Done)
+- Current Plan:
+  - non-default `mbd_checks` の broken probe/link path を current tree に合わせて整理し、`mbd_constraint_probe` failure の root cause を build wiring か source かで切り分ける。
+  - same-session secondary は `E-47` として declare したが、まず `mbd_checks` を PASS に戻すことを優先する。
+- Completed This Session:
+  - `session_token=/tmp/e_team_session_20260309T024831Z_7672.token` で `SESSION_TIMER_DECLARE E-46/E-47`、`SESSION_TIMER_PROGRESS E-46` を 2 回記録し、`guard10/20/30/60=pass` を取得した。
+  - `FEM4C/Makefile` の `MBD_PROBE_SRCS` に `src/mbd/kinematics2d.c` を追加し、`mbd_constraint_probe` unresolved `mbd_kinematics2d_*` の root cause が build wiring であることを確認した。
+  - `FEM4C/Makefile` の `mbd_consistency` を explicit integrator route に固定し、probe/equation-count consistency を current tree で再び PASS にした。
+  - `FEM4C/scripts/check_mbd_integrators.sh` は stable input を `examples/mbd_2link_rigid_dyn.dat` に切り替え、`implicit_params` / `implicit_param_sources` / `implicit_param_*_source_status` を期待する current runtime surface に同期した。
+  - `FEM4C/scripts/check_ci_contract.sh` / `FEM4C/scripts/test_check_ci_contract.sh` も同じ marker drift に追従させ、static CI contract を current script surface と一致させた。
+  - `docs/fem4c_team_next_queue.md` を `E-46 Done` に更新した。
+- Verification:
+  - `bash -n FEM4C/scripts/check_mbd_integrators.sh FEM4C/scripts/check_ci_contract.sh FEM4C/scripts/test_check_ci_contract.sh` -> PASS
+  - `make -C FEM4C mbd_probe` -> PASS
+  - `make -C FEM4C mbd_consistency` -> PASS
+  - `make -C FEM4C mbd_integrator_checks` -> PASS
+  - `make -C FEM4C mbd_checks` -> PASS
+  - `make -C FEM4C mbd_ci_contract` -> PASS
+- Next Actions:
+  - `E-46` は完了として扱う。
+  - secondary task `E-47` は current source-of-truth に entry が見当たらないため、次の E dispatch を待つ。
+- Open Risks/Blockers:
+  - `make -C FEM4C mbd_ci_contract_test` は fail-path self-test 群が長く、今回の session 上限に対しては acceptance 必須ではないため未実施。
+
+## 2026-03-09 / E-team (E-47 Done)
+- Current Plan:
+  - non-default `mbd_checks` / `mbd_negative` / `mbd_regression` の current command surface を docs/help に同期し、Run 1 default route との境界を固定する。
+  - same-session secondary は `E-48` として declare したが、source-of-truth に entry がある場合のみ着手する。
+- Completed This Session:
+  - `session_token=/tmp/e_team_session_20260309T042346Z_2069011.token` で `SESSION_TIMER_DECLARE E-47/E-48`、`SESSION_TIMER_PROGRESS E-47` を 2 回記録し、`guard10/20/30/60=pass` を取得した。
+  - `FEM4C/scripts/test_check_mbd_run1_surface_docs_sync.sh` を追加し、README / acceptance doc / Make help にある `mbd_m1_rigid_acceptance`, `mbd_regression`, `mbd_negative`, `mbd_checks` の role boundary を focused docs-sync target として固定した。
+  - validator には `--print-required-labels`, `--print-contract-inventory`, `--print-contract-counts`, `--print-supported-options`, `--help` surface を持たせ、inspection path を固定した。
+  - `FEM4C/Makefile` に `mbd_run1_surface_docs_sync_test` と help line を追加し、`FEM4C/README.md` / `docs/06_acceptance_matrix_2d.md` も Run 1 default-core vs non-default MBD boundary に同期した。
+  - `docs/fem4c_team_next_queue.md` を `E-47 Done` に更新した。
+- Verification:
+  - `bash -n FEM4C/scripts/test_check_mbd_run1_surface_docs_sync.sh` -> PASS
+  - `bash FEM4C/scripts/test_check_mbd_run1_surface_docs_sync.sh --print-required-labels` -> PASS
+  - `bash FEM4C/scripts/test_check_mbd_run1_surface_docs_sync.sh --print-contract-counts` -> PASS
+  - `bash FEM4C/scripts/test_check_mbd_run1_surface_docs_sync.sh --print-supported-options` -> PASS
+  - `bash FEM4C/scripts/test_check_mbd_run1_surface_docs_sync.sh --help` -> PASS
+  - `make -C FEM4C mbd_run1_surface_docs_sync_test` -> PASS
+  - `make -C FEM4C help | rg "mbd_(regression|m1_rigid_acceptance|negative|checks|run1_surface_docs_sync_test)"` -> PASS
+- Next Actions:
+  - `E-47` は完了として扱う。
+  - `E-48` は current source-of-truth に entry が見当たらないため、次の E dispatch を待つ。
+- Open Risks/Blockers:
+  - なし。
+
+## 2026-03-09 / E-team (E-47 Formal Rerun Accepted)
+- Current Plan:
+  - prior invalid run を破棄し、新規 `session_token=/tmp/e_team_session_20260309T114355Z_3090684.token` で `E-47` を formal rerun する。
+  - Run 1 MBD docs/help boundary を再検証しつつ、helper surface と queue surface も machine-checkable に揃えて formal close する。
+- Completed This Session:
+  - `SESSION_TIMER_DECLARE E-47/E-48`、`SESSION_TIMER_PROGRESS` 3 回、`guard10/20/30/60=pass` を記録した。
+  - `make -C FEM4C mbd_run1_surface_docs_sync_test`, `mbd_run1_surface_docs_sync_surfaces_test`, `mbd_run1_surface_docs_sync_surfaces_help_test`, `mbd_run1_surface_docs_sync_surface_smoke(_test)` を rerun し、focused helper surface が current Run 1 MBD command surface と一致していることを再確認した。
+  - `make -C FEM4C mbd_m1_rigid_acceptance`, `mbd_regression`, `mbd_negative`, `mbd_checks`, `mbd_m1_rigid_acceptance_test` を rerun し、default-core vs non-default route boundary の current behavior が崩れていないことを確認した。
+  - `docs/fem4c_team_next_queue.md` の `A-20` section に summary line を追加し、queue surface でも `mbd_system2d_history_contract_smoke` / `mbd_a_team_foundation_smoke` / `mbd_run1_surface_docs_sync_test` の並びが smoke validator で追えるようにした。
+  - raw `SESSION_TIMER_END` は次のとおり。
+    ```text
+    SESSION_TIMER_END
+    session_token=/tmp/e_team_session_20260309T114355Z_3090684.token
+    team_tag=e_team
+    start_utc=2026-03-09T11:43:55Z
+    end_utc=2026-03-09T12:46:34Z
+    start_epoch=1773056635
+    end_epoch=1773060394
+    elapsed_sec=3759
+    elapsed_min=62
+    progress_count=3
+    last_progress_task=E-47
+    last_progress_kind=implementation
+    last_progress_note=After the queue summary-line fix, the full E-47 helper surface is stable: mbd_run1_surface_docs_sync_test, the docs-sync helper tests, and the smoke bundle all pass while the default-core versus non-default MBD route boundary remains unchanged
+    last_progress_utc=2026-03-09T12:24:51Z
+    last_progress_epoch=1773059091
+    last_progress_elapsed_min=40
+    ```
+- Verification:
+  - `make -C FEM4C mbd_run1_surface_docs_sync_test mbd_run1_surface_docs_sync_surfaces_test mbd_run1_surface_docs_sync_surfaces_help_test mbd_run1_surface_docs_sync_surface_smoke_test` -> PASS
+  - `make -C FEM4C mbd_m1_rigid_acceptance` -> PASS
+  - `make -C FEM4C mbd_regression mbd_negative mbd_checks` -> PASS
+  - `make -C FEM4C mbd_m1_rigid_acceptance_test` -> PASS
+  - `make -C FEM4C mbd_run1_surface_docs_sync_surface_smoke` -> PASS
+  - `make -n -C FEM4C test | rg "mbd_checks|parser_compat|integrator_checks"` -> PASS
+  - `bash FEM4C/scripts/test_check_mbd_run1_surface_docs_sync.sh --print-contract-counts` -> PASS
+  - `bash FEM4C/scripts/test_check_mbd_run1_surface_docs_sync.sh --print-supported-options` -> PASS
+  - `bash FEM4C/scripts/test_check_mbd_run1_surface_docs_sync.sh --print-current-command-surface` -> PASS
+- Next Actions:
+  - `E-47` は formal rerun accepted として閉じる。
+  - `E-48` は current source-of-truth に entry が見当たらないため、次の E dispatch を待つ。
+- Open Risks/Blockers:
+  - なし。
+
+## 2026-03-08 / C-team (C-R1 recheck, C-R2 helper extraction, C-R3 review-smoke hardening)
+- Current Plan:
+  - `C-R1` の build acceptance を短く再確認し、`C-R2` として `coupled_step_common2d.{c,h}` の helper 抽出で explicit/implicit 共通部の重複を減らす。
+  - same-session secondary として `C-R3` を使い、抽出した helper path を parser-free smoke と focused review-spec bundle で固定する。
+- Completed This Session:
+  - `session_token=/tmp/c_team_session_20260308T054832Z_1896466.token` で `SESSION_TIMER_DECLARE C-R2/C-R3`、`SESSION_TIMER_PROGRESS C-R2`、`SESSION_TIMER_PROGRESS C-R3` を記録し、`guard10/20/30/60=pass` と `elapsed_min=60` で session を閉じた。
+  - `FEM4C/src/elements/q4/q4_element.c` / `FEM4C/src/elements/t3/t3_element.c` に stiffness adapter を追加し、`make clean && make -j2` で Q4/T3 incompatible-pointer warning が消えた状態を再確認した。
+  - `FEM4C/src/coupled/coupled_step_common2d.{c,h}` に shared helper を追加し、`FEM4C/src/coupled/coupled_step_explicit2d.c` / `FEM4C/src/coupled/coupled_step_implicit2d.c` の reaction apply, pose capture, MBD time sync, shared solve path を共通化した。
+  - `FEM4C/scripts/test_q4_t3_stiffness_adapter_warnings.sh`, `FEM4C/scripts/test_coupled_step_common2d.sh`, `FEM4C/scripts/test_coupled_step_common2d_solve.sh`, `FEM4C/Makefile` の focused bundle `c_review_spec_smoke_test` を追加し、parser-free smoke で helper extraction を固定した。
+  - `docs/fem4c_team_next_queue.md` を `C-R1=Done`, `C-R2=Done`, `C-R3=Done` に同期し、`docs/team_status.md` に今回ランの timer / commands / pass-fail を追記した。
+- Next Actions:
+  - 次セッションは PM dispatch に従い、review-spec 後続の solver-core task か queue 側の次タスクへ戻る。
+  - 追加の common helper 抽出を続ける場合は `c_review_spec_smoke_test` を focused acceptance として維持する。
+- Open Risks/Blockers:
+  - `FEM4C/Makefile` の unrelated drift が大きいため、staging は review-spec 対象 path に限定する必要がある。
+  - `make clean && make -j2` の初回で `build/mbd/system2d.o` directory miss が一度だけ出たが、再現しなかったため現時点では blocker ではない。
+
+## 2026-03-08 / C-team (C-57 contract-report handoff, C-58 audit report validator)
+- Current Plan:
+  - `C-57` を `Done` 化し、repo-root audited entrypoint の `root_surface_audit_contract_report_log=` surface を正式反映する。
+  - same-session secondary `C-58` を `Done` 化し、root_surface_audit 提出ログ validator と focused bundle 連携を正式反映する。
+- Completed This Session:
+  - `scripts/run_coupled_compare_reason_code_root_surface_audit.sh` に `root_surface_audit_contract_report_log=` handoff を追加し、default/nested/modes self-tests を更新した。
+  - `scripts/check_coupled_compare_reason_code_root_surface_audit_report.py` と 8 本の focused self-tests を追加し、missing / missing-nested-key / mismatch / escape まで fail-fast coverage を固定した。
+  - `FEM4C/Makefile`, `FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh`, `FEM4C/scripts/test_make_coupled_compare_reason_code_root_surface_contract_checks.sh`, `docs/team_runbook.md`, `docs/fem4c_team_next_queue.md` を更新し、validator / bundle / help / phony / docs-sync surfaces を同期した。
+- Next Actions:
+  - `docs/fem4c_team_next_queue.md` を基準に、次回は `C-59` (`Todo`) の audited surface wrapper 化へ進む。
+  - 短い再確認では `make -C FEM4C coupled_compare_reason_code_root_surface_audit_report_test` を優先し、bundle 全体は提出前確認に回す。
+- Open Risks/Blockers:
+  - `FEM4C/Makefile` を含む dirty diff が大きいため、staging は今回の audit-surface path に限定する必要がある。
+  - `coupled_compare_reason_code_root_surface_contract_checks_test` は focused bundle 全体を再生するため時間がかかる。
+
+## 2026-03-08 / C-team (C-62 Done, C-63 Done, C-64 In Progress)
+- Current Plan:
+  - `C-64` として `root_surface_contract_bundle_surface_*` metadata を再検証する surface-log validator を追加する。
+  - validator / `--print-required-keys` / focused self-tests / Make target / docs-sync を同一セッションで閉じる。
+- Completed This Session:
+  - `C-62` を完了し、`scripts/check_coupled_compare_reason_code_root_surface_contract_bundle_report.py` と focused self-tests、`make -C FEM4C coupled_compare_reason_code_root_surface_contract_bundle_report_test` を追加した。
+  - `C-63` を完了し、`scripts/run_coupled_compare_reason_code_root_surface_contract_bundle_surface.sh` と 3 本の self-tests、`make -C FEM4C coupled_compare_reason_code_root_surface_contract_bundle_surface_test` を追加した。
+  - `FEM4C/Makefile`, `FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh`, `docs/team_runbook.md`, `docs/fem4c_team_next_queue.md` を同期し、queue を `C-62 Done / C-63 Done / C-64 In Progress` に更新した。
+- Next Actions:
+  - `scripts/check_coupled_compare_reason_code_root_surface_contract_bundle_surface_report.py` を追加し、surface log の metadata / log existence / parent-dir guard を fail-fast 化する。
+  - `make -C FEM4C coupled_compare_reason_code_root_surface_contract_bundle_surface_report_test` と docs-sync 更新まで通して `C-64` を閉じる。
+- Open Risks/Blockers:
+  - existing dirty tree が大きく、`FEM4C/Makefile` と docs の staging は今回 path に限定する必要がある。
+  - heavy recursive focused bundle を直接 wrapper へ埋め込むと run time が伸びるため、surface wrapper は repo-root contract を保ちつつ lightweight path を維持する必要がある。
+
+## 2026-03-08 / C-team (C-64..C-69 Done, C-70 In Progress)
+- Current Plan:
+  - `C-70` として wrapper-surface log validator を追加し、saved `root_surface_contract_bundle_surface_wrapper_report_*` log を再検証できるようにする。
+  - validator / `--print-required-keys` / focused self-tests / Make target / docs-sync を同一セッションで閉じる。
+- Completed This Session:
+  - `C-64` を完了し、surface-log validator と focused self-tests、`coupled_compare_reason_code_root_surface_contract_bundle_surface_report_test` を追加した。
+  - `C-65` を完了し、surface-log validator の wrong-component / escaped-path / nested mismatch coverage を追加した。
+  - `C-66` を完了し、repo-root `run_coupled_compare_reason_code_root_surface_contract_bundle_surface_report.sh` wrapper と self-tests を追加した。
+  - `C-67` を完了し、report-wrapper log validator と focused self-tests、`coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report_test` を追加した。
+  - `C-68` を完了し、report-wrapper validator の wrong-component / escaped-path / nested mismatch coverage を追加した。
+  - `C-69` を完了し、repo-root `run_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report.sh` wrapper と self-tests を追加した。
+  - `docs/fem4c_team_next_queue.md` を `C-64..C-69 Done / C-70 In Progress` に更新し、`docs/team_runbook.md` / `FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh` を同期した。
+- Next Actions:
+  - `scripts/check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_surface_report.py` を追加する。
+  - `make -C FEM4C coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_surface_report_test` と docs-sync まで通して `C-70` を閉じる。
+- Open Risks/Blockers:
+  - deep wrapper chain を 1 セッションで進めると replay が長くなるため、repo-root surface は focused path に保つ必要がある。
+  - current dirty tree が大きいので、staging は今回の wrapper/validator path に限定する必要がある。
+
+## 2026-03-09 / C-team (C-70..C-76 Done, C-77 In Progress)
+- Current Plan:
+  - `C-70/C-71` の wrapper-surface validator / wrapper を閉じつつ、same-session auto-next として `COUPLED_COMPARE_SKIP_NESTED_SELFTESTS=1` の skip path を root-surface stack 全体へ通す。
+  - skip wrapper / report / surface-report まで同一セッションで閉じ、次の validator hardening を `C-77` として残す。
+- Completed This Session:
+  - `scripts/check_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_surface_report.py` と negative coverage self-tests を追加し、`make -C FEM4C coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_surface_report_test` を PASS させた。
+  - `scripts/run_coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_report.sh` を repo-root wrapper として安定化し、`make -C FEM4C coupled_compare_reason_code_root_surface_contract_bundle_surface_wrapper_surface_test` を PASS させた。
+  - `scripts/run_coupled_compare_reason_code_pm_surface.sh`, `scripts/run_coupled_compare_reason_code_root_modes.sh`, `scripts/run_coupled_compare_reason_code_root_surface.sh`, `scripts/run_coupled_compare_reason_code_root_surface_audit.sh`, `scripts/run_coupled_compare_reason_code_root_surface_audit_surface.sh`, `scripts/run_coupled_compare_reason_code_root_surface_contract_bundle_surface.sh` に `COUPLED_COMPARE_SKIP_NESTED_SELFTESTS=1` 伝播を追加し、skip-focused targets を追加した。
+  - `scripts/run_coupled_compare_reason_code_skip_nested_selftests.sh`, `scripts/check_coupled_compare_reason_code_skip_nested_selftests_report.py`, `scripts/run_coupled_compare_reason_code_skip_nested_selftests_report.sh`, `scripts/check_coupled_compare_reason_code_skip_nested_selftests_surface_report.py`, `scripts/run_coupled_compare_reason_code_skip_nested_selftests_surface_report.sh`, `scripts/check_coupled_compare_reason_code_skip_nested_selftests_wrapper_surface_report.py` と各 focused self-tests / Make targets を追加した。
+  - `FEM4C/Makefile`, `FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh`, `docs/team_runbook.md`, `docs/fem4c_team_next_queue.md` を同期し、queue を `C-70..C-76 Done / C-77 In Progress` に更新した。
+- Next Actions:
+  - `C-77` は initial validator / print-required-keys / make target まで入ったため、次回は wrong-component / escaped-path などの negative coverage を追加して formal `Done` にする。
+  - staging は current dirty tree を避けて、今回 touched した wrapper / validator / docs path のみに限定する。
+- Open Risks/Blockers:
+  - current worktree は大型 dirty diff のままなので、`safe_stage_command` を外れた path を混ぜると監査不能になる。
+  - skip path は再帰 self-test を抑止したが、non-skip wrapper chain は依然として replay が長く、提出前検証は focused target を優先する必要がある。
+
+## 2026-03-09 / C-team (C-77..C-82 Done, C-83 In Progress)
+- Current Plan:
+  - `C-83` として `coupled_compare_reason_code_skip_nested_selftests_contract_checks` bundle へ C-82 report validator を編入し、bundle self-test drift を解消する。
+  - `guard60=pass` と `end` は取得済みのため、次回は `make -C FEM4C coupled_compare_reason_code_skip_nested_selftests_contract_checks_test` の FAIL 原因に絞って再開する。
+- Completed This Session:
+  - `session_token=/tmp/c_team_session_20260309T040634Z_1682558.token` で `SESSION_TIMER_DECLARE C-77/C-78`、`SESSION_TIMER_PROGRESS` 3 回、`guard10/20/30/40/60=pass`、`elapsed_min=60` を記録した。
+  - `C-77..C-79` を完了し、skip wrapper/report surface validator chain（validator / wrapper / nested validator）を hardened した。
+  - `C-80` を完了し、`coupled_compare_reason_code_skip_nested_selftests_contract_checks` bundle / bundle self-test / help self-test を追加した。
+  - `C-81` を完了し、repo-root wrapper `run_coupled_compare_reason_code_skip_nested_selftests_contract_checks.sh` と explicit/default/nested out-dir smoke を追加した。
+  - `C-82` を完了し、saved contract bundle wrapper log validator と focused self-tests を追加した。
+  - `docs/team_runbook.md`, `docs/fem4c_team_next_queue.md`, `FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh` を current surface に同期した。
+- Next Actions:
+  - `make -C FEM4C coupled_compare_reason_code_skip_nested_selftests_contract_checks` と `..._test` の差分を見て、C-82 編入後に足りない PASS surface を `FEM4C/scripts/test_make_coupled_compare_reason_code_skip_nested_selftests_contract_checks.sh` へ反映する。
+  - `docs/fem4c_team_next_queue.md` は `C-81 Done / C-82 Done / C-83 In Progress` を維持し、C-83 完了後に次の Auto-Next を起票する。
+- Open Risks/Blockers:
+  - `make -C FEM4C coupled_compare_reason_code_skip_nested_selftests_contract_checks_test` は C-82 report validator 編入後に FAIL のままで、bundle self-test expectation drift が残っている。
+  - worktree 全体の dirty diff が大きいため、staging は今回 touched した skip-nested-selftests chain の path に限定する必要がある。
+
+## 2026-03-09 / C-team (C-84..C-90 Done, C-91 In Progress)
+- Current Plan:
+  - `C-91` として `skip_nested_selftests` contract wrapper-surface-wrapper current surface を runbook / docs-sync / queue に formal 同期する。
+  - 次セッションでは `make -C FEM4C coupled_compare_reason_code_skip_nested_selftests_contract_report_wrapper_surface_wrapper_test` と `..._wrapper_surface_wrapper_report_test` の focused bundle target を acceptance 入口として固定する。
+- Completed This Session:
+  - `C-84..C-86` を formal accepted 状態へ引き上げ、contract `core/public split`, report-wrapper handoff, report-wrapper validator を current surface に揃えた。
+  - `C-87/C-88` として contract wrapper-surface / validator を追加し、focused self-tests を通した。
+  - `C-89/C-90` として contract wrapper-surface-wrapper / validator を追加し、focused self-tests を通した。
+  - `FEM4C/Makefile`, `docs/team_runbook.md`, `docs/fem4c_team_next_queue.md`, `FEM4C/scripts/check_coupled_compare_reason_code_docs_sync.sh` を更新し、queue を `C-84..C-90 Done / C-91 In Progress` に同期した。
+- Next Actions:
+  - `C-91` を formal `Done` にするため、wrapper-surface-wrapper focused Make targets の PASS surface を bundle acceptance として固定する。
+  - staging は `safe_stage_command` に含めた C-team path のみに限定する。
+- Open Risks/Blockers:
+  - wrapper-surface / wrapper-surface-wrapper run scripts は nested focused bundle を含むため、連続検証は数分単位でかかる。
+  - unrelated dirty diff が大きく、`docs/team_status.md` / `docs/session_continuity_log.md` を含む safe-stage path 以外を混ぜると監査不能になる。
+
+## 2026-03-10 / PM-team (Timer Module Switch)
+- Current Plan:
+  - repo-local canonical timer module を `tools/team_timer/` に切り替え、60分測定と active-state 監視を旧 `session_timer*` 依存から分離する。
+  - 今後の team run は `python3 tools/team_timer/team_timer.py` を正本とし、旧 shell timer は compatibility shim としてのみ残す。
+- Completed This Session:
+  - `tools/team_timer/team_timer.py` を追加し、`start/declare/progress/guard/end` を新 state root `/tmp/highperformanceFEM_team_timer` で実装した。
+  - `tools/team_timer/team_control_tower.py` と `tools/team_timer/audit_team_sessions.py` を追加し、監視/監査の入口を新モジュール配下へ揃えた。
+  - `AGENTS.md`, `docs/abc_team_chat_handoff.md`, `docs/team_runbook.md`, `docs/fem4c_team_next_queue.md` を新タイマーモジュール前提へ更新した。
+  - 旧 `scripts/session_timer.sh` と `scripts/session_timer_guard.sh` を compatibility shim 化し、内部実装を新モジュールへ切り替えた。
+- Next Actions:
+  - 必要なら `render_team_dispatch_from_queue.py` 等の派生ツールも新モジュール表記へ追従させる。
+  - 次の team run で `tools/team_timer/team_timer.py` ベースの 60-90分運用が実際に定着するかを監視する。
+- Open Risks/Blockers:
+  - `docs/fem4c_team_next_queue.md` の PM運用メモには旧 timer コマンド名が履歴として多数残っているため、履歴行と現行ルールを混同しないよう注意が必要。
+  - 旧 `scripts/session_timer*.sh` を完全削除すると既存 test / helper へ影響するため、当面は shim として残す。

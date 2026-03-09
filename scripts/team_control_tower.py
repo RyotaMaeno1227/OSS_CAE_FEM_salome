@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -46,6 +47,8 @@ class TeamSnapshot:
     declared_primary_task: str | None
     declared_secondary_task: str | None
     plan_utc: str | None
+    progress_count: int | None
+    latest_progress_elapsed_min: int | None
     queue_task_id: str | None
     queue_task_status: str | None
     queue_task_goal: str | None
@@ -59,7 +62,10 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Render current team runtime/acceptance snapshot")
     parser.add_argument("--team-status", default="docs/team_status.md")
     parser.add_argument("--queue", default="docs/fem4c_team_next_queue.md")
-    parser.add_argument("--state-root", default="/tmp/codex_team_control")
+    parser.add_argument(
+        "--state-root",
+        default=os.environ.get("TEAM_TIMER_STATE_ROOT", "/tmp/highperformanceFEM_team_timer"),
+    )
     parser.add_argument("--min-elapsed", type=int, default=60)
     parser.add_argument("--max-elapsed", type=int, default=90)
     parser.add_argument("--no-guard-grace-minutes", type=int, default=DEFAULT_NO_GUARD_GRACE_MINUTES)
@@ -215,6 +221,16 @@ def build_next_action(
             " `scripts/session_timer_declare.sh <token> <primary> <secondary>` を記録するか、"
             " 停止済みなら新規 session_token で同一タスクをやり直す。"
         )
+    if runtime_state == "PROGRESS_MISSING":
+        if task is None:
+            return (
+                "宣言後の実装進捗 heartbeat が不足。"
+                " `scripts/session_timer_progress.sh <token> <current_task> <work_kind> [note]` を記録して作業継続を可視化する。"
+            )
+        return (
+            f"{task_label} は SESSION_TIMER_PROGRESS が不足。"
+            " 20分以内に1回、40分台でもう1回 progress を残して guard60 まで継続する。"
+        )
     if runtime_state == "RUNNING":
         if task is None:
             return "current session を継続。終了時に `Auto-Next` を queue へ追記して再開点を固定する。"
@@ -293,6 +309,14 @@ def build_snapshots(
             last_guard_result = active.get("last_guard_result", "")
             plan_epoch_raw = active.get("plan_epoch")
             plan_epoch = int(plan_epoch_raw) if plan_epoch_raw and plan_epoch_raw.isdigit() else None
+            progress_count_raw = active.get("progress_count")
+            progress_count = int(progress_count_raw) if progress_count_raw and progress_count_raw.isdigit() else 0
+            latest_progress_elapsed_raw = active.get("last_progress_elapsed_min")
+            latest_progress_elapsed_min = (
+                int(latest_progress_elapsed_raw)
+                if latest_progress_elapsed_raw and latest_progress_elapsed_raw.isdigit()
+                else None
+            )
             declared_primary_task = active.get("declared_primary_task")
             declared_secondary_task = active.get("declared_secondary_task")
             plan_utc = active.get("plan_utc")
@@ -311,6 +335,8 @@ def build_snapshots(
                 runtime_state = "STALE_AFTER_60"
             elif plan_missing:
                 runtime_state = "PLAN_MISSING"
+            elif elapsed_min_now >= 20 and progress_count <= 0:
+                runtime_state = "PROGRESS_MISSING"
             elif last_guard_result == "block" and elapsed_min_at_last_seen < min_elapsed:
                 runtime_state = "ACTIVE_UNCONFIRMED"
             elif elapsed_min_now < min_elapsed:
@@ -326,6 +352,8 @@ def build_snapshots(
             declared_primary_task = None
             declared_secondary_task = None
             plan_utc = None
+            progress_count = None
+            latest_progress_elapsed_min = None
             runtime_state = "READY_NEXT" if latest_verdict == "PASS" else "NEEDS_REWORK"
 
         snapshots.append(
@@ -337,6 +365,8 @@ def build_snapshots(
                 declared_primary_task=declared_primary_task,
                 declared_secondary_task=declared_secondary_task,
                 plan_utc=plan_utc,
+                progress_count=progress_count,
+                latest_progress_elapsed_min=latest_progress_elapsed_min,
                 queue_task_id=task.task_id if task else None,
                 queue_task_status=task.status if task else None,
                 queue_task_goal=task.goal if task else None,
@@ -365,6 +395,7 @@ def render_markdown(
     active = [s.team for s in snapshots if s.runtime_state in {"RUNNING", "READY_TO_WRAP", "OVERRUN"}]
     active_unconfirmed = [s.team for s in snapshots if s.runtime_state == "ACTIVE_UNCONFIRMED"]
     plan_missing = [s.team for s in snapshots if s.runtime_state == "PLAN_MISSING"]
+    progress_missing = [s.team for s in snapshots if s.runtime_state == "PROGRESS_MISSING"]
     stale = [s.team for s in snapshots if s.runtime_state in {"STALE_NO_GUARD", "STALE_BEFORE_60", "STALE_AFTER_60"}]
     ready_next = [s.team for s in snapshots if s.runtime_state == "READY_NEXT"]
     needs_rework = [s.team for s in snapshots if s.runtime_state == "NEEDS_REWORK"]
@@ -377,6 +408,7 @@ def render_markdown(
         f"- active_teams: `{','.join(active) if active else '-'}`",
         f"- active_unconfirmed: `{','.join(active_unconfirmed) if active_unconfirmed else '-'}`",
         f"- plan_missing: `{','.join(plan_missing) if plan_missing else '-'}`",
+        f"- progress_missing: `{','.join(progress_missing) if progress_missing else '-'}`",
         f"- stale_sessions: `{','.join(stale) if stale else '-'}`",
         f"- ready_next: `{','.join(ready_next) if ready_next else '-'}`",
         f"- needs_rework: `{','.join(needs_rework) if needs_rework else '-'}`",
@@ -392,6 +424,7 @@ def render_markdown(
                 f"- session_token: `{s.session_token if s.session_token else '-'}`",
                 f"- declared_plan: `{s.declared_primary_task if s.declared_primary_task else '-'} -> {s.declared_secondary_task if s.declared_secondary_task else '-'}`",
                 f"- plan_utc: `{s.plan_utc if s.plan_utc else '-'}`",
+                f"- progress: `{s.progress_count if s.progress_count is not None else '-'} / {s.latest_progress_elapsed_min if s.latest_progress_elapsed_min is not None else '-'}`",
                 f"- queue_head: `{s.queue_task_id if s.queue_task_id else '-'} / {s.queue_task_status if s.queue_task_status else '-'}`",
                 f"- queue_goal: {s.queue_task_goal if s.queue_task_goal else '-'}",
                 f"- latest_entry: {s.latest_entry}",
