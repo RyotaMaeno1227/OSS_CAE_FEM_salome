@@ -554,8 +554,33 @@ freeze を先に行う。
 - Phase 2L is blocked until checkpoint grouping is resolved
 - current git state is cumulative, not phase-local
 - checkpoint grouping must precede further C splitting
+- implementation candidate-only checkpoint was not feasible
+- further C splitting must wait for intentional implementation checkpoint resolution
 - no commit is performed in this phase
 - no staging is performed in this phase
+
+docs checkpoint と intentional Phase 2 implementation checkpoint 完了後、
+Phase 2L は docs-only planning としてのみ再開可能になった。
+
+- Phase 2L is docs-only
+- no C edit is performed
+- no function move is performed
+- no checker/script edit is performed
+- no build system change is performed
+- current dirty state still blocks actual C edit without explicit approval and checkpoint discipline
+- Phase 2M is docs-only and fixes the future exact guard path for `step_flex_counter_columns`
+- Phase 2N hardens route-aware exact `step_flex_counter_columns` guards in the Year1 route matrix checker
+- Phase 2O performs the first actual writer-meta helper move for `coupled_run2d_step_flex_iteration_column_name`
+- Phase 2P is docs-only and accepts the Phase 2O split only if the earlier full verification matrix stayed green
+- Phase 2Q is docs-only and fixes the checkpoint plan for the accepted Phase 2N / 2O / 2P worktree-only family
+- further actual C edit should prefer checkpoint discipline for the Phase 2N / 2O worktree surfaces before another split is attempted
+- further actual C edit should wait for an explicit-path checkpoint commit of that family unless the user explicitly accepts the added provenance risk
+- future checker/script edit requires explicit user approval
+- future C edit requires explicit user approval
+- solver core remains native implementation
+- Python / shell are not solver core
+- Year1 monolithic behavior is preserve-only
+- Year2 monolithic remains out of scope
 
 ### Phase 3
 
