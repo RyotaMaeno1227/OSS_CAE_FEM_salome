@@ -86,7 +86,7 @@ int coupled_run2d_compare_step_sample_hold_active(
 int coupled_run2d_compare_step_delayed_snapshot_step(
     coupled_scheme_t scheme,
     const coupled_step_history2d_t *history);
-static const char *coupled_run2d_step_flex_iteration_column_name(
+const char *coupled_run2d_step_flex_iteration_column_name(
     coupled_scheme_t scheme);
 static const char *coupled_run2d_step_coupling_reason(
     const coupled_step_history2d_t *history);
@@ -899,18 +899,6 @@ static const char *coupled_run2d_delay_buffer_scope_from_run(
         return "2link_body_interface_skeleton";
     }
     return "1link_minimal_skeleton";
-}
-
-static const char *coupled_run2d_step_flex_iteration_column_name(
-    coupled_scheme_t scheme)
-{
-    if (scheme == COUPLED_SCHEME_ONEWAY_SNAPSHOT) {
-        return "snapshot_iteration_index";
-    }
-    if (scheme == COUPLED_SCHEME_DELAYED_COSIM_V1_5) {
-        return "communication_iteration_index";
-    }
-    return "coupling_iteration_index";
 }
 
 static const char *coupled_run2d_step_coupling_reason(

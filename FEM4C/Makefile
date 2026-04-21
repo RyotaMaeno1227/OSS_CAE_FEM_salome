@@ -39,6 +39,7 @@ MBD_SRCS = $(SRCDIR)/mbd/body2d.c $(SRCDIR)/mbd/constraint2d.c $(SRCDIR)/mbd/for
 COUPLED_SRCS = $(SRCDIR)/coupled/case2d.c $(SRCDIR)/coupled/coupled_run2d.c \
 	               $(SRCDIR)/coupled/coupled_run2d_config.c \
 	               $(SRCDIR)/coupled/coupled_run2d_route_meta.c \
+	               $(SRCDIR)/coupled/coupled_run2d_writer_meta.c \
 	               $(SRCDIR)/coupled/coupled_monolithic_assembly2d.c \
 	               $(SRCDIR)/coupled/coupled_monolithic_state2d.c \
 	               $(SRCDIR)/coupled/coupled_step_common2d.c \

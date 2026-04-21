@@ -63,6 +63,7 @@ check_route_output_contract() {
             check_output_token "${route}" "${out_path}" "delay_semantics_status,not_applicable" || return 1
             check_output_token "${route}" "${out_path}" "compare_schema_version,year1_2link_v1" || return 1
             check_output_token "${route}" "${out_path}" "compare_step_columns,step_index,time,constraint_residual_l2,coupling_residual_l2,flex_solves,compare_iteration_count,coupling_converged,exchange_lag_steps,sample_hold_active,delayed_snapshot_step" || return 1
+            check_output_token "${route}" "${out_path}" "step_flex_counter_columns,step_index,snapshot_iteration_index,body_id,full_reassembly_count,static_solve_count" || return 1
             ;;
         delayed_cosim_v1_5)
             check_output_token "${route}" "${out_path}" "comparison_role,co_simulation" || return 1
@@ -72,6 +73,7 @@ check_route_output_contract() {
             check_output_token "${route}" "${out_path}" "step_columns,step_index,time,constraint_residual_l2,flex_solves,exchange_lag_steps,sample_hold_active,delayed_snapshot_step" || return 1
             check_output_token "${route}" "${out_path}" "compare_schema_version,year1_2link_v1" || return 1
             check_output_token "${route}" "${out_path}" "compare_step_columns,step_index,time,constraint_residual_l2,coupling_residual_l2,flex_solves,compare_iteration_count,coupling_converged,exchange_lag_steps,sample_hold_active,delayed_snapshot_step" || return 1
+            check_output_token "${route}" "${out_path}" "step_flex_counter_columns,step_index,communication_iteration_index,body_id,full_reassembly_count,static_solve_count" || return 1
             ;;
         fixed_point_strong)
             check_output_token "${route}" "${out_path}" "comparison_role,legacy_experimental" || return 1
@@ -79,6 +81,7 @@ check_route_output_contract() {
             check_output_token "${route}" "${out_path}" "delay_semantics_status,not_applicable" || return 1
             check_output_token "${route}" "${out_path}" "coupling_metric,qflex_l2" || return 1
             check_output_token "${route}" "${out_path}" "step_columns,step_index,time,constraint_residual_l2,coupling_residual_l2,flex_solves,fixed_point_iterations,coupling_converged" || return 1
+            check_output_token "${route}" "${out_path}" "step_flex_counter_columns,step_index,coupling_iteration_index,body_id,full_reassembly_count,static_solve_count" || return 1
             ;;
         monolithic_strong_v1)
             check_output_token "${route}" "${out_path}" "comparison_role,monolithic_strong" || return 1
@@ -90,6 +93,7 @@ check_route_output_contract() {
             check_output_token "${route}" "${out_path}" "compare_step_columns,step_index,time,constraint_residual_l2,coupling_residual_l2,flex_solves,compare_iteration_count,coupling_converged,exchange_lag_steps,sample_hold_active,delayed_snapshot_step" || return 1
             check_output_token "${route}" "${out_path}" "physical_status_columns,step_index,physical_residual_l2,constraint_residual_l2" || return 1
             check_output_token "${route}" "${out_path}" "step_status_columns,step_index,coupling_converged,coupling_iterations,coupling_reason" || return 1
+            check_output_token "${route}" "${out_path}" "step_flex_counter_columns,step_index,coupling_iteration_index,body_id,full_reassembly_count,static_solve_count" || return 1
             ;;
         *)
             echo "FAIL: route=${route} has no output contract expectation" >&2
