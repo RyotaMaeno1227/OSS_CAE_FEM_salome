@@ -573,6 +573,9 @@ Phase 2L は docs-only planning としてのみ再開可能になった。
 - Phase 2O performs the first actual writer-meta helper move for `coupled_run2d_step_flex_iteration_column_name`
 - Phase 2P is docs-only and accepts the Phase 2O split only if the earlier full verification matrix stayed green
 - Phase 2Q is docs-only and fixes the checkpoint plan for the accepted Phase 2N / 2O / 2P worktree-only family
+- Phase 2Q checkpoint family is now committed as `61e4ee57cd8bd02314a020819b07e566ec6522c4` and `c76e15025bb6a1e7dfaab4923ef405fb447d0509`
+- Phase 2R is docs-only and audits post-checkpoint push-readiness for those two commits
+- pushing the committed `HEAD` is acceptable once manually reviewed, but another actual C split remains blocked until that publish step is closed
 - further actual C edit should prefer checkpoint discipline for the Phase 2N / 2O worktree surfaces before another split is attempted
 - further actual C edit should wait for an explicit-path checkpoint commit of that family unless the user explicitly accepts the added provenance risk
 - future checker/script edit requires explicit user approval
