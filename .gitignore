@@ -72,4 +72,7 @@ FEM4C/parser/parser.exe
 .vscode/
 tmp*.md
 scripts/__pycache__/
+FEM4C/scripts/__pycache__/
+FEM4C/build/
+FEM4C/bin/
 FEM4C/scripts/.tmp_*.sh
