@@ -85,6 +85,8 @@ COUPLED_FLEX_TIP_SET 1 2 2 3
 注:
 - `examples/...` の相対 path は `cd FEM4C` からの実行を前提とする。
 - current rigid benchmark (`examples/mbd_2link_rigid_dyn.dat`) と合わせるため、minimal example set の `body_id` は `0`, `1` を使う。
+- 最小例一式の機械チェックは `make -C FEM4C coupled_example_check` で実行できる。
+- E-07 時点の acceptance は「master/link inputs が current runner で読めて完走すること」であり、Newmark/HHT の数値収束評価は E-08/E-09 以降で扱う。
 
 ## 5. 後方互換
 - 既存 `MBD_BODY` は互換維持する。

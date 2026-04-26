@@ -25,6 +25,19 @@
 | `full_reassembly_count_link1` | count | link1 の full reassembly 累積回数 |
 | `full_reassembly_count_link2` | count | link2 の full reassembly 累積回数 |
 
+## 2A. Auxiliary Interface Center CSV
+- compare schema 本体は上表の列で固定し、root/tip interface center は別 artifact で扱う。
+- 補助 CSV の想定列は以下とする。
+  - `step_index`
+  - `body_id`
+  - `time`
+  - `marker_x`, `marker_y`, `marker_theta`
+  - `root_center_local_x`, `root_center_local_y`
+  - `tip_center_local_x`, `tip_center_local_y`
+  - `root_center_world_x`, `root_center_world_y`
+  - `tip_center_world_x`, `tip_center_world_y`
+- この CSV は compare schema の代替ではなく、snapshot metadata を compare/export へ露出する補助用途に限定する。
+
 ## 3. ファイル命名
 - FEM4C:
   - `results/rigid_2link_explicit.csv`
@@ -33,6 +46,10 @@
   - `results/flex_2link_explicit.csv`
   - `results/flex_2link_newmark.csv`
   - `results/flex_2link_hht.csv`
+  - optional auxiliary:
+    - `results/flex_2link_explicit_interface_centers.csv`
+    - `results/flex_2link_newmark_interface_centers.csv`
+    - `results/flex_2link_hht_interface_centers.csv`
 - 参照値:
   - `reference/recurdyn/flex_2link_reference.csv`
   - `reference/adamsflex/flex_2link_reference.csv`
