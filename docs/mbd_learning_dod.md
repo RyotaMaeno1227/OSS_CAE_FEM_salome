@@ -50,3 +50,9 @@
   3. 失敗時チェックポイント
   4. 2D から 3D へ拡張するときの注意点
 
+## 6. 現在の初手学習 docs
+- `docs/MBD_00_learning_map.md`
+- `docs/MBD_01_rigid_body_2d_basics.md`
+- `docs/MBD_02_constraints_and_jacobians.md`
+
+上記 3 本は、最終完成版へ向かう途中でも先行して更新してよい最小骨格とする。
