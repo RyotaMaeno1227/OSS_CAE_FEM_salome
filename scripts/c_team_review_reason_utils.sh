@@ -52,7 +52,30 @@ c_team_build_prefixed_reason_codes() {
 }
 
 c_team_collect_missing_log_review_pattern() {
-  printf '%s' "collect_preflight_log_resolved|collect_preflight_log_missing|collect_preflight_check_reason|submission_readiness_retry_command|review_command_fail_reason_codes_source"
+  printf '%s' "collect_preflight_log_resolved|collect_preflight_log_missing|collect_preflight_check_reason|submission_readiness_retry_command|review_command_fail_reason|review_command_fail_reason_codes|review_command_fail_reason_codes_source|review_command_retry_command"
+}
+
+c_team_normalize_reason_codes_source() {
+  local raw="${1:-}"
+  local fallback="${2:-fallback}"
+  case "${raw}" in
+    checker|fallback|-)
+      printf '%s' "${raw}"
+      ;;
+    *)
+      printf '%s' "${fallback}"
+      ;;
+  esac
+}
+
+c_team_build_collect_preflight_review_reason_code() {
+  local preflight_reason="${1:-unknown_collect_preflight_reason}"
+  local normalized_reason
+  normalized_reason="$(c_team_normalize_reason_code "${preflight_reason}")"
+  if [[ -z "${normalized_reason}" ]]; then
+    normalized_reason="unknown_collect_preflight_reason"
+  fi
+  printf 'review_command_collect_preflight_%s_before_review_command' "${normalized_reason}"
 }
 
 c_team_resolve_binary_toggle() {

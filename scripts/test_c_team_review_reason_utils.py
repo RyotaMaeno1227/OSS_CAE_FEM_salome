@@ -71,7 +71,7 @@ class CTeamReviewReasonUtilsTest(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, msg=proc.stdout + proc.stderr)
         self.assertEqual(
             proc.stdout.strip(),
-            "collect_preflight_log_resolved|collect_preflight_log_missing|collect_preflight_check_reason|submission_readiness_retry_command|review_command_fail_reason_codes_source",
+            "collect_preflight_log_resolved|collect_preflight_log_missing|collect_preflight_check_reason|submission_readiness_retry_command|review_command_fail_reason|review_command_fail_reason_codes|review_command_fail_reason_codes_source|review_command_retry_command",
         )
 
     def test_resolve_binary_toggle_prefers_primary(self) -> None:
@@ -106,6 +106,32 @@ class CTeamReviewReasonUtilsTest(unittest.TestCase):
         )
         self.assertEqual(proc.returncode, 0, msg=proc.stdout + proc.stderr)
         self.assertEqual(proc.stdout.strip(), "9")
+
+    def test_normalize_reason_codes_source_accepts_known_values(self) -> None:
+        proc = run_bash("c_team_normalize_reason_codes_source checker")
+        self.assertEqual(proc.returncode, 0, msg=proc.stdout + proc.stderr)
+        self.assertEqual(proc.stdout.strip(), "checker")
+
+    def test_normalize_reason_codes_source_falls_back_for_unknown(self) -> None:
+        proc = run_bash("c_team_normalize_reason_codes_source unknown_source fallback")
+        self.assertEqual(proc.returncode, 0, msg=proc.stdout + proc.stderr)
+        self.assertEqual(proc.stdout.strip(), "fallback")
+
+    def test_build_collect_preflight_review_reason_code(self) -> None:
+        proc = run_bash("c_team_build_collect_preflight_review_reason_code latest_resolved_log_missing_strict")
+        self.assertEqual(proc.returncode, 0, msg=proc.stdout + proc.stderr)
+        self.assertEqual(
+            proc.stdout.strip(),
+            "review_command_collect_preflight_latest_resolved_log_missing_strict_before_review_command",
+        )
+
+    def test_build_collect_preflight_review_reason_code_falls_back_for_empty(self) -> None:
+        proc = run_bash("c_team_build_collect_preflight_review_reason_code ''")
+        self.assertEqual(proc.returncode, 0, msg=proc.stdout + proc.stderr)
+        self.assertEqual(
+            proc.stdout.strip(),
+            "review_command_collect_preflight_unknown_collect_preflight_reason_before_review_command",
+        )
 
 
 if __name__ == "__main__":
