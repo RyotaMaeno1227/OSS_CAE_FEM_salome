@@ -33,15 +33,26 @@ typedef struct {
     double density;          /* Material density */
 } material_t;
 
+typedef enum {
+    FEM_SOLVER_MODE_STATIC_DEFAULT = 0,
+    FEM_SOLVER_MODE_IMPLICIT_ONEWAY_NEWMARK = 1,
+    FEM_SOLVER_MODE_EXPLICIT_ONEWAY_CENTRAL_DIFFERENCE = 2
+} fem_solver_mode_t;
+
 /* Analysis control structure */
 typedef struct {
     int analysis_type;       /* Analysis type (static, dynamic, etc.) */
+    fem_solver_mode_t fem_solver_mode; /* FEM solver mode */
     int num_nodes;           /* Total number of nodes */
     int num_elements;        /* Total number of elements */
     int num_materials;       /* Total number of materials */
     int spatial_dimension;   /* Problem spatial dimension */
     int max_iterations;      /* Maximum solver iterations */
     double tolerance;        /* Convergence tolerance */
+    double time_step_dt;     /* Dynamic time step size */
+    int num_time_steps;      /* Number of time steps */
+    int outer_max_iterations; /* Outer fixed-point iteration limit */
+    double outer_tolerance;  /* Outer fixed-point convergence tolerance */
     char title[MAX_TITLE_LEN]; /* Problem title */
 } analysis_control_t;
 
@@ -51,6 +62,20 @@ typedef struct {
     double residual;         /* Final residual norm */
     double elapsed_time;     /* Solution time */
     int status;              /* Solver status */
+    int step_index;          /* Final dynamic step index */
+    double step_dt;          /* Final dynamic step dt */
+    double step_load_scale;  /* Final dynamic step load scale */
+    int step_outer_iterations; /* Final dynamic step outer iterations */
+    int step_linear_iterations; /* Final dynamic step linear iterations */
+    int step_retry_count;    /* Final dynamic step retry count */
+    int step_converged;      /* Final dynamic step converged flag */
+    int step_converged_after_retry; /* Final dynamic step retry convergence flag */
+    double step_outer_metric; /* Final dynamic step outer convergence metric */
+    int friction_active_row_count; /* Final recorded friction-active rows */
+    int friction_stick_row_count; /* Final recorded friction stick rows */
+    int friction_slip_row_count; /* Final recorded friction slip rows */
+    double friction_max_abs_ft_t_n; /* Final recorded max |Ft| */
+    double friction_max_abs_ut_rel_m; /* Final recorded max |Ut_rel| */
 } solver_info_t;
 
 /* Matrix storage structure (for sparse matrices) */

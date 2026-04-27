@@ -42,6 +42,7 @@
 /* Dimensions */
 #define MAX_NODES_PER_ELEMENT   10  /* Maximum nodes per element (T10) */
 #define MAX_DOF_PER_NODE        3   /* Maximum DOF per node (3D) */
+#define MAX_ELEMENT_DOF         (MAX_DOF_PER_NODE * MAX_NODES_PER_ELEMENT)
 #define MAX_GAUSS_POINTS        27  /* Maximum Gauss points (3x3x3) */
 #define MAX_SURFACE_NODES       3
 #define MAX_TRACTION_SURFACES   20000
@@ -50,7 +51,13 @@
 #define T6_NODES_PER_ELEMENT    6
 #define T6_DOF_PER_NODE         2
 #define T6_TOTAL_DOF            12
+#define T6_SHELL_DOF_PER_NODE   3
+#define T6_SHELL_TOTAL_DOF      18
 #define T6_GAUSS_POINTS         3
+
+/* T3 shell-2D extension constants */
+#define T3_SHELL_DOF_PER_NODE   3
+#define T3_SHELL_TOTAL_DOF      9
 
 /* Mathematical constants */
 #define ZERO    0.0
