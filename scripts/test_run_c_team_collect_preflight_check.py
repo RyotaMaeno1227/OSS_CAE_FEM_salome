@@ -20,6 +20,16 @@ def write_log(text: str) -> str:
 
 
 class RunCTeamCollectPreflightCheckTest(unittest.TestCase):
+    @staticmethod
+    def review_pass_block() -> str:
+        return (
+            "review_command_required=1\n"
+            "review_command_fail_reason=-\n"
+            "review_command_fail_reason_codes=-\n"
+            "review_command_fail_reason_codes_source=-\n"
+            "review_command_retry_command=python scripts/check_c_team_review_commands.py --team-status docs/team_status.md\n"
+        )
+
     def run_script(
         self,
         extra_env: dict[str, str] | None = None,
@@ -40,6 +50,7 @@ class RunCTeamCollectPreflightCheckTest(unittest.TestCase):
     def test_skips_without_log(self):
         proc = self.run_script()
         self.assertEqual(proc.returncode, 0, msg=proc.stdout + proc.stderr)
+        self.assertIn("collect_preflight_require_review_keys=0", proc.stdout)
         self.assertIn("collect_preflight_check=skipped", proc.stdout)
 
     def test_passes_when_enabled_log_matches_expected(self):
@@ -51,7 +62,46 @@ class RunCTeamCollectPreflightCheckTest(unittest.TestCase):
         )
         proc = self.run_script(extra_env={"C_COLLECT_PREFLIGHT_LOG": log_path})
         self.assertEqual(proc.returncode, 0, msg=proc.stdout + proc.stderr)
+        self.assertIn("collect_preflight_require_review_keys=0", proc.stdout)
         self.assertIn("C_TEAM_COLLECT_PREFLIGHT_REPORT", proc.stdout)
+        self.assertIn("verdict=PASS", proc.stdout)
+        self.assertIn("collect_preflight_check=pass", proc.stdout)
+
+    def test_fails_when_review_keys_required_and_missing(self):
+        log_path = write_log(
+            "collect_result=PASS\n"
+            "preflight_mode=enabled\n"
+            "preflight_team_status=docs/team_status.md\n"
+            "preflight_result=pass\n"
+        )
+        proc = self.run_script(
+            extra_env={
+                "C_COLLECT_PREFLIGHT_LOG": log_path,
+                "C_COLLECT_REQUIRE_REVIEW_KEYS": "1",
+            }
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        combined = proc.stdout + proc.stderr
+        self.assertIn("collect_preflight_require_review_keys=1", combined)
+        self.assertIn("missing_keys=review_command_required", combined)
+        self.assertIn("collect_preflight_check=fail", combined)
+
+    def test_passes_when_review_keys_required_and_present(self):
+        log_path = write_log(
+            "collect_result=PASS\n"
+            "preflight_mode=enabled\n"
+            "preflight_team_status=docs/team_status.md\n"
+            "preflight_result=pass\n"
+            + self.review_pass_block()
+        )
+        proc = self.run_script(
+            extra_env={
+                "C_COLLECT_PREFLIGHT_LOG": log_path,
+                "C_COLLECT_REQUIRE_REVIEW_KEYS": "1",
+            }
+        )
+        self.assertEqual(proc.returncode, 0, msg=proc.stdout + proc.stderr)
+        self.assertIn("collect_preflight_require_review_keys=1", proc.stdout)
         self.assertIn("verdict=PASS", proc.stdout)
         self.assertIn("collect_preflight_check=pass", proc.stdout)
 
@@ -148,6 +198,7 @@ class RunCTeamCollectPreflightCheckTest(unittest.TestCase):
         self.assertNotEqual(proc.returncode, 0)
         combined = proc.stdout + proc.stderr
         self.assertIn("collect_log_not_found", combined)
+        self.assertIn("collect_preflight_require_review_keys=0", combined)
         self.assertIn("collect_preflight_check_reason=latest_not_found_strict", combined)
         self.assertIn("collect_preflight_check=fail", combined)
 
@@ -172,6 +223,7 @@ class RunCTeamCollectPreflightCheckTest(unittest.TestCase):
         combined = proc.stdout + proc.stderr
         self.assertIn("collect_preflight_log_resolved=/tmp/c37_missing_default.log", combined)
         self.assertIn("collect_preflight_log_missing=/tmp/c37_missing_default.log", combined)
+        self.assertIn("collect_preflight_require_review_keys=0", combined)
         self.assertIn("collect_preflight_check_reason=latest_resolved_log_missing_default_skip", combined)
         self.assertIn("collect_preflight_check=skipped", combined)
 
@@ -291,6 +343,73 @@ class RunCTeamCollectPreflightCheckTest(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, msg=proc.stdout + proc.stderr)
         self.assertIn("collect_preflight_log_resolved=/tmp/c33_checker_preflight.log", proc.stdout)
         self.assertIn("collect_preflight_check=pass", proc.stdout)
+
+    def test_latest_missing_review_keys_skips_by_default_when_required(self):
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".md", delete=False) as fp:
+            status_path = fp.name
+            fp.write(
+                textwrap.dedent(
+                    """\
+                    ## Cチーム
+                    - 実行タスク: C-59
+                      - 実行コマンド:
+                        - python scripts/check_c_team_collect_preflight_report.py /tmp/c59_latest_missing_review_keys_default.log --require-enabled
+                    """
+                )
+            )
+        Path("/tmp/c59_latest_missing_review_keys_default.log").write_text(
+            "collect_result=PASS\n"
+            "preflight_mode=enabled\n"
+            f"preflight_team_status={status_path}\n"
+            "preflight_result=pass\n",
+            encoding="utf-8",
+        )
+        proc = self.run_script(
+            extra_env={
+                "C_COLLECT_PREFLIGHT_LOG": "latest",
+                "C_COLLECT_REQUIRE_REVIEW_KEYS": "1",
+            },
+            status_path=status_path,
+        )
+        self.assertEqual(proc.returncode, 0, msg=proc.stdout + proc.stderr)
+        combined = proc.stdout + proc.stderr
+        self.assertIn("collect_preflight_log_resolved=/tmp/c59_latest_missing_review_keys_default.log", combined)
+        self.assertIn("collect_preflight_check_reason=latest_missing_review_keys_default_skip", combined)
+        self.assertIn("collect_preflight_check=skipped", combined)
+
+    def test_latest_missing_review_keys_fails_in_strict_mode_when_required(self):
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".md", delete=False) as fp:
+            status_path = fp.name
+            fp.write(
+                textwrap.dedent(
+                    """\
+                    ## Cチーム
+                    - 実行タスク: C-59
+                      - 実行コマンド:
+                        - python scripts/check_c_team_collect_preflight_report.py /tmp/c59_latest_missing_review_keys_strict.log --require-enabled
+                    """
+                )
+            )
+        Path("/tmp/c59_latest_missing_review_keys_strict.log").write_text(
+            "collect_result=PASS\n"
+            "preflight_mode=enabled\n"
+            f"preflight_team_status={status_path}\n"
+            "preflight_result=pass\n",
+            encoding="utf-8",
+        )
+        proc = self.run_script(
+            extra_env={
+                "C_COLLECT_PREFLIGHT_LOG": "latest",
+                "C_COLLECT_LATEST_REQUIRE_FOUND": "1",
+                "C_COLLECT_REQUIRE_REVIEW_KEYS": "1",
+            },
+            status_path=status_path,
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        combined = proc.stdout + proc.stderr
+        self.assertIn("collect_preflight_log_resolved=/tmp/c59_latest_missing_review_keys_strict.log", combined)
+        self.assertIn("collect_preflight_check_reason=latest_missing_review_keys_strict", combined)
+        self.assertIn("collect_preflight_check=fail", combined)
 
 
 if __name__ == "__main__":

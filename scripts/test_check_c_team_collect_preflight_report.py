@@ -19,11 +19,24 @@ def write_report(text: str) -> str:
 
 
 class CheckCTeamCollectPreflightReportTest(unittest.TestCase):
+    @staticmethod
+    def review_pass_block() -> str:
+        return textwrap.dedent(
+            """\
+            review_command_required=1
+            review_command_fail_reason=-
+            review_command_fail_reason_codes=-
+            review_command_fail_reason_codes_source=-
+            review_command_retry_command=python scripts/check_c_team_review_commands.py --team-status docs/team_status.md
+            """
+        )
+
     def run_script(
         self,
         report_text: str,
         require_enabled: bool = False,
         expect_team_status: str | None = None,
+        require_review_keys: bool = False,
     ) -> subprocess.CompletedProcess[str]:
         path = write_report(report_text)
         cmd = ["python", str(SCRIPT_PATH), path]
@@ -31,6 +44,8 @@ class CheckCTeamCollectPreflightReportTest(unittest.TestCase):
             cmd.append("--require-enabled")
         if expect_team_status:
             cmd.extend(["--expect-team-status", expect_team_status])
+        if require_review_keys:
+            cmd.append("--require-review-keys")
         return subprocess.run(
             cmd,
             cwd=REPO_ROOT,
@@ -49,13 +64,15 @@ class CheckCTeamCollectPreflightReportTest(unittest.TestCase):
                 preflight_mode=enabled
                 preflight_team_status={status_path}
                 preflight_result=pass
-                """.format(status_path=status_path)
+                {review_block}
+                """.format(status_path=status_path, review_block=self.review_pass_block().strip())
             ),
             require_enabled=True,
             expect_team_status=status_path,
         )
         self.assertEqual(proc.returncode, 0, msg=proc.stdout + proc.stderr)
         self.assertIn("verdict=PASS", proc.stdout)
+        self.assertIn("review_keys_required=0", proc.stdout)
 
     def test_pass_for_disabled_preflight(self):
         proc = self.run_script(
@@ -69,6 +86,7 @@ class CheckCTeamCollectPreflightReportTest(unittest.TestCase):
         )
         self.assertEqual(proc.returncode, 0, msg=proc.stdout + proc.stderr)
         self.assertIn("verdict=PASS", proc.stdout)
+        self.assertIn("review_keys_required=0", proc.stdout)
 
     def test_fail_when_required_key_missing(self):
         proc = self.run_script(
@@ -107,7 +125,8 @@ class CheckCTeamCollectPreflightReportTest(unittest.TestCase):
                 preflight_mode=enabled
                 preflight_team_status={logged_status}
                 preflight_result=pass
-                """.format(logged_status=logged_status)
+                {review_block}
+                """.format(logged_status=logged_status, review_block=self.review_pass_block().strip())
             ),
             require_enabled=True,
             expect_team_status=expected_status,
@@ -128,13 +147,64 @@ class CheckCTeamCollectPreflightReportTest(unittest.TestCase):
                 preflight_mode=enabled
                 preflight_team_status={status_path}
                 preflight_result=pass
-                """.format(status_path=status_path)
+                {review_block}
+                """.format(status_path=status_path, review_block=self.review_pass_block().strip())
             ),
             require_enabled=True,
             expect_team_status=str(status_path.relative_to(REPO_ROOT)),
         )
         self.assertEqual(proc.returncode, 0, msg=proc.stdout + proc.stderr)
         self.assertIn("verdict=PASS", proc.stdout)
+
+    def test_fail_when_review_required_present_but_keys_missing(self):
+        proc = self.run_script(
+            textwrap.dedent(
+                """\
+                collect_result=PASS
+                preflight_mode=enabled
+                preflight_team_status=/tmp/team_status.md
+                preflight_result=pass
+                review_command_required=1
+                """
+            )
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("missing_keys=review_command_fail_reason", proc.stdout)
+
+    def test_fail_when_require_review_keys_flag_missing_review_required(self):
+        proc = self.run_script(
+            textwrap.dedent(
+                """\
+                collect_result=PASS
+                preflight_mode=enabled
+                preflight_team_status=/tmp/team_status.md
+                preflight_result=pass
+                """
+            ),
+            require_review_keys=True,
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("missing_keys=review_command_required", proc.stdout)
+        self.assertIn("review_keys_required=1", proc.stdout)
+
+    def test_fail_when_review_reason_source_invalid(self):
+        proc = self.run_script(
+            textwrap.dedent(
+                """\
+                collect_result=PASS
+                preflight_mode=enabled
+                preflight_team_status=/tmp/team_status.md
+                preflight_result=pass
+                review_command_required=1
+                review_command_fail_reason=-
+                review_command_fail_reason_codes=-
+                review_command_fail_reason_codes_source=invalid_source
+                review_command_retry_command=python scripts/check_c_team_review_commands.py --team-status docs/team_status.md
+                """
+            )
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("review_command_fail_reason_codes_source=invalid_source", proc.stdout)
 
 
 if __name__ == "__main__":
