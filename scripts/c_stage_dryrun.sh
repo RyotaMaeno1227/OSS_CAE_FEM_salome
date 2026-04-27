@@ -220,8 +220,12 @@ report() {
         done
         echo "safe_stage_command=${safe_stage_command}"
     else
-        echo "safe_stage_targets=-"
-        echo "safe_stage_command=git add"
+        echo "safe_stage_targets=${TARGETS[*]}"
+        safe_stage_command="git add"
+        for path in "${TARGETS[@]}"; do
+            safe_stage_command+=" $(printf '%q' "$path")"
+        done
+        echo "safe_stage_command=${safe_stage_command}"
     fi
     echo "dryrun_result=${dryrun_result}"
 }
