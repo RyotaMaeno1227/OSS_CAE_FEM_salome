@@ -11,6 +11,7 @@
 /* Global arrays - dynamically sized */
 extern double (*g_node_coords)[3];           /* Node coordinates */
 extern double (*g_node_displ)[3];            /* Node displacements */
+extern double (*g_node_bc_values)[3];        /* Prescribed displacement values */
 extern double (*g_node_force)[3];            /* Node external forces */
 extern int (*g_node_bc_flags)[3];            /* Boundary condition flags */
 extern int *g_node_ids;                      /* Original node identifiers */
@@ -62,6 +63,46 @@ extern int g_traction_surfaces[MAX_TRACTION_SURFACES][MAX_SURFACE_NODES];
 extern double g_traction_values[MAX_TRACTION_SURFACES][3];
 extern int g_num_pressure_surfaces;
 extern int g_pressure_surfaces[MAX_TRACTION_SURFACES][MAX_SURFACE_NODES];
+extern int g_pressure_surface_node_counts[MAX_TRACTION_SURFACES];
+extern int g_pressure_surface_nodes[MAX_TRACTION_SURFACES][T6_NODES_PER_ELEMENT];
+extern double g_pressure_surface_values[MAX_TRACTION_SURFACES];
+
+#define MAX_FEM_CONTACT_GENERIC_SURFACES 256
+#define MAX_FEM_CONTACT_GENERIC_PAIRS 256
+#define MAX_FEM_STATIC_LOAD_STEPS 64
+#define MAX_FEM_LOAD_SCALE_STEPS 256
+
+#define FEM_LOCAL_FEEDBACK_MODE_NONE 0
+#define FEM_LOCAL_FEEDBACK_MODE_LAGGED_REDUCED 1
+
+extern int g_num_fem_contact_generic_surfaces;
+extern int g_fem_contact_generic_surface_ids[MAX_FEM_CONTACT_GENERIC_SURFACES];
+extern int g_fem_contact_generic_surface_part_ids[MAX_FEM_CONTACT_GENERIC_SURFACES];
+extern int g_fem_contact_generic_surface_edge_counts[MAX_FEM_CONTACT_GENERIC_SURFACES];
+extern char g_fem_contact_generic_surface_paths[MAX_FEM_CONTACT_GENERIC_SURFACES][MAX_FILENAME_LEN];
+
+extern int g_num_fem_contact_generic_pairs;
+extern int g_fem_contact_generic_pair_ids[MAX_FEM_CONTACT_GENERIC_PAIRS];
+extern int g_fem_contact_generic_pair_surface_i[MAX_FEM_CONTACT_GENERIC_PAIRS];
+extern int g_fem_contact_generic_pair_surface_j[MAX_FEM_CONTACT_GENERIC_PAIRS];
+extern double g_fem_contact_generic_pair_k_pen[MAX_FEM_CONTACT_GENERIC_PAIRS];
+extern double g_fem_contact_generic_pair_c_pen[MAX_FEM_CONTACT_GENERIC_PAIRS];
+extern double g_fem_contact_generic_pair_mu[MAX_FEM_CONTACT_GENERIC_PAIRS];
+extern double g_fem_contact_generic_pair_mu_cap[MAX_FEM_CONTACT_GENERIC_PAIRS];
+extern double g_fem_contact_generic_pair_k_t_pen[MAX_FEM_CONTACT_GENERIC_PAIRS];
+extern double g_fem_contact_generic_pair_u_t_reg_m[MAX_FEM_CONTACT_GENERIC_PAIRS];
+extern double g_fem_contact_generic_pair_k_adh_n[MAX_FEM_CONTACT_GENERIC_PAIRS];
+extern double g_fem_contact_generic_pair_gap_adh_max_m[MAX_FEM_CONTACT_GENERIC_PAIRS];
+extern int g_fem_local_feedback_mode;
+extern char g_fem_local_contact_file[MAX_FILENAME_LEN];
+extern int g_num_fem_static_load_steps;
+extern int g_fem_static_load_step_ids[MAX_FEM_STATIC_LOAD_STEPS];
+extern double g_fem_static_load_step_scales[MAX_FEM_STATIC_LOAD_STEPS];
+extern int g_num_fem_load_scale_steps;
+extern int g_fem_load_scale_step_ids[MAX_FEM_LOAD_SCALE_STEPS];
+extern double g_fem_load_scale_step_scales[MAX_FEM_LOAD_SCALE_STEPS];
+extern int g_fem_static_current_load_step;
+extern double g_fem_static_current_load_scale;
 
 /* Analysis control variables */
 extern analysis_control_t g_analysis;
@@ -79,6 +120,8 @@ extern char g_output_filename[MAX_FILENAME_LEN];
 
 /* OpenMP control */
 extern int g_num_threads;
+extern int g_fem_dof_per_node;
+extern double g_shell_k6rot;
 /* T3 orientation policy: 0=auto-correct (default), 1=strict-fail */
 extern int g_t3_strict_orientation;
 

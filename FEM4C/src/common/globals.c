@@ -20,6 +20,7 @@ static void globals_free_mesh_arrays(void);
 /* Global arrays - actual storage (dynamically sized) */
 double (*g_node_coords)[3] = NULL;
 double (*g_node_displ)[3] = NULL;
+double (*g_node_bc_values)[3] = NULL;
 double (*g_node_force)[3] = NULL;
 int (*g_node_bc_flags)[3] = NULL;
 int *g_node_ids = NULL;
@@ -65,6 +66,13 @@ static fem_error_t globals_resize_nodes(int new_capacity)
         return error_set(FEM_ERROR_MEMORY_ALLOCATION, "Failed to resize node displacements");
     }
     g_node_displ = displ;
+
+    double (*bc_values)[3] = realloc(g_node_bc_values, (size_t)new_capacity * sizeof(*g_node_bc_values));
+    if (!bc_values) {
+        globals_free_mesh_arrays();
+        return error_set(FEM_ERROR_MEMORY_ALLOCATION, "Failed to resize node prescribed displacement values");
+    }
+    g_node_bc_values = bc_values;
 
     double (*force)[3] = realloc(g_node_force, (size_t)new_capacity * sizeof(*g_node_force));
     if (!force) {
@@ -246,6 +254,7 @@ static void globals_free_mesh_arrays(void)
 {
     free(g_node_coords);
     free(g_node_displ);
+    free(g_node_bc_values);
     free(g_node_force);
     free(g_node_bc_flags);
     free(g_node_ids);
@@ -264,6 +273,7 @@ static void globals_free_mesh_arrays(void)
 
     g_node_coords = NULL;
     g_node_displ = NULL;
+    g_node_bc_values = NULL;
     g_node_force = NULL;
     g_node_bc_flags = NULL;
     g_node_ids = NULL;
@@ -386,6 +396,9 @@ void globals_initialize_node_entry(int node_index)
     g_node_displ[node_index][0] = 0.0;
     g_node_displ[node_index][1] = 0.0;
     g_node_displ[node_index][2] = 0.0;
+    g_node_bc_values[node_index][0] = 0.0;
+    g_node_bc_values[node_index][1] = 0.0;
+    g_node_bc_values[node_index][2] = 0.0;
     g_node_force[node_index][0] = 0.0;
     g_node_force[node_index][1] = 0.0;
     g_node_force[node_index][2] = 0.0;
@@ -455,6 +468,36 @@ int g_traction_surfaces[MAX_TRACTION_SURFACES][MAX_SURFACE_NODES];
 double g_traction_values[MAX_TRACTION_SURFACES][3];
 int g_num_pressure_surfaces = 0;
 int g_pressure_surfaces[MAX_TRACTION_SURFACES][MAX_SURFACE_NODES];
+int g_pressure_surface_node_counts[MAX_TRACTION_SURFACES];
+int g_pressure_surface_nodes[MAX_TRACTION_SURFACES][T6_NODES_PER_ELEMENT];
+double g_pressure_surface_values[MAX_TRACTION_SURFACES];
+int g_num_fem_contact_generic_surfaces = 0;
+int g_fem_contact_generic_surface_ids[MAX_FEM_CONTACT_GENERIC_SURFACES];
+int g_fem_contact_generic_surface_part_ids[MAX_FEM_CONTACT_GENERIC_SURFACES];
+int g_fem_contact_generic_surface_edge_counts[MAX_FEM_CONTACT_GENERIC_SURFACES];
+char g_fem_contact_generic_surface_paths[MAX_FEM_CONTACT_GENERIC_SURFACES][MAX_FILENAME_LEN];
+int g_num_fem_contact_generic_pairs = 0;
+int g_fem_contact_generic_pair_ids[MAX_FEM_CONTACT_GENERIC_PAIRS];
+int g_fem_contact_generic_pair_surface_i[MAX_FEM_CONTACT_GENERIC_PAIRS];
+int g_fem_contact_generic_pair_surface_j[MAX_FEM_CONTACT_GENERIC_PAIRS];
+double g_fem_contact_generic_pair_k_pen[MAX_FEM_CONTACT_GENERIC_PAIRS];
+double g_fem_contact_generic_pair_c_pen[MAX_FEM_CONTACT_GENERIC_PAIRS];
+double g_fem_contact_generic_pair_mu[MAX_FEM_CONTACT_GENERIC_PAIRS];
+double g_fem_contact_generic_pair_mu_cap[MAX_FEM_CONTACT_GENERIC_PAIRS];
+double g_fem_contact_generic_pair_k_t_pen[MAX_FEM_CONTACT_GENERIC_PAIRS];
+double g_fem_contact_generic_pair_u_t_reg_m[MAX_FEM_CONTACT_GENERIC_PAIRS];
+double g_fem_contact_generic_pair_k_adh_n[MAX_FEM_CONTACT_GENERIC_PAIRS];
+double g_fem_contact_generic_pair_gap_adh_max_m[MAX_FEM_CONTACT_GENERIC_PAIRS];
+int g_fem_local_feedback_mode = FEM_LOCAL_FEEDBACK_MODE_NONE;
+char g_fem_local_contact_file[MAX_FILENAME_LEN];
+int g_num_fem_static_load_steps = 0;
+int g_fem_static_load_step_ids[MAX_FEM_STATIC_LOAD_STEPS];
+double g_fem_static_load_step_scales[MAX_FEM_STATIC_LOAD_STEPS];
+int g_num_fem_load_scale_steps = 0;
+int g_fem_load_scale_step_ids[MAX_FEM_LOAD_SCALE_STEPS];
+double g_fem_load_scale_step_scales[MAX_FEM_LOAD_SCALE_STEPS];
+int g_fem_static_current_load_step = 0;
+double g_fem_static_current_load_scale = 1.0;
 
 /* Analysis control variables */
 analysis_control_t g_analysis;
@@ -472,6 +515,8 @@ char g_output_filename[MAX_FILENAME_LEN];
 
 /* OpenMP control */
 int g_num_threads = 1;
+int g_fem_dof_per_node = 2;
+double g_shell_k6rot = 100.0;
 /* T3 orientation policy: 0=auto-correct (default), 1=strict-fail */
 int g_t3_strict_orientation = 0;
 
@@ -497,11 +542,16 @@ fem_error_t globals_initialize(void)
 
     /* Initialize analysis control */
     g_analysis.analysis_type = 1;  /* Static analysis */
+    g_analysis.fem_solver_mode = FEM_SOLVER_MODE_STATIC_DEFAULT;
     g_analysis.num_nodes = 0;
     g_analysis.num_elements = 0;
     g_analysis.num_materials = 0;
     g_analysis.max_iterations = MAX_ITERATIONS;
     g_analysis.tolerance = TOLERANCE;
+    g_analysis.time_step_dt = 0.0;
+    g_analysis.num_time_steps = 0;
+    g_analysis.outer_max_iterations = 0;
+    g_analysis.outer_tolerance = 0.0;
     strcpy(g_analysis.title, "FEM4C Analysis");
     g_analysis.spatial_dimension = 2;
 
@@ -510,6 +560,20 @@ fem_error_t globals_initialize(void)
     g_solver_info.residual = 0.0;
     g_solver_info.elapsed_time = 0.0;
     g_solver_info.status = FEM_SUCCESS;
+    g_solver_info.step_index = 0;
+    g_solver_info.step_dt = 0.0;
+    g_solver_info.step_load_scale = 0.0;
+    g_solver_info.step_outer_iterations = 0;
+    g_solver_info.step_linear_iterations = 0;
+    g_solver_info.step_retry_count = 0;
+    g_solver_info.step_converged = 0;
+    g_solver_info.step_converged_after_retry = 0;
+    g_solver_info.step_outer_metric = 0.0;
+    g_solver_info.friction_active_row_count = 0;
+    g_solver_info.friction_stick_row_count = 0;
+    g_solver_info.friction_slip_row_count = 0;
+    g_solver_info.friction_max_abs_ft_t_n = 0.0;
+    g_solver_info.friction_max_abs_ut_rel_m = 0.0;
 
     /* Initialize file names */
     strcpy(g_input_filename, "input.dat");
@@ -580,15 +644,55 @@ void globals_reset(void)
     g_has_pressure = 0;
     g_num_tractions = 0;
     g_num_pressure_surfaces = 0;
+    g_num_fem_contact_generic_surfaces = 0;
+    g_num_fem_contact_generic_pairs = 0;
     for (int i = 0; i < MAX_TRACTION_SURFACES; i++) {
         for (int j = 0; j < MAX_SURFACE_NODES; j++) {
             g_traction_surfaces[i][j] = -1;
             g_pressure_surfaces[i][j] = -1;
         }
+        g_pressure_surface_node_counts[i] = 0;
+        for (int j = 0; j < T6_NODES_PER_ELEMENT; ++j) {
+            g_pressure_surface_nodes[i][j] = -1;
+        }
+        g_pressure_surface_values[i] = 0.0;
         g_traction_values[i][0] = 0.0;
         g_traction_values[i][1] = 0.0;
         g_traction_values[i][2] = 0.0;
     }
+    for (int i = 0; i < MAX_FEM_CONTACT_GENERIC_SURFACES; ++i) {
+        g_fem_contact_generic_surface_ids[i] = -1;
+        g_fem_contact_generic_surface_part_ids[i] = -1;
+        g_fem_contact_generic_surface_edge_counts[i] = 0;
+        g_fem_contact_generic_surface_paths[i][0] = '\0';
+    }
+    for (int i = 0; i < MAX_FEM_CONTACT_GENERIC_PAIRS; ++i) {
+        g_fem_contact_generic_pair_ids[i] = -1;
+        g_fem_contact_generic_pair_surface_i[i] = -1;
+        g_fem_contact_generic_pair_surface_j[i] = -1;
+        g_fem_contact_generic_pair_k_pen[i] = 0.0;
+        g_fem_contact_generic_pair_c_pen[i] = 0.0;
+        g_fem_contact_generic_pair_mu[i] = 0.0;
+        g_fem_contact_generic_pair_mu_cap[i] = 0.0;
+        g_fem_contact_generic_pair_k_t_pen[i] = 0.0;
+        g_fem_contact_generic_pair_u_t_reg_m[i] = 0.0;
+        g_fem_contact_generic_pair_k_adh_n[i] = 0.0;
+        g_fem_contact_generic_pair_gap_adh_max_m[i] = 0.0;
+    }
+    g_fem_local_feedback_mode = FEM_LOCAL_FEEDBACK_MODE_NONE;
+    g_fem_local_contact_file[0] = '\0';
+    g_num_fem_static_load_steps = 0;
+    for (int i = 0; i < MAX_FEM_STATIC_LOAD_STEPS; ++i) {
+        g_fem_static_load_step_ids[i] = -1;
+        g_fem_static_load_step_scales[i] = 0.0;
+    }
+    g_num_fem_load_scale_steps = 0;
+    for (int i = 0; i < MAX_FEM_LOAD_SCALE_STEPS; ++i) {
+        g_fem_load_scale_step_ids[i] = -1;
+        g_fem_load_scale_step_scales[i] = 0.0;
+    }
+    g_fem_static_current_load_step = 0;
+    g_fem_static_current_load_scale = 1.0;
 
     globals_free_system_arrays();
 
@@ -596,6 +700,9 @@ void globals_reset(void)
     g_num_elements = 0;
     g_num_materials = 0;
     g_total_dof = 0;
+    g_fem_dof_per_node = 2;
+    g_shell_k6rot = 100.0;
+    g_t3_strict_orientation = 0;
 }
 
 /* Allocate system arrays based on total DOF */
