@@ -5,6 +5,7 @@
 #include "t6_stiffness.h"
 #include "../../common/globals.h"
 #include "../../common/error.h"
+#include <math.h>
 #include <string.h>
 
 /* Calculate material matrix for plane stress */
@@ -74,7 +75,7 @@ fem_error_t t6_material_matrix_plane_strain(double E, double nu,
 }
 
 /* Main function to calculate T6 element stiffness matrix */
-fem_error_t t6_element_stiffness_matrix(int element_id, 
+fem_error_t t6_element_stiffness_matrix(int element_id,
                                        double ke[T6_TOTAL_DOF][T6_TOTAL_DOF])
 {
     double D[T6_STRESS_COMPONENTS][T6_STRAIN_COMPONENTS];
@@ -105,6 +106,53 @@ fem_error_t t6_element_stiffness_matrix(int element_id,
     err = t6_integrate_stiffness(element_id, D, ke);
     CHECK_ERROR(err);
     
+    return FEM_SUCCESS;
+}
+
+fem_error_t t6_element_shell_stiffness_matrix(int element_id,
+                                              double ke[MAX_ELEMENT_DOF][MAX_ELEMENT_DOF])
+{
+    double membrane_ke[T6_TOTAL_DOF][T6_TOTAL_DOF];
+    double diagonal_sum = 0.0;
+    double drilling_stiffness = 0.0;
+    fem_error_t err;
+
+    err = t6_element_stiffness_matrix(element_id, membrane_ke);
+    CHECK_ERROR(err);
+
+    for (int i = 0; i < MAX_ELEMENT_DOF; ++i) {
+        for (int j = 0; j < MAX_ELEMENT_DOF; ++j) {
+            ke[i][j] = ZERO;
+        }
+    }
+
+    for (int node_i = 0; node_i < T6_NODES_PER_ELEMENT; ++node_i) {
+        int shell_i = node_i * T6_SHELL_DOF_PER_NODE;
+        int membrane_i = node_i * T6_DOF_PER_NODE;
+        for (int node_j = 0; node_j < T6_NODES_PER_ELEMENT; ++node_j) {
+            int shell_j = node_j * T6_SHELL_DOF_PER_NODE;
+            int membrane_j = node_j * T6_DOF_PER_NODE;
+            for (int a = 0; a < T6_DOF_PER_NODE; ++a) {
+                for (int b = 0; b < T6_DOF_PER_NODE; ++b) {
+                    ke[shell_i + a][shell_j + b] =
+                        membrane_ke[membrane_i + a][membrane_j + b];
+                }
+            }
+        }
+    }
+
+    for (int i = 0; i < T6_TOTAL_DOF; ++i) {
+        diagonal_sum += fabs(membrane_ke[i][i]);
+    }
+    drilling_stiffness = (diagonal_sum > 0.0)
+        ? g_shell_k6rot * (diagonal_sum / (double)T6_TOTAL_DOF)
+        : fabs(g_shell_k6rot);
+
+    for (int node = 0; node < T6_NODES_PER_ELEMENT; ++node) {
+        int rz = node * T6_SHELL_DOF_PER_NODE + 2;
+        ke[rz][rz] += drilling_stiffness;
+    }
+
     return FEM_SUCCESS;
 }
 

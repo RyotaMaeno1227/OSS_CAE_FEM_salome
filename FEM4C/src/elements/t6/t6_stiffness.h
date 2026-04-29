@@ -14,8 +14,10 @@ fem_error_t t6_material_matrix_plane_strain(double E, double nu,
                                            double D[T6_STRESS_COMPONENTS][T6_STRAIN_COMPONENTS]);
 
 /* Element stiffness matrix calculation */
-fem_error_t t6_element_stiffness_matrix(int element_id, 
+fem_error_t t6_element_stiffness_matrix(int element_id,
                                        double ke[T6_TOTAL_DOF][T6_TOTAL_DOF]);
+fem_error_t t6_element_shell_stiffness_matrix(int element_id,
+                                              double ke[MAX_ELEMENT_DOF][MAX_ELEMENT_DOF]);
 
 /* Integration utilities */
 fem_error_t t6_integrate_stiffness(int element_id,
