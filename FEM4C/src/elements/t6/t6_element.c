@@ -24,6 +24,38 @@ double g_t6_gauss_weights[T6_GAUSS_POINTS] = {
     0.166666666666667   /* Weight 3: 1/6 */
 };
 
+static double t6_signed_corner_area(const double coords[T6_NODES_PER_ELEMENT][2])
+{
+    return 0.5 * ((coords[1][0] - coords[0][0]) * (coords[2][1] - coords[0][1]) -
+                  (coords[2][0] - coords[0][0]) * (coords[1][1] - coords[0][1]));
+}
+
+static fem_error_t t6_element_stiffness_adapter(
+    int element_id,
+    double ke[][MAX_DOF_PER_NODE * MAX_NODES_PER_ELEMENT])
+{
+    double local_ke[T6_TOTAL_DOF][T6_TOTAL_DOF];
+    fem_error_t err = t6_element_stiffness_matrix(element_id, local_ke);
+
+    if (err != FEM_SUCCESS) {
+        return err;
+    }
+
+    for (int i = 0; i < MAX_DOF_PER_NODE * MAX_NODES_PER_ELEMENT; i++) {
+        for (int j = 0; j < MAX_DOF_PER_NODE * MAX_NODES_PER_ELEMENT; j++) {
+            ke[i][j] = ZERO;
+        }
+    }
+
+    for (int i = 0; i < T6_TOTAL_DOF; i++) {
+        for (int j = 0; j < T6_TOTAL_DOF; j++) {
+            ke[i][j] = local_ke[i][j];
+        }
+    }
+
+    return FEM_SUCCESS;
+}
+
 /* Initialize T6 element module */
 fem_error_t t6_initialize(void)
 {
@@ -47,7 +79,7 @@ fem_error_t t6_register(void)
         .init = t6_initialize,
         .shape_functions = NULL,  /* Complex signature, handled directly */
         .jacobian = NULL,         /* Complex signature, handled directly */
-        .stiffness = t6_element_stiffness_matrix,
+        .stiffness = t6_element_stiffness_adapter,
         .stress = NULL,  /* To be implemented */
         .validate = t6_validate_element
     };
@@ -76,8 +108,6 @@ fem_error_t t6_shape_derivatives_natural(double xi, double eta,
                                          double dN_dxi[T6_NODES_PER_ELEMENT],
                                          double dN_deta[T6_NODES_PER_ELEMENT])
 {
-    double zeta = ONE - xi - eta;  /* Third natural coordinate */
-
     /* Standard T6 shape function derivatives */
     /* Derivatives with respect to xi */
     dN_dxi[0] = FOUR * xi + FOUR * eta - THREE;     /* dN1/dxi = 4*xi + 4*eta - 3 */
@@ -148,7 +178,7 @@ fem_error_t t6_jacobian_matrix(int element_id, double xi, double eta,
     
     /* Check for valid determinant */
     if (fabs(*det_J) < TOLERANCE) {
-        return error_set(FEM_ERROR_SINGULAR_MATRIX, 
+        return error_set(FEM_ERROR_SINGULAR_MATRIX,
                         "Zero or negative Jacobian determinant in element %d", element_id + 1);
     }
     
@@ -317,15 +347,34 @@ fem_error_t t6_check_element_geometry(int element_id)
     err = t6_get_element_coordinates(element_id, coords);
     CHECK_ERROR(err);
     
-    /* Calculate element area using the first 3 corner nodes */
-    area = 0.5 * fabs((coords[1][0] - coords[0][0]) * (coords[2][1] - coords[0][1]) -
-                     (coords[2][0] - coords[0][0]) * (coords[1][1] - coords[0][1]));
-    
-    /* Check for degenerate element */
-    if (area < TOLERANCE) {
-        return error_set(FEM_ERROR_INVALID_INPUT, 
+    area = t6_signed_corner_area(coords);
+    if (fabs(area) < TOLERANCE) {
+        return error_set(FEM_ERROR_INVALID_INPUT,
                         "Element %d has zero or negative area", element_id + 1);
     }
-    
+
+    if (area < 0.0) {
+        if (g_t3_strict_orientation) {
+            return error_set(FEM_ERROR_INVALID_INPUT,
+                             "Element %d has clockwise orientation (strict mode)",
+                             element_id + 1);
+        }
+
+        int tmp = g_element_nodes[element_id][0];
+        g_element_nodes[element_id][0] = g_element_nodes[element_id][1];
+        g_element_nodes[element_id][1] = tmp;
+
+        tmp = g_element_nodes[element_id][4];
+        g_element_nodes[element_id][4] = g_element_nodes[element_id][5];
+        g_element_nodes[element_id][5] = tmp;
+
+        static int warned = 0;
+        if (!warned) {
+            printf("  Warning: T6 element orientation corrected (clockwise -> CCW). ");
+            printf("Use --strict-t3-orientation to fail instead.\n");
+            warned = 1;
+        }
+    }
+
     return FEM_SUCCESS;
 }
