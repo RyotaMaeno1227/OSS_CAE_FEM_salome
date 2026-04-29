@@ -25,6 +25,32 @@ double g_q4_gauss_weights[Q4_GAUSS_POINTS] = {
     1.0   /* Weight 4 */
 };
 
+static fem_error_t q4_element_stiffness_adapter(
+    int element_id,
+    double ke[][MAX_DOF_PER_NODE * MAX_NODES_PER_ELEMENT])
+{
+    double local_ke[Q4_TOTAL_DOF][Q4_TOTAL_DOF];
+    fem_error_t err = q4_element_stiffness(element_id, local_ke);
+
+    if (err != FEM_SUCCESS) {
+        return err;
+    }
+
+    for (int i = 0; i < MAX_DOF_PER_NODE * MAX_NODES_PER_ELEMENT; i++) {
+        for (int j = 0; j < MAX_DOF_PER_NODE * MAX_NODES_PER_ELEMENT; j++) {
+            ke[i][j] = ZERO;
+        }
+    }
+
+    for (int i = 0; i < Q4_TOTAL_DOF; i++) {
+        for (int j = 0; j < Q4_TOTAL_DOF; j++) {
+            ke[i][j] = local_ke[i][j];
+        }
+    }
+
+    return FEM_SUCCESS;
+}
+
 /* Initialize Q4 element module */
 fem_error_t q4_initialize(void)
 {
@@ -48,7 +74,7 @@ fem_error_t q4_register(void)
         .init = q4_initialize,
         .shape_functions = NULL,  /* Complex signature, handled directly */
         .jacobian = NULL,         /* Complex signature, handled directly */
-        .stiffness = q4_element_stiffness,
+        .stiffness = q4_element_stiffness_adapter,
         .stress = q4_element_stress,
         .validate = q4_validate_element
     };
