@@ -6,6 +6,7 @@
  */
 
 #include "../common/types.h"
+#include "../mbd/system2d.h"
 #include <stdio.h>
 
 /* Input file format types */
@@ -26,7 +27,14 @@ typedef struct {
 } input_control_t;
 
 /* Main input functions */
+const char *input_mbd_primary_directives_csv(void);
+const char *input_mbd_optional_geometry_directives_csv(void);
 fem_error_t input_read_data(const char *filename);
+fem_error_t input_read_mbd_body_directives(const char *filename,
+                                           mbd_system2d_t *system,
+                                           int *saw_mbd_entry,
+                                           int *first_mbd_line);
+fem_error_t input_read_coupled_directives(const char *filename);
 fem_error_t input_open_file(input_control_t *input, const char *filename);
 fem_error_t input_close_file(input_control_t *input);
 fem_error_t input_detect_format(input_control_t *input);
