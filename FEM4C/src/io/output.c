@@ -223,7 +223,8 @@ fem_error_t output_write_displacements(output_control_t *output)
     
     fprintf(output->file_ptr, "Nodal Displacements:\n");
     fprintf(output->file_ptr, "====================\n");
-    fprintf(output->file_ptr, "Node      UX           UY           UZ\n");
+    fprintf(output->file_ptr, "Node      UX           UY           %s\n",
+            (g_fem_dof_per_node >= 3) ? "RZ" : "UZ");
     fprintf(output->file_ptr, "----  -----------  -----------  -----------\n");
     
     for (i = 0; i < g_num_nodes; i++) {
@@ -278,6 +279,19 @@ fem_error_t output_write_reactions(output_control_t *output)
 /* Write analysis summary */
 fem_error_t output_write_summary(output_control_t *output)
 {
+    int has_dynamic_step_summary = 0;
+
+    if (g_analysis.fem_solver_mode == FEM_SOLVER_MODE_IMPLICIT_ONEWAY_NEWMARK ||
+        g_analysis.fem_solver_mode == FEM_SOLVER_MODE_EXPLICIT_ONEWAY_CENTRAL_DIFFERENCE ||
+        g_solver_info.step_dt > 0.0 ||
+        g_solver_info.step_outer_iterations > 0 ||
+        g_solver_info.step_linear_iterations > 0 ||
+        g_solver_info.step_retry_count > 0 ||
+        g_solver_info.step_converged ||
+        g_solver_info.step_converged_after_retry) {
+        has_dynamic_step_summary = 1;
+    }
+
     fprintf(output->file_ptr, "Analysis Summary:\n");
     fprintf(output->file_ptr, "=================\n");
     
@@ -285,9 +299,27 @@ fem_error_t output_write_summary(output_control_t *output)
     fprintf(output->file_ptr, "  Iterations:     %d\n", g_solver_info.iterations);
     fprintf(output->file_ptr, "  Final residual: %e\n", g_solver_info.residual);
     fprintf(output->file_ptr, "  Elapsed time:   %.3f sec\n", g_solver_info.elapsed_time);
-    fprintf(output->file_ptr, "  Status:         %s\n", 
+    fprintf(output->file_ptr, "  Status:         %s\n",
             (g_solver_info.status == FEM_SUCCESS) ? "SUCCESS" : "ERROR");
-    
+
+    if (has_dynamic_step_summary) {
+        fprintf(output->file_ptr, "  Step Index:     %d\n", g_solver_info.step_index);
+        fprintf(output->file_ptr, "  Step dt:        %e\n", g_solver_info.step_dt);
+        fprintf(output->file_ptr, "  Load Scale:     %e\n", g_solver_info.step_load_scale);
+        fprintf(output->file_ptr, "  Outer Iterations: %d\n", g_solver_info.step_outer_iterations);
+        fprintf(output->file_ptr, "  Linear Iterations: %d\n", g_solver_info.step_linear_iterations);
+        fprintf(output->file_ptr, "  Retry Count:    %d\n", g_solver_info.step_retry_count);
+        fprintf(output->file_ptr, "  Converged:      %s\n", g_solver_info.step_converged ? "true" : "false");
+        fprintf(output->file_ptr, "  Converged After Retry: %s\n",
+                g_solver_info.step_converged_after_retry ? "true" : "false");
+        fprintf(output->file_ptr, "  Outer Metric:   %e\n", g_solver_info.step_outer_metric);
+    }
+    fprintf(output->file_ptr, "  Friction Active Rows: %d\n", g_solver_info.friction_active_row_count);
+    fprintf(output->file_ptr, "  Friction Stick Rows: %d\n", g_solver_info.friction_stick_row_count);
+    fprintf(output->file_ptr, "  Friction Slip Rows: %d\n", g_solver_info.friction_slip_row_count);
+    fprintf(output->file_ptr, "  Friction Max |Ft|: %e\n", g_solver_info.friction_max_abs_ft_t_n);
+    fprintf(output->file_ptr, "  Friction Max |Ut_rel|: %e\n", g_solver_info.friction_max_abs_ut_rel_m);
+
     fprintf(output->file_ptr, "\nMaterial Properties:\n");
     for (int i = 0; i < g_num_materials; i++) {
         fprintf(output->file_ptr, "  Material %d:\n", i+1);
@@ -566,10 +598,10 @@ fem_error_t output_write_nastran_f06_displacements(output_control_t *output)
             i + 1,                     /* Node ID (1-based) */
             g_node_displ[i][0],        /* T1 (X displacement) */
             g_node_displ[i][1],        /* T2 (Y displacement) */
-            g_node_displ[i][2],        /* T3 (Z displacement) */
+            0.0,                       /* T3 (unused in shell-2D mainline) */
             0.0,                       /* R1 (X rotation) */
             0.0,                       /* R2 (Y rotation) */
-            0.0);                      /* R3 (Z rotation) */
+            g_node_displ[i][2]);       /* R3 (Z rotation) */
     }
 
     fprintf(output->file_ptr, "\n");
@@ -646,13 +678,17 @@ fem_error_t output_write_nastran_f06_forces(output_control_t *output)
     for (i = 0; i < g_num_nodes; i++) {
         if (g_node_bc_flags[i][0] || g_node_bc_flags[i][1] || g_node_bc_flags[i][2]) {
             double rx = 0.0, ry = 0.0, rz = 0.0;
+            int base = i * g_fem_dof_per_node;
 
             if (ku != NULL) {
                 if (g_node_bc_flags[i][0]) {
-                    rx = ku[i * 2] - g_global_force[i * 2];
+                    rx = ku[base] - g_global_force[base];
                 }
                 if (g_node_bc_flags[i][1]) {
-                    ry = ku[i * 2 + 1] - g_global_force[i * 2 + 1];
+                    ry = ku[base + 1] - g_global_force[base + 1];
+                }
+                if (g_fem_dof_per_node >= 3 && g_node_bc_flags[i][2]) {
+                    rz = ku[base + 2] - g_global_force[base + 2];
                 }
             }
 
@@ -661,10 +697,10 @@ fem_error_t output_write_nastran_f06_forces(output_control_t *output)
                 i + 1,
                 rx,
                 ry,
-                rz,
                 0.0,
                 0.0,
-                0.0);
+                0.0,
+                rz);
         }
     }
 
