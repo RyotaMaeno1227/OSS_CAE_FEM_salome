@@ -15,6 +15,32 @@ fem_error_t t3_initialize(void)
     return FEM_SUCCESS;
 }
 
+static fem_error_t t3_element_stiffness_adapter(
+    int element_id,
+    double ke[][MAX_DOF_PER_NODE * MAX_NODES_PER_ELEMENT])
+{
+    double local_ke[T3_TOTAL_DOF][T3_TOTAL_DOF];
+    fem_error_t err = t3_element_stiffness(element_id, local_ke);
+
+    if (err != FEM_SUCCESS) {
+        return err;
+    }
+
+    for (int i = 0; i < MAX_DOF_PER_NODE * MAX_NODES_PER_ELEMENT; i++) {
+        for (int j = 0; j < MAX_DOF_PER_NODE * MAX_NODES_PER_ELEMENT; j++) {
+            ke[i][j] = ZERO;
+        }
+    }
+
+    for (int i = 0; i < T3_TOTAL_DOF; i++) {
+        for (int j = 0; j < T3_TOTAL_DOF; j++) {
+            ke[i][j] = local_ke[i][j];
+        }
+    }
+
+    return FEM_SUCCESS;
+}
+
 /* Register T3 element with element base system */
 fem_error_t t3_register(void)
 {
@@ -31,7 +57,7 @@ fem_error_t t3_register(void)
         .init = t3_initialize,
         .shape_functions = NULL,  /* Complex signature, handled directly */
         .jacobian = NULL,         /* Complex signature, handled directly */
-        .stiffness = t3_element_stiffness,
+        .stiffness = t3_element_stiffness_adapter,
         .stress = t3_element_stress,
         .validate = t3_validate_element
     };
@@ -184,11 +210,16 @@ fem_error_t t3_strain_displacement_matrix(int element_id, double xi, double eta,
 /* Calculate T3 element stiffness matrix */
 fem_error_t t3_element_stiffness(int element_id, double ke[T3_TOTAL_DOF][T3_TOTAL_DOF])
 {
+    fem_error_t error;
+
     if (element_id < 0 || element_id >= g_num_elements) {
         error_set(FEM_ERROR_INVALID_INPUT, "t3_element_stiffness",
                      "Invalid element ID");
         return FEM_ERROR_INVALID_INPUT;
     }
+
+    error = t3_validate_element(element_id);
+    if (error != FEM_SUCCESS) return error;
 
     /* Initialize stiffness matrix to zero */
     for (int i = 0; i < T3_TOTAL_DOF; i++) {
@@ -212,7 +243,7 @@ fem_error_t t3_element_stiffness(int element_id, double ke[T3_TOTAL_DOF][T3_TOTA
 
     /* Get material matrix */
     double D[T3_STRAIN_COMPONENTS][T3_STRAIN_COMPONENTS];
-    fem_error_t error = element_2d_material_matrix_plane_stress(material_id, D);
+    error = element_2d_material_matrix_plane_stress(material_id, D);
     if (error != FEM_SUCCESS) return error;
 
     /* Calculate B matrix */
@@ -236,6 +267,55 @@ fem_error_t t3_element_stiffness(int element_id, double ke[T3_TOTAL_DOF][T3_TOTA
                 }
             }
         }
+    }
+
+    return FEM_SUCCESS;
+}
+
+fem_error_t t3_element_shell_stiffness(int element_id,
+                                       double ke[MAX_ELEMENT_DOF][MAX_ELEMENT_DOF])
+{
+    double membrane_ke[T3_TOTAL_DOF][T3_TOTAL_DOF];
+    double diagonal_sum = 0.0;
+    double drilling_stiffness = 0.0;
+    fem_error_t err;
+
+    err = t3_element_stiffness(element_id, membrane_ke);
+    if (err != FEM_SUCCESS) {
+        return err;
+    }
+
+    for (int i = 0; i < MAX_ELEMENT_DOF; ++i) {
+        for (int j = 0; j < MAX_ELEMENT_DOF; ++j) {
+            ke[i][j] = 0.0;
+        }
+    }
+
+    for (int node_i = 0; node_i < T3_NODES_PER_ELEMENT; ++node_i) {
+        int shell_i = node_i * T3_SHELL_DOF_PER_NODE;
+        int membrane_i = node_i * T3_DOF_PER_NODE;
+        for (int node_j = 0; node_j < T3_NODES_PER_ELEMENT; ++node_j) {
+            int shell_j = node_j * T3_SHELL_DOF_PER_NODE;
+            int membrane_j = node_j * T3_DOF_PER_NODE;
+            for (int a = 0; a < T3_DOF_PER_NODE; ++a) {
+                for (int b = 0; b < T3_DOF_PER_NODE; ++b) {
+                    ke[shell_i + a][shell_j + b] =
+                        membrane_ke[membrane_i + a][membrane_j + b];
+                }
+            }
+        }
+    }
+
+    for (int i = 0; i < T3_TOTAL_DOF; ++i) {
+        diagonal_sum += fabs(membrane_ke[i][i]);
+    }
+    drilling_stiffness = (diagonal_sum > 0.0)
+        ? g_shell_k6rot * (diagonal_sum / (double)T3_TOTAL_DOF)
+        : fabs(g_shell_k6rot);
+
+    for (int node = 0; node < T3_NODES_PER_ELEMENT; ++node) {
+        int rz = node * T3_SHELL_DOF_PER_NODE + 2;
+        ke[rz][rz] += drilling_stiffness;
     }
 
     return FEM_SUCCESS;

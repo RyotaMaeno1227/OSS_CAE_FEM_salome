@@ -40,6 +40,8 @@ fem_error_t t3_strain_displacement_matrix(int element_id, double xi, double eta,
 /* Element stiffness matrix */
 fem_error_t t3_element_stiffness(int element_id,
                                 double ke[T3_TOTAL_DOF][T3_TOTAL_DOF]);
+fem_error_t t3_element_shell_stiffness(int element_id,
+                                       double ke[MAX_ELEMENT_DOF][MAX_ELEMENT_DOF]);
 
 /* Element stress calculation */
 fem_error_t t3_element_stress(int element_id,
