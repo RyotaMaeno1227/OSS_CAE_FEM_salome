@@ -39,6 +39,13 @@ static fem_error_t assembly_apply_traction_loads(void);
 static fem_error_t assembly_apply_traction_surface(int surface_index);
 static fem_error_t assembly_apply_pressure_loads(void);
 static fem_error_t assembly_apply_pressure_surface(int surface_index);
+static fem_error_t assembly_apply_pressure_surface_t3(int surface_index);
+static fem_error_t assembly_apply_pressure_surface_t6(int surface_index);
+static fem_error_t assembly_accumulate_quadratic_edge_pressure(
+    const double edge_coords[3][2],
+    double pressure,
+    const int target_local_indices[3],
+    double *fe_local);
 static fem_error_t assembly_prepare_global_system(void);
 static fem_error_t assembly_build_stiffness_profile(void);
 static void assembly_zero_stiffness_matrix(void);
@@ -47,11 +54,82 @@ static double assembly_matrix_get_value(int row, int col);
 static fem_error_t assembly_matrix_set_value(int row, int col, double value);
 static fem_error_t assembly_matrix_add_value(int row, int col, double value);
 static fem_error_t assembly_collect_element_dofs(int element_id, int *dof_map, int *dof_count);
+static int assembly_element_dof_per_node(int element_type);
+static int assembly_element_node_count(int element_type);
+static int assembly_element_total_dof(int element_type);
+static fem_error_t assembly_fill_element_dof_map(int element_id, int *dof_map);
+static double assembly_get_element_thickness(int element_id);
+static fem_error_t assembly_compute_element_area(int element_id, double *area_out);
+static fem_error_t assembly_compute_element_area_t6(int element_id, double *area_out);
+static fem_error_t assembly_compute_element_area_t3(int element_id, double *area_out);
+static fem_error_t assembly_compute_element_area_q4(int element_id, double *area_out);
+
+static int assembly_element_dof_per_node(int element_type)
+{
+    switch (element_type) {
+        case ELEMENT_T6:
+            return (g_fem_dof_per_node == 3) ? T6_SHELL_DOF_PER_NODE : T6_DOF_PER_NODE;
+        case ELEMENT_T3:
+            return (g_fem_dof_per_node == 3) ? T3_SHELL_DOF_PER_NODE : T3_DOF_PER_NODE;
+        case ELEMENT_Q4:
+            return Q4_DOF_PER_NODE;
+        default:
+            return 0;
+    }
+}
+
+static int assembly_element_node_count(int element_type)
+{
+    switch (element_type) {
+        case ELEMENT_T6:
+            return T6_NODES_PER_ELEMENT;
+        case ELEMENT_T3:
+            return T3_NODES_PER_ELEMENT;
+        case ELEMENT_Q4:
+            return Q4_NODES_PER_ELEMENT;
+        default:
+            return 0;
+    }
+}
+
+static int assembly_element_total_dof(int element_type)
+{
+    return assembly_element_node_count(element_type) *
+           assembly_element_dof_per_node(element_type);
+}
+
+static fem_error_t assembly_fill_element_dof_map(int element_id, int *dof_map)
+{
+    int element_type;
+    int node_count;
+    int dof_per_node;
+
+    CHECK_BOUNDS(element_id, g_num_elements, "Element ID");
+
+    element_type = g_element_type[element_id];
+    node_count = assembly_element_node_count(element_type);
+    dof_per_node = assembly_element_dof_per_node(element_type);
+    if (node_count <= 0 || dof_per_node <= 0) {
+        return error_set(FEM_ERROR_INVALID_ELEMENT_TYPE,
+                         "Unsupported element type %d in DOF map",
+                         element_type);
+    }
+
+    for (int i = 0; i < node_count; ++i) {
+        int node_id = g_element_nodes[element_id][i];
+        CHECK_BOUNDS(node_id, g_num_nodes, "Node ID");
+        for (int j = 0; j < dof_per_node; ++j) {
+            dof_map[i * dof_per_node + j] = node_id * g_fem_dof_per_node + j;
+        }
+    }
+
+    return FEM_SUCCESS;
+}
 
 static fem_error_t assembly_prepare_global_system(void)
 {
     fem_error_t err;
-    int expected_dof = g_total_dof > 0 ? g_total_dof : g_num_nodes * 2;
+    int expected_dof = g_total_dof > 0 ? g_total_dof : g_num_nodes * g_fem_dof_per_node;
 
     err = globals_allocate_system_arrays(expected_dof);
     CHECK_ERROR(err);
@@ -88,7 +166,7 @@ static fem_error_t assembly_build_stiffness_profile(void)
         g_stiffness_profile[i] = i;
     }
 
-    int dof_map[T6_TOTAL_DOF];
+    int dof_map[MAX_ELEMENT_DOF];
     int dof_count = 0;
     for (int element_id = 0; element_id < g_num_elements; element_id++) {
         err = assembly_collect_element_dofs(element_id, dof_map, &dof_count);
@@ -244,33 +322,13 @@ static fem_error_t assembly_matrix_add_value(int row, int col, double value)
 
 static fem_error_t assembly_collect_element_dofs(int element_id, int *dof_map, int *dof_count)
 {
-    switch (g_element_type[element_id]) {
-        case ELEMENT_T6:
-            *dof_count = T6_TOTAL_DOF;
-            return assembly_get_element_dof_map(element_id, dof_map);
-        case ELEMENT_T3:
-            *dof_count = T3_TOTAL_DOF;
-            for (int i = 0; i < T3_NODES_PER_ELEMENT; i++) {
-                int node_index = g_element_nodes[element_id][i];
-                CHECK_BOUNDS(node_index, g_num_nodes, "Node ID");
-                dof_map[2 * i]     = node_index * 2;
-                dof_map[2 * i + 1] = node_index * 2 + 1;
-            }
-            return FEM_SUCCESS;
-        case ELEMENT_Q4:
-            *dof_count = Q4_TOTAL_DOF;
-            for (int i = 0; i < Q4_NODES_PER_ELEMENT; i++) {
-                int node_index = g_element_nodes[element_id][i];
-                CHECK_BOUNDS(node_index, g_num_nodes, "Node ID");
-                dof_map[2 * i]     = node_index * 2;
-                dof_map[2 * i + 1] = node_index * 2 + 1;
-            }
-            return FEM_SUCCESS;
-        default:
-            return error_set(FEM_ERROR_INVALID_ELEMENT_TYPE,
-                             "Unsupported element type %d in skyline profile build",
-                             g_element_type[element_id]);
+    *dof_count = assembly_element_total_dof(g_element_type[element_id]);
+    if (*dof_count <= 0) {
+        return error_set(FEM_ERROR_INVALID_ELEMENT_TYPE,
+                         "Unsupported element type %d in skyline profile build",
+                         g_element_type[element_id]);
     }
+    return assembly_fill_element_dof_map(element_id, dof_map);
 }
 
 /* Clear global arrays */
@@ -293,10 +351,147 @@ fem_error_t assembly_clear_global_arrays(void)
     return FEM_SUCCESS;
 }
 
+fem_error_t assembly_add_lumped_mass_scaled_to_stiffness(double mass_scale)
+{
+    fem_error_t err;
+    double *mass_diag = NULL;
+
+    if (!g_global_stiffness_values || g_total_dof <= 0) {
+        return error_set(FEM_ERROR_INVALID_INPUT,
+                         "Global stiffness matrix must be assembled before adding lumped mass");
+    }
+
+    mass_diag = calloc((size_t)g_total_dof, sizeof(double));
+    if (!mass_diag) {
+        return error_set(FEM_ERROR_MEMORY_ALLOCATION,
+                         "Failed to allocate lumped mass diagonal buffer");
+    }
+
+    err = assembly_build_lumped_mass_diagonal(mass_diag);
+    CHECK_ERROR_CLEANUP(err, free(mass_diag));
+
+    for (int dof = 0; dof < g_total_dof; ++dof) {
+        err = assembly_matrix_add_value(dof, dof, mass_scale * mass_diag[dof]);
+        CHECK_ERROR_CLEANUP(err, free(mass_diag));
+    }
+
+    free(mass_diag);
+    return FEM_SUCCESS;
+}
+
+fem_error_t assembly_add_lumped_mass_times_vector_to_force(const double *vector,
+                                                          double scale)
+{
+    fem_error_t err;
+    double *mass_diag = NULL;
+
+    CHECK_NULL(vector, "lumped mass vector");
+
+    if (!g_global_force || g_total_dof <= 0) {
+        return error_set(FEM_ERROR_INVALID_INPUT,
+                         "Global force vector must be assembled before adding lumped mass history RHS");
+    }
+
+    mass_diag = calloc((size_t)g_total_dof, sizeof(double));
+    if (!mass_diag) {
+        return error_set(FEM_ERROR_MEMORY_ALLOCATION,
+                         "Failed to allocate lumped mass diagonal buffer");
+    }
+
+    err = assembly_build_lumped_mass_diagonal(mass_diag);
+    CHECK_ERROR_CLEANUP(err, free(mass_diag));
+
+    for (int dof = 0; dof < g_total_dof; ++dof) {
+        g_global_force[dof] += scale * mass_diag[dof] * vector[dof];
+    }
+
+    free(mass_diag);
+    return FEM_SUCCESS;
+}
+
+fem_error_t assembly_build_lumped_mass_diagonal(double *mass_diag)
+{
+    fem_error_t err;
+
+    CHECK_NULL(mass_diag, "lumped mass diagonal");
+
+    if (g_fem_dof_per_node != 2) {
+        return error_set(FEM_ERROR_INVALID_INPUT,
+                         "lumped mass first cut: shell / 3 dof node is not supported yet; require 2 dof per node");
+    }
+
+    if (g_total_dof <= 0) {
+        return error_set(FEM_ERROR_INVALID_INPUT,
+                         "Global DOF must be initialized before building lumped mass diagonal");
+    }
+
+    for (int dof = 0; dof < g_total_dof; ++dof) {
+        mass_diag[dof] = 0.0;
+    }
+
+    for (int element_id = 0; element_id < g_num_elements; ++element_id) {
+        int element_type = g_element_type[element_id];
+        int node_count = assembly_element_node_count(element_type);
+        int dof_map[MAX_ELEMENT_DOF];
+        double area = 0.0;
+        double rho = 0.0;
+        double thickness = 0.0;
+        double total_mass = 0.0;
+        double nodal_mass = 0.0;
+        int material_id = g_element_material[element_id];
+
+        switch (element_type) {
+            case ELEMENT_T3:
+            case ELEMENT_T6:
+            case ELEMENT_Q4:
+                break;
+            default:
+                return error_set(FEM_ERROR_INVALID_ELEMENT_TYPE,
+                                 "lumped mass first cut: unsupported element type %d in element %d",
+                                 element_type,
+                                 element_id + 1);
+        }
+
+        if (node_count <= 0) {
+            return error_set(FEM_ERROR_INVALID_ELEMENT_TYPE,
+                             "lumped mass first cut: invalid node count for element %d",
+                             element_id + 1);
+        }
+
+        err = assembly_compute_element_area(element_id, &area);
+        CHECK_ERROR(err);
+
+        if (material_id < 0 || material_id >= g_num_materials) {
+            return error_set(FEM_ERROR_INVALID_MATERIAL,
+                             "lumped mass first cut: invalid material index %d for element %d",
+                             material_id + 1,
+                             element_id + 1);
+        }
+
+        rho = g_material_props[material_id][3];
+        thickness = assembly_get_element_thickness(element_id);
+        total_mass = rho * thickness * area;
+        nodal_mass = total_mass / (double)node_count;
+
+        err = assembly_fill_element_dof_map(element_id, dof_map);
+        CHECK_ERROR(err);
+
+        for (int node_index = 0; node_index < node_count; ++node_index) {
+            int ux_dof = dof_map[node_index * g_fem_dof_per_node];
+            int uy_dof = dof_map[node_index * g_fem_dof_per_node + 1];
+
+            mass_diag[ux_dof] += nodal_mass;
+            mass_diag[uy_dof] += nodal_mass;
+        }
+    }
+
+    return FEM_SUCCESS;
+}
+
 /* Assemble global stiffness matrix */
 fem_error_t assembly_global_stiffness_matrix(void)
 {
-    double ke[T6_TOTAL_DOF][T6_TOTAL_DOF];
+    double ke[MAX_ELEMENT_DOF][MAX_ELEMENT_DOF];
     int element_id;
     fem_error_t err;
 
@@ -313,21 +508,68 @@ fem_error_t assembly_global_stiffness_matrix(void)
     /* Loop over all elements */
     for (element_id = 0; element_id < g_num_elements; element_id++) {
         if (g_element_type[element_id] == ELEMENT_T6) {
-            err = t6_element_stiffness_matrix(element_id, ke);
+            for (int i = 0; i < MAX_ELEMENT_DOF; ++i) {
+                for (int j = 0; j < MAX_ELEMENT_DOF; ++j) {
+                    ke[i][j] = 0.0;
+                }
+            }
+            if (g_fem_dof_per_node == 3) {
+                err = t6_element_shell_stiffness_matrix(element_id, ke);
+            } else {
+                double ke_mem[T6_TOTAL_DOF][T6_TOTAL_DOF];
+                err = t6_element_stiffness_matrix(element_id, ke_mem);
+                if (err == FEM_SUCCESS) {
+                    for (int i = 0; i < T6_TOTAL_DOF; ++i) {
+                        for (int j = 0; j < T6_TOTAL_DOF; ++j) {
+                            ke[i][j] = ke_mem[i][j];
+                        }
+                    }
+                }
+            }
             CHECK_ERROR(err);
 
             err = assembly_add_element_stiffness(element_id, ke);
             CHECK_ERROR(err);
         } else if (g_element_type[element_id] == ELEMENT_T3) {
-            double ke_t3[T3_TOTAL_DOF][T3_TOTAL_DOF];
-            err = t3_element_stiffness(element_id, ke_t3);
+            double ke_t3[MAX_ELEMENT_DOF][MAX_ELEMENT_DOF];
+            for (int i = 0; i < MAX_ELEMENT_DOF; ++i) {
+                for (int j = 0; j < MAX_ELEMENT_DOF; ++j) {
+                    ke_t3[i][j] = 0.0;
+                }
+            }
+            if (g_fem_dof_per_node == 3) {
+                err = t3_element_shell_stiffness(element_id, ke_t3);
+            } else {
+                double ke_mem[T3_TOTAL_DOF][T3_TOTAL_DOF];
+                err = t3_element_stiffness(element_id, ke_mem);
+                if (err == FEM_SUCCESS) {
+                    for (int i = 0; i < T3_TOTAL_DOF; ++i) {
+                        for (int j = 0; j < T3_TOTAL_DOF; ++j) {
+                            ke_t3[i][j] = ke_mem[i][j];
+                        }
+                    }
+                }
+            }
             CHECK_ERROR(err);
 
             err = assembly_add_element_stiffness_t3(element_id, ke_t3);
             CHECK_ERROR(err);
         } else if (g_element_type[element_id] == ELEMENT_Q4) {
-            double ke_q4[Q4_TOTAL_DOF][Q4_TOTAL_DOF];
-            err = q4_element_stiffness(element_id, ke_q4);
+            double ke_q4[MAX_ELEMENT_DOF][MAX_ELEMENT_DOF];
+            double ke_mem[Q4_TOTAL_DOF][Q4_TOTAL_DOF];
+            for (int i = 0; i < MAX_ELEMENT_DOF; ++i) {
+                for (int j = 0; j < MAX_ELEMENT_DOF; ++j) {
+                    ke_q4[i][j] = 0.0;
+                }
+            }
+            err = q4_element_stiffness(element_id, ke_mem);
+            if (err == FEM_SUCCESS) {
+                for (int i = 0; i < Q4_TOTAL_DOF; ++i) {
+                    for (int j = 0; j < Q4_TOTAL_DOF; ++j) {
+                        ke_q4[i][j] = ke_mem[i][j];
+                    }
+                }
+            }
             CHECK_ERROR(err);
 
             err = assembly_add_element_stiffness_q4(element_id, ke_q4);
@@ -348,6 +590,7 @@ fem_error_t assembly_global_force_vector(void)
 {
     int node_id, dof;
     double total_force = 0.0;
+    double load_scale = g_fem_static_current_load_scale;
 
     printf("Assembling global force vector...\n");
 
@@ -362,10 +605,10 @@ fem_error_t assembly_global_force_vector(void)
 
     /* Add nodal forces */
     for (node_id = 0; node_id < g_num_nodes; node_id++) {
-        for (dof = 0; dof < 2; dof++) { /* 2D problem */
-            int global_dof = node_id * 2 + dof;
+        for (dof = 0; dof < g_fem_dof_per_node; dof++) {
+            int global_dof = node_id * g_fem_dof_per_node + dof;
             if (global_dof < g_total_dof && fabs(g_node_force[node_id][dof]) > 0.0) {
-                g_global_force[global_dof] += g_node_force[node_id][dof];
+                g_global_force[global_dof] += g_node_force[node_id][dof] * load_scale;
             }
         }
     }
@@ -402,9 +645,10 @@ fem_error_t assembly_global_force_vector(void)
 
 /* Add element stiffness matrix to global matrix */
 fem_error_t assembly_add_element_stiffness(int element_id, 
-                                          double ke[T6_TOTAL_DOF][T6_TOTAL_DOF])
+                                          double ke[MAX_ELEMENT_DOF][MAX_ELEMENT_DOF])
 {
-    int dof_map[T6_TOTAL_DOF];
+    int dof_map[MAX_ELEMENT_DOF];
+    int dof_count = assembly_element_total_dof(g_element_type[element_id]);
     fem_error_t err;
 
     err = assembly_get_element_dof_map(element_id, dof_map);
@@ -413,7 +657,7 @@ fem_error_t assembly_add_element_stiffness(int element_id,
     static int assembly_debug = 0;
     if (!assembly_debug) {
         printf("  DOF mapping for element %d: ", element_id);
-        for (int i = 0; i < T6_TOTAL_DOF; i++) {
+        for (int i = 0; i < dof_count; i++) {
             printf("%d ", dof_map[i]);
         }
         printf("\n  Element stiffness matrix sample:\n");
@@ -427,12 +671,12 @@ fem_error_t assembly_add_element_stiffness(int element_id,
         assembly_debug = 1;
     }
 
-    for (int i = 0; i < T6_TOTAL_DOF; i++) {
+    for (int i = 0; i < dof_count; i++) {
         int global_i = dof_map[i];
         if (global_i < 0 || global_i >= g_total_dof) {
             continue;
         }
-        for (int j = i; j < T6_TOTAL_DOF; j++) {
+        for (int j = i; j < dof_count; j++) {
             int global_j = dof_map[j];
             if (global_j < 0 || global_j >= g_total_dof) {
                 continue;
@@ -446,22 +690,9 @@ fem_error_t assembly_add_element_stiffness(int element_id,
 }
 
 /* Get DOF mapping for element */
-fem_error_t assembly_get_element_dof_map(int element_id, int dof_map[T6_TOTAL_DOF])
+fem_error_t assembly_get_element_dof_map(int element_id, int dof_map[MAX_ELEMENT_DOF])
 {
-    int i, node_id;
-    
-    CHECK_BOUNDS(element_id, g_num_elements, "Element ID");
-    
-    /* Map element DOFs to global DOFs */
-    for (i = 0; i < T6_NODES_PER_ELEMENT; i++) {
-        node_id = g_element_nodes[element_id][i];
-        CHECK_BOUNDS(node_id, g_num_nodes, "Node ID");
-        
-        dof_map[2*i]     = node_id * 2;     /* u displacement */
-        dof_map[2*i + 1] = node_id * 2 + 1; /* v displacement */
-    }
-    
-    return FEM_SUCCESS;
+    return assembly_fill_element_dof_map(element_id, dof_map);
 }
 
 /* Get global DOF index */
@@ -470,7 +701,7 @@ fem_error_t assembly_get_global_dof_index(int node_id, int local_dof)
     CHECK_BOUNDS(node_id, g_num_nodes, "Node ID");
     CHECK_BOUNDS(local_dof, 3, "Local DOF");
     
-    return node_id * 2 + local_dof; /* 2D problem */
+    return node_id * g_fem_dof_per_node + local_dof;
 }
 
 /* Apply boundary conditions */
@@ -486,12 +717,14 @@ fem_error_t assembly_apply_boundary_conditions(void)
     }
 
     for (node_id = 0; node_id < g_num_nodes; node_id++) {
-        for (dof = 0; dof < 2; dof++) { /* 2D problem */
+        for (dof = 0; dof < g_fem_dof_per_node; dof++) {
             if (g_node_bc_flags[node_id][dof] == 1) {
-                global_dof = node_id * 2 + dof;
+                global_dof = node_id * g_fem_dof_per_node + dof;
 
                 if (global_dof < g_total_dof) {
-                    double prescribed_value = g_node_displ[node_id][dof];
+                    double prescribed_base_value =
+                        g_node_bc_values ? g_node_bc_values[node_id][dof] : g_node_displ[node_id][dof];
+                    double prescribed_value = prescribed_base_value * g_fem_static_current_load_scale;
                     double original_diag = assembly_matrix_get_value(global_dof, global_dof);
 
                     for (i = 0; i < g_total_dof; i++) {
@@ -609,24 +842,71 @@ fem_error_t assembly_parallel_stiffness_matrix(void)
 
         switch (g_element_type[element_id]) {
             case ELEMENT_T6: {
-                double ke[T6_TOTAL_DOF][T6_TOTAL_DOF];
-                local_err = t6_element_stiffness_matrix(element_id, ke);
+                double ke[MAX_ELEMENT_DOF][MAX_ELEMENT_DOF];
+                for (int i = 0; i < MAX_ELEMENT_DOF; ++i) {
+                    for (int j = 0; j < MAX_ELEMENT_DOF; ++j) {
+                        ke[i][j] = 0.0;
+                    }
+                }
+                if (g_fem_dof_per_node == 3) {
+                    local_err = t6_element_shell_stiffness_matrix(element_id, ke);
+                } else {
+                    double ke_mem[T6_TOTAL_DOF][T6_TOTAL_DOF];
+                    local_err = t6_element_stiffness_matrix(element_id, ke_mem);
+                    if (local_err == FEM_SUCCESS) {
+                        for (int i = 0; i < T6_TOTAL_DOF; ++i) {
+                            for (int j = 0; j < T6_TOTAL_DOF; ++j) {
+                                ke[i][j] = ke_mem[i][j];
+                            }
+                        }
+                    }
+                }
                 if (local_err == FEM_SUCCESS) {
                     local_err = assembly_add_element_stiffness(element_id, ke);
                 }
                 break;
             }
             case ELEMENT_T3: {
-                double ke[T3_TOTAL_DOF][T3_TOTAL_DOF];
-                local_err = t3_element_stiffness(element_id, ke);
+                double ke[MAX_ELEMENT_DOF][MAX_ELEMENT_DOF];
+                for (int i = 0; i < MAX_ELEMENT_DOF; ++i) {
+                    for (int j = 0; j < MAX_ELEMENT_DOF; ++j) {
+                        ke[i][j] = 0.0;
+                    }
+                }
+                if (g_fem_dof_per_node == 3) {
+                    local_err = t3_element_shell_stiffness(element_id, ke);
+                } else {
+                    double ke_mem[T3_TOTAL_DOF][T3_TOTAL_DOF];
+                    local_err = t3_element_stiffness(element_id, ke_mem);
+                    if (local_err == FEM_SUCCESS) {
+                        for (int i = 0; i < T3_TOTAL_DOF; ++i) {
+                            for (int j = 0; j < T3_TOTAL_DOF; ++j) {
+                                ke[i][j] = ke_mem[i][j];
+                            }
+                        }
+                    }
+                }
                 if (local_err == FEM_SUCCESS) {
                     local_err = assembly_add_element_stiffness_t3(element_id, ke);
                 }
                 break;
             }
             case ELEMENT_Q4: {
-                double ke[Q4_TOTAL_DOF][Q4_TOTAL_DOF];
-                local_err = q4_element_stiffness(element_id, ke);
+                double ke[MAX_ELEMENT_DOF][MAX_ELEMENT_DOF];
+                double ke_mem[Q4_TOTAL_DOF][Q4_TOTAL_DOF];
+                for (int i = 0; i < MAX_ELEMENT_DOF; ++i) {
+                    for (int j = 0; j < MAX_ELEMENT_DOF; ++j) {
+                        ke[i][j] = 0.0;
+                    }
+                }
+                local_err = q4_element_stiffness(element_id, ke_mem);
+                if (local_err == FEM_SUCCESS) {
+                    for (int i = 0; i < Q4_TOTAL_DOF; ++i) {
+                        for (int j = 0; j < Q4_TOTAL_DOF; ++j) {
+                            ke[i][j] = ke_mem[i][j];
+                        }
+                    }
+                }
                 if (local_err == FEM_SUCCESS) {
                     local_err = assembly_add_element_stiffness_q4(element_id, ke);
                 }
@@ -651,24 +931,21 @@ fem_error_t assembly_parallel_stiffness_matrix(void)
 
 /* Add T3 element stiffness matrix to global stiffness matrix */
 fem_error_t assembly_add_element_stiffness_t3(int element_id,
-                                             double ke[T3_TOTAL_DOF][T3_TOTAL_DOF])
+                                             double ke[MAX_ELEMENT_DOF][MAX_ELEMENT_DOF])
 {
-    int dof_map[T3_TOTAL_DOF];
+    int dof_map[MAX_ELEMENT_DOF];
+    int dof_count = assembly_element_total_dof(g_element_type[element_id]);
     fem_error_t err = FEM_SUCCESS;
 
-    for (int i = 0; i < T3_NODES_PER_ELEMENT; i++) {
-        int node_id = g_element_nodes[element_id][i];
-        for (int j = 0; j < T3_DOF_PER_NODE; j++) {
-            dof_map[i * T3_DOF_PER_NODE + j] = node_id * 2 + j;
-        }
-    }
+    err = assembly_fill_element_dof_map(element_id, dof_map);
+    CHECK_ERROR(err);
 
-    for (int i = 0; i < T3_TOTAL_DOF; i++) {
+    for (int i = 0; i < dof_count; i++) {
         int global_i = dof_map[i];
         if (global_i < 0 || global_i >= g_total_dof) {
             continue;
         }
-        for (int j = i; j < T3_TOTAL_DOF; j++) {
+        for (int j = i; j < dof_count; j++) {
             int global_j = dof_map[j];
             if (global_j < 0 || global_j >= g_total_dof) {
                 continue;
@@ -683,24 +960,21 @@ fem_error_t assembly_add_element_stiffness_t3(int element_id,
 
 /* Add Q4 element stiffness matrix to global stiffness matrix */
 fem_error_t assembly_add_element_stiffness_q4(int element_id,
-                                             double ke[Q4_TOTAL_DOF][Q4_TOTAL_DOF])
+                                             double ke[MAX_ELEMENT_DOF][MAX_ELEMENT_DOF])
 {
-    int dof_map[Q4_TOTAL_DOF];
+    int dof_map[MAX_ELEMENT_DOF];
+    int dof_count = assembly_element_total_dof(g_element_type[element_id]);
     fem_error_t err = FEM_SUCCESS;
 
-    for (int i = 0; i < Q4_NODES_PER_ELEMENT; i++) {
-        int node_id = g_element_nodes[element_id][i];
-        for (int j = 0; j < Q4_DOF_PER_NODE; j++) {
-            dof_map[i * Q4_DOF_PER_NODE + j] = node_id * 2 + j;
-        }
-    }
+    err = assembly_fill_element_dof_map(element_id, dof_map);
+    CHECK_ERROR(err);
 
-    for (int i = 0; i < Q4_TOTAL_DOF; i++) {
+    for (int i = 0; i < dof_count; i++) {
         int global_i = dof_map[i];
         if (global_i < 0 || global_i >= g_total_dof) {
             continue;
         }
-        for (int j = i; j < Q4_TOTAL_DOF; j++) {
+        for (int j = i; j < dof_count; j++) {
             int global_j = dof_map[j];
             if (global_j < 0 || global_j >= g_total_dof) {
                 continue;
@@ -764,9 +1038,90 @@ static double assembly_get_element_thickness(int element_id)
     return thickness;
 }
 
+static fem_error_t assembly_compute_element_area(int element_id, double *area_out)
+{
+    CHECK_NULL(area_out, "element area output");
+
+    switch (g_element_type[element_id]) {
+        case ELEMENT_T6:
+            return assembly_compute_element_area_t6(element_id, area_out);
+        case ELEMENT_T3:
+            return assembly_compute_element_area_t3(element_id, area_out);
+        case ELEMENT_Q4:
+            return assembly_compute_element_area_q4(element_id, area_out);
+        default:
+            return error_set(FEM_ERROR_INVALID_ELEMENT_TYPE,
+                             "lumped mass first cut: unsupported element type %d in area computation",
+                             g_element_type[element_id]);
+    }
+}
+
+static fem_error_t assembly_compute_element_area_t6(int element_id, double *area_out)
+{
+    double J[2][2], det_J;
+    double area = 0.0;
+    fem_error_t err;
+
+    for (int gp = 0; gp < T6_GAUSS_POINTS; gp++) {
+        double xi = g_t6_gauss_points[gp][0];
+        double eta = g_t6_gauss_points[gp][1];
+        double weight = g_t6_gauss_weights[gp];
+
+        err = t6_jacobian_matrix(element_id, xi, eta, J, &det_J);
+        CHECK_ERROR(err);
+
+        area += weight * det_J;
+    }
+
+    *area_out = area;
+    return FEM_SUCCESS;
+}
+
+static fem_error_t assembly_compute_element_area_t3(int element_id, double *area_out)
+{
+    double J[2][2], det_J;
+    double area = 0.0;
+    fem_error_t err;
+
+    for (int gp = 0; gp < T3_GAUSS_POINTS; gp++) {
+        double xi = t3_body_force_points[gp][0];
+        double eta = t3_body_force_points[gp][1];
+        double weight = t3_body_force_weights[gp];
+
+        err = t3_jacobian_matrix(element_id, xi, eta, J, &det_J);
+        CHECK_ERROR(err);
+
+        area += weight * det_J;
+    }
+
+    *area_out = area;
+    return FEM_SUCCESS;
+}
+
+static fem_error_t assembly_compute_element_area_q4(int element_id, double *area_out)
+{
+    double J[2][2], det_J;
+    double area = 0.0;
+    fem_error_t err;
+
+    for (int gp = 0; gp < Q4_GAUSS_POINTS; gp++) {
+        double xi = g_q4_gauss_points[gp][0];
+        double eta = g_q4_gauss_points[gp][1];
+        double weight = g_q4_gauss_weights[gp];
+
+        err = q4_jacobian_matrix(element_id, xi, eta, J, &det_J);
+        CHECK_ERROR(err);
+
+        area += weight * det_J;
+    }
+
+    *area_out = area;
+    return FEM_SUCCESS;
+}
+
 static fem_error_t assembly_apply_body_force_t6(int element_id)
 {
-    double fe[T6_TOTAL_DOF] = {0.0};
+    double fe[MAX_ELEMENT_DOF] = {0.0};
     double N[T6_NODES_PER_ELEMENT];
     double J[2][2], det_J;
     fem_error_t err;
@@ -785,22 +1140,23 @@ static fem_error_t assembly_apply_body_force_t6(int element_id)
 
         double scale = weight * det_J * thickness;
         for (int i = 0; i < T6_NODES_PER_ELEMENT; i++) {
-            fe[2 * i]     += N[i] * g_body_force[0] * scale;
-            fe[2 * i + 1] += N[i] * g_body_force[1] * scale;
+            int base = i * assembly_element_dof_per_node(ELEMENT_T6);
+            fe[base]     += N[i] * g_body_force[0] * scale * g_fem_static_current_load_scale;
+            fe[base + 1] += N[i] * g_body_force[1] * scale * g_fem_static_current_load_scale;
         }
     }
 
-    int dof_map[T6_TOTAL_DOF];
+    int dof_map[MAX_ELEMENT_DOF];
     err = assembly_get_element_dof_map(element_id, dof_map);
     CHECK_ERROR(err);
 
-    assembly_accumulate_force(T6_TOTAL_DOF, dof_map, fe);
+    assembly_accumulate_force(assembly_element_total_dof(ELEMENT_T6), dof_map, fe);
     return FEM_SUCCESS;
 }
 
 static fem_error_t assembly_apply_body_force_t3(int element_id)
 {
-    double fe[T3_TOTAL_DOF] = {0.0};
+    double fe[MAX_ELEMENT_DOF] = {0.0};
     double N[T3_NODES_PER_ELEMENT];
     double J[2][2], det_J;
     fem_error_t err;
@@ -819,25 +1175,23 @@ static fem_error_t assembly_apply_body_force_t3(int element_id)
 
         double scale = weight * det_J * thickness;
         for (int i = 0; i < T3_NODES_PER_ELEMENT; i++) {
-            fe[2 * i]     += N[i] * g_body_force[0] * scale;
-            fe[2 * i + 1] += N[i] * g_body_force[1] * scale;
+            int base = i * assembly_element_dof_per_node(ELEMENT_T3);
+            fe[base]     += N[i] * g_body_force[0] * scale * g_fem_static_current_load_scale;
+            fe[base + 1] += N[i] * g_body_force[1] * scale * g_fem_static_current_load_scale;
         }
     }
 
-    int dof_map[T3_TOTAL_DOF];
-    for (int i = 0; i < T3_NODES_PER_ELEMENT; i++) {
-        int node_index = g_element_nodes[element_id][i];
-        dof_map[2 * i]     = node_index * 2;
-        dof_map[2 * i + 1] = node_index * 2 + 1;
-    }
+    int dof_map[MAX_ELEMENT_DOF];
+    err = assembly_fill_element_dof_map(element_id, dof_map);
+    CHECK_ERROR(err);
 
-    assembly_accumulate_force(T3_TOTAL_DOF, dof_map, fe);
+    assembly_accumulate_force(assembly_element_total_dof(ELEMENT_T3), dof_map, fe);
     return FEM_SUCCESS;
 }
 
 static fem_error_t assembly_apply_body_force_q4(int element_id)
 {
-    double fe[Q4_TOTAL_DOF] = {0.0};
+    double fe[MAX_ELEMENT_DOF] = {0.0};
     double N[Q4_NODES_PER_ELEMENT];
     double J[2][2], det_J;
     fem_error_t err;
@@ -856,19 +1210,17 @@ static fem_error_t assembly_apply_body_force_q4(int element_id)
 
         double scale = weight * det_J * thickness;
         for (int i = 0; i < Q4_NODES_PER_ELEMENT; i++) {
-            fe[2 * i]     += N[i] * g_body_force[0] * scale;
-            fe[2 * i + 1] += N[i] * g_body_force[1] * scale;
+            int base = i * assembly_element_dof_per_node(ELEMENT_Q4);
+            fe[base]     += N[i] * g_body_force[0] * scale * g_fem_static_current_load_scale;
+            fe[base + 1] += N[i] * g_body_force[1] * scale * g_fem_static_current_load_scale;
         }
     }
 
-    int dof_map[Q4_TOTAL_DOF];
-    for (int i = 0; i < Q4_NODES_PER_ELEMENT; i++) {
-        int node_index = g_element_nodes[element_id][i];
-        dof_map[2 * i]     = node_index * 2;
-        dof_map[2 * i + 1] = node_index * 2 + 1;
-    }
+    int dof_map[MAX_ELEMENT_DOF];
+    err = assembly_fill_element_dof_map(element_id, dof_map);
+    CHECK_ERROR(err);
 
-    assembly_accumulate_force(Q4_TOTAL_DOF, dof_map, fe);
+    assembly_accumulate_force(assembly_element_total_dof(ELEMENT_Q4), dof_map, fe);
     return FEM_SUCCESS;
 }
 
@@ -885,7 +1237,7 @@ static fem_error_t assembly_apply_traction_surface(int surface_index)
 {
     int node_indices[MAX_SURFACE_NODES];
     double coords[MAX_SURFACE_NODES][2];
-    double fe_local[MAX_SURFACE_NODES * 2] = {0.0};
+    double fe_local[MAX_SURFACE_NODES * MAX_DOF_PER_NODE] = {0.0};
 
     for (int i = 0; i < MAX_SURFACE_NODES; i++) {
         node_indices[i] = g_traction_surfaces[surface_index][i];
@@ -898,8 +1250,8 @@ static fem_error_t assembly_apply_traction_surface(int surface_index)
         coords[i][1] = g_node_coords[node_indices[i]][1];
     }
 
-    const double tx = g_traction_values[surface_index][0];
-    const double ty = g_traction_values[surface_index][1];
+    const double tx = g_traction_values[surface_index][0] * g_fem_static_current_load_scale;
+    const double ty = g_traction_values[surface_index][1] * g_fem_static_current_load_scale;
 
     for (int gp = 0; gp < 3; gp++) {
         double s = line_gauss_points[gp];
@@ -927,18 +1279,20 @@ static fem_error_t assembly_apply_traction_surface(int surface_index)
         double scaled_weight = weight * jacobian;
 
         for (int i = 0; i < MAX_SURFACE_NODES; i++) {
-            fe_local[2 * i]     += N[i] * tx * scaled_weight;
-            fe_local[2 * i + 1] += N[i] * ty * scaled_weight;
+            int base = i * g_fem_dof_per_node;
+            fe_local[base]     += N[i] * tx * scaled_weight;
+            fe_local[base + 1] += N[i] * ty * scaled_weight;
         }
     }
 
-    int dof_map[MAX_SURFACE_NODES * 2];
+    int dof_map[MAX_SURFACE_NODES * MAX_DOF_PER_NODE];
     for (int i = 0; i < MAX_SURFACE_NODES; i++) {
-        dof_map[2 * i]     = node_indices[i] * 2;
-        dof_map[2 * i + 1] = node_indices[i] * 2 + 1;
+        for (int j = 0; j < g_fem_dof_per_node; ++j) {
+            dof_map[i * g_fem_dof_per_node + j] = node_indices[i] * g_fem_dof_per_node + j;
+        }
     }
 
-    assembly_accumulate_force(MAX_SURFACE_NODES * 2, dof_map, fe_local);
+    assembly_accumulate_force(MAX_SURFACE_NODES * g_fem_dof_per_node, dof_map, fe_local);
     return FEM_SUCCESS;
 }
 
@@ -953,12 +1307,28 @@ static fem_error_t assembly_apply_pressure_loads(void)
 
 static fem_error_t assembly_apply_pressure_surface(int surface_index)
 {
+    int node_count = g_pressure_surface_node_counts[surface_index];
+
+    if (node_count == 3) {
+        return assembly_apply_pressure_surface_t3(surface_index);
+    }
+    if (node_count == T6_NODES_PER_ELEMENT) {
+        return assembly_apply_pressure_surface_t6(surface_index);
+    }
+    return error_set(FEM_ERROR_INVALID_INPUT,
+                     "Pressure surface %d has unsupported node_count=%d",
+                     surface_index + 1,
+                     node_count);
+}
+
+static fem_error_t assembly_apply_pressure_surface_t3(int surface_index)
+{
     int node_indices[MAX_SURFACE_NODES];
     double coords[MAX_SURFACE_NODES][2];
-    double fe_local[MAX_SURFACE_NODES * 2] = {0.0};
+    double fe_local[MAX_SURFACE_NODES * MAX_DOF_PER_NODE] = {0.0};
 
     for (int i = 0; i < MAX_SURFACE_NODES; i++) {
-        node_indices[i] = g_pressure_surfaces[surface_index][i];
+        node_indices[i] = g_pressure_surface_nodes[surface_index][i];
         if (node_indices[i] < 0 || node_indices[i] >= g_num_nodes) {
             return error_set(FEM_ERROR_INVALID_NODE,
                              "Invalid node index %d in pressure surface %d",
@@ -999,24 +1369,140 @@ static fem_error_t assembly_apply_pressure_surface(int surface_index)
 
         double nx = dy_ds / jacobian;
         double ny = -dx_ds / jacobian;
-        double pressure = g_pressure_value;
+        double pressure = g_pressure_surface_values[surface_index] * g_fem_static_current_load_scale;
         double px = -pressure * nx;
         double py = -pressure * ny;
 
         double scaled_weight = weight * jacobian;
 
         for (int i = 0; i < MAX_SURFACE_NODES; i++) {
-            fe_local[2 * i]     += N[i] * px * scaled_weight;
-            fe_local[2 * i + 1] += N[i] * py * scaled_weight;
+            int base = i * g_fem_dof_per_node;
+            fe_local[base]     += N[i] * px * scaled_weight;
+            fe_local[base + 1] += N[i] * py * scaled_weight;
         }
     }
 
-    int dof_map[MAX_SURFACE_NODES * 2];
+    int dof_map[MAX_SURFACE_NODES * MAX_DOF_PER_NODE];
     for (int i = 0; i < MAX_SURFACE_NODES; i++) {
-        dof_map[2 * i]     = node_indices[i] * 2;
-        dof_map[2 * i + 1] = node_indices[i] * 2 + 1;
+        for (int j = 0; j < g_fem_dof_per_node; ++j) {
+            dof_map[i * g_fem_dof_per_node + j] = node_indices[i] * g_fem_dof_per_node + j;
+        }
     }
 
-    assembly_accumulate_force(MAX_SURFACE_NODES * 2, dof_map, fe_local);
+    assembly_accumulate_force(MAX_SURFACE_NODES * g_fem_dof_per_node, dof_map, fe_local);
+    return FEM_SUCCESS;
+}
+
+static fem_error_t assembly_accumulate_quadratic_edge_pressure(
+    const double edge_coords[3][2],
+    double pressure,
+    const int target_local_indices[3],
+    double *fe_local)
+{
+    for (int gp = 0; gp < 3; gp++) {
+        double s = line_gauss_points[gp];
+        double weight = line_gauss_weights[gp];
+        double N[3];
+        double dNds[3];
+        double dx_ds = 0.0;
+        double dy_ds = 0.0;
+        double jacobian;
+        double nx;
+        double ny;
+        double px;
+        double py;
+        double scaled_weight;
+
+        N[0] = 0.5 * s * (s - 1.0);
+        N[1] = 1.0 - s * s;
+        N[2] = 0.5 * s * (s + 1.0);
+
+        dNds[0] = s - 0.5;
+        dNds[1] = -2.0 * s;
+        dNds[2] = s + 0.5;
+
+        for (int i = 0; i < 3; i++) {
+            dx_ds += dNds[i] * edge_coords[i][0];
+            dy_ds += dNds[i] * edge_coords[i][1];
+        }
+
+        jacobian = sqrt(dx_ds * dx_ds + dy_ds * dy_ds);
+        if (jacobian < TOLERANCE) {
+            return FEM_ERROR_INVALID_INPUT;
+        }
+
+        nx = dy_ds / jacobian;
+        ny = -dx_ds / jacobian;
+        px = -pressure * nx;
+        py = -pressure * ny;
+        scaled_weight = weight * jacobian;
+
+        for (int i = 0; i < 3; i++) {
+            int base = target_local_indices[i] * g_fem_dof_per_node;
+            fe_local[base] += N[i] * px * scaled_weight;
+            fe_local[base + 1] += N[i] * py * scaled_weight;
+        }
+    }
+
+    return FEM_SUCCESS;
+}
+
+static fem_error_t assembly_apply_pressure_surface_t6(int surface_index)
+{
+    static const int edge_local_indices[3][3] = {
+        {0, 3, 1},
+        {1, 4, 2},
+        {2, 5, 0}
+    };
+    int node_indices[T6_NODES_PER_ELEMENT];
+    double coords[T6_NODES_PER_ELEMENT][2];
+    double fe_local[T6_NODES_PER_ELEMENT * MAX_DOF_PER_NODE] = {0.0};
+    double pressure = g_pressure_surface_values[surface_index] * g_fem_static_current_load_scale;
+
+    for (int i = 0; i < T6_NODES_PER_ELEMENT; i++) {
+        node_indices[i] = g_pressure_surface_nodes[surface_index][i];
+        if (node_indices[i] < 0 || node_indices[i] >= g_num_nodes) {
+            return error_set(FEM_ERROR_INVALID_NODE,
+                             "Invalid node index %d in pressure surface %d",
+                             node_indices[i], surface_index + 1);
+        }
+        coords[i][0] = g_node_coords[node_indices[i]][0];
+        coords[i][1] = g_node_coords[node_indices[i]][1];
+    }
+
+    for (int edge = 0; edge < 3; ++edge) {
+        double edge_coords[3][2];
+        fem_error_t err;
+
+        for (int i = 0; i < 3; ++i) {
+            int local_index = edge_local_indices[edge][i];
+            edge_coords[i][0] = coords[local_index][0];
+            edge_coords[i][1] = coords[local_index][1];
+        }
+
+        err = assembly_accumulate_quadratic_edge_pressure(
+            edge_coords,
+            pressure,
+            edge_local_indices[edge],
+            fe_local);
+        if (err != FEM_SUCCESS) {
+            return error_set(FEM_ERROR_INVALID_INPUT,
+                             "Degenerate T6 pressure surface %d edge %d",
+                             surface_index + 1,
+                             edge + 1);
+        }
+    }
+
+    {
+        int dof_map[T6_NODES_PER_ELEMENT * MAX_DOF_PER_NODE];
+
+        for (int i = 0; i < T6_NODES_PER_ELEMENT; i++) {
+            for (int j = 0; j < g_fem_dof_per_node; ++j) {
+                dof_map[i * g_fem_dof_per_node + j] = node_indices[i] * g_fem_dof_per_node + j;
+            }
+        }
+
+        assembly_accumulate_force(T6_NODES_PER_ELEMENT * g_fem_dof_per_node, dof_map, fe_local);
+    }
     return FEM_SUCCESS;
 }
