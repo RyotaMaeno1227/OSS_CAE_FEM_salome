@@ -38,7 +38,7 @@ ANALYSIS_SRCS = $(SRCDIR)/analysis/static.c $(SRCDIR)/analysis/runner.c
 MBD_SRCS = $(SRCDIR)/mbd/body2d.c $(SRCDIR)/mbd/constraint2d.c $(SRCDIR)/mbd/forces2d.c $(SRCDIR)/mbd/integrator_explicit2d.c $(SRCDIR)/mbd/integrator_newmark2d.c $(SRCDIR)/mbd/integrator_hht2d.c $(SRCDIR)/mbd/kinematics2d.c $(SRCDIR)/mbd/kkt2d.c $(SRCDIR)/mbd/assembler2d.c $(SRCDIR)/mbd/linear_solver_dense.c $(SRCDIR)/mbd/output2d.c $(SRCDIR)/mbd/projection2d.c $(SRCDIR)/mbd/system2d.c
 COUPLED_SRCS = $(SRCDIR)/coupled/case2d.c $(SRCDIR)/coupled/coupled_run2d.c \
 	               $(SRCDIR)/coupled/coupled_run2d_config.c \
-	               $(SRCDIR)/coupled/coupled_run2d_route_meta.c \
+	               $(SRCDIR)/coupled/coupled_run2d_route_descriptors.c \
 	               $(SRCDIR)/coupled/coupled_run2d_writer_meta.c \
 	               $(SRCDIR)/coupled/coupled_step_history2d.c \
 	               $(SRCDIR)/coupled/coupled_monolithic_assembly2d.c \

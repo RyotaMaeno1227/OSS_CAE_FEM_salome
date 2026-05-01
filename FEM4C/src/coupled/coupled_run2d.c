@@ -50,20 +50,20 @@ static fem_error_t coupled_run2d_capture_step_flex_counters(
     coupled_step_history2d_t *history);
 static fem_error_t coupled_run2d_capture_marker_pose(const mbd_body2d_t *body,
                                                      double marker_pose[3]);
-static const char *coupled_run2d_summary_title_from_scheme(
+const char *coupled_run2d_summary_title_from_scheme(
     coupled_scheme_t scheme);
-static const char *coupled_run2d_step_runner_name_from_scheme(
+const char *coupled_run2d_step_runner_name_from_scheme(
     coupled_scheme_t scheme);
-static int coupled_run2d_feedback_to_mbd_from_scheme(coupled_scheme_t scheme);
-static const char *coupled_run2d_path_class_from_scheme(coupled_scheme_t scheme);
-static const char *coupled_run2d_role_from_scheme(coupled_scheme_t scheme);
-static const char *coupled_run2d_comparison_role_from_scheme(
+int coupled_run2d_feedback_to_mbd_from_scheme(coupled_scheme_t scheme);
+const char *coupled_run2d_path_class_from_scheme(coupled_scheme_t scheme);
+const char *coupled_run2d_role_from_scheme(coupled_scheme_t scheme);
+const char *coupled_run2d_comparison_role_from_scheme(
     coupled_scheme_t scheme);
-static int coupled_run2d_body_count_from_run(const coupled_run2d_t *run);
-static int coupled_run2d_interface_count_from_run(const coupled_run2d_t *run);
-static const char *coupled_run2d_solver_route_class_from_run(
+int coupled_run2d_body_count_from_run(const coupled_run2d_t *run);
+int coupled_run2d_interface_count_from_run(const coupled_run2d_t *run);
+const char *coupled_run2d_solver_route_class_from_run(
     const coupled_run2d_t *run);
-static const char *coupled_run2d_delay_buffer_scope_from_run(
+const char *coupled_run2d_delay_buffer_scope_from_run(
     const coupled_run2d_t *run);
 const char *coupled_run2d_coupling_metric_from_scheme(
     coupled_scheme_t scheme);
@@ -88,7 +88,7 @@ int coupled_run2d_compare_step_delayed_snapshot_step(
     const coupled_step_history2d_t *history);
 const char *coupled_run2d_step_flex_iteration_column_name(
     coupled_scheme_t scheme);
-static const char *coupled_run2d_step_coupling_reason(
+const char *coupled_run2d_step_coupling_reason(
     const coupled_step_history2d_t *history);
 static fem_error_t coupled_run2d_dispatch_step_by_scheme(
     coupled_run2d_t *run,
@@ -510,156 +510,6 @@ static fem_error_t coupled_run2d_capture_marker_pose(const mbd_body2d_t *body,
     marker_pose[1] = origin[1];
     marker_pose[2] = theta;
     return FEM_SUCCESS;
-}
-
-static const char *coupled_run2d_summary_title_from_scheme(
-    coupled_scheme_t scheme)
-{
-    switch (scheme) {
-    case COUPLED_SCHEME_ONEWAY_SNAPSHOT:
-        return "Coupled oneway_snapshot run summary:";
-    case COUPLED_SCHEME_STAGGERED_EXPLICIT:
-        return "Coupled staggered_explicit run summary:";
-    case COUPLED_SCHEME_FIXED_POINT_STRONG:
-        return "Coupled fixed_point_strong run summary:";
-    case COUPLED_SCHEME_MONOLITHIC_STRONG_V1:
-        return "Coupled monolithic_strong_v1 run summary:";
-    case COUPLED_SCHEME_DELAYED_COSIM_V1_5:
-        return "Coupled delayed_cosim_v1_5 run summary:";
-    default:
-        return "Coupled unknown-scheme run summary:";
-    }
-}
-
-static const char *coupled_run2d_step_runner_name_from_scheme(
-    coupled_scheme_t scheme)
-{
-    switch (scheme) {
-    case COUPLED_SCHEME_ONEWAY_SNAPSHOT:
-        return "coupled_step_oneway2d_run";
-    case COUPLED_SCHEME_STAGGERED_EXPLICIT:
-        return "coupled_step_explicit2d_run";
-    case COUPLED_SCHEME_FIXED_POINT_STRONG:
-        return "coupled_step_implicit2d_run";
-    case COUPLED_SCHEME_MONOLITHIC_STRONG_V1:
-        return "coupled_step_monolithic2d_run";
-    case COUPLED_SCHEME_DELAYED_COSIM_V1_5:
-        return "coupled_step_delayed_cosim2d_run";
-    default:
-        return "unknown";
-    }
-}
-
-static int coupled_run2d_feedback_to_mbd_from_scheme(coupled_scheme_t scheme)
-{
-    return scheme == COUPLED_SCHEME_ONEWAY_SNAPSHOT ? 0 : 1;
-}
-
-static const char *coupled_run2d_path_class_from_scheme(coupled_scheme_t scheme)
-{
-    return scheme == COUPLED_SCHEME_ONEWAY_SNAPSHOT ? "official" : "experimental";
-}
-
-static const char *coupled_run2d_role_from_scheme(coupled_scheme_t scheme)
-{
-    if (scheme == COUPLED_SCHEME_ONEWAY_SNAPSHOT) {
-        return "official one-way snapshot/replay baseline with no FEM-to-MBD feedback";
-    }
-    if (scheme == COUPLED_SCHEME_STAGGERED_EXPLICIT) {
-        return "experimental two-way staggered path preserved outside official mainline acceptance";
-    }
-    if (scheme == COUPLED_SCHEME_FIXED_POINT_STRONG) {
-        return "experimental strong same-step path preserved outside official mainline acceptance";
-    }
-    if (scheme == COUPLED_SCHEME_MONOLITHIC_STRONG_V1) {
-        return "year1 experimental monolithic strong comparison lane; fixed_point_strong remains a separate experimental legacy path";
-    }
-    if (scheme == COUPLED_SCHEME_DELAYED_COSIM_V1_5) {
-        return "year1 experimental delayed co-simulation comparison lane with lag-1 sample-hold skeleton and topology-dependent route metadata; still distinct from monolithic_strong_v1";
-    }
-    return "unknown";
-}
-
-static const char *coupled_run2d_comparison_role_from_scheme(
-    coupled_scheme_t scheme)
-{
-    if (scheme == COUPLED_SCHEME_ONEWAY_SNAPSHOT) {
-        return "official_reference";
-    }
-    if (scheme == COUPLED_SCHEME_MONOLITHIC_STRONG_V1) {
-        return "monolithic_strong";
-    }
-    if (scheme == COUPLED_SCHEME_DELAYED_COSIM_V1_5) {
-        return "co_simulation";
-    }
-    return "legacy_experimental";
-}
-
-static int coupled_run2d_body_count_from_run(const coupled_run2d_t *run)
-{
-    if (!run) {
-        return 0;
-    }
-
-    if (run->case_data.num_flex_bodies > 0) {
-        return run->case_data.num_flex_bodies;
-    }
-
-    return run->flex_model_count;
-}
-
-static int coupled_run2d_interface_count_from_run(const coupled_run2d_t *run)
-{
-    return coupled_run2d_body_count_from_run(run);
-}
-
-static const char *coupled_run2d_solver_route_class_from_run(
-    const coupled_run2d_t *run)
-{
-    const coupled_scheme_t scheme =
-        run ? run->time.scheme : COUPLED_SCHEME_ONEWAY_SNAPSHOT;
-
-    if (scheme == COUPLED_SCHEME_ONEWAY_SNAPSHOT) {
-        return "accepted_snapshot_replay";
-    }
-    if (scheme == COUPLED_SCHEME_STAGGERED_EXPLICIT) {
-        return "partitioned_staggered_two_way";
-    }
-    if (scheme == COUPLED_SCHEME_FIXED_POINT_STRONG) {
-        return "same_step_fixed_point";
-    }
-    if (scheme == COUPLED_SCHEME_MONOLITHIC_STRONG_V1) {
-        if (coupled_run2d_body_count_from_run(run) >= 2) {
-            return "single_coupled_system_2link_body_interface_skeleton";
-        }
-        return "single_coupled_system_1link_newton_minimal_proof";
-    }
-    if (scheme == COUPLED_SCHEME_DELAYED_COSIM_V1_5) {
-        if (coupled_run2d_body_count_from_run(run) >= 2) {
-            return "partitioned_delayed_cosim_sample_hold_2link_body_interface_skeleton";
-        }
-        return "partitioned_delayed_cosim_sample_hold_1link_skeleton";
-    }
-    return "unknown";
-}
-
-static const char *coupled_run2d_delay_buffer_scope_from_run(
-    const coupled_run2d_t *run)
-{
-    if (coupled_run2d_body_count_from_run(run) >= 2) {
-        return "2link_body_interface_skeleton";
-    }
-    return "1link_minimal_skeleton";
-}
-
-static const char *coupled_run2d_step_coupling_reason(
-    const coupled_step_history2d_t *history)
-{
-    if (!history || history->coupling_reason[0] == '\0') {
-        return "not_reported";
-    }
-
-    return history->coupling_reason;
 }
 
 static fem_error_t coupled_run2d_dispatch_step_by_scheme(
