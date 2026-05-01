@@ -1,6 +1,6 @@
 /* FEM4C - Finite Element Method in C
  * Main program entry point
- * 実行コマンド：./bin/fem4c.exe NastranBalkFile/3Dtria_example.dat run_out part_0001 output.dat
+ * 実行コマンド：./bin/fem4c.exe NastranBalkFile/3Dtria_example.dat run_out
  * 　　　　　　(PWD:FEM4C)
  */
 
@@ -31,6 +31,7 @@ extern int setenv(const char *name, const char *value, int overwrite);
 #include "common/globals.h"
 #include "common/error.h"
 #include "analysis/runner.h"
+#include "coupled/coupled_run2d.h"
 
 static int path_is_file(const char *path)
 {
@@ -41,25 +42,167 @@ static int path_is_file(const char *path)
     return S_ISREG(st.st_mode);
 }
 
-static int has_suffix(const char *text, const char *suffix)
+static int has_suffix_ignore_case(const char *text, const char *suffix)
 {
-    size_t text_len = strlen(text);
-    size_t suffix_len = strlen(suffix);
+    size_t text_len = 0;
+    size_t suffix_len = 0;
+    size_t i = 0;
+
+    if (!text || !suffix) {
+        return 0;
+    }
+
+    text_len = strlen(text);
+    suffix_len = strlen(suffix);
     if (suffix_len > text_len) {
         return 0;
     }
-    return strcmp(text + text_len - suffix_len, suffix) == 0;
+
+    for (i = 0; i < suffix_len; ++i) {
+        unsigned char lhs = (unsigned char)text[text_len - suffix_len + i];
+        unsigned char rhs = (unsigned char)suffix[i];
+        if (tolower(lhs) != tolower(rhs)) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+static void uppercase_ascii_copy(char *dst, size_t dst_cap, const char *src)
+{
+    size_t i = 0;
+
+    if (!dst || dst_cap == 0) {
+        return;
+    }
+
+    if (!src) {
+        dst[0] = '\0';
+        return;
+    }
+
+    for (i = 0; i + 1 < dst_cap && src[i] != '\0'; ++i) {
+        dst[i] = (char)toupper((unsigned char)src[i]);
+    }
+    dst[i] = '\0';
+}
+
+static int line_starts_with_nastran_card(const char *line_upper, const char *card)
+{
+    size_t i = 0;
+    size_t card_len = 0;
+
+    if (!line_upper || !card) {
+        return 0;
+    }
+
+    while (line_upper[i] == ' ' || line_upper[i] == '\t') {
+        ++i;
+    }
+    if (line_upper[i] == '$' || line_upper[i] == '\0') {
+        return 0;
+    }
+
+    card_len = strlen(card);
+    if (strncmp(line_upper + i, card, card_len) != 0) {
+        return 0;
+    }
+
+    return line_upper[i + card_len] == '\0' ||
+           line_upper[i + card_len] == ' ' ||
+           line_upper[i + card_len] == '\t' ||
+           line_upper[i + card_len] == ',';
+}
+
+static int looks_like_nastran_bulk_content(const char *path)
+{
+    FILE *fp = NULL;
+    char line[1024];
+    int lines_read = 0;
+    int begin_bulk_seen = 0;
+    int score = 0;
+    int saw_grid = 0;
+    int saw_ctria3 = 0;
+    int saw_ctria6 = 0;
+    int saw_cquad4 = 0;
+    int saw_pshell = 0;
+    int saw_mat1 = 0;
+
+    if (!path || path[0] == '\0') {
+        return 0;
+    }
+
+    fp = fopen(path, "rb");
+    if (!fp) {
+        return 0;
+    }
+
+    while (lines_read < 160 && fgets(line, sizeof(line), fp)) {
+        char upper[1024];
+
+        ++lines_read;
+        uppercase_ascii_copy(upper, sizeof(upper), line);
+
+        if (!begin_bulk_seen && strstr(upper, "BEGIN BULK") != NULL) {
+            begin_bulk_seen = 1;
+            score += 3;
+        }
+
+        if (!saw_grid && (line_starts_with_nastran_card(upper, "GRID") ||
+                          line_starts_with_nastran_card(upper, "GRID*"))) {
+            saw_grid = 1;
+            score += 1;
+        }
+        if (!saw_ctria3 && line_starts_with_nastran_card(upper, "CTRIA3")) {
+            saw_ctria3 = 1;
+            score += 1;
+        }
+        if (!saw_ctria6 && line_starts_with_nastran_card(upper, "CTRIA6")) {
+            saw_ctria6 = 1;
+            score += 1;
+        }
+        if (!saw_cquad4 &&
+            (line_starts_with_nastran_card(upper, "CQUAD4") ||
+             line_starts_with_nastran_card(upper, "CQUAD8"))) {
+            saw_cquad4 = 1;
+            score += 1;
+        }
+        if (!saw_pshell && line_starts_with_nastran_card(upper, "PSHELL")) {
+            saw_pshell = 1;
+            score += 1;
+        }
+        if (!saw_mat1 && line_starts_with_nastran_card(upper, "MAT1")) {
+            saw_mat1 = 1;
+            score += 1;
+        }
+
+        if (begin_bulk_seen && score >= 4) {
+            fclose(fp);
+            return 1;
+        }
+    }
+
+    fclose(fp);
+    return begin_bulk_seen ? score >= 4 : score >= 5;
 }
 
 static int looks_like_nastran_input(const char *path)
 {
+    if (!path || path[0] == '\0') {
+        return 0;
+    }
+
     if (strstr(path, "NastranBalkFile") != NULL) {
         return 1;
     }
-    if (has_suffix(path, ".nas") || has_suffix(path, ".bdf")) {
+    if (has_suffix_ignore_case(path, ".nas") || has_suffix_ignore_case(path, ".bdf")) {
         return 1;
     }
-    return 0;
+    if (has_suffix_ignore_case(path, ".txt") || has_suffix_ignore_case(path, ".dat")) {
+        return looks_like_nastran_bulk_content(path);
+    }
+    return looks_like_nastran_bulk_content(path);
 }
 
 static int text_equals_ignore_case(const char *lhs, const char *rhs)
@@ -177,11 +320,41 @@ static int parse_coupled_integrator_option(const char *text)
     }
 
     return text_equals_ignore_case(text, "newmark_beta") ||
+           text_equals_ignore_case(text, "explicit") ||
            text_equals_ignore_case(text, "newmark-beta") ||
            text_equals_ignore_case(text, "newmark") ||
            text_equals_ignore_case(text, "hht_alpha") ||
            text_equals_ignore_case(text, "hht-alpha") ||
            text_equals_ignore_case(text, "hht");
+}
+
+static int parse_coupled_scheme_option(const char *text)
+{
+    if (!text) {
+        return 0;
+    }
+
+    return text_equals_ignore_case(text, "oneway_snapshot") ||
+           text_equals_ignore_case(text, "oneway_replay_v1") ||
+           text_equals_ignore_case(text, "oneway-replay-v1") ||
+           text_equals_ignore_case(text, "oneway_replay") ||
+           text_equals_ignore_case(text, "oneway-replay") ||
+           text_equals_ignore_case(text, "oneway-snapshot") ||
+           text_equals_ignore_case(text, "oneway") ||
+           text_equals_ignore_case(text, "staggered_explicit") ||
+           text_equals_ignore_case(text, "staggered-explicit") ||
+           text_equals_ignore_case(text, "staggered") ||
+           text_equals_ignore_case(text, "fixed_point_strong") ||
+           text_equals_ignore_case(text, "fixed-point-strong") ||
+           text_equals_ignore_case(text, "strong") ||
+           text_equals_ignore_case(text, "monolithic_strong_v1") ||
+           text_equals_ignore_case(text, "monolithic-strong-v1") ||
+           text_equals_ignore_case(text, "monolithic_strong") ||
+           text_equals_ignore_case(text, "delayed_cosim_v1_5") ||
+           text_equals_ignore_case(text, "delayed-cosim-v1-5") ||
+           text_equals_ignore_case(text, "delayed_cosim") ||
+           text_equals_ignore_case(text, "delayed_co_sim_v1_5") ||
+           text_equals_ignore_case(text, "legacy_default");
 }
 
 static int set_named_env(const char *name, const char *value)
@@ -199,6 +372,11 @@ static int set_named_env(const char *name, const char *value)
 static int set_coupled_integrator_env(const char *integrator)
 {
     return set_named_env("FEM4C_COUPLED_INTEGRATOR", integrator);
+}
+
+static int set_coupled_scheme_env(const char *scheme)
+{
+    return set_named_env("FEM4C_COUPLED_SCHEME", scheme);
 }
 
 static int set_mbd_integrator_env(const char *integrator)
@@ -219,16 +397,73 @@ static int set_mbd_and_coupled_param_env(const char *mbd_name,
            set_named_env(coupled_name, value);
 }
 
+static void print_usage(const char *program_name)
+{
+    const char *prog = program_name;
+
+    if (!prog || prog[0] == '\0') {
+        prog = "./bin/fem4c";
+    }
+
+    printf("Usage:\n");
+    printf("  %s [options] <input.dat> [output.dat]\n", prog);
+    printf("  %s [options] <nastran_bulk> [parser_out_root]\n", prog);
+    printf("  %s [options] --parser-part=<collector> <nastran_bulk> [parser_out_root] [output.dat]\n\n", prog);
+
+    printf("Modes:\n");
+    printf("  --mode=<fem|mbd|coupled>      Analysis mode (env: FEM4C_ANALYSIS_MODE)\n\n");
+
+    printf("Coupled surface contract:\n");
+    printf("  --coupled-integrator=<explicit|newmark_beta|hht_alpha>\n");
+    printf("      MBD integrator used inside coupled mode (env: FEM4C_COUPLED_INTEGRATOR)\n");
+    printf("  --coupled-scheme=<oneway_snapshot|oneway_replay_v1|staggered_explicit|fixed_point_strong|monolithic_strong_v1|delayed_cosim_v1_5|legacy_default>\n");
+    printf("      Coupling scheme between MBD and FEM (env: FEM4C_COUPLED_SCHEME)\n");
+    printf("      official: oneway_snapshot (review alias: oneway_replay_v1)\n");
+    printf("      experimental: staggered_explicit, fixed_point_strong, monolithic_strong_v1, delayed_cosim_v1_5\n");
+    printf("      monolithic_strong_v1: year1 experimental comparison lane stub; fixed_point_strong != monolithic_strong_v1\n");
+    printf("      delayed_cosim_v1_5: year1 experimental delayed co-simulation stub; delay semantics stay open and v2 is still undecided\n");
+    printf("      legacy_default resolves explicit->staggered_explicit and newmark_beta/hht_alpha->fixed_point_strong\n");
+    printf("      supported pairings: oneway_snapshot + explicit/newmark_beta/hht_alpha,\n");
+    printf("                          staggered_explicit + explicit,\n");
+    printf("                          fixed_point_strong + newmark_beta/hht_alpha,\n");
+    printf("                          monolithic_strong_v1 + newmark_beta/hht_alpha (dedicated stub),\n");
+    printf("                          delayed_cosim_v1_5 + explicit/newmark_beta/hht_alpha (dedicated stub)\n\n");
+
+    printf("MBD mode surface contract:\n");
+    printf("  --mbd-integrator=<explicit|newmark_beta|hht_alpha>\n");
+    printf("      MBD-only integrator selection (env: FEM4C_MBD_INTEGRATOR)\n\n");
+
+    printf("Shared time-integration parameters:\n");
+    printf("  --newmark-beta=<value>        Coupled env: FEM4C_NEWMARK_BETA\n");
+    printf("  --newmark-gamma=<value>       Coupled env: FEM4C_NEWMARK_GAMMA\n");
+    printf("  --hht-alpha=<value>           Coupled env: FEM4C_HHT_ALPHA\n");
+    printf("  --mbd-newmark-beta=<value>    MBD env: FEM4C_MBD_NEWMARK_BETA\n");
+    printf("  --mbd-newmark-gamma=<value>   MBD env: FEM4C_MBD_NEWMARK_GAMMA\n");
+    printf("  --mbd-hht-alpha=<value>       MBD env: FEM4C_MBD_HHT_ALPHA\n");
+    printf("  --mbd-dt=<value>              MBD env: FEM4C_MBD_DT\n");
+    printf("  --mbd-steps=<value>           MBD env: FEM4C_MBD_STEPS\n\n");
+
+    printf("Other options:\n");
+    printf("  --parser-part=<collector>     Explicit single-part parser override; default bulk route exports all collectors\n");
+    printf("  --strict-t3-orientation[=0|1] Strict T3 orientation checks (env: FEM4C_STRICT_T3_ORIENTATION)\n");
+    printf("  -h, --help                    Show this help\n");
+}
+
 static int run_parser(const char *input_path, const char *outroot, const char *part)
 {
 #ifdef _WIN32
     const char *parser_path = "parser\\parser.exe"; /* Windowsはバックスラッシュが安全 */
     char cmd[4096];
 
-    /* cmd.exe に確実に通すため、/c を付けて丸ごとクォート */
-    snprintf(cmd, sizeof(cmd),
-             "cmd /c \"\"%s\" \"%s\" \"%s\" \"%s\"\"",
-             parser_path, input_path, outroot, part);
+    if (part && part[0] != '\0') {
+        snprintf(cmd, sizeof(cmd),
+                 "cmd /c \"\"%s\" \"%s\" \"%s\" \"--part=%s\"\"",
+                 parser_path, input_path, outroot, part);
+    } else {
+        snprintf(cmd, sizeof(cmd),
+                 "cmd /c \"\"%s\" \"%s\" \"%s\"\"",
+                 parser_path, input_path, outroot);
+    }
 
     fprintf(stderr, "[DEBUG] run_parser cmd: %s\n", cmd);
 
@@ -262,15 +497,28 @@ static int run_parser(const char *input_path, const char *outroot, const char *p
     }
 
     if (pid == 0) {
-        /* Child process: exec parser */
-        char *const args[] = {
+        char part_arg[512];
+        char *const args_without_part[] = {
             (char *)parser_path,
             (char *)input_path,
             (char *)outroot,
-            (char *)part,
             NULL
         };
-        execv(parser_path, args);
+        char *const args_with_part[] = {
+            (char *)parser_path,
+            (char *)input_path,
+            (char *)outroot,
+            part_arg,
+            NULL
+        };
+
+        /* Child process: exec parser */
+        if (part && part[0] != '\0') {
+            snprintf(part_arg, sizeof(part_arg), "--part=%s", part);
+            execv(parser_path, args_with_part);
+        } else {
+            execv(parser_path, args_without_part);
+        }
         perror("execv");
         _exit(127);
     }
@@ -298,6 +546,7 @@ int main(int argc, char *argv[])
     analysis_mode_t analysis_mode = analysis_mode_from_env();
     const char *strict_t3_prefix = "--strict-t3-orientation=";
     const char *coupled_integrator_prefix = "--coupled-integrator=";
+    const char *coupled_scheme_prefix = "--coupled-scheme=";
     const char *mbd_integrator_prefix = "--mbd-integrator=";
     const char *newmark_beta_prefix = "--newmark-beta=";
     const char *newmark_gamma_prefix = "--newmark-gamma=";
@@ -307,10 +556,14 @@ int main(int argc, char *argv[])
     const char *mbd_hht_alpha_prefix = "--mbd-hht-alpha=";
     const char *mbd_dt_prefix = "--mbd-dt=";
     const char *mbd_steps_prefix = "--mbd-steps=";
+    const char *parser_part_prefix = "--parser-part=";
     const char *strict_t3_env = getenv("FEM4C_STRICT_T3_ORIENTATION");
     const char *coupled_integrator_cli = NULL;
+    const char *coupled_scheme_cli = NULL;
     const char *mbd_integrator_cli = NULL;
+    const char *parser_part_cli = NULL;
     int coupled_integrator_from_cli = 0;
+    int coupled_scheme_from_cli = 0;
     int mbd_integrator_from_cli = 0;
     int newmark_beta_from_cli = 0;
     int newmark_gamma_from_cli = 0;
@@ -334,7 +587,13 @@ int main(int argc, char *argv[])
     }
 
     /* Parse optional CLI flags before positional args. */
-    while (argc > argi && strncmp(argv[argi], "--", 2) == 0) {
+    while (argc > argi &&
+           (strncmp(argv[argi], "--", 2) == 0 || strcmp(argv[argi], "-h") == 0)) {
+        if (strcmp(argv[argi], "--help") == 0) {
+            print_usage(argv[0]);
+            return EXIT_SUCCESS;
+        }
+
         if (strcmp(argv[argi], "--mode") == 0) {
             if (argc <= argi + 1) {
                 printf("Missing value after --mode (expected fem|mbd|coupled)\n");
@@ -359,6 +618,11 @@ int main(int argc, char *argv[])
             continue;
         }
 
+        if (strcmp(argv[argi], "-h") == 0) {
+            print_usage(argv[0]);
+            return EXIT_SUCCESS;
+        }
+
         if (strcmp(argv[argi], "--strict-t3-orientation") == 0) {
             g_t3_strict_orientation = 1;
             argi += 1;
@@ -381,13 +645,33 @@ int main(int argc, char *argv[])
             continue;
         }
 
+        if (strcmp(argv[argi], "--parser-part") == 0) {
+            if (argc <= argi + 1) {
+                printf("Missing value after --parser-part\n");
+                return EXIT_FAILURE;
+            }
+            parser_part_cli = argv[argi + 1];
+            argi += 2;
+            continue;
+        }
+
+        if (strncmp(argv[argi], parser_part_prefix, strlen(parser_part_prefix)) == 0) {
+            parser_part_cli = argv[argi] + strlen(parser_part_prefix);
+            if (parser_part_cli[0] == '\0') {
+                printf("Invalid empty value for --parser-part\n");
+                return EXIT_FAILURE;
+            }
+            argi += 1;
+            continue;
+        }
+
         if (strcmp(argv[argi], "--coupled-integrator") == 0) {
             if (argc <= argi + 1) {
-                printf("Missing value after --coupled-integrator (expected newmark_beta|hht_alpha)\n");
+                printf("Missing value after --coupled-integrator (expected explicit|newmark_beta|hht_alpha)\n");
                 return EXIT_FAILURE;
             }
             if (!parse_coupled_integrator_option(argv[argi + 1])) {
-                printf("Invalid --coupled-integrator value: %s (expected newmark_beta|hht_alpha)\n",
+                printf("Invalid --coupled-integrator value: %s (expected explicit|newmark_beta|hht_alpha)\n",
                        argv[argi + 1]);
                 return EXIT_FAILURE;
             }
@@ -397,13 +681,29 @@ int main(int argc, char *argv[])
             continue;
         }
 
+        if (strcmp(argv[argi], "--coupled-scheme") == 0) {
+            if (argc <= argi + 1) {
+                printf("Missing value after --coupled-scheme (expected oneway_snapshot|oneway_replay_v1|staggered_explicit|fixed_point_strong|monolithic_strong_v1|delayed_cosim_v1_5|legacy_default)\n");
+                return EXIT_FAILURE;
+            }
+            if (!parse_coupled_scheme_option(argv[argi + 1])) {
+                printf("Invalid --coupled-scheme value: %s (expected oneway_snapshot|oneway_replay_v1|staggered_explicit|fixed_point_strong|monolithic_strong_v1|delayed_cosim_v1_5|legacy_default)\n",
+                       argv[argi + 1]);
+                return EXIT_FAILURE;
+            }
+            coupled_scheme_cli = argv[argi + 1];
+            coupled_scheme_from_cli = 1;
+            argi += 2;
+            continue;
+        }
+
         if (strcmp(argv[argi], "--mbd-integrator") == 0) {
             if (argc <= argi + 1) {
-                printf("Missing value after --mbd-integrator (expected newmark_beta|hht_alpha)\n");
+                printf("Missing value after --mbd-integrator (expected explicit|newmark_beta|hht_alpha)\n");
                 return EXIT_FAILURE;
             }
             if (!parse_coupled_integrator_option(argv[argi + 1])) {
-                printf("Invalid --mbd-integrator value: %s (expected newmark_beta|hht_alpha)\n",
+                printf("Invalid --mbd-integrator value: %s (expected explicit|newmark_beta|hht_alpha)\n",
                        argv[argi + 1]);
                 return EXIT_FAILURE;
             }
@@ -416,7 +716,7 @@ int main(int argc, char *argv[])
         if (strncmp(argv[argi], coupled_integrator_prefix, strlen(coupled_integrator_prefix)) == 0) {
             const char *integrator_value = argv[argi] + strlen(coupled_integrator_prefix);
             if (!parse_coupled_integrator_option(integrator_value)) {
-                printf("Invalid --coupled-integrator value: %s (expected newmark_beta|hht_alpha)\n",
+                printf("Invalid --coupled-integrator value: %s (expected explicit|newmark_beta|hht_alpha)\n",
                        integrator_value);
                 return EXIT_FAILURE;
             }
@@ -426,10 +726,23 @@ int main(int argc, char *argv[])
             continue;
         }
 
+        if (strncmp(argv[argi], coupled_scheme_prefix, strlen(coupled_scheme_prefix)) == 0) {
+            const char *scheme_value = argv[argi] + strlen(coupled_scheme_prefix);
+            if (!parse_coupled_scheme_option(scheme_value)) {
+                printf("Invalid --coupled-scheme value: %s (expected oneway_snapshot|oneway_replay_v1|staggered_explicit|fixed_point_strong|monolithic_strong_v1|delayed_cosim_v1_5|legacy_default)\n",
+                       scheme_value);
+                return EXIT_FAILURE;
+            }
+            coupled_scheme_cli = scheme_value;
+            coupled_scheme_from_cli = 1;
+            argi += 1;
+            continue;
+        }
+
         if (strncmp(argv[argi], mbd_integrator_prefix, strlen(mbd_integrator_prefix)) == 0) {
             const char *integrator_value = argv[argi] + strlen(mbd_integrator_prefix);
             if (!parse_coupled_integrator_option(integrator_value)) {
-                printf("Invalid --mbd-integrator value: %s (expected newmark_beta|hht_alpha)\n",
+                printf("Invalid --mbd-integrator value: %s (expected explicit|newmark_beta|hht_alpha)\n",
                        integrator_value);
                 return EXIT_FAILURE;
             }
@@ -741,6 +1054,12 @@ int main(int argc, char *argv[])
             return EXIT_FAILURE;
         }
     }
+    if (coupled_scheme_cli) {
+        if (!set_coupled_scheme_env(coupled_scheme_cli)) {
+            printf("Failed to set FEM4C_COUPLED_SCHEME from CLI option\n");
+            return EXIT_FAILURE;
+        }
+    }
     if (mbd_integrator_cli) {
         if (!set_mbd_integrator_env(mbd_integrator_cli)) {
             printf("Failed to set FEM4C_MBD_INTEGRATOR from CLI option\n");
@@ -798,7 +1117,6 @@ int main(int argc, char *argv[])
     if (path_is_file(g_input_filename)) {
         const char *force_parser = getenv("FEM4C_FORCE_PARSER");
         if ((force_parser && strcmp(force_parser, "1") == 0) ||
-            positional_count >= 3 ||
             looks_like_nastran_input(g_input_filename)) {
             needs_parser = 1;
         }
@@ -812,31 +1130,46 @@ int main(int argc, char *argv[])
 
     if (needs_parser) {
         const char *outroot = getenv("FEM4C_PARSE_OUTROOT");
-        const char *part = getenv("FEM4C_PARSE_PART");
+        const char *part = parser_part_cli ? parser_part_cli : getenv("FEM4C_PARSE_PART");
 
         if (positional_count > 1) {
             outroot = argv[argi + 1];
-            if (positional_count > 2) {
-                part = argv[argi + 2];
-            }
-            if (positional_count > 3) {
-                strncpy(output_file, argv[argi + 3], MAX_FILENAME_LEN - 1);
-                output_file[MAX_FILENAME_LEN - 1] = '\0';
-            }
+        }
+
+        if (part && part[0] == '\0') {
+            part = NULL;
+        }
+
+        if (!part && positional_count > 2) {
+            printf("Nastran bulk route no longer accepts positional part_name.\n");
+            printf("Use --parser-part=<collector> for explicit single-part continuation.\n");
+            return EXIT_FAILURE;
+        }
+
+        if (part && positional_count > 2) {
+            strncpy(output_file, argv[argi + 2], MAX_FILENAME_LEN - 1);
+            output_file[MAX_FILENAME_LEN - 1] = '\0';
         }
 
         if (!outroot) {
             outroot = "run_out";
         }
-        if (!part) {
-            part = "part_0001";
-        }
 
         printf("Detected Nastran input: %s\n", input_file);
-        printf("Running parser: outroot=%s part=%s\n", outroot, part);
+        if (part) {
+            printf("Running parser: outroot=%s part=%s\n", outroot, part);
+        } else {
+            printf("Running parser: outroot=%s route=multipart_manifest\n", outroot);
+        }
         if (run_parser(input_file, outroot, part) != 0) {
             printf("Parser execution failed.\n");
             return EXIT_FAILURE;
+        }
+
+        if (!part) {
+            printf("Parser export completed successfully.\n");
+            printf("assembly_manifest=%s/assembly_manifest.json\n", outroot);
+            return EXIT_SUCCESS;
         }
 
         snprintf(input_file, sizeof(input_file), "%s/%s", outroot, part);
@@ -872,15 +1205,50 @@ int main(int argc, char *argv[])
     }
     if (analysis_mode == ANALYSIS_MODE_COUPLED) {
         const char *integrator = getenv("FEM4C_COUPLED_INTEGRATOR");
+        const char *scheme = getenv("FEM4C_COUPLED_SCHEME");
         const char *newmark_beta = getenv("FEM4C_NEWMARK_BETA");
         const char *newmark_gamma = getenv("FEM4C_NEWMARK_GAMMA");
         const char *hht_alpha = getenv("FEM4C_HHT_ALPHA");
+        const char *mbd_dt = getenv("FEM4C_MBD_DT");
+        const char *mbd_steps = getenv("FEM4C_MBD_STEPS");
+        coupled_integrator_t effective_integrator = COUPLED_INTEGRATOR_NEWMARK_BETA;
+        coupled_scheme_t effective_scheme = COUPLED_SCHEME_FIXED_POINT_STRONG;
+        const char *scheme_source = "legacy_default";
+        int scheme_is_legacy_default = 1;
 
-        printf("Coupled integrator: %s\n\n",
-               (integrator && integrator[0] != '\0') ? integrator : "newmark_beta (default)");
-        printf("Coupled integrator source: %s\n",
+        if (integrator && integrator[0] != '\0' &&
+            coupled_integrator_parse(integrator, &effective_integrator) != FEM_SUCCESS) {
+            effective_integrator = COUPLED_INTEGRATOR_NEWMARK_BETA;
+        }
+        effective_scheme = (effective_integrator == COUPLED_INTEGRATOR_EXPLICIT)
+            ? COUPLED_SCHEME_STAGGERED_EXPLICIT
+            : COUPLED_SCHEME_FIXED_POINT_STRONG;
+        if (scheme && scheme[0] != '\0') {
+            if (text_equals_ignore_case(scheme, "legacy_default")) {
+                scheme_source = coupled_scheme_from_cli ? "cli_legacy_default" : "env_legacy_default";
+            } else if (coupled_scheme_parse(scheme, &effective_scheme) == FEM_SUCCESS) {
+                scheme_source = coupled_scheme_from_cli ? "cli" : "env";
+                scheme_is_legacy_default = 0;
+            } else {
+                scheme_source = coupled_scheme_from_cli ? "cli_invalid_fallback" : "env_invalid_fallback";
+            }
+        }
+
+        printf("Coupled MBD integrator: %s\n\n",
+               coupled_integrator_to_string(effective_integrator));
+        printf("Coupled MBD integrator source: %s\n",
                coupled_integrator_from_cli ? "cli" :
                ((integrator && integrator[0] != '\0') ? "env" : "default"));
+        printf("Coupled scheme: %s\n\n",
+               coupled_scheme_to_string(effective_scheme));
+        printf("Coupled scheme source: %s\n",
+               scheme_source);
+        if (scheme_is_legacy_default) {
+            printf("Coupled scheme legacy default: explicit->staggered_explicit, newmark_beta/hht_alpha->fixed_point_strong\n");
+            printf("Coupled scheme legacy resolution: integrator=%s -> scheme=%s\n",
+                   coupled_integrator_to_string(effective_integrator),
+                   coupled_scheme_to_string(effective_scheme));
+        }
         printf("Coupled parameter source: newmark_beta=%s newmark_gamma=%s hht_alpha=%s\n\n",
                newmark_beta_from_cli ? "cli" :
                ((newmark_beta && newmark_beta[0] != '\0') ? "env" : "default"),
@@ -888,6 +1256,11 @@ int main(int argc, char *argv[])
                ((newmark_gamma && newmark_gamma[0] != '\0') ? "env" : "default"),
                hht_alpha_from_cli ? "cli" :
                ((hht_alpha && hht_alpha[0] != '\0') ? "env" : "default"));
+        printf("Coupled time source: dt=%s steps=%s\n\n",
+               mbd_dt_from_cli ? "cli" :
+               ((mbd_dt && mbd_dt[0] != '\0') ? "env" : "default"),
+               mbd_steps_from_cli ? "cli" :
+               ((mbd_steps && mbd_steps[0] != '\0') ? "env" : "default"));
     }
     printf("T3 orientation strict mode: %s\n\n",
            g_t3_strict_orientation ? "Enabled" : "Disabled");

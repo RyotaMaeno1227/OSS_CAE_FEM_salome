@@ -273,9 +273,6 @@ fem_error_t elements_check_geometric_validity(int element_id)
         return FEM_ERROR_INVALID_INPUT;
     }
 
-    /* Basic geometric checks - can be enhanced later */
-    int element_type = g_element_type[element_id];
-
     /* For now, just use the element's validate function if available */
     return element_validate(element_id);
 }

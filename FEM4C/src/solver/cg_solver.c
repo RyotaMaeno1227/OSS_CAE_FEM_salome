@@ -179,9 +179,12 @@ fem_error_t cg_solve_system(void)
     /* Copy solution back to nodal displacements */
     if (err == FEM_SUCCESS) {
         for (int node = 0; node < g_num_nodes; node++) {
-            g_node_displ[node][0] = g_global_displ[node * 2];     /* u */
-            g_node_displ[node][1] = g_global_displ[node * 2 + 1]; /* v */
-            g_node_displ[node][2] = 0.0; /* w = 0 for 2D */
+            int base = node * g_fem_dof_per_node;
+            g_node_displ[node][0] = g_global_displ[base];
+            g_node_displ[node][1] = g_global_displ[base + 1];
+            g_node_displ[node][2] = (g_fem_dof_per_node >= 3)
+                ? g_global_displ[base + 2]
+                : 0.0;
         }
         
         printf("Solution completed successfully\n");
