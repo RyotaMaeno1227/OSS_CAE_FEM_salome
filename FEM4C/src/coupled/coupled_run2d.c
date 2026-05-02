@@ -8,7 +8,6 @@
 #include "coupled_step_delayed_cosim2d.h"
 #include "coupled_step_monolithic2d.h"
 #include "coupled_step_oneway2d.h"
-#include "flex_solver2d.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,9 +21,7 @@ fem_error_t coupled_time_control_validate_contract(
 static fem_error_t coupled_run2d_load_master_input(coupled_run2d_t *run,
                                                    const char *input_filename);
 static fem_error_t coupled_run2d_validate_flex_case(const coupled_run2d_t *run);
-static fem_error_t coupled_run2d_load_flex_models(coupled_run2d_t *run);
-static fem_error_t coupled_run2d_load_single_flex_model(fem_model_t *model,
-                                                        const char *input_filename);
+fem_error_t coupled_run2d_load_flex_models(coupled_run2d_t *run);
 fem_error_t coupled_run2d_write_step_snapshots(
     const coupled_run2d_t *run,
     coupled_step_history2d_t *history,
@@ -214,41 +211,6 @@ static fem_error_t coupled_run2d_validate_flex_case(const coupled_run2d_t *run)
         }
     }
 
-    return FEM_SUCCESS;
-}
-
-static fem_error_t coupled_run2d_load_single_flex_model(fem_model_t *model,
-                                                        const char *input_filename)
-{
-    CHECK_NULL(model, "flex model");
-    CHECK_NULL(input_filename, "flex input filename");
-
-    CHECK_ERROR(input_read_data(input_filename));
-    CHECK_ERROR(fem_model_clone_from_globals(model));
-    CHECK_ERROR(flex_solver2d_prepare_model(model));
-    return FEM_SUCCESS;
-}
-
-static fem_error_t coupled_run2d_load_flex_models(coupled_run2d_t *run)
-{
-    int i;
-    int loaded = 0;
-
-    CHECK_NULL(run, "coupled_run2d");
-    CHECK_ERROR(coupled_run2d_reserve_flex_model_storage(run,
-                                                         run->case_data.num_flex_bodies));
-
-    for (i = 0; i < run->case_data.num_flex_bodies; ++i) {
-        const coupled_case2d_flex_body_t *body = &run->case_data.flex_bodies[i];
-
-        fem_model_free(&run->flex_models[i]);
-        fem_model_zero(&run->flex_models[i]);
-        CHECK_ERROR(coupled_run2d_load_single_flex_model(&run->flex_models[i],
-                                                         body->fem_input_path));
-        ++loaded;
-    }
-
-    run->flex_model_count = loaded;
     return FEM_SUCCESS;
 }
 
