@@ -3,11 +3,6 @@
 #include "../common/error.h"
 #include "../common/globals.h"
 #include "../io/input.h"
-#include "coupled_step_explicit2d.h"
-#include "coupled_step_implicit2d.h"
-#include "coupled_step_delayed_cosim2d.h"
-#include "coupled_step_monolithic2d.h"
-#include "coupled_step_oneway2d.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -75,7 +70,7 @@ const char *coupled_run2d_step_flex_iteration_column_name(
     coupled_scheme_t scheme);
 const char *coupled_run2d_step_coupling_reason(
     const coupled_step_history2d_t *history);
-static fem_error_t coupled_run2d_dispatch_step_by_scheme(
+fem_error_t coupled_run2d_dispatch_step_by_scheme(
     coupled_run2d_t *run,
     int step_index,
     coupled_step_history2d_t *history);
@@ -240,32 +235,6 @@ static fem_error_t coupled_run2d_capture_step_flex_counters(
         history->flex_body_count += 1;
     }
     return FEM_SUCCESS;
-}
-
-static fem_error_t coupled_run2d_dispatch_step_by_scheme(
-    coupled_run2d_t *run,
-    int step_index,
-    coupled_step_history2d_t *history)
-{
-    CHECK_NULL(run, "coupled_run2d");
-    CHECK_NULL(history, "coupled step history");
-
-    switch (run->time.scheme) {
-    case COUPLED_SCHEME_ONEWAY_SNAPSHOT:
-        return coupled_step_oneway2d_run(run, step_index, history);
-    case COUPLED_SCHEME_STAGGERED_EXPLICIT:
-        return coupled_step_explicit2d_run(run, step_index, history);
-    case COUPLED_SCHEME_FIXED_POINT_STRONG:
-        return coupled_step_implicit2d_run(run, step_index, history);
-    case COUPLED_SCHEME_MONOLITHIC_STRONG_V1:
-        return coupled_step_monolithic2d_run(run, step_index, history);
-    case COUPLED_SCHEME_DELAYED_COSIM_V1_5:
-        return coupled_step_delayed_cosim2d_run(run, step_index, history);
-    default:
-        return error_set(FEM_ERROR_INVALID_INPUT,
-                         "Unsupported coupled scheme dispatch: %d",
-                         (int)run->time.scheme);
-    }
 }
 
 static fem_error_t coupled_legacy_no_flex_fallback_error(
