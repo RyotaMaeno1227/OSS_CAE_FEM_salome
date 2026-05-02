@@ -15,7 +15,7 @@ fem_error_t coupled_time_control_validate_contract(
     const coupled_time_control_t *time);
 static fem_error_t coupled_run2d_load_master_input(coupled_run2d_t *run,
                                                    const char *input_filename);
-static fem_error_t coupled_run2d_validate_flex_case(const coupled_run2d_t *run);
+fem_error_t coupled_run2d_validate_flex_case(const coupled_run2d_t *run);
 fem_error_t coupled_run2d_load_flex_models(coupled_run2d_t *run);
 fem_error_t coupled_run2d_write_step_snapshots(
     const coupled_run2d_t *run,
@@ -164,48 +164,6 @@ static fem_error_t coupled_run2d_load_master_input(coupled_run2d_t *run,
             run,
             run->case_data.num_flex_bodies));
     }
-    return FEM_SUCCESS;
-}
-
-static fem_error_t coupled_run2d_validate_flex_case(const coupled_run2d_t *run)
-{
-    int i;
-
-    CHECK_NULL(run, "coupled_run2d");
-
-    if (run->case_data.num_flex_bodies <= 0) {
-        return error_set(FEM_ERROR_INVALID_INPUT,
-                         "Coupled run requires at least one COUPLED_FLEX_BODY");
-    }
-
-    for (i = 0; i < run->case_data.num_flex_bodies; ++i) {
-        const coupled_case2d_flex_body_t *body = &run->case_data.flex_bodies[i];
-        int body_index = -1;
-
-        if (body->fem_input_path[0] == '\0') {
-            return error_set(FEM_ERROR_INVALID_INPUT,
-                             "Coupled run requires fem input path for body_id %d",
-                             body->body_id);
-        }
-        if (mbd_system2d_find_body_index_by_id(&run->mbd_system,
-                                               body->body_id,
-                                               &body_index) != FEM_SUCCESS) {
-            return error_set(FEM_ERROR_INVALID_INPUT,
-                             "COUPLED_FLEX_BODY body_id %d is not present in MBD system",
-                             body->body_id);
-        }
-        if (body->num_root_nodes <= 0) {
-            return error_set(FEM_ERROR_INVALID_INPUT,
-                             "Coupled run requires COUPLED_FLEX_ROOT_SET for body_id %d",
-                             body->body_id);
-        }
-        if (body->num_tip_nodes <= 0) {
-            return error_set(FEM_ERROR_INVALID_INPUT,
-                             "Coupled run requires COUPLED_FLEX_TIP_SET for body_id %d",
-                             body->body_id);
-        }
-    }
-
     return FEM_SUCCESS;
 }
 
