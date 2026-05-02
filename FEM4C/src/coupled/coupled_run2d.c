@@ -27,7 +27,7 @@ fem_error_t coupled_run2d_write_output(const coupled_run2d_t *run,
                                        const char *output_filename);
 static fem_error_t coupled_legacy_no_flex_fallback_error(
     const coupled_run2d_t *run);
-static fem_error_t coupled_run2d_capture_step_flex_counters(
+fem_error_t coupled_run2d_capture_step_flex_counters(
     const coupled_run2d_t *run,
     coupled_step_history2d_t *history);
 const char *coupled_run2d_summary_title_from_scheme(
@@ -163,34 +163,6 @@ static fem_error_t coupled_run2d_load_master_input(coupled_run2d_t *run,
         CHECK_ERROR(coupled_run2d_reserve_flex_model_storage(
             run,
             run->case_data.num_flex_bodies));
-    }
-    return FEM_SUCCESS;
-}
-
-static fem_error_t coupled_run2d_capture_step_flex_counters(
-    const coupled_run2d_t *run,
-    coupled_step_history2d_t *history)
-{
-    int i;
-
-    if (!run || !history) {
-        return FEM_SUCCESS;
-    }
-
-    CHECK_ERROR(coupled_step_history2d_reserve_flex_body_storage(
-        history,
-        run->case_data.num_flex_bodies));
-    history->flex_body_count = 0;
-    for (i = 0; i < run->case_data.num_flex_bodies; ++i) {
-        const coupled_case2d_flex_body_t *body = &run->case_data.flex_bodies[i];
-        const int slot = history->flex_body_count;
-
-        history->flex_body_ids[slot] = body->body_id;
-        history->flex_body_full_reassembly_count[slot] =
-            run->flex_models[i].full_reassembly_count;
-        history->flex_body_static_solve_count[slot] =
-            run->flex_models[i].static_solve_count;
-        history->flex_body_count += 1;
     }
     return FEM_SUCCESS;
 }
