@@ -5,15 +5,20 @@
 #include <stdio.h>
 
 /*
- * Owns coupled-run summary output writing. Inputs are the coupled run
- * state, accepted step history, and output path already prepared by route
- * execution. Outputs are summary/report file records written through the
- * existing path; side effects are file creation, writes, close, and related
- * error reporting. Route execution, solver work, history buffer management,
- * descriptor selection, and snapshot storage remain outside this file. This
- * extraction is for readability and maintainability, not behavior change.
+ * Owns coupled-run summary/reporting output responsibilities, including
+ * startup console summary printing and summary file writing. Startup console
+ * output reads the already-prepared run configuration/state. Summary file
+ * writing writes existing report artifacts through configured paths. Side
+ * effects are console printing and file output in the writer routines. Route
+ * dispatch, solver steps, flex loading, validation, snapshots, history
+ * allocation/capture, and route descriptor selection remain outside this file.
+ * This extraction is for readability and maintainability, not behavior change.
  */
 
+const char *coupled_run2d_summary_title_from_scheme(
+    coupled_scheme_t scheme);
+const char *coupled_run2d_step_runner_name_from_scheme(
+    coupled_scheme_t scheme);
 int coupled_run2d_feedback_to_mbd_from_scheme(coupled_scheme_t scheme);
 const char *coupled_run2d_path_class_from_scheme(coupled_scheme_t scheme);
 const char *coupled_run2d_role_from_scheme(coupled_scheme_t scheme);
@@ -50,6 +55,60 @@ const char *coupled_run2d_step_flex_iteration_column_name(
     coupled_scheme_t scheme);
 const char *coupled_run2d_step_coupling_reason(
     const coupled_step_history2d_t *history);
+
+void coupled_run2d_print_startup_summary(const coupled_run2d_t *run)
+{
+    printf("%s\n", coupled_run2d_summary_title_from_scheme(run->time.scheme));
+    printf("  scheme=%s\n", coupled_scheme_to_string(run->time.scheme));
+    printf("  path_class=%s\n",
+           coupled_run2d_path_class_from_scheme(run->time.scheme));
+    printf("  step_dispatch_basis=coupling_scheme\n");
+    printf("  step_runner=%s\n",
+           coupled_run2d_step_runner_name_from_scheme(run->time.scheme));
+    if (run->time.scheme_is_legacy_default) {
+        printf("  scheme_source=legacy_default via integrator=%s\n",
+               coupled_integrator_to_string(run->time.integrator));
+    } else {
+        printf("  scheme_source=explicit_request\n");
+    }
+    printf("  integrator=%s\n",
+           coupled_integrator_to_string(run->time.integrator));
+    printf("  coupling_role=%s\n",
+           coupled_run2d_role_from_scheme(run->time.scheme));
+    printf("  comparison_role=%s\n",
+           coupled_run2d_comparison_role_from_scheme(run->time.scheme));
+    printf("  solver_route_class=%s\n",
+           coupled_run2d_solver_route_class_from_run(run));
+    printf("  delay_semantics_status=%s\n",
+           coupled_run2d_delay_semantics_status_from_scheme(run->time.scheme));
+    printf("  v2_decision_state=undecided\n");
+    if (run->time.scheme == COUPLED_SCHEME_MONOLITHIC_STRONG_V1) {
+        printf("  year1_experimental_only=1\n");
+        printf("  fixed_point_strong!=monolithic_strong_v1\n");
+    }
+    if (run->time.scheme == COUPLED_SCHEME_DELAYED_COSIM_V1_5) {
+        printf("  year1_experimental_only=1\n");
+        printf("  monolithic_strong_v1!=delayed_cosim_v1_5\n");
+    }
+    if (run->time.integrator == COUPLED_INTEGRATOR_HHT_ALPHA) {
+        printf("  hht_alpha=%.6e\n", run->time.hht_alpha);
+    }
+    printf("  feedback_to_mbd=%d\n",
+           coupled_run2d_feedback_to_mbd_from_scheme(run->time.scheme));
+    printf("  flex_bodies=%d\n", run->flex_model_count);
+    if (run->time.scheme == COUPLED_SCHEME_MONOLITHIC_STRONG_V1 ||
+        run->time.scheme == COUPLED_SCHEME_DELAYED_COSIM_V1_5) {
+        printf("  body_count=%d\n", coupled_run2d_body_count_from_run(run));
+        printf("  interface_count=%d\n",
+               coupled_run2d_interface_count_from_run(run));
+    }
+    printf("  time: dt=%.6e steps=%d max_iter=%d residual_tol=%.6e marker_relaxation=%.6e\n",
+           run->time.dt,
+           run->time.num_steps,
+           run->time.max_coupling_iterations,
+           run->time.residual_tolerance,
+           run->time.marker_relaxation);
+}
 
 fem_error_t coupled_run2d_write_output(const coupled_run2d_t *run,
                                        const coupled_step_history2d_t *history,

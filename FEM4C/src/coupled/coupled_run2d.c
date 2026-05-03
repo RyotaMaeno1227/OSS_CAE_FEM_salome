@@ -25,6 +25,7 @@ fem_error_t coupled_run2d_write_output(const coupled_run2d_t *run,
                                        const coupled_step_history2d_t *history,
                                        int history_count,
                                        const char *output_filename);
+void coupled_run2d_print_startup_summary(const coupled_run2d_t *run);
 static fem_error_t coupled_legacy_no_flex_fallback_error(
     const coupled_run2d_t *run);
 fem_error_t coupled_run2d_capture_step_flex_counters(
@@ -261,56 +262,7 @@ fem_error_t coupled_run2d(const char *input_filename,
     history = calloc((size_t)run.time.num_steps, sizeof(*history));
     CHECK_NULL(history, "coupled explicit history");
 
-    printf("%s\n", coupled_run2d_summary_title_from_scheme(run.time.scheme));
-    printf("  scheme=%s\n", coupled_scheme_to_string(run.time.scheme));
-    printf("  path_class=%s\n",
-           coupled_run2d_path_class_from_scheme(run.time.scheme));
-    printf("  step_dispatch_basis=coupling_scheme\n");
-    printf("  step_runner=%s\n",
-           coupled_run2d_step_runner_name_from_scheme(run.time.scheme));
-    if (run.time.scheme_is_legacy_default) {
-        printf("  scheme_source=legacy_default via integrator=%s\n",
-               coupled_integrator_to_string(run.time.integrator));
-    } else {
-        printf("  scheme_source=explicit_request\n");
-    }
-    printf("  integrator=%s\n",
-           coupled_integrator_to_string(run.time.integrator));
-    printf("  coupling_role=%s\n",
-           coupled_run2d_role_from_scheme(run.time.scheme));
-    printf("  comparison_role=%s\n",
-           coupled_run2d_comparison_role_from_scheme(run.time.scheme));
-    printf("  solver_route_class=%s\n",
-           coupled_run2d_solver_route_class_from_run(&run));
-    printf("  delay_semantics_status=%s\n",
-           coupled_run2d_delay_semantics_status_from_scheme(run.time.scheme));
-    printf("  v2_decision_state=undecided\n");
-    if (run.time.scheme == COUPLED_SCHEME_MONOLITHIC_STRONG_V1) {
-        printf("  year1_experimental_only=1\n");
-        printf("  fixed_point_strong!=monolithic_strong_v1\n");
-    }
-    if (run.time.scheme == COUPLED_SCHEME_DELAYED_COSIM_V1_5) {
-        printf("  year1_experimental_only=1\n");
-        printf("  monolithic_strong_v1!=delayed_cosim_v1_5\n");
-    }
-    if (run.time.integrator == COUPLED_INTEGRATOR_HHT_ALPHA) {
-        printf("  hht_alpha=%.6e\n", run.time.hht_alpha);
-    }
-    printf("  feedback_to_mbd=%d\n",
-           coupled_run2d_feedback_to_mbd_from_scheme(run.time.scheme));
-    printf("  flex_bodies=%d\n", run.flex_model_count);
-    if (run.time.scheme == COUPLED_SCHEME_MONOLITHIC_STRONG_V1 ||
-        run.time.scheme == COUPLED_SCHEME_DELAYED_COSIM_V1_5) {
-        printf("  body_count=%d\n", coupled_run2d_body_count_from_run(&run));
-        printf("  interface_count=%d\n",
-               coupled_run2d_interface_count_from_run(&run));
-    }
-    printf("  time: dt=%.6e steps=%d max_iter=%d residual_tol=%.6e marker_relaxation=%.6e\n",
-           run.time.dt,
-           run.time.num_steps,
-           run.time.max_coupling_iterations,
-           run.time.residual_tolerance,
-           run.time.marker_relaxation);
+    coupled_run2d_print_startup_summary(&run);
 
     for (step = 0; step < run.time.num_steps; ++step) {
         err = coupled_run2d_dispatch_step_by_scheme(&run,
