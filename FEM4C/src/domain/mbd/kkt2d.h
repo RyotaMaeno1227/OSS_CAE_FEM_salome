@@ -1,8 +1,8 @@
 #ifndef FEM4C_MBD_KKT2D_H
 #define FEM4C_MBD_KKT2D_H
 
-#include "../common/types.h"
-#include "../domain/mbd/constraint2d.h"
+#include "../../common/types.h"
+#include "constraint2d.h"
 
 typedef struct {
     int body_dof;

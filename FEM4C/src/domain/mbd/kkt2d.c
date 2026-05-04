@@ -1,5 +1,5 @@
 #include "kkt2d.h"
-#include "../common/error.h"
+#include "../../common/error.h"
 
 /*
  * 2D rigid-body state:

@@ -3,7 +3,7 @@
 
 #include "../domain/mbd/body2d.h"
 #include "../domain/contact/contact2d.h"
-#include "kkt2d.h"
+#include "../domain/mbd/kkt2d.h"
 
 #define MBD_SYSTEM2D_MAX_BODIES 8
 #define MBD_SYSTEM2D_MAX_CONSTRAINTS 8
