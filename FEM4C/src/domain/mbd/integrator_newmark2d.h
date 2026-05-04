@@ -1,7 +1,7 @@
 #ifndef FEM4C_MBD_INTEGRATOR_NEWMARK2D_H
 #define FEM4C_MBD_INTEGRATOR_NEWMARK2D_H
 
-#include "body2d.h"
+#include "../../mbd/body2d.h"
 
 typedef struct {
     double dt;

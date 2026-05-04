@@ -2,7 +2,7 @@
 #define FEM4C_MBD_INTEGRATOR_HHT2D_H
 
 #include "body2d.h"
-#include "integrator_newmark2d.h"
+#include "../domain/mbd/integrator_newmark2d.h"
 
 typedef struct {
     double dt;

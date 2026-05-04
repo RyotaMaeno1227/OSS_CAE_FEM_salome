@@ -3,7 +3,7 @@
 #include "forces2d.h"
 #include "../domain/mbd/integrator_explicit2d.h"
 #include "integrator_hht2d.h"
-#include "integrator_newmark2d.h"
+#include "../domain/mbd/integrator_newmark2d.h"
 #include "kinematics2d.h"
 #include "../numerics/dense/linear_solver_dense.h"
 #include "output2d.h"
