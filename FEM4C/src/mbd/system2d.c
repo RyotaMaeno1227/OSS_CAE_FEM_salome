@@ -1,7 +1,7 @@
 #include "system2d.h"
 #include "assembler2d.h"
 #include "forces2d.h"
-#include "integrator_explicit2d.h"
+#include "../domain/mbd/integrator_explicit2d.h"
 #include "integrator_hht2d.h"
 #include "integrator_newmark2d.h"
 #include "kinematics2d.h"
