@@ -40,6 +40,7 @@ COUPLED_SRCS = $(SRCDIR)/coupled/case2d.c $(SRCDIR)/coupled/coupled_run2d.c \
 	               $(SRCDIR)/coupled/coupled_run2d_config.c \
 	               $(SRCDIR)/coupled/coupled_run2d_flex_case_validator.c \
 	               $(SRCDIR)/coupled/coupled_run2d_flex_model_loader.c \
+	               $(SRCDIR)/coupled/coupled_run2d_lifecycle.c \
 	               $(SRCDIR)/coupled/coupled_run2d_master_input_loader.c \
 	               $(SRCDIR)/coupled/coupled_run2d_route_descriptors.c \
 	               $(SRCDIR)/coupled/coupled_run2d_step_dispatch.c \
