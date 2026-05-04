@@ -1,7 +1,7 @@
 #ifndef FEM4C_MBD_FORCES2D_H
 #define FEM4C_MBD_FORCES2D_H
 
-#include "integrator_hht2d.h"
+#include "../domain/mbd/integrator_hht2d.h"
 #include "system2d.h"
 
 fem_error_t mbd_forces2d_add_generalized_force(double generalized_force[MBD_BODY2D_DOF],

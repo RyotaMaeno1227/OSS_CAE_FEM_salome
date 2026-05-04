@@ -1,5 +1,5 @@
 #include "integrator_hht2d.h"
-#include "../common/error.h"
+#include "../../common/error.h"
 #include <math.h>
 #include <string.h>
 
