@@ -1,7 +1,6 @@
 #ifndef FEM4C_MBD_CONTACT2D_H
 #define FEM4C_MBD_CONTACT2D_H
 
-#include "body2d.h"
 #include <stdint.h>
 
 #define MBD_CONTACT2D_MAX_PAIRS 8
