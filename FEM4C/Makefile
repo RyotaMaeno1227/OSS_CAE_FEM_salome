@@ -29,40 +29,62 @@ COMMON_SRCS = $(SRCDIR)/common/globals.c $(SRCDIR)/common/error.c
 IO_SRCS = $(SRCDIR)/io/input.c $(SRCDIR)/io/output.c
 MESH_SRCS =
 MATERIAL_SRCS =
-ELEMENT_SRCS = $(SRCDIR)/elements/element_base.c $(SRCDIR)/elements/elements.c \
-               $(SRCDIR)/elements/t6/t6_element.c $(SRCDIR)/elements/t6/t6_stiffness.c \
-               $(SRCDIR)/elements/q4/q4_element.c $(SRCDIR)/elements/q4/q4_stiffness.c \
-               $(SRCDIR)/elements/t3/t3_element.c
-SOLVER_SRCS = $(SRCDIR)/solver/assembly.c $(SRCDIR)/solver/cg_solver.c
+
+# B-plan logical source groups keep current paths while separating future
+# domain and numerics ownership. Physical moves will update paths later.
+DOMAIN_FEM_ELEMENT_SRCS = $(SRCDIR)/elements/element_base.c $(SRCDIR)/elements/elements.c \
+                          $(SRCDIR)/elements/t6/t6_element.c $(SRCDIR)/elements/t6/t6_stiffness.c \
+                          $(SRCDIR)/elements/q4/q4_element.c $(SRCDIR)/elements/q4/q4_stiffness.c \
+                          $(SRCDIR)/elements/t3/t3_element.c
+DOMAIN_FEM_ASSEMBLY_SRCS = $(SRCDIR)/solver/assembly.c
+DOMAIN_FEM_SRCS = $(DOMAIN_FEM_ELEMENT_SRCS) $(DOMAIN_FEM_ASSEMBLY_SRCS)
+
+NUMERICS_CG_SRCS = $(SRCDIR)/solver/cg_solver.c
+NUMERICS_DENSE_SRCS = $(SRCDIR)/mbd/linear_solver_dense.c
+
+DOMAIN_MBD_CORE_SRCS = $(SRCDIR)/mbd/body2d.c $(SRCDIR)/mbd/constraint2d.c $(SRCDIR)/mbd/forces2d.c \
+                       $(SRCDIR)/mbd/integrator_explicit2d.c $(SRCDIR)/mbd/integrator_newmark2d.c \
+                       $(SRCDIR)/mbd/integrator_hht2d.c $(SRCDIR)/mbd/kinematics2d.c \
+                       $(SRCDIR)/mbd/kkt2d.c $(SRCDIR)/mbd/assembler2d.c
+DOMAIN_MBD_RUNTIME_SRCS = $(SRCDIR)/mbd/output2d.c $(SRCDIR)/mbd/projection2d.c $(SRCDIR)/mbd/system2d.c
+DOMAIN_MBD_SRCS = $(DOMAIN_MBD_CORE_SRCS) $(DOMAIN_MBD_RUNTIME_SRCS)
+
+DOMAIN_COUPLED_RUN_SRCS = $(SRCDIR)/coupled/case2d.c $(SRCDIR)/coupled/coupled_run2d.c \
+                          $(SRCDIR)/coupled/coupled_run2d_config.c \
+                          $(SRCDIR)/coupled/coupled_run2d_flex_case_validator.c \
+                          $(SRCDIR)/coupled/coupled_run2d_flex_model_loader.c \
+                          $(SRCDIR)/coupled/coupled_run2d_lifecycle.c \
+                          $(SRCDIR)/coupled/coupled_run2d_master_input_loader.c \
+                          $(SRCDIR)/coupled/coupled_run2d_route_descriptors.c \
+                          $(SRCDIR)/coupled/coupled_run2d_step_dispatch.c \
+                          $(SRCDIR)/coupled/coupled_run2d_step_history_capture.c \
+                          $(SRCDIR)/coupled/coupled_run2d_step_snapshot_writer.c \
+                          $(SRCDIR)/coupled/coupled_run2d_summary_writer.c \
+                          $(SRCDIR)/coupled/coupled_run2d_writer_meta.c
+DOMAIN_COUPLED_STEP_CORE_SRCS = $(SRCDIR)/coupled/coupled_step_history2d.c \
+                                $(SRCDIR)/coupled/coupled_monolithic_assembly2d.c \
+                                $(SRCDIR)/coupled/coupled_monolithic_state2d.c \
+                                $(SRCDIR)/coupled/coupled_step_common2d.c \
+                                $(SRCDIR)/coupled/coupled_step_delayed_cosim2d.c \
+                                $(SRCDIR)/coupled/coupled_step_explicit2d.c \
+                                $(SRCDIR)/coupled/coupled_step_monolithic2d.c \
+                                $(SRCDIR)/coupled/coupled_step_oneway2d.c
+DOMAIN_CONTACT_SRCS = $(SRCDIR)/coupled/contact_patch_load2d.c $(SRCDIR)/coupled/contact_patch2d.c
+DOMAIN_COUPLED_STEP_TAIL_SRCS = $(SRCDIR)/coupled/coupled_step_implicit2d.c
+DOMAIN_COUPLED_FLEX_SRCS = $(SRCDIR)/coupled/fem_model_copy.c \
+                            $(SRCDIR)/coupled/flex_bc2d.c $(SRCDIR)/coupled/flex_body2d.c \
+                            $(SRCDIR)/coupled/flex_nodeset.c \
+                            $(SRCDIR)/coupled/flex_reaction2d.c $(SRCDIR)/coupled/flex_snapshot2d.c \
+                            $(SRCDIR)/coupled/flex_solver2d.c
+DOMAIN_COUPLED_SRCS = $(DOMAIN_COUPLED_RUN_SRCS) $(DOMAIN_COUPLED_STEP_CORE_SRCS) \
+                      $(DOMAIN_CONTACT_SRCS) $(DOMAIN_COUPLED_STEP_TAIL_SRCS) \
+                      $(DOMAIN_COUPLED_FLEX_SRCS)
+
+ELEMENT_SRCS = $(DOMAIN_FEM_ELEMENT_SRCS)
+SOLVER_SRCS = $(DOMAIN_FEM_ASSEMBLY_SRCS) $(NUMERICS_CG_SRCS)
 ANALYSIS_SRCS = $(SRCDIR)/analysis/static.c $(SRCDIR)/analysis/runner.c
-MBD_SRCS = $(SRCDIR)/mbd/body2d.c $(SRCDIR)/mbd/constraint2d.c $(SRCDIR)/mbd/forces2d.c $(SRCDIR)/mbd/integrator_explicit2d.c $(SRCDIR)/mbd/integrator_newmark2d.c $(SRCDIR)/mbd/integrator_hht2d.c $(SRCDIR)/mbd/kinematics2d.c $(SRCDIR)/mbd/kkt2d.c $(SRCDIR)/mbd/assembler2d.c $(SRCDIR)/mbd/linear_solver_dense.c $(SRCDIR)/mbd/output2d.c $(SRCDIR)/mbd/projection2d.c $(SRCDIR)/mbd/system2d.c
-COUPLED_SRCS = $(SRCDIR)/coupled/case2d.c $(SRCDIR)/coupled/coupled_run2d.c \
-	               $(SRCDIR)/coupled/coupled_run2d_config.c \
-	               $(SRCDIR)/coupled/coupled_run2d_flex_case_validator.c \
-	               $(SRCDIR)/coupled/coupled_run2d_flex_model_loader.c \
-	               $(SRCDIR)/coupled/coupled_run2d_lifecycle.c \
-	               $(SRCDIR)/coupled/coupled_run2d_master_input_loader.c \
-	               $(SRCDIR)/coupled/coupled_run2d_route_descriptors.c \
-	               $(SRCDIR)/coupled/coupled_run2d_step_dispatch.c \
-	               $(SRCDIR)/coupled/coupled_run2d_step_history_capture.c \
-	               $(SRCDIR)/coupled/coupled_run2d_step_snapshot_writer.c \
-	               $(SRCDIR)/coupled/coupled_run2d_summary_writer.c \
-	               $(SRCDIR)/coupled/coupled_run2d_writer_meta.c \
-	               $(SRCDIR)/coupled/coupled_step_history2d.c \
-	               $(SRCDIR)/coupled/coupled_monolithic_assembly2d.c \
-	               $(SRCDIR)/coupled/coupled_monolithic_state2d.c \
-	               $(SRCDIR)/coupled/coupled_step_common2d.c \
-	               $(SRCDIR)/coupled/coupled_step_delayed_cosim2d.c \
-	               $(SRCDIR)/coupled/coupled_step_explicit2d.c \
-	               $(SRCDIR)/coupled/coupled_step_monolithic2d.c \
-	               $(SRCDIR)/coupled/coupled_step_oneway2d.c \
-	               $(SRCDIR)/coupled/contact_patch_load2d.c \
-	               $(SRCDIR)/coupled/contact_patch2d.c \
-	               $(SRCDIR)/coupled/coupled_step_implicit2d.c $(SRCDIR)/coupled/fem_model_copy.c \
-	               $(SRCDIR)/coupled/flex_bc2d.c $(SRCDIR)/coupled/flex_body2d.c \
-	               $(SRCDIR)/coupled/flex_nodeset.c \
-	               $(SRCDIR)/coupled/flex_reaction2d.c $(SRCDIR)/coupled/flex_snapshot2d.c \
-	               $(SRCDIR)/coupled/flex_solver2d.c
+MBD_SRCS = $(DOMAIN_MBD_CORE_SRCS) $(NUMERICS_DENSE_SRCS) $(DOMAIN_MBD_RUNTIME_SRCS)
+COUPLED_SRCS = $(DOMAIN_COUPLED_SRCS)
 MAIN_SRCS = $(SRCDIR)/fem4c.c
 
 # All source files
