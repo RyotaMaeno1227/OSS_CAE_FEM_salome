@@ -1,5 +1,5 @@
 #include "assembler2d.h"
-#include "forces2d.h"
+#include "../domain/mbd/forces2d.h"
 #include "../common/error.h"
 #include <stdlib.h>
 #include <string.h>

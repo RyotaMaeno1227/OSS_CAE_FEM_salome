@@ -1,5 +1,5 @@
 #include "forces2d.h"
-#include "../common/error.h"
+#include "../../common/error.h"
 #include <math.h>
 
 fem_error_t mbd_forces2d_add_generalized_force(double generalized_force[MBD_BODY2D_DOF],
