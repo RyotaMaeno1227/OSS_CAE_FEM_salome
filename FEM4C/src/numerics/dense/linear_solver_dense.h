@@ -1,7 +1,7 @@
 #ifndef FEM4C_MBD_LINEAR_SOLVER_DENSE_H
 #define FEM4C_MBD_LINEAR_SOLVER_DENSE_H
 
-#include "../common/types.h"
+#include "../../common/types.h"
 
 #define MBD_LINEAR_SOLVER_DENSE_MAX_DIM 128
 #define MBD_LINEAR_SOLVER_DENSE_DEFAULT_PIVOT_TOL 1.0e-12

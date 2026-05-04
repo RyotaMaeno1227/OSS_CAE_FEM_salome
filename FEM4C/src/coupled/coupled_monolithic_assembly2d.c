@@ -1,7 +1,7 @@
 #include "coupled_monolithic_assembly2d.h"
 
 #include "../common/error.h"
-#include "../mbd/linear_solver_dense.h"
+#include "../numerics/dense/linear_solver_dense.h"
 
 #include <math.h>
 #include <string.h>

@@ -1,5 +1,5 @@
 #include "linear_solver_dense.h"
-#include "../common/error.h"
+#include "../../common/error.h"
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
