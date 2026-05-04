@@ -13,8 +13,8 @@ coupled_scheme_t coupled_scheme_legacy_default_from_integrator(
     coupled_integrator_t integrator);
 fem_error_t coupled_time_control_validate_contract(
     const coupled_time_control_t *time);
-static fem_error_t coupled_run2d_load_master_input(coupled_run2d_t *run,
-                                                   const char *input_filename);
+fem_error_t coupled_run2d_load_master_input(coupled_run2d_t *run,
+                                            const char *input_filename);
 fem_error_t coupled_run2d_validate_flex_case(const coupled_run2d_t *run);
 fem_error_t coupled_run2d_load_flex_models(coupled_run2d_t *run);
 fem_error_t coupled_run2d_write_step_snapshots(
@@ -143,29 +143,6 @@ void coupled_run2d_free(coupled_run2d_t *run)
     coupled_run2d_free_dynamic_buffers(run);
     coupled_case2d_free(&run->case_data);
     coupled_run2d_zero(run);
-}
-
-static fem_error_t coupled_run2d_load_master_input(coupled_run2d_t *run,
-                                                   const char *input_filename)
-{
-    CHECK_NULL(run, "coupled_run2d");
-    CHECK_NULL(input_filename, "coupled input filename");
-
-    CHECK_ERROR(input_read_data(input_filename));
-
-    run->master_fem.analysis = &g_analysis;
-    run->master_fem.num_nodes = g_num_nodes;
-    run->master_fem.num_elements = g_num_elements;
-    run->master_fem.num_materials = g_num_materials;
-
-    CHECK_ERROR(mbd_system2d_load(&run->mbd_system, input_filename));
-    CHECK_ERROR(coupled_case2d_clone(&run->case_data, coupled_case2d_view()));
-    if (run->case_data.num_flex_bodies > 0) {
-        CHECK_ERROR(coupled_run2d_reserve_flex_model_storage(
-            run,
-            run->case_data.num_flex_bodies));
-    }
-    return FEM_SUCCESS;
 }
 
 fem_error_t coupled_run2d(const char *input_filename,
