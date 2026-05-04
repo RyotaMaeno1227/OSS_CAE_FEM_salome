@@ -1,5 +1,5 @@
 #include "kinematics2d.h"
-#include "../common/error.h"
+#include "../../common/error.h"
 #include <math.h>
 
 fem_error_t mbd_kinematics2d_rotate_local_vector(const double local_vector[2],

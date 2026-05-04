@@ -1,7 +1,7 @@
 #ifndef FEM4C_MBD_CONSTRAINT2D_H
 #define FEM4C_MBD_CONSTRAINT2D_H
 
-#include "../common/types.h"
+#include "../../common/types.h"
 
 #define MBD_BODY2D_DOF 3
 #define MBD_CONSTRAINT2D_MAX_EQ 2

@@ -1,7 +1,7 @@
 #ifndef FEM4C_MBD_BODY2D_H
 #define FEM4C_MBD_BODY2D_H
 
-#include "../common/types.h"
+#include "../../common/types.h"
 #include "constraint2d.h"
 
 #define MBD_BODY2D_ID_UNDEFINED (-1)
