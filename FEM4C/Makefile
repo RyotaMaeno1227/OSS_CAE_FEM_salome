@@ -39,7 +39,7 @@ DOMAIN_FEM_ELEMENT_SRCS = $(SRCDIR)/elements/element_base.c $(SRCDIR)/elements/e
 DOMAIN_FEM_ASSEMBLY_SRCS = $(SRCDIR)/solver/assembly.c
 DOMAIN_FEM_SRCS = $(DOMAIN_FEM_ELEMENT_SRCS) $(DOMAIN_FEM_ASSEMBLY_SRCS)
 
-NUMERICS_CG_SRCS = $(SRCDIR)/solver/cg_solver.c
+NUMERICS_CG_SRCS = $(SRCDIR)/numerics/cg/cg_solver.c
 NUMERICS_DENSE_SRCS = $(SRCDIR)/mbd/linear_solver_dense.c
 
 DOMAIN_MBD_CORE_SRCS = $(SRCDIR)/mbd/body2d.c $(SRCDIR)/mbd/constraint2d.c $(SRCDIR)/mbd/forces2d.c \

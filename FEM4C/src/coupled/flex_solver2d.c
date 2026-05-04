@@ -2,7 +2,7 @@
 #include "flex_bc2d.h"
 
 #include "../common/error.h"
-#include "../solver/cg_solver.h"
+#include "../numerics/cg/cg_solver.h"
 #include "../solver/assembly.h"
 
 #include <math.h>

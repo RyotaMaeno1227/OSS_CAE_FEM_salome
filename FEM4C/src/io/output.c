@@ -9,7 +9,7 @@
 #include "../elements/t6/t6_stiffness.h"
 #include "../elements/t3/t3_element.h"
 #include "../elements/q4/q4_element.h"
-#include "../solver/cg_solver.h"
+#include "../numerics/cg/cg_solver.h"
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
