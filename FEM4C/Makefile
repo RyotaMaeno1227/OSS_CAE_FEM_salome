@@ -69,7 +69,7 @@ DOMAIN_COUPLED_STEP_CORE_SRCS = $(SRCDIR)/coupled/coupled_step_history2d.c \
                                 $(SRCDIR)/coupled/coupled_step_explicit2d.c \
                                 $(SRCDIR)/coupled/coupled_step_monolithic2d.c \
                                 $(SRCDIR)/coupled/coupled_step_oneway2d.c
-DOMAIN_CONTACT_SRCS = $(SRCDIR)/coupled/contact_patch_load2d.c $(SRCDIR)/coupled/contact_patch2d.c
+DOMAIN_CONTACT_SRCS = $(SRCDIR)/coupled/contact_patch_load2d.c $(SRCDIR)/domain/contact/contact_patch2d.c
 DOMAIN_COUPLED_STEP_TAIL_SRCS = $(SRCDIR)/coupled/coupled_step_implicit2d.c
 DOMAIN_COUPLED_FLEX_SRCS = $(SRCDIR)/coupled/fem_model_copy.c \
                             $(SRCDIR)/coupled/flex_bc2d.c $(SRCDIR)/coupled/flex_body2d.c \

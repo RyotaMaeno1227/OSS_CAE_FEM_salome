@@ -1,8 +1,8 @@
 #ifndef FEM4C_COUPLED_CONTACT_PATCH2D_H
 #define FEM4C_COUPLED_CONTACT_PATCH2D_H
 
-#include "../common/constants.h"
-#include "../common/types.h"
+#include "../../common/constants.h"
+#include "../../common/types.h"
 
 typedef struct {
     int step;

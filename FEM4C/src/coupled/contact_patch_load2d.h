@@ -1,7 +1,7 @@
 #ifndef FEM4C_COUPLED_CONTACT_PATCH_LOAD2D_H
 #define FEM4C_COUPLED_CONTACT_PATCH_LOAD2D_H
 
-#include "contact_patch2d.h"
+#include "../domain/contact/contact_patch2d.h"
 #include "fem_model_copy.h"
 
 #define CONTACT_PATCH_LOAD2D_MAX_NODES 4
