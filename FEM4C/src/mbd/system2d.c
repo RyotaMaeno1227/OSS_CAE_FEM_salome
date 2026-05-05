@@ -7,7 +7,7 @@
 #include "../domain/mbd/kinematics2d.h"
 #include "../numerics/dense/linear_solver_dense.h"
 #include "output2d.h"
-#include "projection2d.h"
+#include "../domain/mbd/projection2d.h"
 #include "../domain/contact/contact_patch2d.h"
 #include "../coupled/contact_patch_load2d.h"
 #include "../analysis/static.h"

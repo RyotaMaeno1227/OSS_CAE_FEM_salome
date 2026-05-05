@@ -1,6 +1,6 @@
 #include "projection2d.h"
-#include "../numerics/dense/linear_solver_dense.h"
-#include "../common/error.h"
+#include "../../numerics/dense/linear_solver_dense.h"
+#include "../../common/error.h"
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
