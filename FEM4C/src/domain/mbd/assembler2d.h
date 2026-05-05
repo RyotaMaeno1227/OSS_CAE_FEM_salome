@@ -1,8 +1,8 @@
 #ifndef FEM4C_MBD_ASSEMBLER2D_H
 #define FEM4C_MBD_ASSEMBLER2D_H
 
-#include "system2d.h"
-#include "../numerics/dense/linear_solver_dense.h"
+#include "../../mbd/system2d.h"
+#include "../../numerics/dense/linear_solver_dense.h"
 
 #define MBD_ASSEMBLER2D_MAX_BODY_DOF (MBD_SYSTEM2D_MAX_BODIES * MBD_BODY2D_DOF)
 #define MBD_ASSEMBLER2D_MAX_LAMBDA_DOF (MBD_SYSTEM2D_MAX_CONSTRAINTS * MBD_CONSTRAINT2D_MAX_EQ)

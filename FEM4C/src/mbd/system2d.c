@@ -1,5 +1,5 @@
 #include "system2d.h"
-#include "assembler2d.h"
+#include "../domain/mbd/assembler2d.h"
 #include "../domain/mbd/forces2d.h"
 #include "../domain/mbd/integrator_explicit2d.h"
 #include "../domain/mbd/integrator_hht2d.h"
