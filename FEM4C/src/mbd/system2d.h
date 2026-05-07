@@ -2,7 +2,7 @@
 #define FEM4C_MBD_SYSTEM2D_H
 
 #include "../domain/mbd/body2d.h"
-#include "../domain/contact/contact2d.h"
+#include "../contact/kernel/contact2d.h"
 #include "../domain/mbd/kkt2d.h"
 
 #define MBD_SYSTEM2D_MAX_BODIES 8
