@@ -1642,12 +1642,12 @@ globals.c ← error.c ← types.h ← constants.h
 
 ```c
 // 新要素（例：H8要素）のヘッダーファイル
-// src/elements/h8/h8_element.h
+// src/domain/fem/element/h8/h8_element.h
 
 #ifndef H8_ELEMENT_H
 #define H8_ELEMENT_H
 
-#include "../../common/types.h"
+#include "../../../../common/types.h"
 
 #define H8_NODES_PER_ELEMENT 8
 #define H8_DOF_PER_NODE 3
@@ -1665,7 +1665,7 @@ fem_error_t h8_get_element_coordinates(int element_id, double coords[][3]);
 #### 12.2.2 要素登録
 
 ```c
-// src/elements/elements.c に追加
+// src/domain/fem/element/elements.c に追加
 
 #include "h8/h8_element.h"
 
@@ -1694,7 +1694,7 @@ fem_error_t elements_initialize(void) {
 ```c
 // practice/tests/test_t3_element.c
 
-#include "../src/elements/t3/t3_element.h"
+#include "../src/domain/fem/element/t3/t3_element.h"
 #include <assert.h>
 #include <math.h>
 

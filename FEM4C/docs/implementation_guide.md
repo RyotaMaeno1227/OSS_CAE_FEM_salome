@@ -237,11 +237,11 @@ Problem summary:
 
 ## 4. elements（要素）
 対象ファイル:
-- `src/elements/element_base.c/h`
-- `src/elements/elements.c/h`
-- `src/elements/t3/t3_element.c`
-- `src/elements/t6/t6_element.c`, `src/elements/t6/t6_stiffness.c`
-- `src/elements/q4/q4_element.c`, `src/elements/q4/q4_stiffness.c`
+- `src/domain/fem/element/element_base.c/h`
+- `src/domain/fem/element/elements.c/h`
+- `src/domain/fem/element/t3/t3_element.c`
+- `src/domain/fem/element/t6/t6_element.c`, `src/domain/fem/element/t6/t6_stiffness.c`
+- `src/domain/fem/element/q4/q4_element.c`, `src/domain/fem/element/q4/q4_stiffness.c`
 
 ### 4.1 要素登録
 - `elements_initialize()` で `t3_register()`, `q4_register()`, `t6_register()` が登録されます。
@@ -296,7 +296,7 @@ Checking global stiffness matrix properties...
 
 ## 5. solver（アセンブリと解法）
 対象ファイル:
-- `src/solver/assembly.c`, `src/solver/assembly.h`
+- `src/domain/fem/assembly/assembly.c`, `src/domain/fem/assembly/assembly.h`
 - `src/solver/cg_solver.c`, `src/solver/cg_solver.h`
 
 ### 5.1 アセンブリ

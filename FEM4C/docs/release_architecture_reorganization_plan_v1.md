@@ -51,7 +51,7 @@ current `src/` は次の module 群に分かれています。
 - `src/common`
 - `src/analysis`
 - `src/io`
-- `src/elements`
+- `src/domain/fem/element`
 - `src/mbd`
 - `src/solver`
 - `src/coupled`
@@ -62,7 +62,7 @@ current `src/` は次の module 群に分かれています。
 - `src/io/input.c`
 - `src/analysis/static.c`
 - `src/coupled/coupled_run2d.c`
-- `src/solver/assembly.c`
+- `src/domain/fem/assembly/assembly.c`
 
 これは release 後に分割設計の優先対象として扱う。
 

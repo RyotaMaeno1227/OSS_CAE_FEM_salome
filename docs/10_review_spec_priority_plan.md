@@ -89,9 +89,9 @@ review spec と current repo を照合したときの差分は次。
 ### C-R1
 - Goal: Q4/T3 の stiffness function pointer warning を adapter または整合 wrapper で解消する。
 - Scope:
-  - `FEM4C/src/elements/q4/q4_element.c`
-  - `FEM4C/src/elements/t3/t3_element.c`
-  - 必要時のみ `FEM4C/src/elements/t6/t6_element.c`
+  - `FEM4C/src/domain/fem/element/q4/q4_element.c`
+  - `FEM4C/src/domain/fem/element/t3/t3_element.c`
+  - 必要時のみ `FEM4C/src/domain/fem/element/t6/t6_element.c`
 - Acceptance:
   - `make clean && make -j2` で Q4/T3 の incompatible pointer warning が消える。
 

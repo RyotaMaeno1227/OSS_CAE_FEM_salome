@@ -6,7 +6,7 @@
 - `runner.c` は入口と mode 分岐に縮退する。
 - MBD 実行本体は `src/mbd/` に寄せる。
 - flexible body と coupled orchestration は `src/coupled/` に寄せる。
-- 既存 FEM kernel は `src/solver/` / `src/elements/` / `src/io/` の既存資産を活用し、必要最小限の wrapper を追加する。
+- 既存 FEM kernel は `src/domain/fem/assembly/` / `src/domain/fem/element/` / `src/solver/` / `src/io/` の既存資産を活用し、必要最小限の wrapper を追加する。
 
 ## 2. モジュール責務
 | 領域 | 責務 | 主なファイル |
@@ -15,7 +15,7 @@
 | `mbd/` | body state、force assemble、constraint residual/Jacobian、KKT、explicit/Newmark/HHT、projection、MBD出力 | `src/mbd/body2d.*`, `system2d.*`, `assembler2d.*`, `integrator_*2d.*`, `output2d.*` |
 | `coupled/` | flexible link wrapper、nodeset、runtime BC、full reassembly wrapper、snapshot、MBD-FEM 反力授受、coupled step/run | `src/coupled/flex_*`, `case2d.*`, `coupled_step_*2d.*`, `coupled_run2d.*` |
 | `io/` | 既存入力、MBD/Coupled directive parse、出力補助 | `src/io/input.c`, `src/io/output.c` |
-| `solver/` / `elements/` | 既存 FEM kernel、assembly、linear solve、要素剛性 | `src/solver/*`, `src/elements/*` |
+| `domain/fem/assembly/` / `domain/fem/element/` / `solver/` | 既存 FEM kernel、assembly、linear solve、要素剛性 | `src/domain/fem/assembly/*`, `src/domain/fem/element/*`, `src/solver/*` |
 | `scripts/` | acceptance、comparison、補助検証 | `scripts/run_2d_coupled_acceptance.sh`, `scripts/compare_*.py` |
 
 ## 3. `runner.c` から追い出す責務
