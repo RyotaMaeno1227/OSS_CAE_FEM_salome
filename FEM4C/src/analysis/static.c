@@ -8,7 +8,7 @@
 #include "../common/error.h"
 #include "../io/input.h"
 #include "../io/output.h"
-#include "../solver/assembly.h"
+#include "../domain/fem/assembly/assembly.h"
 #include "../numerics/cg/cg_solver.h"
 #include "../domain/fem/element/t6/t6_stiffness.h"
 #include "../domain/fem/element/t3/t3_element.h"

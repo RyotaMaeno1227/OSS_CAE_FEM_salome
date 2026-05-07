@@ -36,7 +36,7 @@ DOMAIN_FEM_ELEMENT_SRCS = $(SRCDIR)/domain/fem/element/element_base.c $(SRCDIR)/
                           $(SRCDIR)/domain/fem/element/t6/t6_element.c $(SRCDIR)/domain/fem/element/t6/t6_stiffness.c \
                           $(SRCDIR)/domain/fem/element/q4/q4_element.c $(SRCDIR)/domain/fem/element/q4/q4_stiffness.c \
                           $(SRCDIR)/domain/fem/element/t3/t3_element.c
-DOMAIN_FEM_ASSEMBLY_SRCS = $(SRCDIR)/solver/assembly.c
+DOMAIN_FEM_ASSEMBLY_SRCS = $(SRCDIR)/domain/fem/assembly/assembly.c
 DOMAIN_FEM_SRCS = $(DOMAIN_FEM_ELEMENT_SRCS) $(DOMAIN_FEM_ASSEMBLY_SRCS)
 
 NUMERICS_CG_SRCS = $(SRCDIR)/numerics/cg/cg_solver.c

@@ -3,13 +3,13 @@
  */
 
 #include "assembly.h"
-#include "../common/constants.h"
-#include "../common/globals.h"
-#include "../common/error.h"
-#include "../domain/fem/element/t6/t6_element.h"
-#include "../domain/fem/element/t6/t6_stiffness.h"
-#include "../domain/fem/element/t3/t3_element.h"
-#include "../domain/fem/element/q4/q4_element.h"
+#include "../../../common/constants.h"
+#include "../../../common/globals.h"
+#include "../../../common/error.h"
+#include "../element/t6/t6_element.h"
+#include "../element/t6/t6_stiffness.h"
+#include "../element/t3/t3_element.h"
+#include "../element/q4/q4_element.h"
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
