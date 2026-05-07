@@ -6,8 +6,8 @@
  */
 
 #include "element_base.h"
-#include "../common/constants.h"
-#include "../common/types.h"
+#include "../../../common/constants.h"
+#include "../../../common/types.h"
 
 /* Element manager functions */
 fem_error_t elements_initialize(void);

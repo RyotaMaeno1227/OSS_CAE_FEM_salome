@@ -7,8 +7,8 @@
 
 #include "../common/types.h"
 #include "../common/constants.h"
-#include "../elements/t3/t3_element.h"
-#include "../elements/q4/q4_element.h"
+#include "../domain/fem/element/t3/t3_element.h"
+#include "../domain/fem/element/q4/q4_element.h"
 
 /* Assembly functions */
 fem_error_t assembly_global_stiffness_matrix(void);

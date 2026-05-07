@@ -5,8 +5,8 @@
  * Common interface for all element types
  */
 
-#include "../common/constants.h"
-#include "../common/types.h"
+#include "../../../common/constants.h"
+#include "../../../common/types.h"
 
 /* Element interface function pointer types */
 typedef fem_error_t (*element_init_func_t)(void);

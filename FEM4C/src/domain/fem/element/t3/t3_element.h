@@ -5,8 +5,8 @@
  * 3-node triangular element with linear shape functions
  */
 
-#include "../../common/constants.h"
-#include "../../common/types.h"
+#include "../../../../common/constants.h"
+#include "../../../../common/types.h"
 
 /* T3 element specific constants */
 #define T3_NODES_PER_ELEMENT    3

@@ -6,7 +6,7 @@ CC = gcc
 CFLAGS = -Wall -Wextra -O3 -std=c99 -mcmodel=large
 OPENMP_FLAGS = -fopenmp
 DEBUG_FLAGS = -g -DDEBUG
-INCLUDES = -Isrc/common -Isrc/elements -Isrc/solver -Isrc/io -Isrc/mesh -Isrc/material -Isrc/analysis -Isrc/mbd -Isrc/coupled
+INCLUDES = -Isrc/common -Isrc/domain/fem/element -Isrc/solver -Isrc/io -Isrc/mesh -Isrc/material -Isrc/analysis -Isrc/mbd -Isrc/coupled
 
 # Directories
 SRCDIR = src
@@ -32,10 +32,10 @@ MATERIAL_SRCS =
 
 # B-plan logical source groups keep current paths while separating future
 # domain and numerics ownership. Physical moves will update paths later.
-DOMAIN_FEM_ELEMENT_SRCS = $(SRCDIR)/elements/element_base.c $(SRCDIR)/elements/elements.c \
-                          $(SRCDIR)/elements/t6/t6_element.c $(SRCDIR)/elements/t6/t6_stiffness.c \
-                          $(SRCDIR)/elements/q4/q4_element.c $(SRCDIR)/elements/q4/q4_stiffness.c \
-                          $(SRCDIR)/elements/t3/t3_element.c
+DOMAIN_FEM_ELEMENT_SRCS = $(SRCDIR)/domain/fem/element/element_base.c $(SRCDIR)/domain/fem/element/elements.c \
+                          $(SRCDIR)/domain/fem/element/t6/t6_element.c $(SRCDIR)/domain/fem/element/t6/t6_stiffness.c \
+                          $(SRCDIR)/domain/fem/element/q4/q4_element.c $(SRCDIR)/domain/fem/element/q4/q4_stiffness.c \
+                          $(SRCDIR)/domain/fem/element/t3/t3_element.c
 DOMAIN_FEM_ASSEMBLY_SRCS = $(SRCDIR)/solver/assembly.c
 DOMAIN_FEM_SRCS = $(DOMAIN_FEM_ELEMENT_SRCS) $(DOMAIN_FEM_ASSEMBLY_SRCS)
 

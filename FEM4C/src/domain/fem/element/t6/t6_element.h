@@ -5,8 +5,8 @@
  * 6-node triangular element with quadratic shape functions
  */
 
-#include "../../common/constants.h"
-#include "../../common/types.h"
+#include "../../../../common/constants.h"
+#include "../../../../common/types.h"
 
 /* T6 element specific constants */
 #define T6_GAUSS_POINTS 3

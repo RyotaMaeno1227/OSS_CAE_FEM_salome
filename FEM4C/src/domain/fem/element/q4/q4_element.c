@@ -5,8 +5,8 @@
 #include "q4_element.h"
 #include "q4_stiffness.h"
 #include "../element_base.h"
-#include "../../common/globals.h"
-#include "../../common/error.h"
+#include "../../../../common/globals.h"
+#include "../../../../common/error.h"
 #include <math.h>
 #include <string.h>
 
