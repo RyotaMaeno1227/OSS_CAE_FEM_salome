@@ -1,4 +1,5 @@
 #include "system2d.h"
+#include "system2d_internal.h"
 #include "../domain/mbd/assembler2d.h"
 #include "../domain/mbd/forces2d.h"
 #include "../domain/mbd/integrator_explicit2d.h"
@@ -40,26 +41,6 @@
 #define MBD_DIAG_E_BODY_COUNT_RANGE "E_BODY_COUNT_RANGE"
 #define MBD_DIAG_E_CONSTRAINT_BODY_RANGE "E_CONSTRAINT_BODY_RANGE"
 #define MBD_HISTORY_OUTPUT_FILENAME_CAPACITY 1024
-#define MBD_SOURCE_DEFAULT "default"
-#define MBD_SOURCE_ENV "env"
-#define MBD_SOURCE_CLI "cli"
-#define MBD_SOURCE_GROUND_AUTO "ground_auto"
-#define MBD_SOURCE_ENV_INVALID_FALLBACK "env_invalid_fallback"
-#define MBD_SOURCE_ENV_OUT_OF_RANGE_FALLBACK "env_out_of_range_fallback"
-#define MBD_IMPLICIT_RESIDUAL_MODE_CONSTRAINT "constraint_residual_l2"
-#define MBD_IMPLICIT_RESIDUAL_MODE_HHT_EFFECTIVE "hht_effective_residual_l2"
-#define MBD_IMPLICIT_SCHEME_NOT_APPLICABLE "not_applicable"
-#define MBD_IMPLICIT_SCHEME_NEWMARK_FREE "newmark_unconstrained_direct"
-#define MBD_IMPLICIT_SCHEME_NEWMARK_KKT "newmark_constrained_single_kkt"
-#define MBD_IMPLICIT_SCHEME_HHT_FREE "hht_unconstrained_direct"
-#define MBD_IMPLICIT_SCHEME_HHT_MODIFIED_NEWTON "hht_modified_newton_effective"
-#define MBD_IMPLICIT_REASON_NOT_RUN "not_run"
-#define MBD_IMPLICIT_REASON_UNCONSTRAINED_DIRECT "unconstrained_direct"
-#define MBD_IMPLICIT_REASON_RESIDUAL_TOLERANCE "residual_tolerance"
-#define MBD_IMPLICIT_REASON_NO_EQUATIONS "no_equations"
-#define MBD_IMPLICIT_REASON_ITERATION_CAP "iteration_cap"
-#define MBD_HHT_FORCE_HISTORY_MODE_NOT_APPLICABLE "not_applicable"
-#define MBD_HHT_FORCE_HISTORY_MODE_SYSTEM_OWNED_CURRENT_PREVIOUS "system_owned_current_previous"
 #define MBD_CONTACT_STIFFNESS_SMALL_EPS 1.0e-12
 #define MBD_CONTACT_TANGENTIAL_SPEED_EPS 1.0e-12
 #define MBD_LOCAL_FEEDBACK_GAMMA_MIN 0.0
@@ -90,9 +71,6 @@
 #define MBD_GENERIC_CONTACT_SEGMENT_EPS 1.0e-14
 #define MBD_GENERIC_CONTACT_FRICTION_VREF_DEFAULT 1.0e-1
 #define MBD_GENERIC_CONTACT_FRICTION_VSMOOTH_DEFAULT 1.0e-3
-#define MBD_PROJECTION_STOP_DISABLED "disabled"
-#define MBD_PROJECTION_STOP_NO_CONSTRAINTS "no_constraints"
-#define MBD_PROJECTION_STOP_NOT_APPLIED "not_applied"
 #define MBD_CONSTRAINT_RESIDUAL_TOL_DEFAULT 1.0e-1
 #define MBD_PROJECTION_DENSE_RETRY_PIVOT_TOL 1.0e-16
 #define MBD_MONOLITHIC_PROPER_MAX_ITER_DEFAULT 6

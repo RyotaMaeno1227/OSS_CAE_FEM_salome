@@ -1,10 +1,9 @@
 #include "system2d.h"
+#include "system2d_internal.h"
 #include "../domain/mbd/projection2d.h"
 #include "../common/error.h"
 #include <stdio.h>
 #include <string.h>
-
-#define MBD_SOURCE_DEFAULT "default"
 
 /*
  * Owns narrow zero/init/free lifecycle helper implementations for mbd_system2d_t.
