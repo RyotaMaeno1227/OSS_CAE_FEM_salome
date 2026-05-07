@@ -6,7 +6,7 @@ CC = gcc
 CFLAGS = -Wall -Wextra -O3 -std=c99 -mcmodel=large
 OPENMP_FLAGS = -fopenmp
 DEBUG_FLAGS = -g -DDEBUG
-INCLUDES = -Isrc/common -Isrc/domain/fem/element -Isrc/solver -Isrc/io -Isrc/mesh -Isrc/material -Isrc/analysis -Isrc/mbd -Isrc/coupled
+INCLUDES = -Isrc/common -Isrc/fem/element -Isrc/solver -Isrc/io -Isrc/mesh -Isrc/material -Isrc/analysis -Isrc/mbd -Isrc/coupled
 
 # Directories
 SRCDIR = src
@@ -30,13 +30,13 @@ IO_SRCS = $(SRCDIR)/io/input.c $(SRCDIR)/io/output.c
 MESH_SRCS =
 MATERIAL_SRCS =
 
-# B-plan logical source groups keep current paths while separating future
-# domain and numerics ownership. Physical moves will update paths later.
-DOMAIN_FEM_ELEMENT_SRCS = $(SRCDIR)/domain/fem/element/element_base.c $(SRCDIR)/domain/fem/element/elements.c \
-                          $(SRCDIR)/domain/fem/element/t6/t6_element.c $(SRCDIR)/domain/fem/element/t6/t6_stiffness.c \
-                          $(SRCDIR)/domain/fem/element/q4/q4_element.c $(SRCDIR)/domain/fem/element/q4/q4_stiffness.c \
-                          $(SRCDIR)/domain/fem/element/t3/t3_element.c
-DOMAIN_FEM_ASSEMBLY_SRCS = $(SRCDIR)/domain/fem/assembly/assembly.c
+# B-plan logical source groups keep subsystem paths while separating future
+# source-list ownership.
+DOMAIN_FEM_ELEMENT_SRCS = $(SRCDIR)/fem/element/element_base.c $(SRCDIR)/fem/element/elements.c \
+                          $(SRCDIR)/fem/element/t6/t6_element.c $(SRCDIR)/fem/element/t6/t6_stiffness.c \
+                          $(SRCDIR)/fem/element/q4/q4_element.c $(SRCDIR)/fem/element/q4/q4_stiffness.c \
+                          $(SRCDIR)/fem/element/t3/t3_element.c
+DOMAIN_FEM_ASSEMBLY_SRCS = $(SRCDIR)/fem/assembly/assembly.c
 DOMAIN_FEM_SRCS = $(DOMAIN_FEM_ELEMENT_SRCS) $(DOMAIN_FEM_ASSEMBLY_SRCS)
 
 NUMERICS_CG_SRCS = $(SRCDIR)/numerics/cg/cg_solver.c

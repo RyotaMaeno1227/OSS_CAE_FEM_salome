@@ -3,7 +3,7 @@
 
 #include "../common/error.h"
 #include "../numerics/cg/cg_solver.h"
-#include "../domain/fem/assembly/assembly.h"
+#include "../fem/assembly/assembly.h"
 
 #include <math.h>
 #include <stdlib.h>

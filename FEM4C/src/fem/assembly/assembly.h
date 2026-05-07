@@ -5,8 +5,8 @@
  * Assembly of global stiffness matrix and force vector
  */
 
-#include "../../../common/types.h"
-#include "../../../common/constants.h"
+#include "../../common/types.h"
+#include "../../common/constants.h"
 #include "../element/t3/t3_element.h"
 #include "../element/q4/q4_element.h"
 

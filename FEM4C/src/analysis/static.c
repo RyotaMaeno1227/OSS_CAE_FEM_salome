@@ -8,12 +8,12 @@
 #include "../common/error.h"
 #include "../io/input.h"
 #include "../io/output.h"
-#include "../domain/fem/assembly/assembly.h"
+#include "../fem/assembly/assembly.h"
 #include "../numerics/cg/cg_solver.h"
-#include "../domain/fem/element/t6/t6_stiffness.h"
-#include "../domain/fem/element/t3/t3_element.h"
-#include "../domain/fem/element/q4/q4_element.h"
-#include "../domain/fem/element/elements.h"
+#include "../fem/element/t6/t6_stiffness.h"
+#include "../fem/element/t3/t3_element.h"
+#include "../fem/element/q4/q4_element.h"
+#include "../fem/element/elements.h"
 #include <time.h>
 #include <stdio.h>
 #include <string.h>

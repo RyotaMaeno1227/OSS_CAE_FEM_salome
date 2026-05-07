@@ -5,8 +5,8 @@
  * 4-node quadrilateral element with linear shape functions
  */
 
-#include "../../../../common/constants.h"
-#include "../../../../common/types.h"
+#include "../../../common/constants.h"
+#include "../../../common/types.h"
 
 /* Q4 element specific constants */
 #define Q4_NODES_PER_ELEMENT    4

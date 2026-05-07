@@ -3,8 +3,8 @@
  */
 
 #include "element_base.h"
-#include "../../../common/error.h"
-#include "../../../common/globals.h"
+#include "../../common/error.h"
+#include "../../common/globals.h"
 #include <string.h>
 #include <math.h>
 

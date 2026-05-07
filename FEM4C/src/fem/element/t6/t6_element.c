@@ -6,8 +6,8 @@
 #include "t6_element.h"
 #include "t6_stiffness.h"
 #include "../element_base.h"
-#include "../../../../common/globals.h"
-#include "../../../../common/error.h"
+#include "../../../common/globals.h"
+#include "../../../common/error.h"
 #include <math.h>
 #include <string.h>
 
