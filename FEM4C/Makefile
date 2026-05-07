@@ -41,6 +41,7 @@ DOMAIN_FEM_SRCS = $(DOMAIN_FEM_ELEMENT_SRCS) $(DOMAIN_FEM_ASSEMBLY_SRCS)
 
 NUMERICS_CG_SRCS = $(SRCDIR)/numerics/cg/cg_solver.c
 NUMERICS_DENSE_SRCS = $(SRCDIR)/numerics/dense/linear_solver_dense.c
+NUMERICS_SRCS = $(NUMERICS_CG_SRCS) $(NUMERICS_DENSE_SRCS)
 
 DOMAIN_MBD_CORE_SRCS = $(SRCDIR)/domain/mbd/body2d.c $(SRCDIR)/domain/mbd/constraint2d.c $(SRCDIR)/domain/mbd/forces2d.c \
                        $(SRCDIR)/domain/mbd/integrator_explicit2d.c $(SRCDIR)/domain/mbd/integrator_newmark2d.c \
@@ -86,9 +87,18 @@ ANALYSIS_SRCS = $(SRCDIR)/analysis/static.c $(SRCDIR)/analysis/runner.c
 MBD_SRCS = $(DOMAIN_MBD_CORE_SRCS) $(NUMERICS_DENSE_SRCS) $(DOMAIN_MBD_RUNTIME_SRCS)
 COUPLED_SRCS = $(DOMAIN_COUPLED_SRCS)
 MAIN_SRCS = $(SRCDIR)/fem4c.c
+APP_SRCS = $(MAIN_SRCS)
 
-# All source files
-SRCS = $(COMMON_SRCS) $(IO_SRCS) $(MESH_SRCS) $(MATERIAL_SRCS) $(ELEMENT_SRCS) $(SOLVER_SRCS) $(ANALYSIS_SRCS) $(MBD_SRCS) $(COUPLED_SRCS) $(MAIN_SRCS)
+# Boundary aliases for future target separation. No new product target is
+# created here; the default build remains the current all-in-one binary.
+FEM_STATIC_SRCS = $(COMMON_SRCS) $(IO_SRCS) $(DOMAIN_FEM_SRCS) $(NUMERICS_CG_SRCS) $(ANALYSIS_SRCS)
+# Full system2d still contains monolithic FEM/static-analysis bridge paths.
+MBD_SYSTEM_SRCS = $(COMMON_SRCS) $(IO_SRCS) $(DOMAIN_CONTACT_SRCS) $(MBD_SRCS)
+COUPLED_SYSTEM_SRCS = $(COMMON_SRCS) $(IO_SRCS) $(NUMERICS_SRCS) $(DOMAIN_FEM_SRCS) $(DOMAIN_MBD_SRCS) $(ANALYSIS_SRCS) $(COUPLED_SRCS)
+
+# All source files for the current product binary; keep link order identical.
+PRODUCT_SRCS = $(COMMON_SRCS) $(IO_SRCS) $(MESH_SRCS) $(MATERIAL_SRCS) $(ELEMENT_SRCS) $(SOLVER_SRCS) $(ANALYSIS_SRCS) $(MBD_SRCS) $(COUPLED_SRCS) $(APP_SRCS)
+SRCS = $(PRODUCT_SRCS)
 
 # Object files
 OBJS = $(SRCS:$(SRCDIR)/%.c=$(BUILDDIR)/%.o)
