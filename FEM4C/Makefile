@@ -43,10 +43,10 @@ NUMERICS_CG_SRCS = $(SRCDIR)/numerics/cg/cg_solver.c
 NUMERICS_DENSE_SRCS = $(SRCDIR)/numerics/dense/linear_solver_dense.c
 NUMERICS_SRCS = $(NUMERICS_CG_SRCS) $(NUMERICS_DENSE_SRCS)
 
-DOMAIN_MBD_CORE_SRCS = $(SRCDIR)/domain/mbd/body2d.c $(SRCDIR)/domain/mbd/constraint2d.c $(SRCDIR)/domain/mbd/forces2d.c \
-                       $(SRCDIR)/domain/mbd/integrator_explicit2d.c $(SRCDIR)/domain/mbd/integrator_newmark2d.c \
-                       $(SRCDIR)/domain/mbd/integrator_hht2d.c $(SRCDIR)/domain/mbd/kinematics2d.c \
-                       $(SRCDIR)/domain/mbd/kkt2d.c $(SRCDIR)/domain/mbd/assembler2d.c
+DOMAIN_MBD_CORE_SRCS = $(SRCDIR)/mbd/kernel/body2d.c $(SRCDIR)/mbd/kernel/constraint2d.c $(SRCDIR)/domain/mbd/forces2d.c \
+                       $(SRCDIR)/mbd/kernel/integrator_explicit2d.c $(SRCDIR)/mbd/kernel/integrator_newmark2d.c \
+                       $(SRCDIR)/mbd/kernel/integrator_hht2d.c $(SRCDIR)/mbd/kernel/kinematics2d.c \
+                       $(SRCDIR)/mbd/kernel/kkt2d.c $(SRCDIR)/domain/mbd/assembler2d.c
 DOMAIN_MBD_RUNTIME_SRCS = $(SRCDIR)/mbd/output2d.c $(SRCDIR)/domain/mbd/projection2d.c $(SRCDIR)/mbd/system2d.c $(SRCDIR)/mbd/system2d_lifecycle.c $(SRCDIR)/mbd/system2d_storage.c $(SRCDIR)/mbd/system2d_config.c $(SRCDIR)/mbd/system2d_contact_config.c $(SRCDIR)/mbd/system2d_snapshot.c $(SRCDIR)/mbd/system2d_clone.c $(SRCDIR)/mbd/system2d_force_state.c
 DOMAIN_MBD_SRCS = $(DOMAIN_MBD_CORE_SRCS) $(DOMAIN_MBD_RUNTIME_SRCS)
 
@@ -108,26 +108,26 @@ TARGET = $(BINDIR)/fem4c
 MBD_PROBE_SRC = practice/ch09/mbd_constraint_probe.c
 MBD_PROBE_TARGET = $(BINDIR)/mbd_constraint_probe
 # constraint2d.c uses kinematics helpers for world-anchor residual/Jacobian evaluation.
-MBD_PROBE_SRCS = $(SRCDIR)/domain/mbd/constraint2d.c $(SRCDIR)/domain/mbd/kinematics2d.c $(SRCDIR)/domain/mbd/kkt2d.c $(SRCDIR)/common/error.c
+MBD_PROBE_SRCS = $(SRCDIR)/mbd/kernel/constraint2d.c $(SRCDIR)/mbd/kernel/kinematics2d.c $(SRCDIR)/mbd/kernel/kkt2d.c $(SRCDIR)/common/error.c
 MBD_NEWMARK2D_PROBE_SRC = practice/ch09/mbd_newmark2d_probe.c
 MBD_NEWMARK2D_PROBE_TARGET = $(BINDIR)/mbd_newmark2d_probe
-MBD_NEWMARK2D_PROBE_SRCS = $(SRCDIR)/domain/mbd/body2d.c $(SRCDIR)/domain/mbd/integrator_newmark2d.c $(SRCDIR)/common/error.c
+MBD_NEWMARK2D_PROBE_SRCS = $(SRCDIR)/mbd/kernel/body2d.c $(SRCDIR)/mbd/kernel/integrator_newmark2d.c $(SRCDIR)/common/error.c
 MBD_HHT2D_PROBE_SRC = practice/ch09/mbd_hht2d_probe.c
 MBD_HHT2D_PROBE_TARGET = $(BINDIR)/mbd_hht2d_probe
-MBD_HHT2D_PROBE_SRCS = $(SRCDIR)/domain/mbd/body2d.c $(SRCDIR)/domain/mbd/integrator_newmark2d.c $(SRCDIR)/domain/mbd/integrator_hht2d.c $(SRCDIR)/common/error.c
+MBD_HHT2D_PROBE_SRCS = $(SRCDIR)/mbd/kernel/body2d.c $(SRCDIR)/mbd/kernel/integrator_newmark2d.c $(SRCDIR)/mbd/kernel/integrator_hht2d.c $(SRCDIR)/common/error.c
 MBD_HHT2D_INVALID_PROBE_SRC = practice/ch09/mbd_hht2d_invalid_probe.c
 MBD_HHT2D_INVALID_PROBE_TARGET = $(BINDIR)/mbd_hht2d_invalid_probe
-MBD_HHT2D_INVALID_PROBE_SRCS = $(SRCDIR)/domain/mbd/integrator_newmark2d.c $(SRCDIR)/domain/mbd/integrator_hht2d.c $(SRCDIR)/common/error.c
+MBD_HHT2D_INVALID_PROBE_SRCS = $(SRCDIR)/mbd/kernel/integrator_newmark2d.c $(SRCDIR)/mbd/kernel/integrator_hht2d.c $(SRCDIR)/common/error.c
 MBD_2D_FOUNDATION_PROBE_SRCS = $(SRCDIR)/common/error.c \
-	$(SRCDIR)/domain/mbd/body2d.c $(SRCDIR)/domain/mbd/constraint2d.c $(SRCDIR)/domain/mbd/forces2d.c \
-	$(SRCDIR)/domain/mbd/kinematics2d.c $(SRCDIR)/domain/mbd/kkt2d.c $(SRCDIR)/domain/mbd/assembler2d.c \
+	$(SRCDIR)/mbd/kernel/body2d.c $(SRCDIR)/mbd/kernel/constraint2d.c $(SRCDIR)/domain/mbd/forces2d.c \
+	$(SRCDIR)/mbd/kernel/kinematics2d.c $(SRCDIR)/mbd/kernel/kkt2d.c $(SRCDIR)/domain/mbd/assembler2d.c \
 	$(SRCDIR)/numerics/dense/linear_solver_dense.c
 MBD_SYSTEM2D_CLI_SRC = practice/ch09/mbd_system2d_cli_main.c
 MBD_SYSTEM2D_CLI_TARGET = $(BINDIR)/mbd_system2d_cli
 MBD_SYSTEM2D_CLI_SRCS = $(SRCDIR)/common/error.c $(SRCDIR)/common/globals.c $(SRCDIR)/io/input.c \
-	$(SRCDIR)/domain/mbd/body2d.c $(SRCDIR)/domain/mbd/constraint2d.c $(SRCDIR)/domain/mbd/forces2d.c \
-	$(SRCDIR)/domain/mbd/integrator_explicit2d.c $(SRCDIR)/domain/mbd/integrator_newmark2d.c \
-	$(SRCDIR)/domain/mbd/integrator_hht2d.c $(SRCDIR)/domain/mbd/kinematics2d.c $(SRCDIR)/domain/mbd/kkt2d.c \
+	$(SRCDIR)/mbd/kernel/body2d.c $(SRCDIR)/mbd/kernel/constraint2d.c $(SRCDIR)/domain/mbd/forces2d.c \
+	$(SRCDIR)/mbd/kernel/integrator_explicit2d.c $(SRCDIR)/mbd/kernel/integrator_newmark2d.c \
+	$(SRCDIR)/mbd/kernel/integrator_hht2d.c $(SRCDIR)/mbd/kernel/kinematics2d.c $(SRCDIR)/mbd/kernel/kkt2d.c \
 	$(SRCDIR)/domain/mbd/assembler2d.c $(SRCDIR)/numerics/dense/linear_solver_dense.c $(SRCDIR)/mbd/output2d.c \
 	$(SRCDIR)/domain/mbd/projection2d.c \
 	$(SRCDIR)/mbd/system2d.c $(SRCDIR)/mbd/system2d_lifecycle.c $(SRCDIR)/mbd/system2d_storage.c $(SRCDIR)/mbd/system2d_config.c $(SRCDIR)/mbd/system2d_contact_config.c $(SRCDIR)/mbd/system2d_snapshot.c $(SRCDIR)/mbd/system2d_clone.c $(SRCDIR)/mbd/system2d_force_state.c $(SRCDIR)/coupled/case2d.c $(SRCDIR)/coupled/flex_nodeset.c
@@ -145,44 +145,44 @@ MBD_ASSEMBLER2D_PROBE_TARGET = $(BINDIR)/mbd_assembler2d_probe
 MBD_ASSEMBLER2D_PROBE_SRCS = $(MBD_2D_FOUNDATION_PROBE_SRCS)
 MBD_KINEMATICS2D_PROBE_SRC = practice/ch09/mbd_kinematics2d_probe.c
 MBD_KINEMATICS2D_PROBE_TARGET = $(BINDIR)/mbd_kinematics2d_probe
-MBD_KINEMATICS2D_PROBE_SRCS = $(SRCDIR)/domain/mbd/kinematics2d.c $(SRCDIR)/common/error.c
+MBD_KINEMATICS2D_PROBE_SRCS = $(SRCDIR)/mbd/kernel/kinematics2d.c $(SRCDIR)/common/error.c
 MBD_EXPLICIT2D_PROBE_SRC = practice/ch09/mbd_explicit2d_probe.c
 MBD_EXPLICIT2D_PROBE_TARGET = $(BINDIR)/mbd_explicit2d_probe
-MBD_EXPLICIT2D_PROBE_SRCS = $(SRCDIR)/domain/mbd/body2d.c $(SRCDIR)/domain/mbd/integrator_explicit2d.c $(SRCDIR)/common/error.c
+MBD_EXPLICIT2D_PROBE_SRCS = $(SRCDIR)/mbd/kernel/body2d.c $(SRCDIR)/mbd/kernel/integrator_explicit2d.c $(SRCDIR)/common/error.c
 MBD_BODY2D_REFERENCE_PROBE_SRC = practice/ch09/mbd_body2d_reference_probe.c
 MBD_BODY2D_REFERENCE_PROBE_TARGET = $(BINDIR)/mbd_body2d_reference_probe
-MBD_BODY2D_REFERENCE_PROBE_SRCS = $(SRCDIR)/domain/mbd/body2d.c $(SRCDIR)/common/error.c
+MBD_BODY2D_REFERENCE_PROBE_SRCS = $(SRCDIR)/mbd/kernel/body2d.c $(SRCDIR)/common/error.c
 MBD_CONSTRAINT_RHS_PROBE_SRC = practice/ch09/mbd_constraint_rhs_probe.c
 MBD_CONSTRAINT_RHS_PROBE_TARGET = $(BINDIR)/mbd_constraint_rhs_probe
-MBD_CONSTRAINT_RHS_PROBE_SRCS = $(SRCDIR)/domain/mbd/constraint2d.c $(SRCDIR)/domain/mbd/kinematics2d.c $(SRCDIR)/common/error.c
+MBD_CONSTRAINT_RHS_PROBE_SRCS = $(SRCDIR)/mbd/kernel/constraint2d.c $(SRCDIR)/mbd/kernel/kinematics2d.c $(SRCDIR)/common/error.c
 MBD_OUTPUT2D_PROBE_SRC = practice/ch09/mbd_output2d_probe.c
 MBD_OUTPUT2D_PROBE_TARGET = $(BINDIR)/mbd_output2d_probe
-MBD_OUTPUT2D_PROBE_SRCS = $(SRCDIR)/domain/mbd/body2d.c $(SRCDIR)/domain/mbd/constraint2d.c \
+MBD_OUTPUT2D_PROBE_SRCS = $(SRCDIR)/mbd/kernel/body2d.c $(SRCDIR)/mbd/kernel/constraint2d.c \
 	$(SRCDIR)/mbd/output2d.c $(SRCDIR)/mbd/system2d.c $(SRCDIR)/mbd/system2d_lifecycle.c $(SRCDIR)/mbd/system2d_storage.c $(SRCDIR)/mbd/system2d_config.c $(SRCDIR)/mbd/system2d_contact_config.c $(SRCDIR)/mbd/system2d_snapshot.c $(SRCDIR)/mbd/system2d_clone.c $(SRCDIR)/mbd/system2d_force_state.c $(SRCDIR)/domain/mbd/forces2d.c \
-	$(SRCDIR)/domain/mbd/integrator_explicit2d.c $(SRCDIR)/domain/mbd/integrator_newmark2d.c \
-	$(SRCDIR)/domain/mbd/integrator_hht2d.c $(SRCDIR)/domain/mbd/kinematics2d.c \
-	$(SRCDIR)/domain/mbd/kkt2d.c $(SRCDIR)/domain/mbd/assembler2d.c \
+	$(SRCDIR)/mbd/kernel/integrator_explicit2d.c $(SRCDIR)/mbd/kernel/integrator_newmark2d.c \
+	$(SRCDIR)/mbd/kernel/integrator_hht2d.c $(SRCDIR)/mbd/kernel/kinematics2d.c \
+	$(SRCDIR)/mbd/kernel/kkt2d.c $(SRCDIR)/domain/mbd/assembler2d.c \
 	$(SRCDIR)/numerics/dense/linear_solver_dense.c $(SRCDIR)/domain/mbd/projection2d.c $(SRCDIR)/common/globals.c \
 	$(SRCDIR)/common/error.c $(SRCDIR)/io/input.c $(SRCDIR)/coupled/case2d.c \
 	$(SRCDIR)/coupled/flex_nodeset.c
 MBD_OUTPUT2D_RIGID_COMPARE_PROBE_SRC = practice/ch09/mbd_output2d_rigid_compare_probe.c
 MBD_OUTPUT2D_RIGID_COMPARE_PROBE_TARGET = $(BINDIR)/mbd_output2d_rigid_compare_probe
-MBD_OUTPUT2D_RIGID_COMPARE_PROBE_SRCS = $(SRCDIR)/domain/mbd/body2d.c $(SRCDIR)/domain/mbd/constraint2d.c \
+MBD_OUTPUT2D_RIGID_COMPARE_PROBE_SRCS = $(SRCDIR)/mbd/kernel/body2d.c $(SRCDIR)/mbd/kernel/constraint2d.c \
 	$(SRCDIR)/mbd/output2d.c $(SRCDIR)/mbd/system2d.c $(SRCDIR)/mbd/system2d_lifecycle.c $(SRCDIR)/mbd/system2d_storage.c $(SRCDIR)/mbd/system2d_config.c $(SRCDIR)/mbd/system2d_contact_config.c $(SRCDIR)/mbd/system2d_snapshot.c $(SRCDIR)/mbd/system2d_clone.c $(SRCDIR)/mbd/system2d_force_state.c $(SRCDIR)/domain/mbd/forces2d.c \
-	$(SRCDIR)/domain/mbd/integrator_explicit2d.c $(SRCDIR)/domain/mbd/integrator_newmark2d.c \
-	$(SRCDIR)/domain/mbd/integrator_hht2d.c $(SRCDIR)/domain/mbd/kinematics2d.c \
-	$(SRCDIR)/domain/mbd/kkt2d.c $(SRCDIR)/domain/mbd/assembler2d.c \
+	$(SRCDIR)/mbd/kernel/integrator_explicit2d.c $(SRCDIR)/mbd/kernel/integrator_newmark2d.c \
+	$(SRCDIR)/mbd/kernel/integrator_hht2d.c $(SRCDIR)/mbd/kernel/kinematics2d.c \
+	$(SRCDIR)/mbd/kernel/kkt2d.c $(SRCDIR)/domain/mbd/assembler2d.c \
 	$(SRCDIR)/numerics/dense/linear_solver_dense.c $(SRCDIR)/domain/mbd/projection2d.c $(SRCDIR)/common/globals.c \
 	$(SRCDIR)/common/error.c $(SRCDIR)/io/input.c $(SRCDIR)/coupled/case2d.c \
 	$(SRCDIR)/coupled/flex_nodeset.c
 MBD_SYSTEM2D_HISTORY_PROBE_SRC = practice/ch09/mbd_system2d_history_probe.c
 MBD_SYSTEM2D_HISTORY_PROBE_TARGET = $(BINDIR)/mbd_system2d_history_probe
 MBD_SYSTEM2D_HISTORY_PROBE_SRCS = $(SRCDIR)/common/globals.c $(SRCDIR)/common/error.c $(SRCDIR)/io/input.c \
-	$(SRCDIR)/coupled/case2d.c $(SRCDIR)/coupled/flex_nodeset.c $(SRCDIR)/domain/mbd/body2d.c $(SRCDIR)/domain/mbd/constraint2d.c \
-	$(SRCDIR)/domain/mbd/forces2d.c $(SRCDIR)/domain/mbd/integrator_explicit2d.c \
-	$(SRCDIR)/domain/mbd/integrator_newmark2d.c $(SRCDIR)/domain/mbd/integrator_hht2d.c \
-	$(SRCDIR)/domain/mbd/kinematics2d.c \
-	$(SRCDIR)/domain/mbd/kkt2d.c $(SRCDIR)/domain/mbd/assembler2d.c \
+	$(SRCDIR)/coupled/case2d.c $(SRCDIR)/coupled/flex_nodeset.c $(SRCDIR)/mbd/kernel/body2d.c $(SRCDIR)/mbd/kernel/constraint2d.c \
+	$(SRCDIR)/domain/mbd/forces2d.c $(SRCDIR)/mbd/kernel/integrator_explicit2d.c \
+	$(SRCDIR)/mbd/kernel/integrator_newmark2d.c $(SRCDIR)/mbd/kernel/integrator_hht2d.c \
+	$(SRCDIR)/mbd/kernel/kinematics2d.c \
+	$(SRCDIR)/mbd/kernel/kkt2d.c $(SRCDIR)/domain/mbd/assembler2d.c \
 	$(SRCDIR)/numerics/dense/linear_solver_dense.c $(SRCDIR)/mbd/output2d.c $(SRCDIR)/domain/mbd/projection2d.c \
 	$(SRCDIR)/mbd/system2d.c $(SRCDIR)/mbd/system2d_lifecycle.c $(SRCDIR)/mbd/system2d_storage.c $(SRCDIR)/mbd/system2d_config.c $(SRCDIR)/mbd/system2d_contact_config.c $(SRCDIR)/mbd/system2d_snapshot.c $(SRCDIR)/mbd/system2d_clone.c $(SRCDIR)/mbd/system2d_force_state.c
 MBD_SYSTEM2D_RIGID_COMPARE_PROBE_SRC = practice/ch09/mbd_system2d_rigid_compare_probe.c
@@ -194,11 +194,11 @@ MBD_SYSTEM2D_COUPLED_GEOMETRY_COMPARE_PROBE_SRCS = $(MBD_SYSTEM2D_HISTORY_PROBE_
 MBD_FLEXIBLE_FORCE_PROBE_SRC = practice/ch09/mbd_flexible_force_probe.c
 MBD_FLEXIBLE_FORCE_PROBE_TARGET = $(BINDIR)/mbd_flexible_force_probe
 MBD_FLEXIBLE_FORCE_PROBE_SRCS = $(SRCDIR)/common/globals.c $(SRCDIR)/common/error.c $(SRCDIR)/io/input.c \
-	$(SRCDIR)/coupled/case2d.c $(SRCDIR)/coupled/flex_nodeset.c $(SRCDIR)/domain/mbd/body2d.c $(SRCDIR)/domain/mbd/constraint2d.c \
-	$(SRCDIR)/domain/mbd/forces2d.c $(SRCDIR)/domain/mbd/integrator_explicit2d.c \
-	$(SRCDIR)/domain/mbd/integrator_newmark2d.c $(SRCDIR)/domain/mbd/integrator_hht2d.c \
-	$(SRCDIR)/domain/mbd/kinematics2d.c \
-	$(SRCDIR)/domain/mbd/kkt2d.c $(SRCDIR)/domain/mbd/assembler2d.c \
+	$(SRCDIR)/coupled/case2d.c $(SRCDIR)/coupled/flex_nodeset.c $(SRCDIR)/mbd/kernel/body2d.c $(SRCDIR)/mbd/kernel/constraint2d.c \
+	$(SRCDIR)/domain/mbd/forces2d.c $(SRCDIR)/mbd/kernel/integrator_explicit2d.c \
+	$(SRCDIR)/mbd/kernel/integrator_newmark2d.c $(SRCDIR)/mbd/kernel/integrator_hht2d.c \
+	$(SRCDIR)/mbd/kernel/kinematics2d.c \
+	$(SRCDIR)/mbd/kernel/kkt2d.c $(SRCDIR)/domain/mbd/assembler2d.c \
 	$(SRCDIR)/numerics/dense/linear_solver_dense.c $(SRCDIR)/mbd/output2d.c $(SRCDIR)/domain/mbd/projection2d.c \
 	$(SRCDIR)/mbd/system2d.c $(SRCDIR)/mbd/system2d_lifecycle.c $(SRCDIR)/mbd/system2d_storage.c $(SRCDIR)/mbd/system2d_config.c $(SRCDIR)/mbd/system2d_contact_config.c $(SRCDIR)/mbd/system2d_snapshot.c $(SRCDIR)/mbd/system2d_clone.c $(SRCDIR)/mbd/system2d_force_state.c
 MBD_FORCES2D_HHT_EFFECTIVE_PROBE_SRC = practice/ch09/mbd_forces2d_hht_effective_probe.c
@@ -225,9 +225,9 @@ MBD_SYSTEM2D_CONSOLE_HISTORY_PROBE_SRCS = $(MBD_SYSTEM2D_HISTORY_PROBE_SRCS)
 MBD_PROJECTION2D_PROBE_SRC = practice/ch09/mbd_projection2d_probe.c
 MBD_PROJECTION2D_PROBE_TARGET = $(BINDIR)/mbd_projection2d_probe
 MBD_PROJECTION2D_PROBE_SRCS = $(SRCDIR)/common/error.c $(SRCDIR)/common/globals.c $(SRCDIR)/io/input.c \
-	$(SRCDIR)/coupled/case2d.c $(SRCDIR)/coupled/flex_nodeset.c $(SRCDIR)/domain/mbd/body2d.c $(SRCDIR)/domain/mbd/constraint2d.c \
-	$(SRCDIR)/domain/mbd/integrator_explicit2d.c $(SRCDIR)/domain/mbd/integrator_newmark2d.c $(SRCDIR)/domain/mbd/integrator_hht2d.c \
-	$(SRCDIR)/domain/mbd/forces2d.c $(SRCDIR)/domain/mbd/kinematics2d.c $(SRCDIR)/domain/mbd/kkt2d.c $(SRCDIR)/domain/mbd/assembler2d.c \
+	$(SRCDIR)/coupled/case2d.c $(SRCDIR)/coupled/flex_nodeset.c $(SRCDIR)/mbd/kernel/body2d.c $(SRCDIR)/mbd/kernel/constraint2d.c \
+	$(SRCDIR)/mbd/kernel/integrator_explicit2d.c $(SRCDIR)/mbd/kernel/integrator_newmark2d.c $(SRCDIR)/mbd/kernel/integrator_hht2d.c \
+	$(SRCDIR)/domain/mbd/forces2d.c $(SRCDIR)/mbd/kernel/kinematics2d.c $(SRCDIR)/mbd/kernel/kkt2d.c $(SRCDIR)/domain/mbd/assembler2d.c \
 	$(SRCDIR)/numerics/dense/linear_solver_dense.c $(SRCDIR)/mbd/output2d.c $(SRCDIR)/mbd/system2d.c $(SRCDIR)/mbd/system2d_lifecycle.c $(SRCDIR)/mbd/system2d_storage.c $(SRCDIR)/mbd/system2d_config.c $(SRCDIR)/mbd/system2d_contact_config.c $(SRCDIR)/mbd/system2d_snapshot.c $(SRCDIR)/mbd/system2d_clone.c $(SRCDIR)/mbd/system2d_force_state.c $(SRCDIR)/domain/mbd/projection2d.c
 MBD_SYSTEM2D_PROJECTION_COMPARE_PROBE_SRC = practice/ch09/mbd_system2d_projection_compare_probe.c
 MBD_SYSTEM2D_PROJECTION_COMPARE_PROBE_TARGET = $(BINDIR)/mbd_system2d_projection_compare_probe
