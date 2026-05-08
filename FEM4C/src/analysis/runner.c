@@ -1,7 +1,7 @@
 #include "runner.h"
 #include "static.h"
 #include "../coupled/coupled_run2d.h"
-#include "../mbd/system2d.h"
+#include "../mbd/system/system2d.h"
 #include "../common/error.h"
 #include <ctype.h>
 #include <stdio.h>

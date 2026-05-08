@@ -1,6 +1,6 @@
 #include "system2d.h"
-#include "../domain/mbd/forces2d.h"
-#include "../common/error.h"
+#include "forces2d.h"
+#include "../../common/error.h"
 #include <string.h>
 
 /*

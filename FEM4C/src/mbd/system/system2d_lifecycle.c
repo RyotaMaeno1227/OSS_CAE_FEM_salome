@@ -1,7 +1,7 @@
 #include "system2d.h"
 #include "system2d_internal.h"
-#include "../domain/mbd/projection2d.h"
-#include "../common/error.h"
+#include "projection2d.h"
+#include "../../common/error.h"
 #include <stdio.h>
 #include <string.h>
 

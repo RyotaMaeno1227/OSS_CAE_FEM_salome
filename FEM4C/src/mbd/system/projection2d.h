@@ -1,7 +1,7 @@
 #ifndef FEM4C_MBD_PROJECTION2D_H
 #define FEM4C_MBD_PROJECTION2D_H
 
-#include "../../mbd/system2d.h"
+#include "system2d.h"
 
 #define MBD_PROJECTION2D_DEFAULT_MAX_ITERS 4
 #define MBD_PROJECTION2D_DEFAULT_RESIDUAL_TOL 1.0e-12

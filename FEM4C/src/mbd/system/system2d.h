@@ -1,9 +1,9 @@
 #ifndef FEM4C_MBD_SYSTEM2D_H
 #define FEM4C_MBD_SYSTEM2D_H
 
-#include "kernel/body2d.h"
-#include "../contact/kernel/contact2d.h"
-#include "kernel/kkt2d.h"
+#include "../kernel/body2d.h"
+#include "../../contact/kernel/contact2d.h"
+#include "../kernel/kkt2d.h"
 
 #define MBD_SYSTEM2D_MAX_BODIES 8
 #define MBD_SYSTEM2D_MAX_CONSTRAINTS 8

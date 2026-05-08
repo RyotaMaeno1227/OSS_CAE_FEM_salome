@@ -1,5 +1,5 @@
 #include "system2d.h"
-#include "../common/error.h"
+#include "../../common/error.h"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>

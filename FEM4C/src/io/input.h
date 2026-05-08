@@ -6,7 +6,7 @@
  */
 
 #include "../common/types.h"
-#include "../mbd/system2d.h"
+#include "../mbd/system/system2d.h"
 #include <stdio.h>
 
 /* Input file format types */

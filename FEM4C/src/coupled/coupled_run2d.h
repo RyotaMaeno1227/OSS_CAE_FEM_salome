@@ -2,7 +2,7 @@
 #define FEM4C_COUPLED_RUN2D_H
 
 #include "../common/types.h"
-#include "../mbd/system2d.h"
+#include "../mbd/system/system2d.h"
 #include "case2d.h"
 #include "fem_model_copy.h"
 
