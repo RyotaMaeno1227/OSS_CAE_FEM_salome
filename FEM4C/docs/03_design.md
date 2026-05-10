@@ -15,8 +15,8 @@ NastranBalkFile の場合は `fem4c` が parser を実行し、出力パッケ�
 ## 2. 主なディレクトリ
 - `src/common/`: 定数、型、グローバル配列、エラー処理
 - `src/io/`: 入力読み込み、出力
-- `src/domain/fem/element/`: 要素ごとの剛性計算
-- `src/solver/`: 連立方程式ソルバ（CG）
+- `src/fem/element/`: 要素ごとの剛性計算
+- `src/numerics/`: 連立方程式ソルバ（CG）
 - `src/analysis/`: 解析ドライバ
 - `parser/`: NastranBalkFile を parser パッケージに変換
 

@@ -237,11 +237,11 @@ Problem summary:
 
 ## 4. elements（要素）
 対象ファイル:
-- `src/domain/fem/element/element_base.c/h`
-- `src/domain/fem/element/elements.c/h`
-- `src/domain/fem/element/t3/t3_element.c`
-- `src/domain/fem/element/t6/t6_element.c`, `src/domain/fem/element/t6/t6_stiffness.c`
-- `src/domain/fem/element/q4/q4_element.c`, `src/domain/fem/element/q4/q4_stiffness.c`
+- `src/fem/element/element_base.c/h`
+- `src/fem/element/elements.c/h`
+- `src/fem/element/t3/t3_element.c`
+- `src/fem/element/t6/t6_element.c`, `src/fem/element/t6/t6_stiffness.c`
+- `src/fem/element/q4/q4_element.c`, `src/fem/element/q4/q4_stiffness.c`
 
 ### 4.1 要素登録
 - `elements_initialize()` で `t3_register()`, `q4_register()`, `t6_register()` が登録されます。
@@ -296,8 +296,8 @@ Checking global stiffness matrix properties...
 
 ## 5. solver（アセンブリと解法）
 対象ファイル:
-- `src/domain/fem/assembly/assembly.c`, `src/domain/fem/assembly/assembly.h`
-- `src/solver/cg_solver.c`, `src/solver/cg_solver.h`
+- `src/fem/assembly/assembly.c`, `src/fem/assembly/assembly.h`
+- `src/numerics/cg/cg_solver.c`, `src/numerics/cg/cg_solver.h`
 
 ### 5.1 アセンブリ
 - `assembly_global_stiffness_matrix()` が全体剛性を作成。

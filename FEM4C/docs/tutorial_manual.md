@@ -215,7 +215,7 @@
 - FEM4C が行っている要素健全性チェック（`t3_check_element_geometry`）を読み、detJ の符号と関連付けて説明できるようにする。
 
 ### FEM4C を読む
-- `src/domain/fem/element/t3/t3_element.c`
+- `src/fem/element/t3/t3_element.c`
   - `t3_shape_functions` と `t3_jacobian_matrix` を確認。  
   - どのように配列を再利用しているか観察。
 
@@ -272,11 +272,11 @@
 - 片持ち梁 1 要素モデルで `K d = f` を解き、理論変位と比較するミニプログラムを作る。
 
 ### FEM4C を読む
-- `src/domain/fem/element/t3/t3_stiffness.c`（T3 実装）／`src/domain/fem/element/t6/t6_stiffness.c`（T6 実装）
+- `src/fem/element/t3/t3_stiffness.c`（T3 実装）／`src/fem/element/t6/t6_stiffness.c`（T6 実装）
   - B・D 計算部分、厚み `thickness` の扱いを確認。
 - `assembly_add_element_stiffness_t3` の DOF マップ処理を合わせて読む。
 ### FEM4C を読む
-- `src/domain/fem/element/t3/t3_stiffness.c`（ファイルがなければ T6 実装を参照）
+- `src/fem/element/t3/t3_stiffness.c`（ファイルがなければ T6 実装を参照）
   - B・D 計算部分、厚みの扱いを確認。  
 - `assembly_add_element_stiffness_t3` の DOF マップ処理を合わせて読む。
 
@@ -337,9 +337,9 @@ Ke(i,j) の寄与は K[global_dofs[i], global_dofs[j]] へ加算する。
 - 要素毎にアセンブリ時の寄与を `printf` で出力し、どの DOF に影響するか可視化する。
 
 ### FEM4C を読む
-- `src/domain/fem/assembly/assembly.c` の `assembly_get_element_dof_map`, `assembly_matrix_add_value`, `assembly_apply_boundary_conditions` を読み、自分の実装と比較する。
+- `src/fem/assembly/assembly.c` の `assembly_get_element_dof_map`, `assembly_matrix_add_value`, `assembly_apply_boundary_conditions` を読み、自分の実装と比較する。
 ### FEM4C を読む
-- `src/domain/fem/assembly/assembly.c` の `assembly_get_element_dof_map`、`assembly_matrix_add_value`。
+- `src/fem/assembly/assembly.c` の `assembly_get_element_dof_map`、`assembly_matrix_add_value`。
 - `assembly_apply_boundary_conditions` の処理を確認し、自作コードと比較する。
 
 ### 検証課題
@@ -392,10 +392,10 @@ Ke(i,j) の寄与は K[global_dofs[i], global_dofs[j]] へ加算する。
 - FEM4C の CG に対角前処理（Jacobi）を追加する際の変更点を調査し、設計メモを作成する。
 
 ### FEM4C を読む
-- `src/solver/cg_solver.c` を読み、`cg_matrix_vector_multiply` がスカイライン行列をどう扱っているか確認。
+- `src/numerics/cg/cg_solver.c` を読み、`cg_matrix_vector_multiply` がスカイライン行列をどう扱っているか確認。
 - `static_analysis.c` のワークフロー（初期化 → 入力 → 解析 → 出力）を追い、自作コードとの対応関係をまとめる。
 ### FEM4C を読む
-- `src/solver/cg_solver.c` を読み、`cg_matrix_vector_multiply` がスカイライン行列をどう扱っているか確認。  
+- `src/numerics/cg/cg_solver.c` を読み、`cg_matrix_vector_multiply` がスカイライン行列をどう扱っているか確認。
 - `static_analysis.c` のワークフロー（初期化 → 入力 → 解析 → 出力）も追う。
 
 ### 検証課題
@@ -464,10 +464,10 @@ Ke(i,j) の寄与は K[global_dofs[i], global_dofs[j]] へ加算する。
 - T6 の節点値から滑らかな変位プロットを生成する Python スクリプトを作成し、可視化の精度向上を体験する。
 
 ### FEM4C を読む
-- `src/domain/fem/element/t6/t6_element.c` の `t6_shape_functions`, `t6_shape_derivatives_natural`, `t6_jacobian_matrix`, `t6_strain_displacement_matrix`。
+- `src/fem/element/t6/t6_element.c` の `t6_shape_functions`, `t6_shape_derivatives_natural`, `t6_jacobian_matrix`, `t6_strain_displacement_matrix`。
 - 変数名や配列サイズが T3 からどう変わっているか比較する。
 ### FEM4C を読む
-- `src/domain/fem/element/t6/t6_element.c` の `t6_shape_functions`, `t6_shape_derivatives_natural`, `t6_jacobian_matrix`, `t6_strain_displacement_matrix`。
+- `src/fem/element/t6/t6_element.c` の `t6_shape_functions`, `t6_shape_derivatives_natural`, `t6_jacobian_matrix`, `t6_strain_displacement_matrix`。
 - 変数名や配列サイズが T3 からどう変わっているか比較する。
 
 ### 検証課題
@@ -513,11 +513,11 @@ Ke(i,j) の寄与は K[global_dofs[i], global_dofs[j]] へ加算する。
 - FEM4C に新しい荷重タイプ（例: 温度荷重）を追加する際の設計メモをまとめる。
 
 ### FEM4C を読む
-- `src/domain/fem/element/t6/t6_stiffness.c`（剛性計算）
-- `src/domain/fem/assembly/assembly.c` の T6 分岐（`ELEMENT_T6` を扱っている箇所）。
+- `src/fem/element/t6/t6_stiffness.c`（剛性計算）
+- `src/fem/assembly/assembly.c` の T6 分岐（`ELEMENT_T6` を扱っている箇所）。
 ### FEM4C を読む
-- `src/domain/fem/element/t6/t6_stiffness.h/.c`（剛性計算）
-- `src/domain/fem/assembly/assembly.c` の T6 分岐（`ELEMENT_T6` を扱っている箇所）。
+- `src/fem/element/t6/t6_stiffness.h/.c`（剛性計算）
+- `src/fem/assembly/assembly.c` の T6 分岐（`ELEMENT_T6` を扱っている箇所）。
 
 ### 検証課題
 - T3 ソルバーで使った片持ち梁データを T6 でも解析し、理論値との差が 1% 以内になるか確認。  
@@ -637,10 +637,10 @@ Ke(i,j) の寄与は K[global_dofs[i], global_dofs[j]] へ加算する。
 1. **T6 形状関数とヤコビアン（2〜3時間）**  
    - `practice/ch07/t6_shape.c` を正解表と照合し、`ΣNi=1` と勾配の妥当性を確認。  
 2. **T6 剛性・荷重の実装（6〜10時間）**  
-   - `src/domain/fem/element/t6/t6_stiffness.c` の B/D/Ke の流れを追い、数式表と対応させる。
-   - `src/domain/fem/element/t6/t6_element.c` の要素情報（節点並び、面積計算）を確認する。
+   - `src/fem/element/t6/t6_stiffness.c` の B/D/Ke の流れを追い、数式表と対応させる。
+   - `src/fem/element/t6/t6_element.c` の要素情報（節点並び、面積計算）を確認する。
 3. **アセンブリと入力連携の確認（3〜5時間）**  
-   - `src/domain/fem/assembly/assembly.c` で T6 が組立に乗るか確認。
+   - `src/fem/assembly/assembly.c` で T6 が組立に乗るか確認。
    - `src/io/input.c` の要素タイプ分岐を確認する。  
 4. **検算（3〜5時間）**  
    - T3 と T6 の同一問題で解の傾向が一致するか比較。  
@@ -681,7 +681,7 @@ output_part_0002.vtk
 ```
 
 ### FEM4C を読む
-- `src/domain/fem/element/t6/`：T6 の実装詳細。
+- `src/fem/element/t6/`：T6 の実装詳細。
 - `src/analysis/static.c`：解析フローの入口。  
 - `src/io/input.c`：parser 出力の読み込みと境界条件処理。  
 
@@ -965,15 +965,15 @@ Chapter 03・05・07 のチェックでは、本文に挿入した簡易図を�
 ### C. 理論↔実装対応表（最小版）
 | 概念 | 数式/キーワード | 実装の位置 |
 |------|-----------------|------------|
-| 釣合い式 | K d = f | `FEM4C/src/domain/fem/assembly/assembly.c` |
+| 釣合い式 | K d = f | `FEM4C/src/fem/assembly/assembly.c` |
 | 形状関数 | N1, N2, N3 | `FEM4C/practice/ch03/t3_shape.c` |
 | ヤコビアン | J, det(J) | `FEM4C/practice/ch03/t3_shape.c` |
-| B マトリクス | ε = B d | `FEM4C/src/domain/fem/element/t3/t3_stiffness.c` |
-| D マトリクス | σ = D ε | `FEM4C/src/domain/fem/element/t3/t3_stiffness.c` |
-| 要素剛性 | Ke = ∫ Bᵀ D B detJ | `FEM4C/src/domain/fem/element/t3/t3_stiffness.c` |
-| 組立 | K に Ke を加算 | `FEM4C/src/domain/fem/assembly/assembly.c` |
+| B マトリクス | ε = B d | `FEM4C/src/fem/element/t3/t3_stiffness.c` |
+| D マトリクス | σ = D ε | `FEM4C/src/fem/element/t3/t3_stiffness.c` |
+| 要素剛性 | Ke = ∫ Bᵀ D B detJ | `FEM4C/src/fem/element/t3/t3_stiffness.c` |
+| 組立 | K に Ke を加算 | `FEM4C/src/fem/assembly/assembly.c` |
 | 境界条件 | Dirichlet/Force | `FEM4C/src/io/input.c` |
-| CG ソルバ | 反復解法 | `FEM4C/src/solver/cg_solver.c` |
+| CG ソルバ | 反復解法 | `FEM4C/src/numerics/cg/cg_solver.c` |
 | 出力 | 変位/応力 | `FEM4C/src/io/output.c` |
 
 ### D. 最小検算入力と期待ログ

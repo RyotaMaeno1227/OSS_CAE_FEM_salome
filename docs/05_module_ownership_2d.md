@@ -6,16 +6,16 @@
 - `runner.c` は入口と mode 分岐に縮退する。
 - MBD 実行本体は `src/mbd/` に寄せる。
 - flexible body と coupled orchestration は `src/coupled/` に寄せる。
-- 既存 FEM kernel は `src/domain/fem/assembly/` / `src/domain/fem/element/` / `src/solver/` / `src/io/` の既存資産を活用し、必要最小限の wrapper を追加する。
+- 既存 FEM kernel は `src/fem/assembly/` / `src/fem/element/` / `src/numerics/` / `src/io/` の既存資産を活用し、必要最小限の wrapper を追加する。
 
 ## 2. モジュール責務
 | 領域 | 責務 | 主なファイル |
 |---|---|---|
 | `analysis/` | CLI入口、mode分岐、parse済み構造体の run 呼び出し | `src/analysis/runner.c` |
-| `mbd/` | body state、force assemble、constraint residual/Jacobian、KKT、explicit/Newmark/HHT、projection、MBD出力 | `src/mbd/body2d.*`, `system2d.*`, `assembler2d.*`, `integrator_*2d.*`, `output2d.*` |
+| `mbd/` | body state、force assemble、constraint residual/Jacobian、KKT、explicit/Newmark/HHT、projection、MBD出力 | `src/mbd/kernel/body2d.*`, `src/mbd/system/system2d.*`, `src/mbd/system/assembler2d.*`, `src/mbd/kernel/integrator_*2d.*`, `src/mbd/output/output2d.*` |
 | `coupled/` | flexible link wrapper、nodeset、runtime BC、full reassembly wrapper、snapshot、MBD-FEM 反力授受、coupled step/run | `src/coupled/flex_*`, `case2d.*`, `coupled_step_*2d.*`, `coupled_run2d.*` |
 | `io/` | 既存入力、MBD/Coupled directive parse、出力補助 | `src/io/input.c`, `src/io/output.c` |
-| `domain/fem/assembly/` / `domain/fem/element/` / `solver/` | 既存 FEM kernel、assembly、linear solve、要素剛性 | `src/domain/fem/assembly/*`, `src/domain/fem/element/*`, `src/solver/*` |
+| `fem/assembly/` / `fem/element/` / `numerics/` | 既存 FEM kernel、assembly、linear solve、要素剛性 | `src/fem/assembly/*`, `src/fem/element/*`, `src/numerics/*` |
 | `scripts/` | acceptance、comparison、補助検証 | `scripts/run_2d_coupled_acceptance.sh`, `scripts/compare_*.py` |
 
 ## 3. `runner.c` から追い出す責務
@@ -37,8 +37,8 @@
 | チーム | 主担当 |
 |---|---|
 | PM | `docs/04_2d_coupled_scope.md`, `docs/05_module_ownership_2d.md`, `docs/06_acceptance_matrix_2d.md`, `docs/07_input_spec_coupled_2d.md`, `docs/08_merge_order_2d.md`, `docs/09_compare_schema_2d.md` |
-| A | `src/mbd/body2d.*`, `forces2d.*`, `kinematics2d.*`, `integrator_explicit2d.*`, `output2d.*` |
-| B | `src/mbd/system2d.*`, `constraint2d.*`, `assembler2d.*`, `linear_solver_dense.*`, `integrator_newmark2d.*`, `integrator_hht2d.*`, `projection2d.*` |
+| A | `src/mbd/kernel/body2d.*`, `src/mbd/system/forces2d.*`, `src/mbd/kernel/kinematics2d.*`, `src/mbd/kernel/integrator_explicit2d.*`, `src/mbd/output/output2d.*` |
+| B | `src/mbd/system/system2d.*`, `src/mbd/kernel/constraint2d.*`, `src/mbd/system/assembler2d.*`, `src/numerics/dense/linear_solver_dense.*`, `src/mbd/kernel/integrator_newmark2d.*`, `src/mbd/kernel/integrator_hht2d.*`, `src/mbd/system/projection2d.*` |
 | C | `src/coupled/fem_model_copy.*`, `flex_solver2d.*`, `flex_bc2d.*`, `flex_nodeset.*`, `flex_snapshot2d.*` |
 | D | `src/coupled/flex_body2d.*`, `flex_reaction2d.*`, `case2d.*` の flexible body 側 |
 | E | `src/analysis/runner.c`, `src/coupled/coupled_step_*2d.*`, `src/coupled/coupled_run2d.*`, `examples/*`, `scripts/compare_*.py`, `scripts/run_2d_coupled_acceptance.sh` |

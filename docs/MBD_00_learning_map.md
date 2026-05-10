@@ -47,31 +47,31 @@ Run 3 までに最低限そろえる学習 docs は次の 3 本とする。
 
 ### 入口
 
-- `FEM4C/src/mbd/body2d.c`
-- `FEM4C/src/mbd/body2d.h`
-- `FEM4C/src/mbd/constraint2d.c`
-- `FEM4C/src/mbd/constraint2d.h`
-- `FEM4C/src/mbd/kinematics2d.c`
-- `FEM4C/src/mbd/kinematics2d.h`
+- `FEM4C/src/mbd/kernel/body2d.c`
+- `FEM4C/src/mbd/kernel/body2d.h`
+- `FEM4C/src/mbd/kernel/constraint2d.c`
+- `FEM4C/src/mbd/kernel/constraint2d.h`
+- `FEM4C/src/mbd/kernel/kinematics2d.c`
+- `FEM4C/src/mbd/kernel/kinematics2d.h`
 
 ### 次段
 
-- `FEM4C/src/mbd/assembler2d.c`
-- `FEM4C/src/mbd/assembler2d.h`
-- `FEM4C/src/mbd/kkt2d.c`
-- `FEM4C/src/mbd/kkt2d.h`
-- `FEM4C/src/mbd/linear_solver_dense.c`
-- `FEM4C/src/mbd/linear_solver_dense.h`
+- `FEM4C/src/mbd/system/assembler2d.c`
+- `FEM4C/src/mbd/system/assembler2d.h`
+- `FEM4C/src/mbd/kernel/kkt2d.c`
+- `FEM4C/src/mbd/kernel/kkt2d.h`
+- `FEM4C/src/numerics/dense/linear_solver_dense.c`
+- `FEM4C/src/numerics/dense/linear_solver_dense.h`
 
 ### 時間積分
 
-- `FEM4C/src/mbd/integrator_explicit2d.c`
-- `FEM4C/src/mbd/integrator_newmark2d.c`
-- `FEM4C/src/mbd/integrator_hht2d.c`
+- `FEM4C/src/mbd/kernel/integrator_explicit2d.c`
+- `FEM4C/src/mbd/kernel/integrator_newmark2d.c`
+- `FEM4C/src/mbd/kernel/integrator_hht2d.c`
 
 ### 最後に読むもの
 
-- `FEM4C/src/mbd/system2d.c`
+- `FEM4C/src/mbd/system/system2d.c`
 - `FEM4C/src/coupled/flex_body2d.c`
 - `FEM4C/src/coupled/coupled_step_explicit2d.c`
 - `FEM4C/src/coupled/coupled_step_implicit2d.c`
@@ -117,4 +117,3 @@ Run 3 までに最低限そろえる学習 docs は次の 3 本とする。
 1. DOF が 3 -> 6 に増える
 2. 回転表現が単一角から行列 / quaternion へ変わる
 3. 接触・摩擦で拘束と力の扱いが複雑になる
-
