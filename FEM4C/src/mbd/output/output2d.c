@@ -1,6 +1,6 @@
 #include "output2d.h"
-#include "../coupled/case2d.h"
-#include "../common/error.h"
+#include "../../coupled/case2d.h"
+#include "../../common/error.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>

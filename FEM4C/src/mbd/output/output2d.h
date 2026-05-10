@@ -1,7 +1,7 @@
 #ifndef FEM4C_MBD_OUTPUT2D_H
 #define FEM4C_MBD_OUTPUT2D_H
 
-#include "system/system2d.h"
+#include "../system/system2d.h"
 #include <stdio.h>
 
 #define MBD_OUTPUT2D_HISTORY_FIELD_COUNT 33
