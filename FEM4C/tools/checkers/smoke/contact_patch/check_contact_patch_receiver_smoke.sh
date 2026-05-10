@@ -113,7 +113,7 @@ INVALID_PROBE_BIN="${OUT_DIR}/contact_patch_receiver_invalid_probe"
 INVALID_PROBE_LOG="${OUT_DIR}/contact_patch_receiver_invalid_probe.log"
 
 cat >"${INVALID_PROBE_SRC}" <<'EOF'
-#include "src/coupled/contact_patch2d.h"
+#include "src/contact/kernel/contact_patch2d.h"
 #include "src/coupled/contact_patch_load2d.h"
 #include "src/common/error.h"
 
@@ -165,7 +165,7 @@ int main(void)
 EOF
 
 gcc -Wall -Wextra -O3 -std=c99 -mcmodel=large \
-    -I. -Isrc/common -Isrc/elements -Isrc/solver -Isrc/io -Isrc/mesh -Isrc/material -Isrc/analysis -Isrc/mbd -Isrc/coupled \
+    -I. -Isrc/common -Isrc/fem/element -Isrc/solver -Isrc/io -Isrc/mesh -Isrc/material -Isrc/analysis -Isrc/mbd -Isrc/coupled \
     "${INVALID_PROBE_SRC}" \
     $(find build -name '*.o' ! -path 'build/fem4c.o' | sort) \
     -lm -o "${INVALID_PROBE_BIN}"
