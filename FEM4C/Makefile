@@ -61,7 +61,7 @@ DOMAIN_COUPLED_RUN_SRCS = $(SRCDIR)/coupled/case2d.c $(SRCDIR)/coupled/coupled_r
                           $(SRCDIR)/coupled/coupled_run2d_step_history_capture.c \
                           $(SRCDIR)/coupled/coupled_run2d_step_snapshot_writer.c \
                           $(SRCDIR)/coupled/coupled_run2d_summary_writer.c \
-                          $(SRCDIR)/coupled/coupled_run2d_writer_meta.c
+                          $(SRCDIR)/coupled/trace/coupled_run2d_writer_meta.c
 DOMAIN_COUPLED_STEP_CORE_SRCS = $(SRCDIR)/coupled/coupled_step_history2d.c \
                                 $(SRCDIR)/coupled/coupled_monolithic_assembly2d.c \
                                 $(SRCDIR)/coupled/coupled_monolithic_state2d.c \
