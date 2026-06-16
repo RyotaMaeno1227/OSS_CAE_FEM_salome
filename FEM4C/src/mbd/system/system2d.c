@@ -986,9 +986,19 @@ static fem_error_t mbd_system2d_compute_explicit_acceleration_field(
         if (err != FEM_SUCCESS) {
             goto cleanup;
         }
+        memcpy(dense_rhs,
+               dense_kkt.rhs,
+               (size_t) total_dof * sizeof(*dense_rhs));
+        err = mbd_system2d_apply_ground_lock_to_dense_system(system,
+                                                             dense_matrix_compact,
+                                                             dense_rhs,
+                                                             total_dof);
+        if (err != FEM_SUCCESS) {
+            goto cleanup;
+        }
         err = mbd_system2d_dense_solve_with_projection_retry(system,
                                                              dense_matrix_compact,
-                                                             dense_kkt.rhs,
+                                                             dense_rhs,
                                                              total_dof,
                                                              dense_solution);
         if (err != FEM_SUCCESS) {
