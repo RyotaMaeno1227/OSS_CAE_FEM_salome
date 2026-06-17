@@ -4,6 +4,7 @@
 #include "../kernel/body2d.h"
 #include "../../contact/kernel/contact2d.h"
 #include "../kernel/kkt2d.h"
+#include "../../common/constants.h"
 
 #define MBD_SYSTEM2D_MAX_BODIES 8
 #define MBD_SYSTEM2D_MAX_CONSTRAINTS 8
@@ -139,6 +140,7 @@ typedef struct {
     int num_steps;
     int steps_requested;
     int steps_executed;
+    int history_stride;
     mbd_integrator2d_t integrator;
     const char *integrator_source_status;
     double newmark_beta;
@@ -148,6 +150,7 @@ typedef struct {
     int implicit_iterations_last;
     const char *dt_source_status;
     const char *steps_source_status;
+    const char *history_stride_source_status;
     const char *newmark_beta_source_status;
     const char *newmark_gamma_source_status;
     const char *hht_alpha_source_status;

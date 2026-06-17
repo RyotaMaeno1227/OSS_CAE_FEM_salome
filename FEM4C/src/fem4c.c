@@ -441,7 +441,8 @@ static void print_usage(const char *program_name)
     printf("  --mbd-newmark-gamma=<value>   MBD env: FEM4C_MBD_NEWMARK_GAMMA\n");
     printf("  --mbd-hht-alpha=<value>       MBD env: FEM4C_MBD_HHT_ALPHA\n");
     printf("  --mbd-dt=<value>              MBD env: FEM4C_MBD_DT\n");
-    printf("  --mbd-steps=<value>           MBD env: FEM4C_MBD_STEPS\n\n");
+    printf("  --mbd-steps=<value>           MBD env: FEM4C_MBD_STEPS\n");
+    printf("  --mbd-history-stride=<value>  MBD env: FEM4C_MBD_HISTORY_STRIDE\n\n");
 
     printf("Other options:\n");
     printf("  --parser-part=<collector>     Explicit single-part parser override; default bulk route exports all collectors\n");
@@ -556,6 +557,7 @@ int main(int argc, char *argv[])
     const char *mbd_hht_alpha_prefix = "--mbd-hht-alpha=";
     const char *mbd_dt_prefix = "--mbd-dt=";
     const char *mbd_steps_prefix = "--mbd-steps=";
+    const char *mbd_history_stride_prefix = "--mbd-history-stride=";
     const char *parser_part_prefix = "--parser-part=";
     const char *strict_t3_env = getenv("FEM4C_STRICT_T3_ORIENTATION");
     const char *coupled_integrator_cli = NULL;
@@ -570,6 +572,7 @@ int main(int argc, char *argv[])
     int hht_alpha_from_cli = 0;
     int mbd_dt_from_cli = 0;
     int mbd_steps_from_cli = 0;
+    int mbd_history_stride_from_cli = 0;
     int argi = 1;
     int positional_count;
     
@@ -1015,9 +1018,10 @@ int main(int argc, char *argv[])
                 printf("Missing value after --mbd-steps\n");
                 return EXIT_FAILURE;
             }
-            if (!parse_ranged_int_option(argv[argi + 1], 1, 1000000, &(int){0})) {
-                printf("Invalid value for --mbd-steps: %s (allowed range: 1..1000000)\n",
-                       argv[argi + 1]);
+            if (!parse_ranged_int_option(argv[argi + 1], 1, MBD_MAX_STEPS, &(int){0})) {
+                printf("Invalid value for --mbd-steps: %s (allowed range: 1..%d)\n",
+                       argv[argi + 1],
+                       MBD_MAX_STEPS);
                 return EXIT_FAILURE;
             }
             if (!set_named_env("FEM4C_MBD_STEPS", argv[argi + 1])) {
@@ -1031,9 +1035,10 @@ int main(int argc, char *argv[])
 
         if (strncmp(argv[argi], mbd_steps_prefix, strlen(mbd_steps_prefix)) == 0) {
             const char *value_text = argv[argi] + strlen(mbd_steps_prefix);
-            if (!parse_ranged_int_option(value_text, 1, 1000000, &(int){0})) {
-                printf("Invalid value for --mbd-steps: %s (allowed range: 1..1000000)\n",
-                       value_text);
+            if (!parse_ranged_int_option(value_text, 1, MBD_MAX_STEPS, &(int){0})) {
+                printf("Invalid value for --mbd-steps: %s (allowed range: 1..%d)\n",
+                       value_text,
+                       MBD_MAX_STEPS);
                 return EXIT_FAILURE;
             }
             if (!set_named_env("FEM4C_MBD_STEPS", value_text)) {
@@ -1041,6 +1046,43 @@ int main(int argc, char *argv[])
                 return EXIT_FAILURE;
             }
             mbd_steps_from_cli = 1;
+            argi += 1;
+            continue;
+        }
+
+        if (strcmp(argv[argi], "--mbd-history-stride") == 0) {
+            if (argc <= argi + 1) {
+                printf("Missing value after --mbd-history-stride\n");
+                return EXIT_FAILURE;
+            }
+            if (!parse_ranged_int_option(argv[argi + 1], 1, MBD_MAX_STEPS, &(int){0})) {
+                printf("Invalid value for --mbd-history-stride: %s (allowed range: 1..%d)\n",
+                       argv[argi + 1],
+                       MBD_MAX_STEPS);
+                return EXIT_FAILURE;
+            }
+            if (!set_named_env("FEM4C_MBD_HISTORY_STRIDE", argv[argi + 1])) {
+                printf("Failed to set FEM4C_MBD_HISTORY_STRIDE from CLI option\n");
+                return EXIT_FAILURE;
+            }
+            mbd_history_stride_from_cli = 1;
+            argi += 2;
+            continue;
+        }
+
+        if (strncmp(argv[argi], mbd_history_stride_prefix, strlen(mbd_history_stride_prefix)) == 0) {
+            const char *value_text = argv[argi] + strlen(mbd_history_stride_prefix);
+            if (!parse_ranged_int_option(value_text, 1, MBD_MAX_STEPS, &(int){0})) {
+                printf("Invalid value for --mbd-history-stride: %s (allowed range: 1..%d)\n",
+                       value_text,
+                       MBD_MAX_STEPS);
+                return EXIT_FAILURE;
+            }
+            if (!set_named_env("FEM4C_MBD_HISTORY_STRIDE", value_text)) {
+                printf("Failed to set FEM4C_MBD_HISTORY_STRIDE from CLI option\n");
+                return EXIT_FAILURE;
+            }
+            mbd_history_stride_from_cli = 1;
             argi += 1;
             continue;
         }
@@ -1073,6 +1115,7 @@ int main(int argc, char *argv[])
         const char *mbd_hht_alpha = getenv("FEM4C_MBD_HHT_ALPHA");
         const char *mbd_dt = getenv("FEM4C_MBD_DT");
         const char *mbd_steps = getenv("FEM4C_MBD_STEPS");
+        const char *mbd_history_stride = getenv("FEM4C_MBD_HISTORY_STRIDE");
         const char *integrator_source = mbd_integrator_from_cli ? "cli" :
             ((mbd_integrator_env && mbd_integrator_env[0] != '\0') ? "env" : "default");
         const char *newmark_beta_source = newmark_beta_from_cli ? "cli" :
@@ -1085,13 +1128,16 @@ int main(int argc, char *argv[])
             ((mbd_dt && mbd_dt[0] != '\0') ? "env" : "default");
         const char *steps_source = mbd_steps_from_cli ? "cli" :
             ((mbd_steps && mbd_steps[0] != '\0') ? "env" : "default");
+        const char *history_stride_source = mbd_history_stride_from_cli ? "cli" :
+            ((mbd_history_stride && mbd_history_stride[0] != '\0') ? "env" : "default");
 
         if (!set_named_env("FEM4C_MBD_INTEGRATOR_SOURCE", integrator_source) ||
             !set_named_env("FEM4C_MBD_NEWMARK_BETA_SOURCE", newmark_beta_source) ||
             !set_named_env("FEM4C_MBD_NEWMARK_GAMMA_SOURCE", newmark_gamma_source) ||
             !set_named_env("FEM4C_MBD_HHT_ALPHA_SOURCE", hht_alpha_source) ||
             !set_named_env("FEM4C_MBD_DT_SOURCE", dt_source) ||
-            !set_named_env("FEM4C_MBD_STEPS_SOURCE", steps_source)) {
+            !set_named_env("FEM4C_MBD_STEPS_SOURCE", steps_source) ||
+            !set_named_env("FEM4C_MBD_HISTORY_STRIDE_SOURCE", history_stride_source)) {
             printf("Failed to set MBD source metadata environment keys from CLI context\n");
             return EXIT_FAILURE;
         }
@@ -1184,6 +1230,7 @@ int main(int argc, char *argv[])
         const char *hht_alpha = getenv("FEM4C_MBD_HHT_ALPHA");
         const char *mbd_dt = getenv("FEM4C_MBD_DT");
         const char *mbd_steps = getenv("FEM4C_MBD_STEPS");
+        const char *mbd_history_stride = getenv("FEM4C_MBD_HISTORY_STRIDE");
 
         printf("MBD integrator: %s\n\n",
                (integrator && integrator[0] != '\0') ? integrator : "newmark_beta (default)");
@@ -1197,11 +1244,13 @@ int main(int argc, char *argv[])
                ((newmark_gamma && newmark_gamma[0] != '\0') ? "env" : "default"),
                hht_alpha_from_cli ? "cli" :
                ((hht_alpha && hht_alpha[0] != '\0') ? "env" : "default"));
-        printf("MBD time source: dt=%s steps=%s\n\n",
+        printf("MBD time source: dt=%s steps=%s history_stride=%s\n\n",
                mbd_dt_from_cli ? "cli" :
                ((mbd_dt && mbd_dt[0] != '\0') ? "env" : "default"),
                mbd_steps_from_cli ? "cli" :
-               ((mbd_steps && mbd_steps[0] != '\0') ? "env" : "default"));
+               ((mbd_steps && mbd_steps[0] != '\0') ? "env" : "default"),
+               mbd_history_stride_from_cli ? "cli" :
+               ((mbd_history_stride && mbd_history_stride[0] != '\0') ? "env" : "default"));
     }
     if (analysis_mode == ANALYSIS_MODE_COUPLED) {
         const char *integrator = getenv("FEM4C_COUPLED_INTEGRATOR");

@@ -280,6 +280,9 @@ static fem_error_t mbd_integrator_parse(const char *text,
                                         mbd_integrator2d_t *integrator);
 static mbd_integrator2d_t mbd_integrator_from_env(const char **status_out);
 static fem_error_t mbd_time_control_from_env(mbd_time_control2d_t *time);
+static int mbd_history_output_step_should_write(int step,
+                                                int final_step,
+                                                int stride);
 static int mbd_emit_step_trace(int requested_steps,
                                double dt,
                                mbd_integrator2d_t integrator);
@@ -6137,30 +6140,36 @@ fem_error_t mbd_system2d_run(const char *input_filename,
                         }
                     }
                 }
-                CHECK_ERROR_CLEANUP(mbd_output2d_write_history_snapshot(history_out,
-                                                                        explicit_step + 1,
-                                                                        system.time.dt * (explicit_step + 1),
-                                                                        &system),
-                                    mbd_output2d_close_optional_files(&history_out,
-                                                                      &rigid_compare_out,
-                                                                      &contact_trace_out,
-                                                                      &contact_feedback_out,
-                                                                      &contact_feedback_use_out,
-                                                                      &contact_reduced_data_out,
-                                                                      &same_time_reduced_iteration_out));
-                history_snapshot_count += 1;
-                CHECK_ERROR_CLEANUP(mbd_output2d_write_rigid_compare_snapshot(rigid_compare_out,
-                                                                              system.time.dt * (explicit_step + 1),
-                                                                              &system),
-                                    mbd_output2d_close_optional_files(&history_out,
-                                                                      &rigid_compare_out,
-                                                                      &contact_trace_out,
-                                                                      &contact_feedback_out,
-                                                                      &contact_feedback_use_out,
-                                                                      &contact_reduced_data_out,
-                                                                      &same_time_reduced_iteration_out));
-                if (rigid_compare_out) {
-                    rigid_compare_snapshot_count += 1;
+                if (mbd_history_output_step_should_write(explicit_step + 1,
+                                                         system.time.steps_requested,
+                                                         system.time.history_stride)) {
+                    CHECK_ERROR_CLEANUP(mbd_output2d_write_history_snapshot(
+                                            history_out,
+                                            explicit_step + 1,
+                                            system.time.dt * (explicit_step + 1),
+                                            &system),
+                                        mbd_output2d_close_optional_files(&history_out,
+                                                                          &rigid_compare_out,
+                                                                          &contact_trace_out,
+                                                                          &contact_feedback_out,
+                                                                          &contact_feedback_use_out,
+                                                                          &contact_reduced_data_out,
+                                                                          &same_time_reduced_iteration_out));
+                    history_snapshot_count += 1;
+                    CHECK_ERROR_CLEANUP(mbd_output2d_write_rigid_compare_snapshot(
+                                            rigid_compare_out,
+                                            system.time.dt * (explicit_step + 1),
+                                            &system),
+                                        mbd_output2d_close_optional_files(&history_out,
+                                                                          &rigid_compare_out,
+                                                                          &contact_trace_out,
+                                                                          &contact_feedback_out,
+                                                                          &contact_feedback_use_out,
+                                                                          &contact_reduced_data_out,
+                                                                          &same_time_reduced_iteration_out));
+                    if (rigid_compare_out) {
+                        rigid_compare_snapshot_count += 1;
+                    }
                 }
                 CHECK_ERROR_CLEANUP(mbd_output2d_write_contact_trace_step_snapshot(contact_trace_out,
                                                                                    explicit_step + 1,
@@ -6338,30 +6347,36 @@ fem_error_t mbd_system2d_run(const char *input_filename,
             for (newmark_step = 0; newmark_step < system.time.steps_requested; ++newmark_step) {
                 CHECK_ERROR(mbd_system2d_do_newmark_step(&system));
                 CHECK_ERROR(mbd_system2d_refresh_contact_forces_and_trace(&system));
-                CHECK_ERROR_CLEANUP(mbd_output2d_write_history_snapshot(history_out,
-                                                                        newmark_step + 1,
-                                                                        system.time.dt * (newmark_step + 1),
-                                                                        &system),
-                                    mbd_output2d_close_optional_files(&history_out,
-                                                                      &rigid_compare_out,
-                                                                      &contact_trace_out,
-                                                                      &contact_feedback_out,
-                                                                      &contact_feedback_use_out,
-                                                                      &contact_reduced_data_out,
-                                                                      &same_time_reduced_iteration_out));
-                history_snapshot_count += 1;
-                CHECK_ERROR_CLEANUP(mbd_output2d_write_rigid_compare_snapshot(rigid_compare_out,
-                                                                              system.time.dt * (newmark_step + 1),
-                                                                              &system),
-                                    mbd_output2d_close_optional_files(&history_out,
-                                                                      &rigid_compare_out,
-                                                                      &contact_trace_out,
-                                                                      &contact_feedback_out,
-                                                                      &contact_feedback_use_out,
-                                                                      &contact_reduced_data_out,
-                                                                      &same_time_reduced_iteration_out));
-                if (rigid_compare_out) {
-                    rigid_compare_snapshot_count += 1;
+                if (mbd_history_output_step_should_write(newmark_step + 1,
+                                                         system.time.steps_requested,
+                                                         system.time.history_stride)) {
+                    CHECK_ERROR_CLEANUP(mbd_output2d_write_history_snapshot(
+                                            history_out,
+                                            newmark_step + 1,
+                                            system.time.dt * (newmark_step + 1),
+                                            &system),
+                                        mbd_output2d_close_optional_files(&history_out,
+                                                                          &rigid_compare_out,
+                                                                          &contact_trace_out,
+                                                                          &contact_feedback_out,
+                                                                          &contact_feedback_use_out,
+                                                                          &contact_reduced_data_out,
+                                                                          &same_time_reduced_iteration_out));
+                    history_snapshot_count += 1;
+                    CHECK_ERROR_CLEANUP(mbd_output2d_write_rigid_compare_snapshot(
+                                            rigid_compare_out,
+                                            system.time.dt * (newmark_step + 1),
+                                            &system),
+                                        mbd_output2d_close_optional_files(&history_out,
+                                                                          &rigid_compare_out,
+                                                                          &contact_trace_out,
+                                                                          &contact_feedback_out,
+                                                                          &contact_feedback_use_out,
+                                                                          &contact_reduced_data_out,
+                                                                          &same_time_reduced_iteration_out));
+                    if (rigid_compare_out) {
+                        rigid_compare_snapshot_count += 1;
+                    }
                 }
                 CHECK_ERROR_CLEANUP(mbd_output2d_write_contact_trace_step_snapshot(contact_trace_out,
                                                                                    newmark_step + 1,
@@ -6442,30 +6457,36 @@ fem_error_t mbd_system2d_run(const char *input_filename,
             for (hht_step = 0; hht_step < system.time.steps_requested; ++hht_step) {
                 CHECK_ERROR(mbd_system2d_do_hht_step(&system));
                 CHECK_ERROR(mbd_system2d_refresh_contact_forces_and_trace(&system));
-                CHECK_ERROR_CLEANUP(mbd_output2d_write_history_snapshot(history_out,
-                                                                        hht_step + 1,
-                                                                        system.time.dt * (hht_step + 1),
-                                                                        &system),
-                                    mbd_output2d_close_optional_files(&history_out,
-                                                                      &rigid_compare_out,
-                                                                      &contact_trace_out,
-                                                                      &contact_feedback_out,
-                                                                      &contact_feedback_use_out,
-                                                                      &contact_reduced_data_out,
-                                                                      &same_time_reduced_iteration_out));
-                history_snapshot_count += 1;
-                CHECK_ERROR_CLEANUP(mbd_output2d_write_rigid_compare_snapshot(rigid_compare_out,
-                                                                              system.time.dt * (hht_step + 1),
-                                                                              &system),
-                                    mbd_output2d_close_optional_files(&history_out,
-                                                                      &rigid_compare_out,
-                                                                      &contact_trace_out,
-                                                                      &contact_feedback_out,
-                                                                      &contact_feedback_use_out,
-                                                                      &contact_reduced_data_out,
-                                                                      &same_time_reduced_iteration_out));
-                if (rigid_compare_out) {
-                    rigid_compare_snapshot_count += 1;
+                if (mbd_history_output_step_should_write(hht_step + 1,
+                                                         system.time.steps_requested,
+                                                         system.time.history_stride)) {
+                    CHECK_ERROR_CLEANUP(mbd_output2d_write_history_snapshot(
+                                            history_out,
+                                            hht_step + 1,
+                                            system.time.dt * (hht_step + 1),
+                                            &system),
+                                        mbd_output2d_close_optional_files(&history_out,
+                                                                          &rigid_compare_out,
+                                                                          &contact_trace_out,
+                                                                          &contact_feedback_out,
+                                                                          &contact_feedback_use_out,
+                                                                          &contact_reduced_data_out,
+                                                                          &same_time_reduced_iteration_out));
+                    history_snapshot_count += 1;
+                    CHECK_ERROR_CLEANUP(mbd_output2d_write_rigid_compare_snapshot(
+                                            rigid_compare_out,
+                                            system.time.dt * (hht_step + 1),
+                                            &system),
+                                        mbd_output2d_close_optional_files(&history_out,
+                                                                          &rigid_compare_out,
+                                                                          &contact_trace_out,
+                                                                          &contact_feedback_out,
+                                                                          &contact_feedback_use_out,
+                                                                          &contact_reduced_data_out,
+                                                                          &same_time_reduced_iteration_out));
+                    if (rigid_compare_out) {
+                        rigid_compare_snapshot_count += 1;
+                    }
                 }
                 CHECK_ERROR_CLEANUP(mbd_output2d_write_contact_trace_step_snapshot(contact_trace_out,
                                                                                    hht_step + 1,
@@ -6780,11 +6801,12 @@ fem_error_t mbd_system2d_run(const char *input_filename,
            mbd_output2d_rigid_compare_tip_geometry_contract(),
            mbd_output2d_rigid_compare_root_reaction_surface(),
            mbd_output2d_rigid_energy_surface());
-    printf("  time_control: dt=%.6e steps=%d\n",
-           system.time.dt, system.time.num_steps);
-    printf("  time_fallback: dt=%s steps=%s\n",
+    printf("  time_control: dt=%.6e steps=%d history_stride=%d\n",
+           system.time.dt, system.time.num_steps, system.time.history_stride);
+    printf("  time_fallback: dt=%s steps=%s history_stride=%s\n",
            system.time.dt_source_status,
-           system.time.steps_source_status);
+           system.time.steps_source_status,
+           system.time.history_stride_source_status);
     if (system.has_gravity) {
         printf("  gravity_input: gx=%.6e gy=%.6e\n",
                system.gravity[0], system.gravity[1]);
@@ -7039,8 +7061,11 @@ fem_error_t mbd_system2d_run(const char *input_filename,
     fprintf(out, "steps,%d\n", system.time.num_steps);
     fprintf(out, "steps_requested,%d\n", system.time.steps_requested);
     fprintf(out, "steps_executed,%d\n", system.time.steps_executed);
+    fprintf(out, "history_stride,%d\n", system.time.history_stride);
     fprintf(out, "dt_source_status,%s\n", system.time.dt_source_status);
     fprintf(out, "steps_source_status,%s\n", system.time.steps_source_status);
+    fprintf(out, "history_stride_source_status,%s\n",
+            system.time.history_stride_source_status);
     fprintf(out, "source,%s\n", system.from_input ? "input" : "builtin");
     fprintf(out, "history_csv,%s\n", history_output_filename);
     fprintf(out, "rigid_compare_csv,%s\n",
@@ -7342,6 +7367,22 @@ static int source_marker_is_cli(const char *source_marker)
     return string_equals_ignore_case(source_marker, MBD_SOURCE_CLI);
 }
 
+static int mbd_history_output_step_should_write(int step,
+                                                int final_step,
+                                                int stride)
+{
+    if (step <= 0) {
+        return 1;
+    }
+    if (step == final_step) {
+        return 1;
+    }
+    if (stride <= 1) {
+        return 1;
+    }
+    return (step % stride) == 0;
+}
+
 static fem_error_t mbd_integrator_parse(const char *text,
                                         mbd_integrator2d_t *integrator)
 {
@@ -7407,6 +7448,7 @@ static fem_error_t mbd_time_control_from_env(mbd_time_control2d_t *time)
     const char *implicit_max_iterations_source_marker = NULL;
     const char *dt_source_marker = NULL;
     const char *steps_source_marker = NULL;
+    const char *history_stride_source_marker = NULL;
 
     CHECK_NULL(time, "mbd time control");
 
@@ -7425,8 +7467,13 @@ static fem_error_t mbd_time_control_from_env(mbd_time_control2d_t *time)
                                                        1.0e-3, 1.0e-12, 1.0e3,
                                                        &time->dt_source_status);
     time->num_steps = parse_env_int_or_default_with_status("FEM4C_MBD_STEPS",
-                                                           1, 0, 1000000,
+                                                           1, 1, MBD_MAX_STEPS,
                                                            &time->steps_source_status);
+    time->history_stride = parse_env_int_or_default_with_status("FEM4C_MBD_HISTORY_STRIDE",
+                                                                MBD_HISTORY_STRIDE_DEFAULT,
+                                                                1,
+                                                                MBD_MAX_STEPS,
+                                                                &time->history_stride_source_status);
     time->implicit_max_iterations = parse_env_int_or_default_with_status("FEM4C_MBD_IMPLICIT_MAX_ITERS",
                                                                          1, 0, 1000,
                                                                          &time->implicit_max_iterations_source_status);
@@ -7440,6 +7487,7 @@ static fem_error_t mbd_time_control_from_env(mbd_time_control2d_t *time)
     implicit_max_iterations_source_marker = getenv("FEM4C_MBD_IMPLICIT_MAX_ITERS_SOURCE");
     dt_source_marker = getenv("FEM4C_MBD_DT_SOURCE");
     steps_source_marker = getenv("FEM4C_MBD_STEPS_SOURCE");
+    history_stride_source_marker = getenv("FEM4C_MBD_HISTORY_STRIDE_SOURCE");
 
     if (source_marker_is_cli(getenv("FEM4C_MBD_INTEGRATOR_SOURCE")) &&
         strcmp(time->integrator_source_status, MBD_SOURCE_ENV) == 0) {
@@ -7468,6 +7516,10 @@ static fem_error_t mbd_time_control_from_env(mbd_time_control2d_t *time)
     if (source_marker_is_cli(steps_source_marker) &&
         strcmp(time->steps_source_status, MBD_SOURCE_ENV) == 0) {
         time->steps_source_status = MBD_SOURCE_CLI;
+    }
+    if (source_marker_is_cli(history_stride_source_marker) &&
+        strcmp(time->history_stride_source_status, MBD_SOURCE_ENV) == 0) {
+        time->history_stride_source_status = MBD_SOURCE_CLI;
     }
 
     return FEM_SUCCESS;

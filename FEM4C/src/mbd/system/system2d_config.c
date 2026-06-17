@@ -88,6 +88,7 @@ void mbd_time_control2d_set_defaults(mbd_time_control2d_t *time)
     time->dt = 1.0e-3;
     time->num_steps = 1;
     time->steps_requested = 1;
+    time->history_stride = MBD_HISTORY_STRIDE_DEFAULT;
     time->integrator = MBD_INTEGRATOR2D_NEWMARK_BETA;
     time->integrator_source_status = MBD_SOURCE_DEFAULT;
     time->newmark_beta = 2.5e-1;
@@ -97,6 +98,7 @@ void mbd_time_control2d_set_defaults(mbd_time_control2d_t *time)
     time->implicit_iterations_last = 0;
     time->dt_source_status = MBD_SOURCE_DEFAULT;
     time->steps_source_status = MBD_SOURCE_DEFAULT;
+    time->history_stride_source_status = MBD_SOURCE_DEFAULT;
     time->newmark_beta_source_status = MBD_SOURCE_DEFAULT;
     time->newmark_gamma_source_status = MBD_SOURCE_DEFAULT;
     time->hht_alpha_source_status = MBD_SOURCE_DEFAULT;

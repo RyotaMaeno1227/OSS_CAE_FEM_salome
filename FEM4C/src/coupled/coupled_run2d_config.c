@@ -1,5 +1,6 @@
 #include "coupled_run2d.h"
 
+#include "../common/constants.h"
 #include "../common/error.h"
 
 #include <ctype.h>
@@ -303,7 +304,7 @@ fem_error_t coupled_time_control_from_env(coupled_time_control_t *time)
     time->dt = parse_env_double_or_default("FEM4C_MBD_DT",
                                            1.0e-3, 1.0e-12, 1.0e+3);
     time->num_steps = parse_env_int_or_default("FEM4C_MBD_STEPS",
-                                               1, 1, 1000000);
+                                               1, 1, MBD_MAX_STEPS);
     time->max_coupling_iterations = parse_env_int_or_default(
         "FEM4C_COUPLED_MAX_ITERATIONS",
         12, 1, 1000);

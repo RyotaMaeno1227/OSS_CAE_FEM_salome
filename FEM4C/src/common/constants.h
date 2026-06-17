@@ -23,6 +23,10 @@
 #define MAX_ITERATIONS      10000
 #define PI                  3.14159265358979323846
 
+/* MBD runtime limits */
+#define MBD_MAX_STEPS                 500000000
+#define MBD_HISTORY_STRIDE_DEFAULT    1
+
 /* Element type constants */
 #define ELEMENT_T3          3   /* 3-node triangle */
 #define ELEMENT_Q4          4   /* 4-node quadrilateral */
